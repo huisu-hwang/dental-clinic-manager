@@ -281,7 +281,7 @@ export default function ProtocolSplitModal({
             <div className="space-y-4">
               {/* 미할당 스텝 */}
               {unassignedIndices.length > 0 && (
-                <div className="border border-amber-200 bg-amber-50 rounded-xl p-4">
+                <div className="border border-amber-200 bg-at-warning-bg rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-semibold text-amber-800">
                       미할당 단계 ({unassignedIndices.length})
@@ -299,7 +299,7 @@ export default function ProtocolSplitModal({
                         key={idx}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-amber-200 rounded-lg text-xs text-at-text-secondary"
                       >
-                        <span className="font-semibold text-amber-600">Step {idx + 1}</span>
+                        <span className="font-semibold text-at-warning">Step {idx + 1}</span>
                         <span className="truncate max-w-[120px]">{steps[idx].title || `단계 ${idx + 1}`}</span>
                       </span>
                     ))}

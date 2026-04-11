@@ -241,7 +241,7 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
               >
                 <div className="flex items-start gap-4">
                   <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
-                    notification.category === 'important' ? 'bg-red-100' :
+                    notification.category === 'important' ? 'bg-at-error-bg' :
                     notification.category === 'birthday' ? 'bg-pink-100' :
                     notification.category === 'event' ? 'bg-purple-100' :
                     notification.category === 'insurance' ? 'bg-emerald-100' :
@@ -249,11 +249,11 @@ export default function NotificationSettings({ currentUser, clinicId }: Notifica
                     'bg-at-tag'
                   }`}>
                     <IconComponent className={`w-5 h-5 ${
-                      notification.category === 'important' ? 'text-red-600' :
+                      notification.category === 'important' ? 'text-at-error' :
                       notification.category === 'birthday' ? 'text-pink-600' :
                       notification.category === 'event' ? 'text-purple-600' :
                       notification.category === 'insurance' ? 'text-emerald-600' :
-                      notification.category === 'reminder' ? 'text-amber-600' :
+                      notification.category === 'reminder' ? 'text-at-warning' :
                       'text-at-accent'
                     }`} />
                   </div>

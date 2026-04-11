@@ -315,13 +315,13 @@ export default function QRCodeDisplay() {
             <div className="flex gap-2 print:hidden">
               <button
                 onClick={copyToClipboard}
-                className="px-3 py-1 text-sm bg-at-surface-alt hover:bg-gray-200 rounded-xl transition-colors"
+                className="px-3 py-1 text-sm bg-at-surface-alt hover:bg-at-border rounded-xl transition-colors"
               >
                 복사
               </button>
               <button
                 onClick={printQRCode}
-                className="px-3 py-1 text-sm bg-at-surface-alt hover:bg-gray-200 rounded-xl transition-colors"
+                className="px-3 py-1 text-sm bg-at-surface-alt hover:bg-at-border rounded-xl transition-colors"
               >
                 인쇄
               </button>
@@ -503,7 +503,7 @@ export default function QRCodeDisplay() {
           <button
             onClick={generateNewQRCode}
             disabled={loading}
-            className="w-full py-3 bg-at-accent text-white rounded-xl font-semibold hover:bg-at-accent disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-3 bg-at-accent text-white rounded-xl font-semibold hover:bg-at-accent disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'QR 코드 생성 중...' : qrCode ? '새 QR 코드 재생성' : 'QR 코드 생성'}
           </button>

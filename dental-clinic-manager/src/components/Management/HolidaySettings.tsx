@@ -166,7 +166,7 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
 
   const getHolidayTypeColor = (type: string) => {
     switch (type) {
-      case 'fixed': return 'bg-red-100 text-red-700'
+      case 'fixed': return 'bg-at-error-bg text-at-error'
       case 'lunar': return 'bg-orange-100 text-orange-700'
       case 'substitute': return 'bg-at-tag text-at-accent'
       default: return 'bg-at-surface-alt text-at-text-secondary'
@@ -387,7 +387,7 @@ export default function HolidaySettings({ clinicId }: HolidaySettingsProps) {
                       <button
                         onClick={() => handleDeleteHoliday(holiday.id)}
                         disabled={deletingId === holiday.id}
-                        className="p-1 text-at-error hover:text-red-700 disabled:opacity-50"
+                        className="p-1 text-at-error hover:text-at-error disabled:opacity-50"
                         title="삭제"
                       >
                         <TrashIcon className="h-4 w-4" />

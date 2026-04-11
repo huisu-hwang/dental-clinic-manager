@@ -435,7 +435,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="예: 스케일링 후 주의사항"
-            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
           />
         </div>
 
@@ -446,7 +446,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="예: 스케일링 주의사항"
-            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
           />
         </div>
 
@@ -456,7 +456,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             <select
               value={postType}
               onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
-              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
             >
               {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
@@ -469,7 +469,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             <select
               value={tone}
               onChange={(e) => setTone(e.target.value as ToneType)}
-              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
             >
               {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
                 <option key={value} value={value}>{label} - {description}</option>
@@ -550,7 +550,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 className={`w-8 h-8 rounded-xl text-sm font-medium transition-colors ${
                   imageCount === n
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-at-surface-alt text-at-text hover:bg-slate-200'
+                    : 'bg-at-surface-alt text-at-text hover:bg-at-border'
                 }`}
               >
                 {n}
@@ -623,7 +623,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                     setReferenceImageBase64('')
                     setReferenceImagePreview('')
                   }}
-                  className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                  className="text-xs text-red-400 hover:text-at-error transition-colors"
                 >
                   삭제
                 </button>
@@ -696,7 +696,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
 
       {/* 에러 */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600">
+        <div className="bg-at-error-bg border border-red-200 rounded-xl p-4 text-sm text-at-error">
           {error}
         </div>
       )}
@@ -741,7 +741,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         <button
           onClick={handleGenerate}
           disabled={!topic || !keyword || (postType === 'clinical' && (!clinicalData?.patientConsent || !clinicalData?.procedureType || !clinicalData?.photos.some(p => p.uploadedUrl)))}
-          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
         >
           <SparklesIcon className="h-5 w-5" />
           {postType === 'clinical'
@@ -759,13 +759,13 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-at-text">생성 결과</h2>
               {savedItemId && !hasUnsavedChanges && (
-                <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                <span className="flex items-center gap-1 text-xs text-at-success bg-at-success-bg px-2 py-0.5 rounded-full">
                   <CheckCircleIcon className="h-3.5 w-3.5" />
                   저장됨
                 </span>
               )}
               {hasUnsavedChanges && (
-                <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                <span className="flex items-center gap-1 text-xs text-at-warning bg-at-warning-bg px-2 py-0.5 rounded-full">
                   <PencilIcon className="h-3.5 w-3.5" />
                   미저장 변경사항
                 </span>
@@ -781,8 +781,8 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
           {saveMessage && (
             <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
               saveMessage.type === 'success'
-                ? 'bg-green-50 text-green-700'
-                : 'bg-red-50 text-red-700'
+                ? 'bg-at-success-bg text-at-success'
+                : 'bg-at-error-bg text-at-error'
             }`}>
               {saveMessage.type === 'success'
                 ? <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
@@ -802,7 +802,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 setEditedTitle(e.target.value)
                 setHasUnsavedChanges(true)
               }}
-              className="w-full text-lg font-bold text-at-text border border-at-border rounded-xl px-3 py-2 focus:ring-2 focus:ring-at-accent focus:border-indigo-500 bg-at-surface-alt/50"
+              className="w-full text-lg font-bold text-at-text border border-at-border rounded-xl px-3 py-2 focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-at-surface-alt/50"
             />
           </div>
 
@@ -901,13 +901,13 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               )}
 
               {generatedResult.platformContent.facebook && (
-                <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-3 space-y-2">
+                <div className="border border-at-border bg-at-accent-light/50 rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-blue-600">Facebook</span>
-                    <span className="text-[10px] text-blue-400">가로형 OG</span>
+                    <span className="text-xs font-semibold text-at-accent">Facebook</span>
+                    <span className="text-[10px] text-at-accent">가로형 OG</span>
                   </div>
                   {generatedResult.platformContent.facebook.images && generatedResult.platformContent.facebook.images.length > 0 && generatedResult.platformContent.facebook.images[0]?.path && (
-                    <img src={generatedResult.platformContent.facebook.images[0].path} alt="Facebook" className="w-full h-32 rounded-xl object-cover border border-blue-200" />
+                    <img src={generatedResult.platformContent.facebook.images[0].path} alt="Facebook" className="w-full h-32 rounded-xl object-cover border border-at-border" />
                   )}
                   <p className="text-xs text-at-text whitespace-pre-wrap leading-5">
                     {generatedResult.platformContent.facebook.message}
@@ -915,7 +915,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                   {generatedResult.platformContent.facebook.hashtags.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1">
                       {generatedResult.platformContent.facebook.hashtags.map((tag, i) => (
-                        <span key={i} className="text-[10px] text-blue-500">#{tag}</span>
+                        <span key={i} className="text-[10px] text-at-accent">#{tag}</span>
                       ))}
                     </div>
                   )}
@@ -945,7 +945,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               <button
                 onClick={handleSaveDraft}
                 disabled={isSavingDraft}
-                className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors text-sm font-medium disabled:opacity-60 w-full"
+                className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-300 text-at-accent rounded-xl hover:bg-at-accent-light transition-colors text-sm font-medium disabled:opacity-60 w-full"
               >
                 {isSavingDraft ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -963,7 +963,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               <button
                 onClick={handlePublishNow}
                 disabled={isScheduling || !generatedResult}
-                className="flex-1 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 {isScheduling ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -978,7 +978,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               <button
                 onClick={() => setShowScheduleModal(true)}
                 disabled={isScheduling || !generatedResult}
-                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 <CalendarDaysIcon className="h-4 w-4" />
                 예약 발행

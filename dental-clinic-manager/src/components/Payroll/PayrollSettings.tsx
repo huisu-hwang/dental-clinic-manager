@@ -380,12 +380,12 @@ export default function PayrollSettings() {
   return (
     <div className="space-y-6">
       {/* 안내 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <h4 className="font-medium text-blue-800 mb-2 flex items-center">
+      <div className="bg-at-accent-light border border-at-border rounded-xl p-4">
+        <h4 className="font-medium text-at-accent mb-2 flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           급여 설정 안내
         </h4>
-        <ul className="list-disc list-inside text-blue-700 text-sm space-y-1">
+        <ul className="list-disc list-inside text-at-accent text-sm space-y-1">
           <li>직원별 급여 기본 설정을 저장하면 매월 급여명세서가 자동으로 생성됩니다.</li>
           <li>4대보험료는 매년 1월에 결정되어 연말까지 유지됩니다.</li>
           <li>설정 변경 시 다음 달 명세서부터 반영됩니다.</li>
@@ -419,7 +419,7 @@ export default function PayrollSettings() {
           {selectedEmployee && (
             <div className="flex items-center">
               {hasSavedSetting ? (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-at-success-bg text-at-success">
                   <Check className="w-4 h-4 mr-1" />
                   급여 설정 완료
                 </span>
@@ -521,7 +521,7 @@ export default function PayrollSettings() {
               {/* 식대 */}
               <div>
                 <label className="block text-sm font-medium text-at-text mb-1">
-                  식대 <span className="text-xs text-green-600">(비과세, 최대 20만원)</span>
+                  식대 <span className="text-xs text-at-success">(비과세, 최대 20만원)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -538,7 +538,7 @@ export default function PayrollSettings() {
               {/* 자가운전 보조금 */}
               <div>
                 <label className="block text-sm font-medium text-at-text mb-1">
-                  자가운전 보조금 <span className="text-xs text-green-600">(비과세, 최대 20만원)</span>
+                  자가운전 보조금 <span className="text-xs text-at-success">(비과세, 최대 20만원)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -631,8 +631,8 @@ export default function PayrollSettings() {
               </div>
 
               {/* 소득세 관련 정보 */}
-              <div className="p-3 bg-blue-50 rounded-md space-y-3">
-                <p className="text-xs text-blue-600 mb-2">
+              <div className="p-3 bg-at-accent-light rounded-md space-y-3">
+                <p className="text-xs text-at-accent mb-2">
                   소득세는 간이세액표에 따라 자동 계산됩니다.
                 </p>
 
@@ -687,7 +687,7 @@ export default function PayrollSettings() {
           </div>
 
           {/* 근태 연동 설정 */}
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <div className="mt-6 p-4 bg-at-warning-bg border border-amber-200 rounded-xl">
             <h4 className="font-medium text-amber-800 mb-4 flex items-center">
               <AlertCircle className="w-4 h-4 mr-2" />
               근태 연동 설정
@@ -707,7 +707,7 @@ export default function PayrollSettings() {
                     setDeductLateMinutes(newValue)
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    deductLateMinutes ? 'bg-emerald-600' : 'bg-slate-300'
+                    deductLateMinutes ? 'bg-emerald-600' : 'bg-at-border'
                   }`}
                 >
                   <span
@@ -732,7 +732,7 @@ export default function PayrollSettings() {
                     setDeductEarlyLeaveMinutes(newValue)
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    deductEarlyLeaveMinutes ? 'bg-emerald-600' : 'bg-slate-300'
+                    deductEarlyLeaveMinutes ? 'bg-emerald-600' : 'bg-at-border'
                   }`}
                 >
                   <span
@@ -753,7 +753,7 @@ export default function PayrollSettings() {
                   type="button"
                   onClick={() => setIncludeOvertimePay(!includeOvertimePay)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    includeOvertimePay ? 'bg-emerald-600' : 'bg-slate-300'
+                    includeOvertimePay ? 'bg-emerald-600' : 'bg-at-border'
                   }`}
                 >
                   <span
@@ -814,8 +814,8 @@ export default function PayrollSettings() {
             {saveMessage && (
               <div className={`flex items-center px-4 py-2 rounded-md text-sm font-medium animate-fade-in ${
                 saveMessage.type === 'success'
-                  ? 'bg-green-100 border border-green-300 text-green-700'
-                  : 'bg-red-100 border border-red-300 text-red-700'
+                  ? 'bg-at-success-bg border border-green-300 text-at-success'
+                  : 'bg-at-error-bg border border-red-300 text-at-error'
               }`}>
                 {saveMessage.type === 'success' ? (
                   <Check className="w-4 h-4 mr-2" />
@@ -878,7 +878,7 @@ export default function PayrollSettings() {
                     </td>
                     <td className="py-2 px-3 text-center">
                       {setting ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-at-success-bg text-at-success">
                           <Check className="w-3 h-3 mr-1" />
                           설정됨
                         </span>

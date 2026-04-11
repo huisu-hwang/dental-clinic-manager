@@ -705,7 +705,7 @@ export default function SignupForm({
                                     setClinicSearchQuery(`${clinic.name} - ${clinic.address}`)
                                     setShowClinicSearchResults(false)
                                   }}
-                                  className="w-full p-3 hover:bg-at-accent-light text-left transition-colors border-b border-slate-100 last:border-b-0"
+                                  className="w-full p-3 hover:bg-at-accent-light text-left transition-colors border-b border-at-border last:border-b-0"
                                 >
                                   <div>
                                     <p className="font-medium text-at-text">{clinic.name}</p>
@@ -738,7 +738,7 @@ export default function SignupForm({
                   {/* 선택된 병원 표시 */}
                   {selectedClinicId && (
                     <div className="mt-2 p-2 bg-at-accent-light rounded-xl">
-                      <p className="text-sm text-blue-800">
+                      <p className="text-sm text-at-accent">
                         선택된 병원: <strong>{selectedClinicName}</strong>
                       </p>
                     </div>
@@ -781,7 +781,7 @@ export default function SignupForm({
                       name: formData.name,
                       role: formData.role
                     })}
-                    className="w-full bg-slate-200 hover:bg-slate-300 text-at-text-secondary font-medium py-2.5 px-4 rounded-xl transition-colors"
+                    className="w-full bg-at-border hover:bg-at-border text-at-text-secondary font-medium py-2.5 px-4 rounded-xl transition-colors"
                   >
                     나중에 하기
                   </button>

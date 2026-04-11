@@ -235,7 +235,7 @@ export default function AdminTelegramMembers({ groupId }: AdminTelegramMembersPr
                     )}
                   </div>
                   <span className={`px-1.5 py-0.5 rounded-lg text-[10px] ${
-                    member.joined_via === 'invite_link' ? 'bg-green-50 text-green-600' : 'bg-at-surface-alt text-at-text-weak'
+                    member.joined_via === 'invite_link' ? 'bg-at-success-bg text-at-success' : 'bg-at-surface-alt text-at-text-weak'
                   }`}>
                     {member.joined_via === 'invite_link' ? '초대링크' : '관리자'}
                   </span>

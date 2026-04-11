@@ -285,7 +285,7 @@ export default function CostTable() {
       ) : sessions.length === 0 ? (
         <div className="px-5 py-12 text-center">
           <div className="text-at-text-weak text-sm">아직 생성된 글이 없습니다.</div>
-          <div className="text-slate-300 text-xs mt-1">마케팅 글을 생성하면 비용이 여기에 표시됩니다.</div>
+          <div className="text-at-text-weak text-xs mt-1">마케팅 글을 생성하면 비용이 여기에 표시됩니다.</div>
         </div>
       ) : (
         <>

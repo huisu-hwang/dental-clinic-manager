@@ -55,8 +55,8 @@ export default function ReportModal({ postId, commentId, profileId, onClose }: R
 
         {submitted ? (
           <div className="text-center py-8">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Flag className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-at-success-bg rounded-full flex items-center justify-center mx-auto mb-3">
+              <Flag className="w-6 h-6 text-at-success" />
             </div>
             <p className="text-at-text font-medium">신고가 접수되었습니다.</p>
             <p className="text-sm text-at-text-secondary mt-1">관리자가 검토 후 조치합니다.</p>

@@ -90,7 +90,7 @@ export default function CashRegisterTable({
                 {CURRENCY_DENOMINATIONS.map(denom => (
                   <th key={denom.key} className="px-2 py-2 text-center text-xs font-semibold text-at-text-secondary min-w-[70px]">
                     <span className={`inline-block px-1.5 py-0.5 rounded text-xs ${
-                      denom.type === 'bill' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      denom.type === 'bill' ? 'bg-at-success-bg text-at-success' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {denom.shortLabel}
                     </span>
@@ -101,7 +101,7 @@ export default function CashRegisterTable({
             </thead>
             <tbody>
               {/* 전일 이월액 행 */}
-              <tr className="bg-orange-50/50 border-b border-slate-100">
+              <tr className="bg-orange-50/50 border-b border-at-border">
                 <td className="px-3 py-2 font-medium text-orange-700 text-xs whitespace-nowrap">전일이월액</td>
                 {CURRENCY_DENOMINATIONS.map(denom => (
                   <td key={`prev_${denom.key}`} className="px-1 py-1.5">
@@ -121,8 +121,8 @@ export default function CashRegisterTable({
                 </td>
               </tr>
               {/* 금일 잔액 행 */}
-              <tr className="bg-blue-50/50">
-                <td className="px-3 py-2 font-medium text-blue-700 text-xs whitespace-nowrap">금일잔액</td>
+              <tr className="bg-at-accent-light/50">
+                <td className="px-3 py-2 font-medium text-at-accent text-xs whitespace-nowrap">금일잔액</td>
                 {CURRENCY_DENOMINATIONS.map(denom => (
                   <td key={`curr_${denom.key}`} className="px-1 py-1.5">
                     <input
@@ -136,7 +136,7 @@ export default function CashRegisterTable({
                     />
                   </td>
                 ))}
-                <td className="px-3 py-2 text-right font-mono font-semibold text-blue-700">
+                <td className="px-3 py-2 text-right font-mono font-semibold text-at-accent">
                   {formatCurrency(currentTotal)}원
                 </td>
               </tr>
@@ -148,8 +148,8 @@ export default function CashRegisterTable({
         <div className="mt-3 flex items-center justify-end gap-2">
           <span className="text-sm text-at-text-secondary">차액 (금일 - 전일):</span>
           <span className={`text-lg font-mono font-bold ${
-            balanceDifference > 0 ? 'text-green-600' :
-            balanceDifference < 0 ? 'text-red-600' : 'text-slate-600'
+            balanceDifference > 0 ? 'text-at-success' :
+            balanceDifference < 0 ? 'text-at-error' : 'text-at-text-secondary'
           }`}>
             {balanceDifference > 0 ? '+' : ''}{formatCurrency(balanceDifference)}원
           </span>
@@ -162,11 +162,11 @@ export default function CashRegisterTable({
           <table className="w-max min-w-full text-sm">
             <thead>
               <tr className="bg-at-surface-alt border-b border-at-border">
-                <th className="px-2 py-2 text-left text-xs font-semibold text-at-text-secondary sticky left-0 bg-slate-50 z-10 min-w-[72px]">구분</th>
+                <th className="px-2 py-2 text-left text-xs font-semibold text-at-text-secondary sticky left-0 bg-at-surface-alt z-10 min-w-[72px]">구분</th>
                 {CURRENCY_DENOMINATIONS.map(denom => (
                   <th key={denom.key} className="px-1 py-2 text-center text-xs font-semibold text-at-text-secondary min-w-[60px]">
                     <span className={`inline-block px-1 py-0.5 rounded text-xs ${
-                      denom.type === 'bill' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      denom.type === 'bill' ? 'bg-at-success-bg text-at-success' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {denom.shortLabel}
                     </span>
@@ -177,7 +177,7 @@ export default function CashRegisterTable({
             </thead>
             <tbody>
               {/* 전일 이월액 행 */}
-              <tr className="bg-orange-50/50 border-b border-slate-100">
+              <tr className="bg-orange-50/50 border-b border-at-border">
                 <td className="px-2 py-2 font-medium text-orange-700 text-xs whitespace-nowrap sticky left-0 bg-orange-50/80 z-10">전일이월</td>
                 {CURRENCY_DENOMINATIONS.map(denom => (
                   <td key={`prev_${denom.key}`} className="px-0.5 py-1">
@@ -197,8 +197,8 @@ export default function CashRegisterTable({
                 </td>
               </tr>
               {/* 금일 잔액 행 */}
-              <tr className="bg-blue-50/50">
-                <td className="px-2 py-2 font-medium text-blue-700 text-xs whitespace-nowrap sticky left-0 bg-blue-50/80 z-10">금일잔액</td>
+              <tr className="bg-at-accent-light/50">
+                <td className="px-2 py-2 font-medium text-at-accent text-xs whitespace-nowrap sticky left-0 bg-at-accent-light/80 z-10">금일잔액</td>
                 {CURRENCY_DENOMINATIONS.map(denom => (
                   <td key={`curr_${denom.key}`} className="px-0.5 py-1">
                     <input
@@ -212,7 +212,7 @@ export default function CashRegisterTable({
                     />
                   </td>
                 ))}
-                <td className="px-2 py-2 text-right font-mono font-semibold text-blue-700 text-xs">
+                <td className="px-2 py-2 text-right font-mono font-semibold text-at-accent text-xs">
                   {formatCurrency(currentTotal)}
                 </td>
               </tr>
@@ -224,8 +224,8 @@ export default function CashRegisterTable({
         <div className="mt-2 flex items-center justify-between bg-at-surface-alt rounded-xl px-3 py-2">
           <span className="text-xs text-at-text-secondary">차액 (금일 - 전일)</span>
           <span className={`text-base font-mono font-bold ${
-            balanceDifference > 0 ? 'text-green-600' :
-            balanceDifference < 0 ? 'text-red-600' : 'text-slate-600'
+            balanceDifference > 0 ? 'text-at-success' :
+            balanceDifference < 0 ? 'text-at-error' : 'text-at-text-secondary'
           }`}>
             {balanceDifference > 0 ? '+' : ''}{formatCurrency(balanceDifference)}원
           </span>

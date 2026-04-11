@@ -267,7 +267,7 @@ export default function UnmatchedPatientModal({
                 </div>
 
                 {item.status === 'matched' && (
-                  <div className="text-sm text-at-success bg-green-100 rounded-lg px-2.5 py-1.5">
+                  <div className="text-sm text-at-success bg-at-success-bg rounded-lg px-2.5 py-1.5">
                     <Check className="w-3.5 h-3.5 inline mr-1" />
                     {item.uploadData.patient_name || '이름 없음'} → {item.matchedPatientName} 매칭 완료
                   </div>

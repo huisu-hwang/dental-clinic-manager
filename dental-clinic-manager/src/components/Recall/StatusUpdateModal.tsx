@@ -38,14 +38,14 @@ export default function StatusUpdateModal({
       value: 'pending',
       label: '리콜 전',
       icon: <Clock className="w-5 h-5" />,
-      color: 'bg-gray-100 text-gray-700 border-gray-300',
+      color: 'bg-at-surface-alt text-at-text-secondary border-at-border',
       description: '아직 연락하지 않음'
     },
     {
       value: 'appointment_made',
       label: '예약 성공',
       icon: <Calendar className="w-5 h-5" />,
-      color: 'bg-green-100 text-green-700 border-green-300',
+      color: 'bg-at-success-bg text-at-success border-green-300',
       description: '내원 예약 확정'
     },
     {
@@ -73,21 +73,21 @@ export default function StatusUpdateModal({
       value: 'call_rejected',
       label: '통화거부',
       icon: <PhoneOff className="w-5 h-5" />,
-      color: 'bg-red-100 text-red-700 border-red-300',
+      color: 'bg-at-error-bg text-at-error border-red-300',
       description: '통화를 거부함'
     },
     {
       value: 'visit_refused',
       label: '내원거부',
       icon: <XCircle className="w-5 h-5" />,
-      color: 'bg-red-100 text-red-700 border-red-300',
+      color: 'bg-at-error-bg text-at-error border-red-300',
       description: '내원 의사 없음'
     },
     {
       value: 'invalid_number',
       label: '없는번호',
       icon: <AlertCircle className="w-5 h-5" />,
-      color: 'bg-gray-100 text-gray-500 border-gray-300',
+      color: 'bg-at-surface-alt text-at-text-weak border-at-border',
       description: '전화번호가 유효하지 않음'
     }
   ]
@@ -193,7 +193,7 @@ export default function StatusUpdateModal({
           <button
             onClick={handleSave}
             disabled={isSaving || !selectedStatus}
-            className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
               <>

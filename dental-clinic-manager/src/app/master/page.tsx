@@ -521,7 +521,7 @@ export default function MasterAdminPage() {
       case 'login': return 'bg-at-success-bg text-green-800'
       case 'logout': return 'bg-at-surface-alt text-at-text'
       case 'access': return 'bg-teal-100 text-teal-800'
-      case 'page_view': return 'bg-at-tag text-blue-800'
+      case 'page_view': return 'bg-at-tag text-at-accent'
       case 'action': return 'bg-purple-100 text-purple-800'
       default: return 'bg-at-surface-alt text-at-text'
     }
@@ -645,7 +645,7 @@ export default function MasterAdminPage() {
             ) : (
               <>
               {/* 모바일: 카드 레이아웃 */}
-              <div className="sm:hidden divide-y divide-gray-200">
+              <div className="sm:hidden divide-y divide-at-border">
                 {pendingUsers.map((pendingUser) => (
                   <div key={pendingUser.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
@@ -660,7 +660,7 @@ export default function MasterAdminPage() {
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-at-text-weak">
                       <span>{pendingUser.clinic?.name || '소속 없음'}</span>
                       <span className={`px-1.5 py-0.5 rounded-full ${
-                        pendingUser.role === 'owner' ? 'bg-at-tag text-blue-800' : 'bg-at-surface-alt text-at-text'
+                        pendingUser.role === 'owner' ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'
                       }`}>
                         {pendingUser.role === 'owner' ? '대표원장' : pendingUser.role}
                       </span>
@@ -698,7 +698,7 @@ export default function MasterAdminPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">작업</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-at-border">
                     {pendingUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-at-surface-alt">
                         <td className="px-6 py-4 text-sm font-medium text-at-text">{user.name}</td>
@@ -716,7 +716,7 @@ export default function MasterAdminPage() {
                         <td className="px-6 py-4 text-sm text-at-text-weak">{user.clinic?.name || '-'}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 text-xs rounded-full ${
-                            user.role === 'owner' ? 'bg-at-tag text-blue-800' : 'bg-at-surface-alt text-at-text'
+                            user.role === 'owner' ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'
                           }`}>
                             {user.role === 'owner' ? '대표원장' : user.role}
                           </span>
@@ -778,7 +778,7 @@ export default function MasterAdminPage() {
               <p className="text-xs sm:text-sm text-at-text-weak mt-1">병원 계정을 관리하고 상태를 변경할 수 있습니다.</p>
             </div>
             {/* 모바일: 카드 레이아웃 */}
-            <div className="sm:hidden divide-y divide-gray-200">
+            <div className="sm:hidden divide-y divide-at-border">
               {clinics.map((clinic) => (
                 <div key={clinic.id} className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -794,7 +794,7 @@ export default function MasterAdminPage() {
                     <span>{clinic.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className={`px-1.5 py-0.5 rounded-full ${clinic.is_public ? 'bg-at-tag text-blue-800' : 'bg-at-surface-alt text-at-text'}`}>
+                    <span className={`px-1.5 py-0.5 rounded-full ${clinic.is_public ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'}`}>
                       {clinic.is_public ? '공개' : '비공개'}
                     </span>
                     <button
@@ -805,7 +805,7 @@ export default function MasterAdminPage() {
                     </button>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <button onClick={() => handleViewClinicUsers(clinic)} className="flex-1 text-at-accent border border-blue-200 py-1.5 rounded-xl text-xs font-medium">회원</button>
+                    <button onClick={() => handleViewClinicUsers(clinic)} className="flex-1 text-at-accent border border-at-border py-1.5 rounded-xl text-xs font-medium">회원</button>
                     <button
                       onClick={() => handleToggleClinicStatus(clinic.id, clinic.status || 'active')}
                       className={`flex-1 border py-1.5 rounded-xl text-xs font-medium ${clinic.status === 'suspended' ? 'text-at-success border-green-200' : 'text-orange-600 border-orange-200'}`}
@@ -832,7 +832,7 @@ export default function MasterAdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">작업</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-at-border">
                   {clinics.map((clinic) => (
                     <tr key={clinic.id} className="hover:bg-at-surface-alt">
                       <td className="px-6 py-4 text-sm font-medium text-at-text">{clinic.name}</td>
@@ -850,7 +850,7 @@ export default function MasterAdminPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          clinic.is_public ? 'bg-at-tag text-blue-800' : 'bg-at-surface-alt text-at-text'
+                          clinic.is_public ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'
                         }`}>
                           {clinic.is_public ? '공개' : '비공개'}
                         </span>
@@ -867,7 +867,7 @@ export default function MasterAdminPage() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleViewClinicUsers(clinic)}
-                            className="text-at-accent hover:text-blue-900 text-sm font-medium"
+                            className="text-at-accent hover:text-at-accent text-sm font-medium"
                             title="병원 회원 보기"
                           >
                             회원 보기
@@ -907,7 +907,7 @@ export default function MasterAdminPage() {
               <p className="text-xs sm:text-sm text-at-text-weak mt-1">각 사용자의 최근 로그인 및 활동 기록을 확인할 수 있습니다.</p>
             </div>
             {/* 모바일: 카드 레이아웃 */}
-            <div className="sm:hidden divide-y divide-gray-200">
+            <div className="sm:hidden divide-y divide-at-border">
               {users.map((u) => (
                 <div key={u.id} className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -926,7 +926,7 @@ export default function MasterAdminPage() {
                   <div className="flex flex-wrap items-center gap-1.5 text-xs text-at-text-weak">
                     <span className={`px-1.5 py-0.5 rounded-full ${
                       u.role === 'master_admin' ? 'bg-purple-100 text-purple-800' :
-                      u.role === 'owner' ? 'bg-at-tag text-blue-800' :
+                      u.role === 'owner' ? 'bg-at-tag text-at-accent' :
                       'bg-at-surface-alt text-at-text'
                     }`}>
                       {getRoleLabel(u.role)}
@@ -935,7 +935,7 @@ export default function MasterAdminPage() {
                     <span>{formatRelativeTime(u.last_login_at)}</span>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <button onClick={() => handleViewActivity(u)} className="flex-1 text-at-accent border border-blue-200 py-1.5 rounded-xl text-xs font-medium">활동</button>
+                    <button onClick={() => handleViewActivity(u)} className="flex-1 text-at-accent border border-at-border py-1.5 rounded-xl text-xs font-medium">활동</button>
                     {u.role !== 'master_admin' && (
                       <>
                         <button onClick={() => handleEditUser(u)} className="flex-1 text-indigo-600 border border-indigo-200 py-1.5 rounded-xl text-xs font-medium">수정</button>
@@ -961,7 +961,7 @@ export default function MasterAdminPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">작업</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-at-border">
                   {users.map((user) => (
                     <Fragment key={user.id}>
                     <tr className="hover:bg-at-surface-alt">
@@ -970,7 +970,7 @@ export default function MasterAdminPage() {
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           user.role === 'master_admin' ? 'bg-purple-100 text-purple-800' :
-                          user.role === 'owner' ? 'bg-at-tag text-blue-800' :
+                          user.role === 'owner' ? 'bg-at-tag text-at-accent' :
                           user.role === 'vice_director' ? 'bg-indigo-100 text-indigo-800' :
                           user.role === 'manager' ? 'bg-teal-100 text-teal-800' :
                           user.role === 'team_leader' ? 'bg-cyan-100 text-cyan-800' :
@@ -1015,7 +1015,7 @@ export default function MasterAdminPage() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleViewActivity(user)}
-                            className="text-at-accent hover:text-blue-900 text-sm font-medium"
+                            className="text-at-accent hover:text-at-accent text-sm font-medium"
                             title="활동 기록 보기"
                           >
                             활동 기록
@@ -1048,7 +1048,7 @@ export default function MasterAdminPage() {
                             {user.recent_logins?.length > 0 ? (
                               <div className="space-y-1.5">
                                 {user.recent_logins.map((log: any) => (
-                                  <div key={log.id} className="flex items-center gap-3 text-xs text-at-text-secondary bg-white rounded px-3 py-2 border border-gray-100">
+                                  <div key={log.id} className="flex items-center gap-3 text-xs text-at-text-secondary bg-white rounded px-3 py-2 border border-at-border">
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-at-success-bg text-at-success font-medium">
                                       로그인
                                     </span>
@@ -1202,7 +1202,7 @@ export default function MasterAdminPage() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase">가입일</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-at-border">
                       {clinicUsers.map((user) => (
                         <tr key={user.id} className="hover:bg-at-surface-alt">
                           <td className="px-4 py-3 text-sm font-medium text-at-text">{user.name}</td>
@@ -1211,7 +1211,7 @@ export default function MasterAdminPage() {
                           <td className="px-4 py-3">
                             <span className={`px-2 py-1 text-xs rounded-full ${
                               user.role === 'owner'
-                                ? 'bg-at-tag text-blue-800'
+                                ? 'bg-at-tag text-at-accent'
                                 : user.role === 'vice_director'
                                 ? 'bg-purple-100 text-purple-800'
                                 : user.role === 'manager'
@@ -1259,7 +1259,7 @@ export default function MasterAdminPage() {
             <div className="p-4 border-t bg-at-surface-alt flex justify-end">
               <button
                 onClick={() => setShowUsersModal(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-at-text rounded-xl font-medium transition-colors"
+                className="px-4 py-2 bg-at-border hover:bg-at-border text-at-text rounded-xl font-medium transition-colors"
               >
                 닫기
               </button>
@@ -1291,7 +1291,7 @@ export default function MasterAdminPage() {
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value)}
-                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="owner">대표원장</option>
                   <option value="vice_director">부원장</option>
@@ -1307,7 +1307,7 @@ export default function MasterAdminPage() {
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="active">활성</option>
                   <option value="pending">승인 대기</option>
@@ -1322,7 +1322,7 @@ export default function MasterAdminPage() {
                 <select
                   value={editClinicId}
                   onChange={(e) => setEditClinicId(e.target.value)}
-                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="">소속 없음</option>
                   {clinics.map((clinic) => (
@@ -1352,7 +1352,7 @@ export default function MasterAdminPage() {
             <div className="p-6 border-t flex justify-end space-x-3">
               <button
                 onClick={() => { setShowEditModal(false); setEditingUser(null) }}
-                className="px-4 py-2 text-sm text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-gray-200"
+                className="px-4 py-2 text-sm text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-at-border"
               >
                 취소
               </button>
@@ -1423,7 +1423,7 @@ export default function MasterAdminPage() {
                 </div>
               ) : activityLogs.length === 0 ? (
                 <div className="text-center py-12 text-at-text-weak">
-                  <ClockIcon className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                  <ClockIcon className="w-12 h-12 mx-auto text-at-text-weak mb-4" />
                   <p>활동 기록이 없습니다.</p>
                   <p className="text-sm mt-2">사용자가 로그인하면 활동 기록이 표시됩니다.</p>
                 </div>
@@ -1468,7 +1468,7 @@ export default function MasterAdminPage() {
             <div className="p-4 border-t bg-at-surface-alt flex justify-end">
               <button
                 onClick={() => setShowActivityModal(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-at-text rounded-xl font-medium transition-colors"
+                className="px-4 py-2 bg-at-border hover:bg-at-border text-at-text rounded-xl font-medium transition-colors"
               >
                 닫기
               </button>
@@ -1644,11 +1644,11 @@ function ScrapingWorkerPanel() {
               {/* Watchdog 상태 */}
               <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
                 watchdog?.online
-                  ? 'bg-at-accent-light border-blue-200 text-at-accent'
+                  ? 'bg-at-accent-light border-at-border text-at-accent'
                   : 'bg-at-surface-alt border-at-border text-at-text-weak'
               }`}>
                 <div className={`w-2.5 h-2.5 rounded-full ${
-                  watchdog?.online ? 'bg-at-accent animate-pulse' : 'bg-gray-300'
+                  watchdog?.online ? 'bg-at-accent animate-pulse' : 'bg-at-border'
                 }`} />
                 <span className="font-medium text-sm">
                   {watchdog?.online ? 'Watchdog 실행 중' : 'Watchdog 중지됨'}
@@ -1702,7 +1702,7 @@ function ScrapingWorkerPanel() {
                 <div className="text-xs text-at-warning mb-1">대기/실행 중인 동기화</div>
                 <div className="text-2xl font-bold text-at-warning">{data.pendingJobsCount}건</div>
               </div>
-              <div className="bg-at-accent-light border border-blue-200 rounded-xl p-4">
+              <div className="bg-at-accent-light border border-at-border rounded-xl p-4">
                 <div className="text-xs text-at-accent mb-1">등록된 워커</div>
                 <div className="text-2xl font-bold text-at-accent">{data.workers.length}개</div>
               </div>
@@ -1719,7 +1719,7 @@ function ScrapingWorkerPanel() {
                     return (
                       <div key={w.id} className="flex items-center gap-3 p-3 bg-at-surface-alt rounded-xl text-sm">
                         <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                          online ? 'bg-green-500 animate-pulse' : 'bg-gray-300'
+                          online ? 'bg-green-500 animate-pulse' : 'bg-at-border'
                         }`} />
                         <span className="font-mono text-xs text-at-text-weak w-40 truncate">{w.id}</span>
                         <span className="text-at-text-secondary font-medium">{w.hostname}</span>
@@ -1751,7 +1751,7 @@ function ScrapingWorkerPanel() {
                   <button
                     onClick={handleStart}
                     disabled={isStarting || !watchdog?.online}
-                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     title={!watchdog?.online ? 'Watchdog이 실행 중이어야 합니다' : ''}
                   >
                     {isStarting ? (
@@ -2155,7 +2155,7 @@ function WorkerPanel() {
                   } catch { /* ignore */ }
                 }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  status.headless ? 'bg-indigo-600' : 'bg-slate-300'
+                  status.headless ? 'bg-indigo-600' : 'bg-at-border'
                 }`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -2182,7 +2182,7 @@ function WorkerPanel() {
                 <button
                   onClick={handleTrigger}
                   disabled={isTriggering || isStopping || !status.workerOnline}
-                  className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {isTriggering ? (
                     <>
@@ -2235,7 +2235,7 @@ function WorkerPanel() {
                   <button
                     onClick={handleStart}
                     disabled={isStarting}
-                    className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     {isStarting ? (
                       <>
@@ -2258,11 +2258,11 @@ function WorkerPanel() {
                   {/* Supervisor 상태 */}
                   <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm ${
                     status.supervisorOnline
-                      ? 'bg-at-accent-light border-blue-200 text-at-accent'
+                      ? 'bg-at-accent-light border-at-border text-at-accent'
                       : 'bg-at-surface-alt border-at-border text-at-text-weak'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${
-                      status.supervisorOnline ? 'bg-at-accent animate-pulse' : 'bg-gray-400'
+                      status.supervisorOnline ? 'bg-at-accent animate-pulse' : 'bg-at-border'
                     }`} />
                     <span className="font-medium">
                       Supervisor: {status.supervisorOnline ? '온라인' : '오프라인'}

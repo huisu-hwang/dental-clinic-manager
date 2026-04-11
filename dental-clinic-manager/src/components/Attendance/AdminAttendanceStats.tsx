@@ -458,43 +458,43 @@ export default function AdminAttendanceStats() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handlePresetPeriod('thisWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 이번 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 지난 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 이번 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 지난 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('last3Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 최근 3개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('last6Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 최근 6개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisYear')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 올해
               </button>
@@ -668,7 +668,7 @@ export default function AdminAttendanceStats() {
 
             {statistics.length === 0 ? (
               <div className="p-12 text-center text-at-text-weak">
-                <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <BarChart3 className="w-12 h-12 mx-auto mb-4 text-at-text-weak" />
                 <p>선택한 기간의 근태 통계가 없습니다.</p>
               </div>
             ) : (
@@ -1046,7 +1046,7 @@ export default function AdminAttendanceStats() {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={closeEditModal}
-                  className="px-4 py-2 text-sm font-medium text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-gray-200 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
                   disabled={isSaving}
                 >
                   취소

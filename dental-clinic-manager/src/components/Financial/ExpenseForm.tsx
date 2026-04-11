@@ -151,7 +151,7 @@ export default function ExpenseForm({
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border p-6 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-at-text-weak" />
       </div>
     )
   }
@@ -180,9 +180,9 @@ export default function ExpenseForm({
             ))}
           </select>
           {selectedCategory && (
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-at-text-weak">
               {selectedCategory.is_hometax_trackable && (
-                <span className="inline-flex items-center text-green-600">
+                <span className="inline-flex items-center text-at-success">
                   <Receipt className="w-3 h-3 mr-1" />
                   홈택스 조회 가능
                 </span>
@@ -204,7 +204,7 @@ export default function ExpenseForm({
               className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-right pr-10"
               placeholder="0"
             />
-            <span className="absolute right-3 top-2 text-gray-400">원</span>
+            <span className="absolute right-3 top-2 text-at-text-weak">원</span>
           </div>
         </div>
 
@@ -214,7 +214,7 @@ export default function ExpenseForm({
             거래처 (업체명)
           </label>
           <div className="relative">
-            <Building2 className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+            <Building2 className="absolute left-3 top-2.5 w-4 h-4 text-at-text-weak" />
             <input
               type="text"
               value={formData.vendor_name}
@@ -272,10 +272,10 @@ export default function ExpenseForm({
               id="is_business_card"
               checked={formData.is_business_card}
               onChange={e => handleChange('is_business_card', e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-at-border rounded-lg focus:ring-at-accent"
+              className="w-4 h-4 text-at-accent border-at-border rounded-lg focus:ring-at-accent"
             />
-            <label htmlFor="is_business_card" className="text-sm text-gray-700 flex items-center">
-              <CreditCard className="w-4 h-4 mr-1 text-blue-600" />
+            <label htmlFor="is_business_card" className="text-sm text-at-text-secondary flex items-center">
+              <CreditCard className="w-4 h-4 mr-1 text-at-accent" />
               사업용 카드로 결제 (홈택스 조회 가능)
             </label>
           </div>
@@ -289,10 +289,10 @@ export default function ExpenseForm({
               id="has_tax_invoice"
               checked={formData.has_tax_invoice}
               onChange={e => handleChange('has_tax_invoice', e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-at-border rounded-lg focus:ring-at-accent"
+              className="w-4 h-4 text-at-accent border-at-border rounded-lg focus:ring-at-accent"
             />
-            <label htmlFor="has_tax_invoice" className="text-sm font-medium text-gray-700 flex items-center">
-              <Receipt className="w-4 h-4 mr-1 text-green-600" />
+            <label htmlFor="has_tax_invoice" className="text-sm font-medium text-at-text-secondary flex items-center">
+              <Receipt className="w-4 h-4 mr-1 text-at-success" />
               세금계산서 발급됨
             </label>
           </div>
@@ -300,7 +300,7 @@ export default function ExpenseForm({
           {formData.has_tax_invoice && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">세금계산서 번호</label>
+                <label className="block text-xs text-at-text-weak mb-1">세금계산서 번호</label>
                 <input
                   type="text"
                   value={formData.tax_invoice_number}
@@ -310,7 +310,7 @@ export default function ExpenseForm({
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">발급일</label>
+                <label className="block text-xs text-at-text-weak mb-1">발급일</label>
                 <input
                   type="date"
                   value={formData.tax_invoice_date}
@@ -329,9 +329,9 @@ export default function ExpenseForm({
             id="is_hometax_synced"
             checked={formData.is_hometax_synced}
             onChange={e => handleChange('is_hometax_synced', e.target.checked)}
-            className="w-4 h-4 text-green-600 border-at-border rounded-lg focus:ring-at-success"
+            className="w-4 h-4 text-at-success border-at-border rounded-lg focus:ring-at-success"
           />
-          <label htmlFor="is_hometax_synced" className="text-sm text-gray-700">
+          <label htmlFor="is_hometax_synced" className="text-sm text-at-text-secondary">
             홈택스에서 조회 가능한 지출
           </label>
         </div>

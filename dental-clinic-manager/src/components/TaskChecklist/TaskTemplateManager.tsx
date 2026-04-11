@@ -14,8 +14,8 @@ import {
 } from 'lucide-react'
 
 const PERIOD_COLORS = [
-  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-400' },
-  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', dot: 'bg-blue-400' },
+  { bg: 'bg-at-warning-bg', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-400' },
+  { bg: 'bg-at-accent-light', border: 'border-at-border', text: 'text-at-accent', dot: 'bg-blue-400' },
   { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', dot: 'bg-indigo-400' },
   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-400' },
   { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', dot: 'bg-rose-400' },
@@ -25,8 +25,8 @@ const PERIOD_COLORS = [
 const STATUS_BADGE: Record<TaskTemplateStatus, { bg: string; text: string }> = {
   draft: { bg: 'bg-at-surface-alt', text: 'text-at-text' },
   pending_approval: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-  approved: { bg: 'bg-green-100', text: 'text-green-700' },
-  rejected: { bg: 'bg-red-100', text: 'text-red-700' },
+  approved: { bg: 'bg-at-success-bg', text: 'text-at-success' },
+  rejected: { bg: 'bg-at-error-bg', text: 'text-at-error' },
 }
 
 interface Staff {
@@ -530,7 +530,7 @@ export default function TaskTemplateManager() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
       </div>
     )
   }
@@ -565,7 +565,7 @@ export default function TaskTemplateManager() {
             })()}
             <button
               onClick={() => { resetBulkForm(); setShowBulkForm(true); setShowForm(false); setShowExcelUpload(false) }}
-              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-at-accent text-white text-sm font-medium rounded-xl hover:bg-at-accent transition-colors"
             >
               <Plus className="w-4 h-4 mr-1.5" />
               업무 추가
@@ -604,7 +604,7 @@ export default function TaskTemplateManager() {
             <select
               value={filterUser}
               onChange={(e) => setFilterUser(e.target.value)}
-              className="text-sm border border-at-border rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-blue-500"
+              className="text-sm border border-at-border rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-at-accent"
             >
               <option value="all">전체 직원</option>
               {staff.map(s => (
@@ -617,7 +617,7 @@ export default function TaskTemplateManager() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="text-sm border border-at-border rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-blue-500"
+              className="text-sm border border-at-border rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-at-accent"
             >
               <option value="all">전체 상태</option>
               <option value="draft">초안</option>
@@ -629,7 +629,7 @@ export default function TaskTemplateManager() {
           {filteredTemplates.length > 0 && (
             <button
               onClick={selectAll}
-              className="text-sm text-blue-600 hover:text-blue-800 ml-auto"
+              className="text-sm text-at-accent hover:text-at-accent ml-auto"
             >
               {selectedIds.size === filteredTemplates.length ? '선택 해제' : '전체 선택'}
             </button>
@@ -639,7 +639,7 @@ export default function TaskTemplateManager() {
 
       {/* 업무 추가/수정 폼 */}
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-4 sm:p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-at-border p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-at-text">
               {editingTemplate ? '업무 수정' : '새 업무 추가'}
@@ -655,7 +655,7 @@ export default function TaskTemplateManager() {
               <select
                 value={formData.assigned_user_id}
                 onChange={(e) => setFormData(prev => ({ ...prev, assigned_user_id: e.target.value }))}
-                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               >
                 <option value="">직원 선택</option>
                 {staff.map(s => (
@@ -674,7 +674,7 @@ export default function TaskTemplateManager() {
                       key={opt.value}
                       className={`flex-1 flex items-center justify-center cursor-pointer rounded-xl border px-3 py-2 text-sm transition-colors ${
                         selected
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                          ? 'border-at-accent bg-at-accent-light text-at-accent font-medium'
                           : 'border-at-border bg-white text-at-text hover:bg-at-surface-alt'
                       }`}
                     >
@@ -700,7 +700,7 @@ export default function TaskTemplateManager() {
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="예: 진료실 소독 및 준비"
-                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               />
             </div>
 
@@ -711,7 +711,7 @@ export default function TaskTemplateManager() {
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="업무에 대한 상세 설명 (선택)"
                 rows={2}
-                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
               />
             </div>
 
@@ -721,7 +721,7 @@ export default function TaskTemplateManager() {
                 type="number"
                 value={formData.sort_order}
                 onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               />
             </div>
           </div>
@@ -729,14 +729,14 @@ export default function TaskTemplateManager() {
           <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-at-border">
             <button
               onClick={resetForm}
-              className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleSave}
               disabled={saving || !formData.assigned_user_id || !formData.title.trim()}
-              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 bg-at-accent text-white text-sm font-medium rounded-xl hover:bg-at-accent transition-colors disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-1.5" />
               {saving ? '저장 중...' : editingTemplate ? '수정' : '추가'}
@@ -761,7 +761,7 @@ export default function TaskTemplateManager() {
             <select
               value={bulkAssignedUserId}
               onChange={(e) => setBulkAssignedUserId(e.target.value)}
-              className="w-full sm:w-64 border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-indigo-500"
+              className="w-full sm:w-64 border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             >
               <option value="">직원 선택</option>
               {staff.map(s => (
@@ -813,7 +813,7 @@ export default function TaskTemplateManager() {
                     }}
                     data-bulk-title
                     placeholder="예: 진료실 소독 및 준비"
-                    className="w-full border border-at-border rounded-xl px-2 py-1.5 text-sm focus:ring-2 focus:ring-at-accent focus:border-indigo-500"
+                    className="w-full border border-at-border rounded-xl px-2 py-1.5 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                 </div>
                 <div className="sm:col-span-5">
@@ -893,7 +893,7 @@ export default function TaskTemplateManager() {
                   {bulkItems.length > 1 && (
                     <button
                       onClick={() => removeBulkItem(index)}
-                      className="p-1.5 rounded-xl hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                       title="행 삭제"
                     >
                       <Trash2 className="w-4 h-4 text-red-400" />
@@ -918,7 +918,7 @@ export default function TaskTemplateManager() {
               </span>
               <button
                 onClick={resetBulkForm}
-                className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
               >
                 취소
               </button>
@@ -948,7 +948,7 @@ export default function TaskTemplateManager() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={downloadExcelTemplate}
-                className="inline-flex items-center text-xs text-green-600 hover:text-green-800"
+                className="inline-flex items-center text-xs text-at-success hover:text-green-800"
               >
                 <Download className="w-3.5 h-3.5 mr-1" />
                 양식 다운로드
@@ -963,12 +963,12 @@ export default function TaskTemplateManager() {
             <span className="text-at-text">
               전체 {excelPreview.length}건
             </span>
-            <span className="text-green-600">
+            <span className="text-at-success">
               <CheckCircle2 className="w-3.5 h-3.5 inline mr-0.5" />
               유효 {excelPreview.filter(i => i.valid).length}건
             </span>
             {excelPreview.filter(i => !i.valid).length > 0 && (
-              <span className="text-red-600">
+              <span className="text-at-error">
                 <AlertCircle className="w-3.5 h-3.5 inline mr-0.5" />
                 수정 필요 {excelPreview.filter(i => !i.valid).length}건
               </span>
@@ -989,7 +989,7 @@ export default function TaskTemplateManager() {
               <div
                 key={idx}
                 className={`grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-xl p-2 ${
-                  item.valid ? 'bg-at-surface-alt' : 'bg-red-50 border border-red-200'
+                  item.valid ? 'bg-at-surface-alt' : 'bg-at-error-bg border border-red-200'
                 }`}
               >
                 <div className="hidden sm:flex sm:col-span-1 justify-center">
@@ -1033,7 +1033,7 @@ export default function TaskTemplateManager() {
                           key={opt.value}
                           className={`flex-1 flex items-center justify-center cursor-pointer rounded-xl border px-1.5 py-1.5 text-xs transition-colors ${
                             selected
-                              ? 'border-green-500 bg-green-50 text-green-700 font-medium'
+                              ? 'border-green-500 bg-at-success-bg text-at-success font-medium'
                               : 'border-at-border bg-white text-at-text hover:bg-at-surface-alt'
                           }`}
                         >
@@ -1054,7 +1054,7 @@ export default function TaskTemplateManager() {
                 <div className="sm:col-span-1 flex justify-end sm:justify-center">
                   <button
                     onClick={() => removeExcelRow(idx)}
-                    className="p-1.5 rounded-xl hover:bg-red-100 transition-colors"
+                    className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                     title="행 삭제"
                   >
                     <Trash2 className="w-4 h-4 text-red-400" />
@@ -1067,7 +1067,7 @@ export default function TaskTemplateManager() {
           <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-at-border">
             <button
               onClick={resetExcelUpload}
-              className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
             >
               취소
             </button>
@@ -1133,11 +1133,11 @@ export default function TaskTemplateManager() {
                         return next
                       })
                     }}
-                    className="w-4 h-4 rounded border-at-border text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent"
                     title={`${staffMember?.name || ''} 전체 선택`}
                   />
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold text-blue-600">
+                  <div className="w-8 h-8 bg-at-tag rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold text-at-accent">
                       {staffMember?.name?.charAt(0) || '?'}
                     </span>
                   </div>
@@ -1156,7 +1156,7 @@ export default function TaskTemplateManager() {
                 const userDrafts = sorted.filter(t => t.status === 'draft' || t.status === 'rejected')
                 if (userDrafts.length === 0) return null
                 return (
-                  <div className="px-4 sm:px-6 py-2 bg-yellow-50 border-b border-yellow-200 flex items-center justify-between">
+                  <div className="px-4 sm:px-6 py-2 bg-at-warning-bg border-b border-yellow-200 flex items-center justify-between">
                     <span className="text-xs text-yellow-700">
                       결재 대기: 초안 {userDrafts.filter(t => t.status === 'draft').length}건
                       {userDrafts.some(t => t.status === 'rejected') && `, 반려 ${userDrafts.filter(t => t.status === 'rejected').length}건`}
@@ -1199,7 +1199,7 @@ export default function TaskTemplateManager() {
                               return next
                             })
                           }}
-                          className="w-3.5 h-3.5 rounded border-at-border text-blue-600 focus:ring-blue-500"
+                          className="w-3.5 h-3.5 rounded border-at-border text-at-accent focus:ring-at-accent"
                           title={`${periodLabel} 전체 선택`}
                         />
                         <div className={`w-2 h-2 rounded-full ${color.dot}`} />
@@ -1209,7 +1209,7 @@ export default function TaskTemplateManager() {
                     </div>
 
                     {/* 해당 시간대 업무 목록 */}
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-at-border">
                       {periodTemplates.map(template => {
                         const statusBadge = STATUS_BADGE[template.status]
 
@@ -1223,7 +1223,7 @@ export default function TaskTemplateManager() {
                               type="checkbox"
                               checked={selectedIds.has(template.id)}
                               onChange={() => toggleSelect(template.id)}
-                              className="w-4 h-4 rounded border-at-border text-blue-600 focus:ring-blue-500"
+                              className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent"
                             />
 
                             {/* 업무 내용 */}
@@ -1256,7 +1256,7 @@ export default function TaskTemplateManager() {
                               </button>
                               <button
                                 onClick={() => handleDelete(template.id)}
-                                className="p-1.5 rounded-xl hover:bg-red-50 transition-colors"
+                                className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                                 title="삭제"
                               >
                                 <Trash2 className="w-4 h-4 text-red-400" />
@@ -1296,7 +1296,7 @@ export default function TaskTemplateManager() {
                       const newLabels = { ...editingConfig.labels, [key]: e.target.value }
                       setEditingConfig(prev => ({ ...prev, labels: newLabels }))
                     }}
-                    className="flex-1 border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                     placeholder="시간대 이름"
                   />
                   {editingConfig.keys.length > 1 && (
@@ -1307,7 +1307,7 @@ export default function TaskTemplateManager() {
                         delete newLabels[key]
                         setEditingConfig({ keys: newKeys, labels: newLabels })
                       }}
-                      className="p-1.5 rounded-xl hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                       title="삭제"
                     >
                       <Trash2 className="w-4 h-4 text-red-400" />
@@ -1361,7 +1361,7 @@ export default function TaskTemplateManager() {
                     savePeriodConfig(config)
                     setShowPeriodSettings(false)
                   }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-xl hover:bg-blue-600 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent transition-colors"
                 >
                   저장
                 </button>
@@ -1376,7 +1376,7 @@ export default function TaskTemplateManager() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300">
             <div className="px-6 pt-6 pb-4 text-center">
-              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 bg-at-error-bg rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-7 h-7 text-red-500" />
               </div>
               <h3 className="text-lg font-bold text-at-text mb-2">
@@ -1390,7 +1390,7 @@ export default function TaskTemplateManager() {
                   </>
                 ) : (
                   <>
-                    선택한 <span className="font-semibold text-red-600">{deleteConfirm.count}개</span> 업무를
+                    선택한 <span className="font-semibold text-at-error">{deleteConfirm.count}개</span> 업무를
                     <br />삭제하시겠습니까?
                   </>
                 )}
@@ -1400,7 +1400,7 @@ export default function TaskTemplateManager() {
             <div className="px-6 pb-6 flex gap-3">
               <button
                 onClick={() => setDeleteConfirm({ show: false, type: 'single' })}
-                className="flex-1 px-4 py-3 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-slate-200 transition-colors"
+                className="flex-1 px-4 py-3 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
               >
                 취소
               </button>

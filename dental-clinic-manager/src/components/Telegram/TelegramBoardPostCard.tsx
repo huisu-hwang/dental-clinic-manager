@@ -59,7 +59,7 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
     <div
       onClick={alwaysShowCheckbox && !selectMode ? () => onClick(post) : handleClick}
       className={`flex items-center px-4 py-3 hover:bg-at-surface-hover cursor-pointer transition-colors border-b border-at-border last:border-b-0 border-l-2 ${
-        post.is_pinned ? 'border-l-red-400 bg-red-50/30' : 'border-l-transparent'
+        post.is_pinned ? 'border-l-red-400 bg-at-error-bg/30' : 'border-l-transparent'
       } ${showCheckbox && selected ? 'bg-at-accent-light' : ''} ${selectMode && !selectable ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       {/* 고정 또는 체크박스 */}

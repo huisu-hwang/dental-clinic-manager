@@ -264,7 +264,7 @@ export default function DentwebSyncSettings() {
               </div>
             </div>
 
-            <div className="bg-amber-50 rounded p-3 text-xs text-amber-700">
+            <div className="bg-at-warning-bg rounded p-3 text-xs text-amber-700">
               <strong>필요 사항:</strong> 덴트웹이 설치된 원내 서버 PC에서 실행해야 합니다.
             </div>
           </div>
@@ -282,7 +282,7 @@ export default function DentwebSyncSettings() {
             {status?.isActive ? (
               <>
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-green-700 font-medium">활성</span>
+                <span className="text-at-success font-medium">활성</span>
               </>
             ) : (
               <>
@@ -305,7 +305,7 @@ export default function DentwebSyncSettings() {
                   {formatDateTime(status.lastSyncAt)}
                 </p>
                 <p className={`text-xs ${
-                  status.lastSyncStatus === 'success' ? 'text-green-600' : 'text-red-600'
+                  status.lastSyncStatus === 'success' ? 'text-at-success' : 'text-at-error'
                 }`}>
                   {status.lastSyncStatus === 'success' ? '성공' : '오류'}
                   {status.lastSyncPatientCount > 0 && ` (${status.lastSyncPatientCount}명)`}
@@ -404,9 +404,9 @@ export default function DentwebSyncSettings() {
               >
                 <div className="flex items-center gap-3">
                   {log.status === 'success' ? (
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <CheckCircle className="w-4 h-4 text-at-success" />
                   ) : log.status === 'error' ? (
-                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <AlertCircle className="w-4 h-4 text-at-error" />
                   ) : (
                     <Loader2 className="w-4 h-4 text-at-text-weak animate-spin" />
                   )}

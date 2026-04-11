@@ -359,7 +359,7 @@ export default function TelegramBoardMemberPanel({
                 </div>
 
                 {inviteSent && (
-                  <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-xl mb-2">
+                  <div className="flex items-center gap-2 text-xs text-at-success bg-at-success-bg px-3 py-2 rounded-xl mb-2">
                     <Check className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="flex-1">{inviteSent}으로 초대 이메일을 발송했습니다</span>
                     <button onClick={() => setInviteSent(null)}>
@@ -494,7 +494,7 @@ export default function TelegramBoardMemberPanel({
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <span className={`px-1.5 py-0.5 rounded-lg text-[10px] ${
-                              member.joined_via === 'invite_link' ? 'bg-green-50 text-green-600' : 'bg-at-surface-alt text-at-text-weak'
+                              member.joined_via === 'invite_link' ? 'bg-at-success-bg text-at-success' : 'bg-at-surface-alt text-at-text-weak'
                             }`}>
                               {member.joined_via === 'invite_link' ? '초대링크' : '관리자'}
                             </span>

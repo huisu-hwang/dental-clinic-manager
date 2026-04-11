@@ -344,7 +344,7 @@ export default function InventoryManagement({
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleStartEditCategory(category)}
-                          className="flex items-center justify-center bg-slate-200 text-at-text-secondary p-2 rounded-xl hover:bg-slate-300 text-sm transition-colors"
+                          className="flex items-center justify-center bg-at-border text-at-text-secondary p-2 rounded-xl hover:bg-at-border text-sm transition-colors"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>

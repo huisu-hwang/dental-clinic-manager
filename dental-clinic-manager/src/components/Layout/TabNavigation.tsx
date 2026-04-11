@@ -1088,16 +1088,16 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                   className={`
                     group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
                     ${tab.isPremiumLocked
-                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      ? 'text-at-text-weak cursor-not-allowed opacity-50'
                       : isActive
                         ? 'bg-at-accent-light text-at-accent'
                         : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-at-text-weak' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                   <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-slate-300 flex-shrink-0" />}
+                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-at-text-weak flex-shrink-0" />}
                 </button>
               )
             })}
@@ -1114,16 +1114,16 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                   className={`
                     group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
                     ${tab.isPremiumLocked
-                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      ? 'text-at-text-weak cursor-not-allowed opacity-50'
                       : isActive
                         ? 'bg-at-accent-light text-at-accent'
                         : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-at-text-weak' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                   <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-slate-300 flex-shrink-0" />}
+                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-at-text-weak flex-shrink-0" />}
                 </button>
               )
             })}
@@ -1188,16 +1188,16 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                             className={`
                               group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
                               ${tab.isPremiumLocked
-                                ? 'text-slate-300 cursor-not-allowed opacity-50'
+                                ? 'text-at-text-weak cursor-not-allowed opacity-50'
                                 : isActive
                                   ? 'bg-at-accent-light text-at-accent'
                                   : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                               }
                             `}
                           >
-                            <Icon className={`w-4 h-4 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                            <Icon className={`w-4 h-4 flex-shrink-0 ${tab.isPremiumLocked ? 'text-at-text-weak' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                             <span className="truncate">{tab.label}</span>
-                            {tab.isPremiumLocked && <Lock className="w-3 h-3 ml-auto text-slate-300 flex-shrink-0" />}
+                            {tab.isPremiumLocked && <Lock className="w-3 h-3 ml-auto text-at-text-weak flex-shrink-0" />}
                           </button>
                         )
                       })}

@@ -139,7 +139,7 @@ export default function FinancialDashboard() {
 
   if (!clinicId) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center text-at-text-weak">
         병원 정보를 불러올 수 없습니다.
       </div>
     )
@@ -190,7 +190,7 @@ export default function FinancialDashboard() {
             onClick={() => setActiveTab('status')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'status'
-                ? 'bg-white text-blue-600 shadow-sm border border-at-border'
+                ? 'bg-white text-at-accent shadow-sm border border-at-border'
                 : 'text-at-text hover:text-at-text hover:bg-white/50'
             }`}
           >
@@ -201,7 +201,7 @@ export default function FinancialDashboard() {
             onClick={() => setActiveTab('settings')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
               activeTab === 'settings'
-                ? 'bg-white text-blue-600 shadow-sm border border-at-border'
+                ? 'bg-white text-at-accent shadow-sm border border-at-border'
                 : 'text-at-text hover:text-at-text hover:bg-white/50'
             }`}
           >
@@ -236,7 +236,7 @@ export default function FinancialDashboard() {
                   <span className="text-at-text">보험수입</span>
                   <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.insurance_revenue || 0)}</span>
                 </div>
-                <div className="h-8 w-px bg-slate-200"></div>
+                <div className="h-8 w-px bg-at-border"></div>
                 <div className="flex flex-col items-end">
                   <span className="text-at-text">비보험수입</span>
                   <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.non_insurance_revenue || 0)}</span>
@@ -331,7 +331,7 @@ export default function FinancialDashboard() {
                   <h2 className="text-lg font-bold text-at-text flex items-center gap-2">
                     <Receipt className="w-5 h-5 text-indigo-500" />
                     상세 지출 내역
-                    <span className="bg-slate-200 text-at-text text-xs px-2 py-0.5 rounded-full ml-2">
+                    <span className="bg-at-border text-at-text text-xs px-2 py-0.5 rounded-full ml-2">
                       {expenses.length}건
                     </span>
                   </h2>
@@ -366,7 +366,7 @@ export default function FinancialDashboard() {
                           <th className="px-6 py-4 border-b border-at-border text-center">작업</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-at-border">
                         {expenses.map(expense => (
                           <tr key={expense.id} className="hover:bg-at-surface-alt/80 transition-colors group">
                             <td className="px-6 py-4">
@@ -386,7 +386,7 @@ export default function FinancialDashboard() {
                             <td className="px-6 py-4">
                               <div className="flex justify-center gap-1.5">
                                 {expense.has_tax_invoice && (
-                                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600" title="세금계산서">
+                                  <div className="w-8 h-8 rounded-full bg-at-accent-light flex items-center justify-center text-at-accent" title="세금계산서">
                                     <Receipt className="w-4 h-4" />
                                   </div>
                                 )}
@@ -457,7 +457,7 @@ export default function FinancialDashboard() {
                     <Calculator className="w-32 h-32" />
                   </div>
                   <h2 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10">
-                    <Calculator className="w-5 h-5 text-blue-400" />
+                    <Calculator className="w-5 h-5 text-at-accent" />
                     예상 세금 정보
                   </h2>
                   <div className="space-y-4 relative z-10">
@@ -517,7 +517,7 @@ export default function FinancialDashboard() {
           {/* 이메일 자동 연동 */}
           <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
             <h2 className="text-lg font-bold text-at-text mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-blue-500" />
+              <Mail className="w-5 h-5 text-at-accent" />
               이메일 자동 연동
             </h2>
             <p className="text-sm text-at-text mb-6">

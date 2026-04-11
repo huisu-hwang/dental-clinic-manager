@@ -102,13 +102,13 @@ export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpda
                   key={featureId}
                   className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                     isEnabled
-                      ? 'border-blue-200 bg-at-accent-light/50'
+                      ? 'border-at-border bg-at-accent-light/50'
                       : 'border-at-border bg-at-surface-alt/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      isEnabled ? 'bg-at-tag text-at-accent' : 'bg-slate-200 text-at-text-weak'
+                      isEnabled ? 'bg-at-tag text-at-accent' : 'bg-at-border text-at-text-weak'
                     }`}>
                       <Icon className="w-5 h-5" />
                     </div>
@@ -127,7 +127,7 @@ export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpda
                     className={`
                       relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200
                       ${isSaving ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
-                      ${isEnabled ? 'bg-at-accent' : 'bg-slate-300'}
+                      ${isEnabled ? 'bg-at-accent' : 'bg-at-border'}
                     `}
                   >
                     <span

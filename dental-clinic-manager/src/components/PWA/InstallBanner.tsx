@@ -54,7 +54,7 @@ export default function InstallBanner() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg">
-      <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-white p-3 shadow-lg sm:p-4">
+      <div className="flex items-center gap-3 rounded-xl border border-at-border bg-white p-3 shadow-lg sm:p-4">
         {/* Icon */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600">
           <Download className="h-5 w-5 text-white" />

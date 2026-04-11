@@ -115,7 +115,7 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
       </div>
     )
   }
@@ -146,7 +146,7 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
       {pendingRequests.length === 0 ? (
         <div className="text-center py-12 border border-at-border rounded-xl">
           <Clock className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
-          <p className="text-slate-500">승인 대기 중인 연차 신청이 없습니다.</p>
+          <p className="text-at-text-weak">승인 대기 중인 연차 신청이 없습니다.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -166,14 +166,14 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
                     {/* 신청자 정보 */}
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="w-10 h-10 bg-at-tag rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-blue-600" />
+                        <User className="w-5 h-5 text-at-accent" />
                       </div>
                       <div>
-                        <p className="font-semibold text-slate-800">{request.users?.name}</p>
-                        <p className="text-xs text-slate-500">{getRoleLabel(request.users?.role)}</p>
+                        <p className="font-semibold text-at-text">{request.users?.name}</p>
+                        <p className="text-xs text-at-text-weak">{getRoleLabel(request.users?.role)}</p>
                       </div>
                       {request.emergency && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded-full">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-at-error-bg text-at-error rounded-full">
                           긴급
                         </span>
                       )}
@@ -214,16 +214,16 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
                               <span
                                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
                                   idx + 1 < request.current_step
-                                    ? 'bg-green-100 text-green-600'
+                                    ? 'bg-at-success-bg text-at-success'
                                     : idx + 1 === request.current_step
-                                    ? 'bg-yellow-100 text-yellow-600'
-                                    : 'bg-slate-100 text-slate-400'
+                                    ? 'bg-yellow-100 text-at-warning'
+                                    : 'bg-at-surface-alt text-at-text-weak'
                                 }`}
                               >
                                 {idx + 1}
                               </span>
                               {idx < steps.length - 1 && (
-                                <ChevronRight className="w-3 h-3 text-slate-300" />
+                                <ChevronRight className="w-3 h-3 text-at-text-weak" />
                               )}
                             </div>
                           ))}
@@ -233,14 +233,14 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
 
                     {/* 사유 */}
                     {request.reason && (
-                      <div className="mt-3 p-3 bg-slate-50 rounded-lg">
-                        <p className="text-xs text-slate-500 mb-1">신청 사유</p>
-                        <p className="text-sm text-slate-700">{request.reason}</p>
+                      <div className="mt-3 p-3 bg-at-surface-alt rounded-lg">
+                        <p className="text-xs text-at-text-weak mb-1">신청 사유</p>
+                        <p className="text-sm text-at-text-secondary">{request.reason}</p>
                       </div>
                     )}
 
                     {/* 신청일 */}
-                    <p className="mt-3 text-xs text-slate-400">
+                    <p className="mt-3 text-xs text-at-text-weak">
                       신청일: {new Date(request.submitted_at).toLocaleString('ko-KR')}
                     </p>
                   </div>
@@ -248,8 +248,8 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
 
                 {/* 반려 사유 입력 */}
                 {rejectingId === request.id && (
-                  <div className="mt-4 p-4 bg-red-50 rounded-lg">
-                    <label className="block text-sm font-medium text-red-700 mb-2">
+                  <div className="mt-4 p-4 bg-at-error-bg rounded-lg">
+                    <label className="block text-sm font-medium text-at-error mb-2">
                       반려 사유
                     </label>
                     <textarea
@@ -271,7 +271,7 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
                           setRejectingId(null)
                           setRejectReason('')
                         }}
-                        className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+                        className="px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-lg hover:bg-at-surface-alt"
                       >
                         취소
                       </button>
@@ -288,7 +288,7 @@ export default function LeaveApprovalList({ currentUser, onSuccess }: LeaveAppro
                       <button
                         onClick={() => setRejectingId(request.id)}
                         disabled={processingId === request.id}
-                        className="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-medium text-at-error bg-white border border-red-200 rounded-lg hover:bg-at-error-bg disabled:opacity-50"
                       >
                         <XCircle className="w-4 h-4 inline-block mr-1" />
                         반려

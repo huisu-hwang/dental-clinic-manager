@@ -51,9 +51,9 @@ const getFileIcon = (fileName?: string) => {
     case 'pdf':
       return <FileText className="w-4 h-4 text-red-500" />
     case 'excel':
-      return <FileSpreadsheet className="w-4 h-4 text-green-600" />
+      return <FileSpreadsheet className="w-4 h-4 text-at-success" />
     case 'word':
-      return <FileType className="w-4 h-4 text-blue-600" />
+      return <FileType className="w-4 h-4 text-at-accent" />
     default:
       return <FileText className="w-4 h-4 text-at-text-weak" />
   }

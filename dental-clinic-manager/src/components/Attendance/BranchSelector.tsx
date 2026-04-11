@@ -82,7 +82,7 @@ export default function BranchSelector({
               ${
                 selectedBranchId === null
                   ? 'bg-at-accent text-white shadow-at-card'
-                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-slate-200'
+                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-border'
               }
             `}
           >
@@ -100,7 +100,7 @@ export default function BranchSelector({
               ${
                 selectedBranchId === branch.id
                   ? 'bg-at-accent text-white shadow-at-card'
-                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-slate-200'
+                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-border'
               }
             `}
             title={branch.address || undefined}

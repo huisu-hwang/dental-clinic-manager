@@ -32,10 +32,10 @@ interface CompareDetail {
 }
 
 const PRIORITY_STYLES: Record<string, { label: string; color: string; icon: string }> = {
-  critical: { label: '심각', color: 'bg-red-100 text-red-700 border-red-200', icon: '🔴' },
+  critical: { label: '심각', color: 'bg-at-error-bg text-at-error border-red-200', icon: '🔴' },
   high: { label: '높음', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: '🟠' },
   medium: { label: '보통', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: '🟡' },
-  low: { label: '낮음', color: 'bg-green-100 text-green-700 border-green-200', icon: '🟢' },
+  low: { label: '낮음', color: 'bg-at-success-bg text-at-success border-green-200', icon: '🟢' },
 }
 
 export default function CompetitorCompare() {
@@ -127,10 +127,10 @@ export default function CompetitorCompare() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
+    if (score >= 80) return 'text-at-success'
+    if (score >= 60) return 'text-at-warning'
     if (score >= 40) return 'text-orange-600'
-    return 'text-red-600'
+    return 'text-at-error'
   }
 
   return (
@@ -140,24 +140,24 @@ export default function CompetitorCompare() {
         <h3 className="text-lg font-semibold">경쟁 블로그 비교</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">키워드</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">키워드</label>
             <input
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="검색 키워드"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-at-accent"
               disabled={loading}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">내 블로그 글 URL</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">내 블로그 글 URL</label>
             <input
               type="text"
               value={myPostUrl}
               onChange={(e) => setMyPostUrl(e.target.value)}
               placeholder="https://blog.naver.com/..."
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-at-accent"
               disabled={loading}
             />
           </div>
@@ -185,7 +185,7 @@ export default function CompetitorCompare() {
       <div className="bg-white rounded-lg border p-4">
         <h4 className="font-semibold mb-3">비교 히스토리</h4>
         {results.length === 0 ? (
-          <p className="text-gray-500 text-sm">아직 비교 결과가 없습니다.</p>
+          <p className="text-at-text-weak text-sm">아직 비교 결과가 없습니다.</p>
         ) : (
           <div className="space-y-2">
             {results.map((r) => (
@@ -193,19 +193,19 @@ export default function CompetitorCompare() {
                 key={r.id}
                 onClick={() => loadDetail(r.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                  selectedResult?.id === r.id ? 'border-indigo-500 bg-indigo-50' : 'hover:bg-gray-50'
+                  selectedResult?.id === r.id ? 'border-indigo-500 bg-indigo-50' : 'hover:bg-at-surface-alt'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium">{r.keyword}</span>
-                    <span className="text-xs text-gray-500 ml-2">{r.my_post_url}</span>
+                    <span className="text-xs text-at-text-weak ml-2">{r.my_post_url}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`text-lg font-bold ${getScoreColor(r.overall_score)}`}>
                       {r.overall_score}점
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-at-text-weak">
                       {new Date(r.created_at).toLocaleDateString('ko-KR')}
                     </span>
                   </div>
@@ -221,12 +221,12 @@ export default function CompetitorCompare() {
         <div className="space-y-4">
           {/* 종합 점수 */}
           <div className="bg-white rounded-lg border p-6 text-center">
-            <h4 className="text-sm text-gray-500 mb-2">종합 점수</h4>
+            <h4 className="text-sm text-at-text-weak mb-2">종합 점수</h4>
             <div className={`text-5xl font-bold ${getScoreColor(selectedResult.overall_score)}`}>
               {selectedResult.overall_score}
-              <span className="text-lg text-gray-400">/100</span>
+              <span className="text-lg text-at-text-weak">/100</span>
             </div>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-at-text-weak mt-2">
               {selectedResult.overall_score >= 80 ? '경쟁력이 높습니다!' :
                selectedResult.overall_score >= 60 ? '개선 여지가 있습니다.' :
                selectedResult.overall_score >= 40 ? '상당한 개선이 필요합니다.' :
@@ -268,7 +268,7 @@ export default function CompetitorCompare() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-500">
+              <div className="text-center py-4 text-at-text-weak">
                 <CheckCircleIcon className="w-8 h-8 mx-auto mb-2 text-green-500" />
                 <p>모든 항목이 경쟁 수준 이상입니다!</p>
               </div>

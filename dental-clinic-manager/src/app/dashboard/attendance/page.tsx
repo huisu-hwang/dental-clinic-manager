@@ -56,7 +56,7 @@ export default function AttendancePage() {
       </div>
 
       {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-      <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
+      <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt">
         <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           {subTabs.map((tab) => {
             const hasTabPermission =
@@ -76,8 +76,8 @@ export default function AttendancePage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    ? 'bg-white text-at-accent shadow-sm'
+                    : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
@@ -90,7 +90,7 @@ export default function AttendancePage() {
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
+      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
         <div key={activeTab} className="tab-content">
           {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
           {activeTab === 'history' && canViewHistory && <AttendanceHistory />}

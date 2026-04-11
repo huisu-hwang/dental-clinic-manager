@@ -345,7 +345,7 @@ export default function ClinicsManagement() {
   const getTierBadge = (tier: string) => {
     const badges = {
       basic: 'bg-at-surface-alt text-at-text',
-      professional: 'bg-at-tag text-blue-800',
+      professional: 'bg-at-tag text-at-accent',
       enterprise: 'bg-purple-100 text-purple-800'
     }
     const labels = {
@@ -546,7 +546,7 @@ export default function ClinicsManagement() {
                           setSelectedClinic(clinic)
                           setShowDetails(true)
                         }}
-                        className="text-at-accent hover:text-blue-900 text-sm font-medium"
+                        className="text-at-accent hover:text-at-accent text-sm font-medium"
                       >
                         상세보기
                       </button>
@@ -672,7 +672,7 @@ export default function ClinicsManagement() {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowDetails(false)}
-                className="bg-slate-200 text-at-text px-4 py-2 rounded-md hover:bg-slate-300"
+                className="bg-at-border text-at-text px-4 py-2 rounded-md hover:bg-at-border"
               >
                 닫기
               </button>

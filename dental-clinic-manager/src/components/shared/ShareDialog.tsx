@@ -179,7 +179,7 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
                 />
                 <Globe className={`w-5 h-5 ${accessLevel === 'public' ? 'text-at-accent' : 'text-at-text-weak'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${accessLevel === 'public' ? 'text-blue-900' : 'text-at-text-secondary'}`}>
+                  <p className={`text-sm font-medium ${accessLevel === 'public' ? 'text-at-accent' : 'text-at-text-secondary'}`}>
                     링크를 가진 모든 사람
                   </p>
                   <p className="text-xs text-at-text-weak">로그인 없이 누구나 볼 수 있습니다</p>
@@ -203,7 +203,7 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
                 />
                 <Lock className={`w-5 h-5 ${accessLevel === 'authenticated' ? 'text-at-accent' : 'text-at-text-weak'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${accessLevel === 'authenticated' ? 'text-blue-900' : 'text-at-text-secondary'}`}>
+                  <p className={`text-sm font-medium ${accessLevel === 'authenticated' ? 'text-at-accent' : 'text-at-text-secondary'}`}>
                     서비스 가입자만
                   </p>
                   <p className="text-xs text-at-text-weak">로그인한 사용자만 볼 수 있습니다</p>

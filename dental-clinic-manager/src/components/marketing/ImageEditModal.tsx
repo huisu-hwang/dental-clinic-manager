@@ -180,7 +180,7 @@ export default function ImageEditModal({
               onChange={(e) => setEditedPrompt(e.target.value)}
               rows={3}
               placeholder="생성할 이미지를 설명해주세요..."
-              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-indigo-500 resize-none"
+              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
             />
           </div>
 
@@ -213,7 +213,7 @@ export default function ImageEditModal({
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-600">
+            <div className="bg-at-error-bg border border-red-200 rounded-xl px-3 py-2 text-sm text-at-error">
               {error}
             </div>
           )}
@@ -223,7 +223,7 @@ export default function ImageEditModal({
             <button
               onClick={handleRegenerate}
               disabled={isRegenerating || !editedPrompt.trim()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {isRegenerating ? (
                 <>

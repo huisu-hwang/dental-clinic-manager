@@ -447,7 +447,7 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
         >
           H3
         </ToolButton>
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-5 bg-at-border mx-1" />
         <ToolButton
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -462,7 +462,7 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
         >
           <em>I</em>
         </ToolButton>
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-5 bg-at-border mx-1" />
         <ToolButton
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -477,7 +477,7 @@ export default function ContentEditor({ body, images, onChange, onImageEdit }: C
         >
           1.
         </ToolButton>
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-5 bg-at-border mx-1" />
         <ToolButton
           active={false}
           onClick={() => editor.chain().focus().setHorizontalRule().run()}

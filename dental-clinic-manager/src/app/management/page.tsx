@@ -290,7 +290,7 @@ export default function ManagementPage() {
               {visitedTabs.has('analytics') && (
                 <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
                   <div className="text-center py-12">
-                    <BarChart3 className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <BarChart3 className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
                     <p className="text-at-text-secondary">통계 분석 기능은 곧 제공될 예정입니다.</p>
                   </div>
                 </div>

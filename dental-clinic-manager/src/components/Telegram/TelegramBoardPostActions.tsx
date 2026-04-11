@@ -49,7 +49,7 @@ export default function TelegramBoardPostActions({
         size="sm"
         onClick={handleScrap}
         disabled={scraping}
-        className={isScraped ? 'text-yellow-600 border-at-border bg-yellow-50' : ''}
+        className={isScraped ? 'text-at-warning border-at-border bg-at-warning-bg' : ''}
       >
         <Bookmark className={`w-4 h-4 mr-1.5 ${isScraped ? 'fill-yellow-500' : ''}`} />
         스크랩 {scrapCount > 0 && scrapCount}

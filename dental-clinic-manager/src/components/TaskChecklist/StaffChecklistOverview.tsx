@@ -103,7 +103,7 @@ export default function StaffChecklistOverview() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
       </div>
     )
   }
@@ -115,19 +115,19 @@ export default function StaffChecklistOverview() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-at-tag rounded-xl flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
+              <BarChart3 className="w-5 h-5 text-at-accent" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-at-text">직원 업무 현황</h2>
-              <p className="text-sm text-slate-500">전체 직원의 업무 체크리스트 완료 현황</p>
+              <p className="text-sm text-at-text-weak">전체 직원의 업무 체크리스트 완료 현황</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => changeDate(-1)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-at-surface-alt transition-colors"
             >
-              <ChevronLeft className="w-5 h-5 text-slate-500" />
+              <ChevronLeft className="w-5 h-5 text-at-text-weak" />
             </button>
             <input
               type="date"
@@ -137,9 +137,9 @@ export default function StaffChecklistOverview() {
             />
             <button
               onClick={() => changeDate(1)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-at-surface-alt transition-colors"
             >
-              <ChevronRight className="w-5 h-5 text-slate-500" />
+              <ChevronRight className="w-5 h-5 text-at-text-weak" />
             </button>
             {!isToday && (
               <button
@@ -156,10 +156,10 @@ export default function StaffChecklistOverview() {
       {/* 직원 없음 */}
       {staffData.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-8 text-center">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="w-8 h-8 text-slate-400" />
+          <div className="w-16 h-16 bg-at-surface-alt rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8 text-at-text-weak" />
           </div>
-          <p className="text-slate-500 text-sm">업무가 배정된 직원이 없습니다.</p>
+          <p className="text-at-text-weak text-sm">업무가 배정된 직원이 없습니다.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -181,27 +181,27 @@ export default function StaffChecklistOverview() {
               >
                 <div className="flex items-center space-x-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    s.rate === 100 ? 'bg-green-100' : s.rate >= 50 ? 'bg-blue-100' : 'bg-slate-100'
+                    s.rate === 100 ? 'bg-at-success-bg' : s.rate >= 50 ? 'bg-at-tag' : 'bg-at-surface-alt'
                   }`}>
                     <span className={`text-sm font-bold ${
-                      s.rate === 100 ? 'text-green-600' : s.rate >= 50 ? 'text-blue-600' : 'text-slate-500'
+                      s.rate === 100 ? 'text-at-success' : s.rate >= 50 ? 'text-at-accent' : 'text-at-text-weak'
                     }`}>
                       {s.name.charAt(0)}
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-slate-800">{s.name}</p>
-                    <p className="text-xs text-slate-500">{getRoleName(s.role)}</p>
+                    <p className="font-medium text-at-text">{s.name}</p>
+                    <p className="text-xs text-at-text-weak">{getRoleName(s.role)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
                     <p className={`text-lg font-bold ${
-                      s.rate === 100 ? 'text-green-600' : s.rate >= 50 ? 'text-blue-600' : 'text-slate-500'
+                      s.rate === 100 ? 'text-at-success' : s.rate >= 50 ? 'text-at-accent' : 'text-at-text-weak'
                     }`}>
                       {s.rate}%
                     </p>
-                    <p className="text-xs text-slate-400">{s.completed}/{s.total}</p>
+                    <p className="text-xs text-at-text-weak">{s.completed}/{s.total}</p>
                   </div>
                   <ChevronDown className={`w-4 h-4 text-at-text-weak transition-transform duration-200 ${
                     expandedStaffId === s.id ? 'rotate-180' : ''
@@ -214,7 +214,7 @@ export default function StaffChecklistOverview() {
                 <div className="w-full bg-at-surface-alt rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all duration-500 ${
-                      s.rate === 100 ? 'bg-green-500' : 'bg-blue-500'
+                      s.rate === 100 ? 'bg-green-500' : 'bg-at-accent'
                     }`}
                     style={{ width: `${s.rate}%` }}
                   />
@@ -225,15 +225,15 @@ export default function StaffChecklistOverview() {
               <div className="px-4 py-2 pb-3 flex space-x-3">
                 {s.byPeriod.filter(p => p.total > 0).map(p => (
                   <div key={p.period} className="flex-1 text-center">
-                    <p className="text-xs text-slate-400 mb-1">{periodCfg.labels[p.period] || p.period}</p>
+                    <p className="text-xs text-at-text-weak mb-1">{periodCfg.labels[p.period] || p.period}</p>
                     <div className="flex items-center justify-center space-x-1">
                       {p.completed === p.total ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                       ) : (
-                        <Circle className="w-3.5 h-3.5 text-slate-300" />
+                        <Circle className="w-3.5 h-3.5 text-at-text-weak" />
                       )}
                       <span className={`text-xs font-medium ${
-                        p.completed === p.total ? 'text-green-600' : 'text-slate-500'
+                        p.completed === p.total ? 'text-at-success' : 'text-at-text-weak'
                       }`}>
                         {p.completed}/{p.total}
                       </span>
@@ -260,22 +260,22 @@ export default function StaffChecklistOverview() {
                             <div
                               key={task.id}
                               className={`flex items-start gap-2.5 px-3 py-2 rounded-lg ${
-                                task.isCompleted ? 'bg-green-50/80' : 'bg-white'
+                                task.isCompleted ? 'bg-at-success-bg/80' : 'bg-white'
                               }`}
                             >
                               {task.isCompleted ? (
                                 <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                               ) : (
-                                <Circle className="w-4 h-4 text-slate-300 mt-0.5 flex-shrink-0" />
+                                <Circle className="w-4 h-4 text-at-text-weak mt-0.5 flex-shrink-0" />
                               )}
                               <div className="flex-1 min-w-0">
                                 <p className={`text-sm ${
-                                  task.isCompleted ? 'text-green-700' : 'text-slate-600'
+                                  task.isCompleted ? 'text-at-success' : 'text-at-text-secondary'
                                 }`}>
                                   {task.title}
                                 </p>
                                 {task.description && (
-                                  <p className="text-xs text-slate-400 mt-0.5">{task.description}</p>
+                                  <p className="text-xs text-at-text-weak mt-0.5">{task.description}</p>
                                 )}
                                 {(task.checkedAt || task.notes) && (
                                   <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -289,7 +289,7 @@ export default function StaffChecklistOverview() {
                                       </span>
                                     )}
                                     {task.notes && (
-                                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                                      <span className="text-xs text-at-text-weak flex items-center gap-1">
                                         <FileText className="w-3 h-3" />
                                         {task.notes}
                                       </span>

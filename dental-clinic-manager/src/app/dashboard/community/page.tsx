@@ -99,8 +99,8 @@ export default function CommunityPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
+          <div className="w-16 h-16 border-4 border-at-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-at-text-secondary">로딩 중...</p>
         </div>
       </div>
     )
@@ -143,7 +143,7 @@ export default function CommunityPage() {
           </div>
 
           {/* 콘텐츠 영역 */}
-          <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-3 sm:p-6">
+          <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
             {/* 차단 알림 */}
             {isBanned && profile && <BanNotice profile={profile} />}
 

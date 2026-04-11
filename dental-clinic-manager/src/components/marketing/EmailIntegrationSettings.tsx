@@ -208,7 +208,7 @@ export default function EmailIntegrationSettings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <ArrowPathIcon className="h-5 w-5 text-slate-400 animate-spin" />
+        <ArrowPathIcon className="h-5 w-5 text-at-text-weak animate-spin" />
       </div>
     )
   }
@@ -217,14 +217,14 @@ export default function EmailIntegrationSettings() {
     <div className="space-y-6">
       {/* Section Header */}
       <div className="flex items-center gap-2">
-        <span className="text-base font-semibold text-slate-800">이메일 자동 모니터링</span>
+        <span className="text-base font-semibold text-at-text">이메일 자동 모니터링</span>
       </div>
 
       {/* Provider Selection & Connection */}
-      <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-4">
+      <div className="bg-at-surface-alt rounded-xl border border-at-border p-5 space-y-4">
         {/* Provider radio */}
         <div>
-          <p className="text-sm font-medium text-slate-700 mb-2">이메일 서비스</p>
+          <p className="text-sm font-medium text-at-text-secondary mb-2">이메일 서비스</p>
           <div className="flex gap-4">
             {(['gmail', 'naver'] as EmailProvider[]).map((p) => (
               <label key={p} className="flex items-center gap-2 cursor-pointer">
@@ -234,9 +234,9 @@ export default function EmailIntegrationSettings() {
                   value={p}
                   checked={selectedProvider === p}
                   onChange={() => setSelectedProvider(p)}
-                  className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                  className="w-4 h-4 text-at-accent border-at-border focus:ring-at-accent"
                 />
-                <span className="text-sm text-slate-700">
+                <span className="text-sm text-at-text-secondary">
                   {p === 'gmail' ? 'Gmail' : '네이버 메일'}
                 </span>
               </label>
@@ -247,21 +247,21 @@ export default function EmailIntegrationSettings() {
         {/* Connection status / form */}
         {isConnected && settings.provider === selectedProvider ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-at-success bg-at-success-bg rounded-lg px-3 py-2">
               <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
               <span>연결됨 — {settings.emailAddress}</span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleDisconnect}
-                className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-white transition-colors"
+                className="px-3 py-1.5 text-sm border border-at-border rounded-lg text-at-text-secondary hover:bg-white transition-colors"
               >
                 연동 해제
               </button>
               {selectedProvider === 'gmail' && (
                 <button
                   onClick={handleGmailConnect}
-                  className="px-3 py-1.5 text-sm border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                  className="px-3 py-1.5 text-sm border border-blue-300 text-at-accent rounded-lg hover:bg-at-accent-light transition-colors"
                 >
                   다시 연동
                 </button>
@@ -271,22 +271,22 @@ export default function EmailIntegrationSettings() {
         ) : selectedProvider === 'gmail' ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">병원 Gmail 주소</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">병원 Gmail 주소</label>
               <input
                 type="email"
                 value={gmailEmail}
                 onChange={(e) => setGmailEmail(e.target.value)}
                 placeholder="clinic@gmail.com"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-at-text-weak mt-1">
                 Google 로그인 화면에서 자동 선택됩니다.
               </p>
             </div>
             <button
               onClick={handleGmailConnect}
               disabled={isConnecting}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm bg-at-accent text-white rounded-lg hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
             >
               {isConnecting ? '연결 중...' : 'Gmail 연동하기'}
             </button>
@@ -294,30 +294,30 @@ export default function EmailIntegrationSettings() {
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">이메일</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">이메일</label>
               <input
                 type="email"
                 value={naverEmail}
                 onChange={(e) => setNaverEmail(e.target.value)}
                 placeholder="example@naver.com"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">앱 비밀번호</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">앱 비밀번호</label>
               <input
                 type="password"
                 value={naverPassword}
                 onChange={(e) => setNaverPassword(e.target.value)}
                 placeholder="네이버 앱 비밀번호 16자리"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               />
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleNaverConnect}
                 disabled={isConnecting}
-                className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
               >
                 {isConnecting ? '저장 중...' : '저장'}
               </button>
@@ -329,8 +329,8 @@ export default function EmailIntegrationSettings() {
       {/* Sender email lists */}
       <div className="space-y-5">
         {/* Lab emails */}
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-3">
-          <p className="text-sm font-medium text-slate-700">기공소 이메일</p>
+        <div className="bg-at-surface-alt rounded-xl border border-at-border p-5 space-y-3">
+          <p className="text-sm font-medium text-at-text-secondary">기공소 이메일</p>
           <div className="flex gap-2">
             <input
               type="email"
@@ -338,11 +338,11 @@ export default function EmailIntegrationSettings() {
               onChange={(e) => setNewLabEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addLabEmail()}
               placeholder="lab@example.com"
-              className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             />
             <button
               onClick={addLabEmail}
-              className="px-3 py-2 text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors flex items-center gap-1"
+              className="px-3 py-2 text-sm bg-at-border hover:bg-at-border text-at-text-secondary rounded-lg transition-colors flex items-center gap-1"
             >
               <PlusIcon className="h-4 w-4" />
               추가
@@ -351,11 +351,11 @@ export default function EmailIntegrationSettings() {
           {labEmails.length > 0 && (
             <ul className="space-y-1">
               {labEmails.map((email) => (
-                <li key={email} className="flex items-center justify-between text-sm text-slate-600 bg-white rounded-lg px-3 py-2 border border-slate-100">
+                <li key={email} className="flex items-center justify-between text-sm text-at-text-secondary bg-white rounded-lg px-3 py-2 border border-at-border">
                   <span>{email}</span>
                   <button
                     onClick={() => setLabEmails(labEmails.filter((e) => e !== email))}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
+                    className="text-at-text-weak hover:text-red-500 transition-colors"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -366,8 +366,8 @@ export default function EmailIntegrationSettings() {
         </div>
 
         {/* Tax office emails */}
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-3">
-          <p className="text-sm font-medium text-slate-700">세무사무소 이메일</p>
+        <div className="bg-at-surface-alt rounded-xl border border-at-border p-5 space-y-3">
+          <p className="text-sm font-medium text-at-text-secondary">세무사무소 이메일</p>
           <div className="flex gap-2">
             <input
               type="email"
@@ -375,11 +375,11 @@ export default function EmailIntegrationSettings() {
               onChange={(e) => setNewTaxEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addTaxEmail()}
               placeholder="tax@example.com"
-              className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             />
             <button
               onClick={addTaxEmail}
-              className="px-3 py-2 text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors flex items-center gap-1"
+              className="px-3 py-2 text-sm bg-at-border hover:bg-at-border text-at-text-secondary rounded-lg transition-colors flex items-center gap-1"
             >
               <PlusIcon className="h-4 w-4" />
               추가
@@ -388,11 +388,11 @@ export default function EmailIntegrationSettings() {
           {taxEmails.length > 0 && (
             <ul className="space-y-1">
               {taxEmails.map((email) => (
-                <li key={email} className="flex items-center justify-between text-sm text-slate-600 bg-white rounded-lg px-3 py-2 border border-slate-100">
+                <li key={email} className="flex items-center justify-between text-sm text-at-text-secondary bg-white rounded-lg px-3 py-2 border border-at-border">
                   <span>{email}</span>
                   <button
                     onClick={() => setTaxEmails(taxEmails.filter((e) => e !== email))}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
+                    className="text-at-text-weak hover:text-red-500 transition-colors"
                   >
                     <TrashIcon className="h-4 w-4" />
                   </button>
@@ -404,12 +404,12 @@ export default function EmailIntegrationSettings() {
       </div>
 
       {/* Monitoring toggle */}
-      <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-2">
+      <div className="bg-at-surface-alt rounded-xl border border-at-border p-5 space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-700">이메일 자동 모니터링 활성화</p>
+            <p className="text-sm font-medium text-at-text-secondary">이메일 자동 모니터링 활성화</p>
             {settings.lastCheckedAt && (
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-at-text-weak mt-0.5">
                 마지막 확인:{' '}
                 {new Date(settings.lastCheckedAt).toLocaleString('ko-KR', {
                   year: 'numeric',
@@ -423,7 +423,7 @@ export default function EmailIntegrationSettings() {
           </div>
           <button
             onClick={() => setMonitoringActive(!monitoringActive)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${monitoringActive ? 'bg-blue-600' : 'bg-slate-300'}`}
+            className={`relative w-11 h-6 rounded-full transition-colors ${monitoringActive ? 'bg-at-accent' : 'bg-at-border'}`}
           >
             <span
               className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${monitoringActive ? 'translate-x-5' : ''}`}
@@ -436,7 +436,7 @@ export default function EmailIntegrationSettings() {
       {message && (
         <div
           className={`flex items-center gap-2 text-sm p-3 rounded-lg ${
-            message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            message.type === 'success' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
           }`}
         >
           {message.type === 'success' ? (
@@ -453,7 +453,7 @@ export default function EmailIntegrationSettings() {
         <button
           onClick={handleSaveSettings}
           disabled={isSaving}
-          className="px-5 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+          className="px-5 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
         >
           {isSaving ? '저장 중...' : '설정 저장'}
         </button>

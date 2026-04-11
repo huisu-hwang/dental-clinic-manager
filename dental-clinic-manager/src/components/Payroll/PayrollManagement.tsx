@@ -88,7 +88,7 @@ export default function PayrollManagement() {
           purpose="payroll"
         />
         {!showPasswordModal && (
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
         )}
       </div>
     )
@@ -132,7 +132,7 @@ export default function PayrollManagement() {
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
                   activeSubTab === tab.id
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-white text-at-accent shadow-sm'
                     : 'text-at-text hover:text-at-text hover:bg-white/50'
                 }`}
               >
@@ -165,9 +165,9 @@ export default function PayrollManagement() {
       </div>
 
       {/* 안내 사항 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
-        <h4 className="font-medium text-blue-800 mb-2">급여 명세서 안내</h4>
-        <ul className="list-disc list-inside text-blue-700 space-y-1">
+      <div className="bg-at-accent-light border border-at-border rounded-xl p-4 text-sm">
+        <h4 className="font-medium text-at-accent mb-2">급여 명세서 안내</h4>
+        <ul className="list-disc list-inside text-at-accent space-y-1">
           {isOwner ? (
             <>
               <li><strong>급여 설정</strong> 탭에서 직원별 급여 기본 정보를 설정하세요.</li>

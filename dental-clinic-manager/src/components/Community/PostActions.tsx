@@ -50,7 +50,7 @@ export default function PostActions({
         size="sm"
         onClick={handleBookmark}
         disabled={bookmarking}
-        className={isBookmarked ? 'text-yellow-600 border-at-border bg-yellow-50' : ''}
+        className={isBookmarked ? 'text-at-warning border-at-border bg-at-warning-bg' : ''}
       >
         <Bookmark className={`w-4 h-4 mr-1.5 ${isBookmarked ? 'fill-yellow-500' : ''}`} />
         스크랩 {bookmarkCount > 0 && bookmarkCount}

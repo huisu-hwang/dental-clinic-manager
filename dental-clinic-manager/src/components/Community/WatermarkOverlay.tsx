@@ -26,7 +26,7 @@ export default function WatermarkOverlay({ nickname }: WatermarkOverlayProps) {
         {Array.from({ length: 20 }).map((_, i) => (
           <span
             key={i}
-            className="text-[11px] text-gray-300/40 whitespace-nowrap select-none font-mono"
+            className="text-[11px] text-at-text-weak/40 whitespace-nowrap select-none font-mono"
           >
             {nickname}
           </span>

@@ -262,7 +262,7 @@ export default function LogsSection({
             {/* 환자명 검색 */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-at-text-weak" />
                 <input
                   type="text"
                   placeholder="환자명 검색..."
@@ -281,7 +281,7 @@ export default function LogsSection({
                 )}
               </div>
               {consultSearch && (
-                <span className="text-xs sm:text-sm text-slate-500">
+                <span className="text-xs sm:text-sm text-at-text-weak">
                   {filteredConsultLogs.length}건 검색됨
                 </span>
               )}
@@ -324,8 +324,8 @@ export default function LogsSection({
                               disabled={updatingId !== null}
                               className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 text-xs font-medium rounded transition-colors
                                 ${updatingId === log.id
-                                  ? 'bg-gray-100 text-gray-400 cursor-wait'
-                                  : 'bg-at-accent-light text-at-accent hover:bg-blue-100 border border-blue-200'
+                                  ? 'bg-at-surface-alt text-at-text-weak cursor-wait'
+                                  : 'bg-at-accent-light text-at-accent hover:bg-at-tag border border-at-border'
                                 }`}
                               title="진행으로 변경"
                             >
@@ -342,12 +342,12 @@ export default function LogsSection({
                               )}
                             </button>
                           ) : recentlyUpdatedIds.has(log.id!) ? (
-                            <span className="inline-flex items-center gap-1 text-green-600 text-xs">
+                            <span className="inline-flex items-center gap-1 text-at-success text-xs">
                               <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               <span className="hidden sm:inline">변경완료</span>
                             </span>
                           ) : (
-                            <span className="text-gray-400 text-xs">-</span>
+                            <span className="text-at-text-weak text-xs">-</span>
                           )}
                         </td>
                       )}
@@ -408,7 +408,7 @@ export default function LogsSection({
             {/* 환자명/비고 검색 */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-at-text-weak" />
                 <input
                   type="text"
                   placeholder="환자명/비고 검색..."
@@ -427,7 +427,7 @@ export default function LogsSection({
                 )}
               </div>
               {giftSearch && (
-                <span className="text-xs sm:text-sm text-slate-500">
+                <span className="text-xs sm:text-sm text-at-text-weak">
                   {filteredGiftLogs.length}건 검색됨
                 </span>
               )}
@@ -487,7 +487,7 @@ export default function LogsSection({
                       <td className="p-2 sm:p-3">{log.name}</td>
                       <td className="p-2 sm:p-3">{log.reason}</td>
                       <td className="p-2 sm:p-3 font-mono text-center">
-                        <span className={log.change > 0 ? 'text-green-600' : 'text-red-600'}>
+                        <span className={log.change > 0 ? 'text-at-success' : 'text-at-error'}>
                           {log.change > 0 ? `+${log.change}` : log.change}
                         </span>
                       </td>
@@ -510,7 +510,7 @@ export default function LogsSection({
                   <tr>
                     <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
                     <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap bg-orange-50">전일 이월액</th>
-                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap bg-blue-50">금일 잔액</th>
+                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap bg-at-accent-light">금일 잔액</th>
                     <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap">차액</th>
                     <th className="p-2 sm:p-3 font-medium">비고</th>
                   </tr>
@@ -524,12 +524,12 @@ export default function LogsSection({
                         <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap bg-orange-50/50">
                           {new Intl.NumberFormat('ko-KR').format(log.previous_balance || 0)}원
                         </td>
-                        <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap bg-blue-50/50">
+                        <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap bg-at-accent-light/50">
                           {new Intl.NumberFormat('ko-KR').format(log.current_balance || 0)}원
                         </td>
                         <td className={`p-2 sm:p-3 text-right font-mono whitespace-nowrap ${
-                          difference > 0 ? 'text-green-600' :
-                          difference < 0 ? 'text-red-600' : 'text-slate-600'
+                          difference > 0 ? 'text-at-success' :
+                          difference < 0 ? 'text-at-error' : 'text-at-text-secondary'
                         }`}>
                           {difference > 0 ? '+' : ''}{new Intl.NumberFormat('ko-KR').format(difference)}원
                         </td>
@@ -541,7 +541,7 @@ export default function LogsSection({
                   })}
                   {cashRegisterLogs.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-4 text-center text-slate-500">
+                      <td colSpan={5} className="p-4 text-center text-at-text-weak">
                         현금 출납 기록이 없습니다.
                       </td>
                     </tr>

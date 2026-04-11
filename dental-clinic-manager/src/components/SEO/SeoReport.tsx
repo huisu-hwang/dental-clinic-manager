@@ -130,37 +130,37 @@ export default function SeoReport() {
         <h3 className="text-lg font-semibold">종합 보고서 생성</h3>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">보고서 제목 (선택)</label>
+          <label className="block text-sm font-medium text-at-text-secondary mb-1">보고서 제목 (선택)</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="예: 3월 치과 키워드 SEO 분석 보고서"
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-at-accent"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">포함할 분석 결과 선택</label>
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">포함할 분석 결과 선택</label>
           {analyses.length === 0 ? (
-            <p className="text-gray-500 text-sm">완료된 분석 결과가 없습니다. 먼저 키워드 분석을 실행하세요.</p>
+            <p className="text-at-text-weak text-sm">완료된 분석 결과가 없습니다. 먼저 키워드 분석을 실행하세요.</p>
           ) : (
             <div className="space-y-1 max-h-60 overflow-y-auto border rounded-lg p-2">
               {analyses.map((a) => (
                 <label
                   key={a.id}
                   className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer transition-colors ${
-                    selectedIds.has(a.id) ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                    selectedIds.has(a.id) ? 'bg-at-accent-light border border-at-border' : 'hover:bg-at-surface-alt'
                   }`}
                 >
                   <input
                     type="checkbox"
                     checked={selectedIds.has(a.id)}
                     onChange={() => toggleSelect(a.id)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-at-border text-at-accent focus:ring-at-accent"
                   />
                   <span className="font-medium">{a.keyword}</span>
-                  <span className="text-xs text-gray-500 ml-auto">
+                  <span className="text-xs text-at-text-weak ml-auto">
                     {new Date(a.created_at).toLocaleDateString('ko-KR')}
                   </span>
                 </label>
@@ -186,7 +186,7 @@ export default function SeoReport() {
       <div className="bg-white rounded-lg border p-4">
         <h4 className="font-semibold mb-3">보고서 히스토리</h4>
         {reports.length === 0 ? (
-          <p className="text-gray-500 text-sm">아직 보고서가 없습니다.</p>
+          <p className="text-at-text-weak text-sm">아직 보고서가 없습니다.</p>
         ) : (
           <div className="space-y-2">
             {reports.map((r) => (
@@ -194,15 +194,15 @@ export default function SeoReport() {
                 key={r.id}
                 onClick={() => loadReport(r.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                  selectedReport?.id === r.id ? 'border-purple-500 bg-purple-50' : 'hover:bg-gray-50'
+                  selectedReport?.id === r.id ? 'border-purple-500 bg-purple-50' : 'hover:bg-at-surface-alt'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <DocumentArrowDownIcon className="w-4 h-4 text-gray-400" />
+                    <DocumentArrowDownIcon className="w-4 h-4 text-at-text-weak" />
                     <span className="font-medium">{r.title}</span>
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-at-text-weak">
                     {r.total_keywords}개 키워드 · {r.total_posts}개 글 · {new Date(r.created_at).toLocaleDateString('ko-KR')}
                   </div>
                 </div>
@@ -217,7 +217,7 @@ export default function SeoReport() {
         <div className="bg-white rounded-lg border p-6 space-y-6">
           <div className="border-b pb-4">
             <h3 className="text-xl font-bold">{selectedReport.title}</h3>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-at-text-weak mt-1">
               생성일: {new Date(selectedReport.generated_at).toLocaleString('ko-KR')} ·
               {selectedReport.total_keywords}개 키워드 · {selectedReport.total_posts}개 글 분석
             </p>
@@ -226,11 +226,11 @@ export default function SeoReport() {
           {/* 개요 */}
           <div>
             <h4 className="font-semibold text-lg mb-2">개요</h4>
-            <p className="text-gray-700">{selectedReport.report_content.overview}</p>
+            <p className="text-at-text-secondary">{selectedReport.report_content.overview}</p>
             {selectedReport.report_content.keywords && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {selectedReport.report_content.keywords.map((kw, i) => (
-                  <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
+                  <span key={i} className="px-2 py-0.5 bg-at-surface-alt text-at-text-secondary rounded-full text-xs">
                     {kw}
                   </span>
                 ))}
@@ -244,8 +244,8 @@ export default function SeoReport() {
               <h4 className="font-semibold text-lg mb-2">상위 노출 공통 패턴</h4>
               <ul className="space-y-1">
                 {selectedReport.report_content.commonPatterns.map((p, i) => (
-                  <li key={i} className="flex items-start gap-2 text-gray-700">
-                    <span className="text-blue-500 mt-0.5">•</span>
+                  <li key={i} className="flex items-start gap-2 text-at-text-secondary">
+                    <span className="text-at-accent mt-0.5">•</span>
                     {p}
                   </li>
                 ))}
@@ -258,7 +258,7 @@ export default function SeoReport() {
             <div>
               <h4 className="font-semibold text-lg mb-2">정량 지표 분석</h4>
               <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-lg">
+                <pre className="whitespace-pre-wrap text-sm bg-at-surface-alt p-4 rounded-lg">
                   {selectedReport.report_content.quantitativeInsights}
                 </pre>
               </div>
@@ -270,7 +270,7 @@ export default function SeoReport() {
             <div>
               <h4 className="font-semibold text-lg mb-2">정성 지표 분석</h4>
               <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-lg">
+                <pre className="whitespace-pre-wrap text-sm bg-at-surface-alt p-4 rounded-lg">
                   {selectedReport.report_content.qualitativeInsights}
                 </pre>
               </div>
@@ -279,12 +279,12 @@ export default function SeoReport() {
 
           {/* 권장 사항 */}
           {selectedReport.report_content.recommendations && selectedReport.report_content.recommendations.length > 0 && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="bg-at-success-bg border border-green-200 rounded-lg p-4">
               <h4 className="font-semibold text-lg mb-2 text-green-800">권장 사항</h4>
               <ol className="space-y-2">
                 {selectedReport.report_content.recommendations.map((r, i) => (
                   <li key={i} className="flex items-start gap-2 text-green-800">
-                    <span className="font-bold text-green-600 min-w-[20px]">{i + 1}.</span>
+                    <span className="font-bold text-at-success min-w-[20px]">{i + 1}.</span>
                     {r}
                   </li>
                 ))}

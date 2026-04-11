@@ -8,8 +8,8 @@ import { loadPeriodConfig } from '@/types/taskChecklist'
 import { CheckCircle2, Circle, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react'
 
 const FALLBACK_COLORS = [
-  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
-  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+  { bg: 'bg-at-warning-bg', border: 'border-amber-200', text: 'text-amber-700' },
+  { bg: 'bg-at-accent-light', border: 'border-at-border', text: 'text-at-accent' },
   { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700' },
   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
   { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
@@ -104,7 +104,7 @@ export default function DailyChecklist() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
       </div>
     )
   }
@@ -149,13 +149,13 @@ export default function DailyChecklist() {
         {totalTasks > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">오늘의 진행률</span>
+              <span className="text-at-text-secondary">오늘의 진행률</span>
               <span className="font-semibold text-at-text">{completedTasks}/{totalTasks} ({progressPercent}%)</span>
             </div>
             <div className="w-full bg-at-surface-alt rounded-full h-3">
               <div
                 className={`h-3 rounded-full transition-all duration-500 ${
-                  progressPercent === 100 ? 'bg-green-500' : 'bg-blue-500'
+                  progressPercent === 100 ? 'bg-green-500' : 'bg-at-accent'
                 }`}
                 style={{ width: `${progressPercent}%` }}
               />
@@ -168,7 +168,7 @@ export default function DailyChecklist() {
       {totalTasks === 0 && (
         <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-8 text-center">
           <div className="w-16 h-16 bg-at-surface-alt rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-slate-400" />
+            <CheckCircle2 className="w-8 h-8 text-at-text-weak" />
           </div>
           <p className="text-at-text-weak text-sm">배정된 업무가 없습니다.</p>
           <p className="text-at-text-weak text-xs mt-1">실장에게 업무 배정을 요청하세요.</p>
@@ -205,7 +205,7 @@ export default function DailyChecklist() {
                   <div
                     key={template.id}
                     className={`px-4 sm:px-6 py-3 flex items-start space-x-3 transition-colors ${
-                      checked ? 'bg-slate-50' : 'hover:bg-slate-50'
+                      checked ? 'bg-at-surface-alt' : 'hover:bg-at-surface-alt'
                     }`}
                   >
                     {/* 체크 버튼 */}
@@ -219,17 +219,17 @@ export default function DailyChecklist() {
                       {checked ? (
                         <CheckCircle2 className="w-6 h-6 text-green-500" />
                       ) : (
-                        <Circle className="w-6 h-6 text-slate-300 hover:text-blue-400" />
+                        <Circle className="w-6 h-6 text-at-text-weak hover:text-at-accent" />
                       )}
                     </button>
 
                     {/* 업무 내용 */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium text-at-text-weak line-through' : 'text-slate-800'}`}>
+                      <p className={`text-sm font-medium text-at-text-weak line-through' : 'text-at-text'}`}>
                         {template.title}
                       </p>
                       {template.description && (
-                        <p className={`text-xs mt-0.5 ${checked ? 'text-slate-300' : 'text-slate-500'}`}>
+                        <p className={`text-xs mt-0.5 ${checked ? 'text-at-text-weak' : 'text-at-text-weak'}`}>
                           {template.description}
                         </p>
                       )}
@@ -239,7 +239,7 @@ export default function DailyChecklist() {
                         </p>
                       )}
                       {checkRecord?.notes && (
-                        <p className="text-xs text-slate-400 mt-0.5 italic">
+                        <p className="text-xs text-at-text-weak mt-0.5 italic">
                           {checkRecord.notes}
                         </p>
                       )}
@@ -270,7 +270,7 @@ export default function DailyChecklist() {
                       className="flex-shrink-0 p-1 rounded hover:bg-at-surface-hover transition-colors"
                       title="메모"
                     >
-                      <StickyNote className="w-4 h-4 text-slate-400" />
+                      <StickyNote className="w-4 h-4 text-at-text-weak" />
                     </button>
                   </div>
                 )

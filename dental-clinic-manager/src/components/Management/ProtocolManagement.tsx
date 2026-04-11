@@ -49,7 +49,7 @@ function DroppableColumn({ id, categoryId, children }: { id: string; categoryId:
     <div
       ref={setNodeRef}
       className={`w-[180px] flex-shrink-0 rounded-lg transition-all ${
-        isOver ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
+        isOver ? 'ring-2 ring-at-accent bg-at-accent-light/50' : ''
       }`}
     >
       {children}
@@ -645,12 +645,12 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
   const getStatusBadgeClass = (status: string) => {
     const classes: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-800',
-      active: 'bg-green-100 text-green-800',
-      archived: 'bg-slate-100 text-slate-600',
+      draft: 'bg-at-surface-alt text-at-text',
+      active: 'bg-at-success-bg text-green-800',
+      archived: 'bg-at-surface-alt text-at-text-secondary',
       pending_review: 'bg-amber-100 text-amber-800'
     }
-    return classes[status] || 'bg-gray-100 text-gray-800'
+    return classes[status] || 'bg-at-surface-alt text-at-text'
   }
 
   const formatDate = (dateString: string) => {
@@ -670,8 +670,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
       <div
         className={`border rounded-lg transition-all relative group ${
           !accessible
-            ? 'bg-gray-50/80 border-gray-200'
-            : isExpanded ? 'bg-white border-slate-300 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+            ? 'bg-at-surface-alt/80 border-at-border'
+            : isExpanded ? 'bg-white border-at-border shadow-md' : 'bg-white border-at-border hover:border-at-border shadow-sm'
         }`}
         style={
           !accessible
@@ -686,27 +686,27 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
         >
           <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
             {!accessible && (
-              <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+              <Lock className="w-3.5 h-3.5 text-at-text-weak flex-shrink-0" />
             )}
             <h4
               className={`text-sm font-semibold leading-tight ${
                 isExpanded ? '' : 'truncate'
               } ${
-                !accessible ? 'text-gray-400 group-hover:text-gray-600' : 'text-slate-800'
+                !accessible ? 'text-at-text-weak group-hover:text-at-text-secondary' : 'text-at-text'
               }`}
               title={protocol.title}
             >
               {protocol.title}
             </h4>
             <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${
-              !accessible ? 'bg-gray-100 text-gray-400' : getStatusBadgeClass(protocol.status)
+              !accessible ? 'bg-at-surface-alt text-at-text-weak' : getStatusBadgeClass(protocol.status)
             }`}>
               {getStatusLabel(protocol.status)}
             </span>
             {showCategoryBadge && protocol.category && (
               <span
                 className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full flex-shrink-0 ${
-                  !accessible ? 'bg-gray-100 text-gray-400' : ''
+                  !accessible ? 'bg-at-surface-alt text-at-text-weak' : ''
                 }`}
                 style={accessible ? {
                   backgroundColor: `${protocol.category.color}20`,
@@ -719,23 +719,23 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
           </div>
           <div className="flex items-center gap-2 ml-auto flex-shrink-0">
             {!isExpanded && protocol.currentVersion && (
-              <span className={`text-xs hidden sm:inline ${!accessible ? 'text-gray-300' : 'text-slate-400'}`}>
+              <span className={`text-xs hidden sm:inline ${!accessible ? 'text-at-text-weak' : 'text-at-text-weak'}`}>
                 v{protocol.currentVersion.version_number}
               </span>
             )}
             {isExpanded ? (
-              <ChevronUp className={`w-4 h-4 ${!accessible ? 'text-gray-300' : 'text-slate-400'}`} />
+              <ChevronUp className={`w-4 h-4 ${!accessible ? 'text-at-text-weak' : 'text-at-text-weak'}`} />
             ) : (
-              <ChevronDown className={`w-4 h-4 ${!accessible ? 'text-gray-300' : 'text-slate-400'}`} />
+              <ChevronDown className={`w-4 h-4 ${!accessible ? 'text-at-text-weak' : 'text-at-text-weak'}`} />
             )}
           </div>
         </div>
 
         {/* 펼친 상태: 상세 정보 + 액션 버튼 */}
         {isExpanded && (
-          <div className={`border-t ${!accessible ? 'border-gray-100' : 'border-slate-100'}`}>
+          <div className={`border-t ${!accessible ? 'border-at-border' : 'border-at-border'}`}>
             <div className="px-3 py-2.5 space-y-2">
-              <div className={`flex items-center gap-3 text-xs ${!accessible ? 'text-gray-400' : 'text-slate-500'}`}>
+              <div className={`flex items-center gap-3 text-xs ${!accessible ? 'text-at-text-weak' : 'text-at-text-weak'}`}>
                 {protocol.currentVersion && (
                   <>
                     <span className="flex items-center">
@@ -752,12 +752,12 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
               {protocol.tags && protocol.tags.length > 0 && (
                 <div className="flex items-center flex-wrap gap-1">
-                  <Tag className={`w-3 h-3 ${!accessible ? 'text-gray-300' : 'text-slate-400'}`} />
+                  <Tag className={`w-3 h-3 ${!accessible ? 'text-at-text-weak' : 'text-at-text-weak'}`} />
                   {protocol.tags.map((tag, index) => (
                     <span
                       key={index}
                       className={`inline-flex px-1.5 py-0.5 text-[10px] rounded ${
-                        !accessible ? 'bg-gray-100 text-gray-400' : 'bg-slate-100 text-slate-600'
+                        !accessible ? 'bg-at-surface-alt text-at-text-weak' : 'bg-at-surface-alt text-at-text-secondary'
                       }`}
                     >
                       {tag}
@@ -769,21 +769,21 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
 
             {/* 권한 없음 안내 (부원장 전용) */}
             {!accessible && (
-              <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-100 bg-gray-50 rounded-b-lg">
-                <Lock className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-xs text-gray-400">접근 권한이 없습니다. 대표원장에게 권한을 요청하세요.</span>
+              <div className="flex items-center gap-2 px-3 py-2 border-t border-at-border bg-at-surface-alt rounded-b-lg">
+                <Lock className="w-3.5 h-3.5 text-at-text-weak" />
+                <span className="text-xs text-at-text-weak">접근 권한이 없습니다. 대표원장에게 권한을 요청하세요.</span>
               </div>
             )}
 
             {/* 액션 버튼 (접근 가능한 경우만) */}
             {accessible && (
-              <div className="flex items-center gap-1 px-3 py-2 border-t border-slate-100 bg-slate-50/50 rounded-b-lg">
+              <div className="flex items-center gap-1 px-3 py-2 border-t border-at-border bg-at-surface-alt/50 rounded-b-lg">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     handleViewProtocol(protocol)
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-at-accent hover:bg-at-accent-light rounded transition-colors"
                   title="보기"
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -822,7 +822,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                       e.stopPropagation()
                       handleEditProtocol(protocol)
                     }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-at-text-secondary hover:bg-at-surface-alt rounded transition-colors"
                     title="수정"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -832,7 +832,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 {canDeleteProtocol(protocol) && (
                   <button
                     onClick={(e) => handleDeleteProtocolDirect(protocol, e)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors ml-auto"
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-at-error hover:bg-at-error-bg rounded transition-colors ml-auto"
                     title="삭제"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -864,16 +864,16 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
         </div>
       )}
 
-      <div className={hideHeader ? '' : 'bg-white border-x border-b border-slate-200 rounded-b-xl p-6'}>
+      <div className={hideHeader ? '' : 'bg-white border-x border-b border-at-border rounded-b-xl p-6'}>
         {/* 서브 탭 네비게이션 - 항상 콘텐츠 영역 내부에 표시 */}
-        <div className={`border-b border-slate-200 bg-slate-50 rounded-t-lg mb-6 px-2 pt-2 ${hideHeader ? '' : '-mx-6 -mt-6'}`}>
+        <div className={`border-b border-at-border bg-at-surface-alt rounded-t-lg mb-6 px-2 pt-2 ${hideHeader ? '' : '-mx-6 -mt-6'}`}>
           <nav className="flex space-x-1 p-2" aria-label="Tabs">
             <button
               onClick={() => setActiveSubTab('list')}
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeSubTab === 'list'
-                  ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  ? 'bg-white text-at-accent shadow-sm border border-at-border'
+                  : 'text-at-text-secondary hover:text-at-text hover:bg-white/50'
               }`}
             >
               <FileText className="w-4 h-4 mr-2" />
@@ -883,8 +883,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
               onClick={() => setActiveSubTab('categories')}
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeSubTab === 'categories'
-                  ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  ? 'bg-white text-at-accent shadow-sm border border-at-border'
+                  : 'text-at-text-secondary hover:text-at-text hover:bg-white/50'
               }`}
             >
               <Folder className="w-4 h-4 mr-2" />
@@ -895,8 +895,8 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 onClick={() => setActiveSubTab('permissions')}
                 className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   activeSubTab === 'permissions'
-                    ? 'bg-white text-purple-700 shadow-sm border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    ? 'bg-white text-purple-700 shadow-sm border border-at-border'
+                    : 'text-at-text-secondary hover:text-at-text hover:bg-white/50'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 mr-2" />
@@ -911,12 +911,12 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             {/* 헤더와 추가 버튼 */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-accent-light text-at-accent">
                   <FileText className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-semibold text-slate-800">
+                <h3 className="text-base font-semibold text-at-text">
                   프로토콜 목록
-                  {!loading && <span className="text-sm font-normal text-slate-500 ml-1">({protocols.length})</span>}
+                  {!loading && <span className="text-sm font-normal text-at-text-weak ml-1">({protocols.length})</span>}
                 </h3>
               </div>
               {canEdit && (
@@ -925,7 +925,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                     setCreateCategoryId(undefined)
                     setShowCreateForm(true)
                   }}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center px-4 py-2 bg-at-accent text-white text-sm font-medium rounded-lg hover:bg-at-accent-hover transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   새 프로토콜 작성
@@ -936,22 +936,22 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             {/* 검색 및 필터 */}
             <div className="space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-at-text-weak" />
                 <input
                   type="text"
                   placeholder="프로토콜 제목 또는 태그로 검색..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-at-border rounded-lg focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
 
               <div className="flex items-center space-x-2">
-                <Filter className="w-4 h-4 text-slate-500" />
+                <Filter className="w-4 h-4 text-at-text-weak" />
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  className="px-3 py-1.5 text-sm border border-at-border rounded-lg focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="all">모든 상태</option>
                   <option value="active">활성</option>
@@ -969,7 +969,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                     className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
                       selectedCategory === 'all'
                         ? 'bg-slate-800 text-white border-slate-800'
-                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                        : 'bg-white text-at-text-secondary border-at-border hover:bg-at-surface-alt'
                     }`}
                   >
                     <Folder className="w-3.5 h-3.5 mr-1.5" />
@@ -982,7 +982,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                       className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full border transition-colors ${
                         selectedCategory === category.id
                           ? 'text-white border-transparent'
-                          : 'bg-white border-slate-200 hover:border-slate-300'
+                          : 'bg-white border-at-border hover:border-at-border'
                       }`}
                       style={
                         selectedCategory === category.id
@@ -1002,13 +1002,13 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-lg text-sm">
                 {success}
               </div>
             )}
@@ -1016,18 +1016,18 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
             {/* 프로토콜 목록 */}
             {loading ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-slate-600">프로토콜을 불러오는 중...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto mb-4"></div>
+                <p className="text-at-text-secondary">프로토콜을 불러오는 중...</p>
               </div>
             ) : protocols.length === 0 ? (
-              <div className="text-center py-12 bg-slate-50 rounded-lg">
-                <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600 mb-1">
+              <div className="text-center py-12 bg-at-surface-alt rounded-lg">
+                <FileText className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
+                <p className="text-at-text-secondary mb-1">
                   {searchTerm || selectedStatus !== 'all' || selectedCategory !== 'all'
                     ? '검색 조건에 맞는 프로토콜이 없습니다.'
                     : '아직 작성된 프로토콜이 없습니다.'}
                 </p>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-at-text-weak">
                   {searchTerm || selectedStatus !== 'all' || selectedCategory !== 'all'
                     ? '다른 검색 조건을 시도하거나 필터를 초기화해 보세요.'
                     : '새 프로토콜을 작성하여 진료 절차를 체계적으로 관리하세요.'}
@@ -1035,7 +1035,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 {canEdit && !searchTerm && selectedStatus === 'all' && selectedCategory === 'all' && (
                   <button
                     onClick={() => setShowCreateForm(true)}
-                    className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+                    className="mt-4 inline-flex items-center px-4 py-2 bg-at-accent text-white text-sm font-medium rounded-lg hover:bg-at-accent-hover"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     첫 프로토콜 작성하기
@@ -1066,9 +1066,9 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                             className="flex items-center gap-2 flex-1 min-w-0"
                           >
                             {isCollapsed ? (
-                              <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                              <ChevronRight className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                             ) : (
-                              <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                              <ChevronDown className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                             )}
                             <span
                               className="font-semibold text-sm truncate"
@@ -1076,7 +1076,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                             >
                               {group.category?.name || '미분류'}
                             </span>
-                            <span className="text-xs text-slate-400 flex-shrink-0">
+                            <span className="text-xs text-at-text-weak flex-shrink-0">
                               ({group.protocols.length})
                             </span>
                           </button>
@@ -1116,7 +1116,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                   {activeDragProtocol && (
                     <div className="bg-white border-2 border-blue-400 rounded-lg shadow-xl p-3 w-[300px]">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-800 truncate">{activeDragProtocol.title}</span>
+                        <span className="font-semibold text-sm text-at-text truncate">{activeDragProtocol.title}</span>
                         <span className={`inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${getStatusBadgeClass(activeDragProtocol.status)}`}>
                           {getStatusLabel(activeDragProtocol.status)}
                         </span>

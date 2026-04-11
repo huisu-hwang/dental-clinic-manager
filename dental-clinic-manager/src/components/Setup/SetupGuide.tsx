@@ -11,7 +11,7 @@ export default function SetupGuide() {
           <div className="bg-at-accent-light border-l-4 border-blue-400 p-4">
             <div className="flex">
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
+                <h3 className="text-sm font-medium text-at-accent">
                   설정 안내
                 </h3>
                 <div className="mt-2 text-sm text-at-accent">

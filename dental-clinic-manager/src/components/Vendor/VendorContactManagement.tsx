@@ -1381,7 +1381,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                   selectedCategory === cat.id
                     ? 'text-white border-transparent'
-                    : 'bg-white border-at-border hover:border-slate-400 text-at-text-secondary'
+                    : 'bg-white border-at-border hover:border-at-border text-at-text-secondary'
                 }`}
                 style={selectedCategory === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
               >
@@ -1444,7 +1444,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             </div>
           ) : filteredContacts.length === 0 ? (
             <div className="py-12 text-center bg-at-surface-alt rounded-xl border border-dashed border-at-border">
-              <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <Building2 className="w-12 h-12 text-at-text-weak mx-auto mb-3" />
               <p className="text-at-text-weak">
                 {searchQuery || selectedCategory || showFavoritesOnly
                   ? '검색 결과가 없습니다.'
@@ -1875,7 +1875,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
                       isDragging
                         ? 'border-at-accent bg-at-accent-light'
-                        : 'border-at-border hover:border-slate-400'
+                        : 'border-at-border hover:border-at-border'
                     }`}
                   >
                     <input
@@ -1952,7 +1952,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     </button>
                   </div>
 
-                  <div className="bg-at-accent-light border border-blue-200 rounded-xl p-3">
+                  <div className="bg-at-accent-light border border-at-border rounded-xl p-3">
                     <p className="text-sm text-at-accent">
                       <strong>컬럼 매핑:</strong> 파일의 각 컬럼이 어떤 필드에 해당하는지 확인하고 필요시 수정하세요.
                       자동으로 감지된 매핑을 확인하거나, 드롭다운에서 직접 선택할 수 있습니다.
@@ -2174,7 +2174,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100">
+                          <tbody className="divide-y divide-at-border">
                             {rawFileData.slice(0, 3).map((row, rowIdx) => (
                               <tr key={rowIdx} className="hover:bg-at-surface-alt">
                                 {fileHeaders.map((_, colIdx) => (
@@ -2231,7 +2231,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                             <th className="px-3 py-2 w-10"></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-at-border">
                           {importPreview.map((item, index) => (
                             <tr key={index} className="hover:bg-at-surface-alt">
                               <td className="px-3 py-2">
@@ -2295,7 +2295,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                     +{Object.keys(item.extra_data).length}개
                                   </span>
                                 ) : (
-                                  <span className="text-slate-300">-</span>
+                                  <span className="text-at-text-weak">-</span>
                                 )}
                               </td>
                               <td className="px-3 py-2">
@@ -2313,7 +2313,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     </div>
                   </div>
 
-                  <div className="bg-at-accent-light border border-blue-200 rounded-xl p-4 space-y-2">
+                  <div className="bg-at-accent-light border border-at-border rounded-xl p-4 space-y-2">
                     <p className="text-sm text-at-accent">
                       <strong>팁:</strong> 표에서 직접 값을 수정할 수 있습니다. 등록하지 않을 항목은 X 버튼으로 제거하세요.
                     </p>

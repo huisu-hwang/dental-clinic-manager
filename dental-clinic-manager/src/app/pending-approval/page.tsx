@@ -188,9 +188,9 @@ export default function PendingApprovalPage() {
                 조금만 더 기다려주세요!
               </p>
 
-              <div className="bg-at-accent-light border border-blue-200 rounded-md p-4 mb-6">
-                <h3 className="font-semibold text-blue-900 mb-2">신청 정보</h3>
-                <div className="space-y-1 text-sm text-blue-800">
+              <div className="bg-at-accent-light border border-at-border rounded-md p-4 mb-6">
+                <h3 className="font-semibold text-at-accent mb-2">신청 정보</h3>
+                <div className="space-y-1 text-sm text-at-accent">
                   <p><strong>이름:</strong> {user.name}</p>
                   <p><strong>이메일:</strong> {user.email}</p>
                   <p><strong>신청 병원:</strong> {user.clinic?.name || clinicInfo?.name || '정보 없음'}</p>
@@ -234,7 +234,7 @@ export default function PendingApprovalPage() {
 
           <button
             onClick={handleLogout}
-            className="w-full bg-slate-200 hover:bg-slate-300 text-at-text font-bold py-3 px-4 rounded-md transition-colors"
+            className="w-full bg-at-border hover:bg-at-border text-at-text font-bold py-3 px-4 rounded-md transition-colors"
           >
             메인화면으로 이동
           </button>

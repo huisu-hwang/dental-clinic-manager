@@ -160,13 +160,13 @@ export default function TelegramBoardApplicationForm({ onSubmit, onCancel, loadi
         </div>
 
         {detectedGroup ? (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+          <div className="p-3 bg-at-success-bg border border-green-200 rounded-xl">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-at-success mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-green-800">{detectedGroup.chat_title}</p>
-                  <p className="text-xs text-green-600 mt-0.5">
+                  <p className="text-xs text-at-success mt-0.5">
                     {detectedGroup.chat_type === 'supergroup' ? '슈퍼그룹' : '그룹'} · Chat ID: {detectedGroup.telegram_chat_id}
                   </p>
                 </div>
@@ -174,7 +174,7 @@ export default function TelegramBoardApplicationForm({ onSubmit, onCancel, loadi
               <button
                 type="button"
                 onClick={handleResetGroup}
-                className="text-xs text-green-600 hover:text-green-800 underline"
+                className="text-xs text-at-success hover:text-green-800 underline"
               >
                 다른 그룹 선택
               </button>
@@ -183,7 +183,7 @@ export default function TelegramBoardApplicationForm({ onSubmit, onCancel, loadi
         ) : polling ? (
           <div className="p-3 bg-at-warning-bg border border-at-border rounded-xl">
             <div className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-amber-600 animate-spin" />
+              <RefreshCw className="w-4 h-4 text-at-warning animate-spin" />
               <div>
                 <p className="text-sm text-at-text">텔레그램에서 그룹을 선택해주세요...</p>
                 <p className="text-xs text-at-text-secondary mt-0.5">봇이 그룹에 추가되면 자동으로 감지됩니다 (최대 2분)</p>

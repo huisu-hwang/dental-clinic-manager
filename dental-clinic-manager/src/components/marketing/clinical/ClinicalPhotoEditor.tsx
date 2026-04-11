@@ -172,7 +172,7 @@ export default function ClinicalPhotoEditor({
               max={100}
               value={transforms.brightness}
               onChange={(e) => updateTransform({ brightness: Number(e.target.value) })}
-              className="flex-1 h-1.5 bg-slate-200 rounded-full accent-indigo-600 cursor-pointer"
+              className="flex-1 h-1.5 bg-at-border rounded-full accent-indigo-600 cursor-pointer"
             />
             <span className="text-xs text-at-text w-10 text-right tabular-nums">
               {transforms.brightness > 0 ? '+' : ''}{transforms.brightness}
@@ -189,7 +189,7 @@ export default function ClinicalPhotoEditor({
               max={100}
               value={transforms.contrast}
               onChange={(e) => updateTransform({ contrast: Number(e.target.value) })}
-              className="flex-1 h-1.5 bg-slate-200 rounded-full accent-indigo-600 cursor-pointer"
+              className="flex-1 h-1.5 bg-at-border rounded-full accent-indigo-600 cursor-pointer"
             />
             <span className="text-xs text-at-text w-10 text-right tabular-nums">
               {transforms.contrast > 0 ? '+' : ''}{transforms.contrast}
@@ -200,7 +200,7 @@ export default function ClinicalPhotoEditor({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={rotateCCW}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-at-text bg-at-surface-alt hover:bg-slate-200 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-at-text bg-at-surface-alt hover:bg-at-border rounded-xl transition-colors"
               title="반시계 90도"
             >
               <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
@@ -208,14 +208,14 @@ export default function ClinicalPhotoEditor({
             </button>
             <button
               onClick={rotateCW}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-at-text bg-at-surface-alt hover:bg-slate-200 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-at-text bg-at-surface-alt hover:bg-at-border rounded-xl transition-colors"
               title="시계 90도"
             >
               <ArrowUturnRightIcon className="h-3.5 w-3.5" />
               90°
             </button>
 
-            <div className="w-px h-6 bg-slate-200 mx-1" />
+            <div className="w-px h-6 bg-at-border mx-1" />
 
             {/* 미세 회전 */}
             <label className="text-xs text-at-text">미세:</label>
@@ -229,20 +229,20 @@ export default function ClinicalPhotoEditor({
                 const base = Math.round(transforms.rotation / 90) * 90
                 updateTransform({ rotation: base + Number(e.target.value) })
               }}
-              className="w-24 h-1.5 bg-slate-200 rounded-full accent-indigo-600 cursor-pointer"
+              className="w-24 h-1.5 bg-at-border rounded-full accent-indigo-600 cursor-pointer"
             />
             <span className="text-[11px] text-at-text tabular-nums w-8">
               {transforms.rotation}°
             </span>
 
-            <div className="w-px h-6 bg-slate-200 mx-1" />
+            <div className="w-px h-6 bg-at-border mx-1" />
 
             <button
               onClick={() => updateTransform({ flipH: !transforms.flipH })}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition-colors ${
                 transforms.flipH
                   ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-at-surface-alt text-at-text hover:bg-slate-200'
+                  : 'bg-at-surface-alt text-at-text hover:bg-at-border'
               }`}
               title="좌우 반전"
             >
@@ -254,7 +254,7 @@ export default function ClinicalPhotoEditor({
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition-colors ${
                 transforms.flipV
                   ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-at-surface-alt text-at-text hover:bg-slate-200'
+                  : 'bg-at-surface-alt text-at-text hover:bg-at-border'
               }`}
               title="상하 반전"
             >
@@ -276,7 +276,7 @@ export default function ClinicalPhotoEditor({
             <button
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
-              className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:bg-at-border disabled:cursor-not-allowed"
             >
               {isSaving ? '저장 중...' : '저장'}
             </button>

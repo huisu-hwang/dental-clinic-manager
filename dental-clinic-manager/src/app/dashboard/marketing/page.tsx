@@ -75,7 +75,7 @@ export default function MarketingPage() {
             </div>
 
             {/* 서브 탭 */}
-            <div className="bg-white border-b border-slate-200 px-4 sm:px-6">
+            <div className="bg-white border-b border-at-border px-4 sm:px-6">
               <nav className="flex gap-1 -mb-px">
                 {tabs.map((tab) => (
                   <button
@@ -83,8 +83,8 @@ export default function MarketingPage() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activeTab === tab.id
-                        ? 'border-blue-600 text-blue-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                        ? 'border-at-accent text-at-accent'
+                        : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                     }`}
                   >
                     <tab.icon className="h-4 w-4" />
@@ -95,7 +95,7 @@ export default function MarketingPage() {
             </div>
 
             {/* 콘텐츠 */}
-            <div className="bg-white rounded-b-xl border border-t-0 border-slate-200 p-4 sm:p-6">
+            <div className="bg-white rounded-b-xl border border-t-0 border-at-border p-4 sm:p-6">
               {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
               {activeTab === 'dashboard' && <DashboardContent />}
               {activeTab === 'posts' && <PostsContent viewPostId={viewPostId} onViewPostHandled={() => setViewPostId(null)} />}
@@ -112,17 +112,17 @@ function DashboardContent() {
     <div className="space-y-6">
       {/* 요약 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
-          <div className="text-sm text-slate-500 mb-1">이번 주 발행</div>
-          <div className="text-2xl font-bold text-slate-800">0 / 5건</div>
+        <div className="bg-at-surface-alt rounded-xl border border-at-border p-5">
+          <div className="text-sm text-at-text-weak mb-1">이번 주 발행</div>
+          <div className="text-2xl font-bold text-at-text">0 / 5건</div>
         </div>
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
-          <div className="text-sm text-slate-500 mb-1">승인 대기</div>
-          <div className="text-2xl font-bold text-amber-600">0건</div>
+        <div className="bg-at-surface-alt rounded-xl border border-at-border p-5">
+          <div className="text-sm text-at-text-weak mb-1">승인 대기</div>
+          <div className="text-2xl font-bold text-at-warning">0건</div>
         </div>
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
-          <div className="text-sm text-slate-500 mb-1">발행 실패</div>
-          <div className="text-2xl font-bold text-red-600">0건</div>
+        <div className="bg-at-surface-alt rounded-xl border border-at-border p-5">
+          <div className="text-sm text-at-text-weak mb-1">발행 실패</div>
+          <div className="text-2xl font-bold text-at-error">0건</div>
         </div>
       </div>
 
@@ -141,22 +141,22 @@ function DashboardContent() {
 // ─── 글 관리 ───
 
 const STATUS_LABELS: Record<CalendarItemStatus, { label: string; color: string }> = {
-  proposed: { label: '제안됨', color: 'bg-slate-100 text-slate-600' },
-  approved: { label: '승인됨', color: 'bg-blue-50 text-blue-600' },
-  rejected: { label: '반려', color: 'bg-red-50 text-red-600' },
-  modified: { label: '수정됨', color: 'bg-amber-50 text-amber-600' },
+  proposed: { label: '제안됨', color: 'bg-at-surface-alt text-at-text-secondary' },
+  approved: { label: '승인됨', color: 'bg-at-accent-light text-at-accent' },
+  rejected: { label: '반려', color: 'bg-at-error-bg text-at-error' },
+  modified: { label: '수정됨', color: 'bg-at-warning-bg text-at-warning' },
   generating: { label: '생성 중', color: 'bg-purple-50 text-purple-600' },
   review: { label: '검토 대기', color: 'bg-indigo-50 text-indigo-600' },
   scheduled: { label: '예약됨', color: 'bg-cyan-50 text-cyan-600' },
-  publishing: { label: '발행 중', color: 'bg-yellow-50 text-yellow-700' },
-  published: { label: '발행 완료', color: 'bg-green-50 text-green-600' },
-  failed: { label: '실패', color: 'bg-red-50 text-red-600' },
+  publishing: { label: '발행 중', color: 'bg-at-warning-bg text-yellow-700' },
+  published: { label: '발행 완료', color: 'bg-at-success-bg text-at-success' },
+  failed: { label: '실패', color: 'bg-at-error-bg text-at-error' },
 }
 
 const POST_TYPE_BADGE: Record<PostType, { label: string; color: string }> = {
-  informational: { label: '정보', color: 'bg-blue-50 text-blue-600' },
+  informational: { label: '정보', color: 'bg-at-accent-light text-at-accent' },
   promotional: { label: '홍보', color: 'bg-orange-50 text-orange-600' },
-  notice: { label: '공지', color: 'bg-slate-100 text-slate-600' },
+  notice: { label: '공지', color: 'bg-at-surface-alt text-at-text-secondary' },
   clinical: { label: '임상', color: 'bg-emerald-50 text-emerald-600' },
 }
 
@@ -274,7 +274,7 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <ArrowPathIcon className="h-6 w-6 text-slate-400 animate-spin" />
+        <ArrowPathIcon className="h-6 w-6 text-at-text-weak animate-spin" />
       </div>
     )
   }
@@ -283,11 +283,11 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
     return (
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="h-12 w-12 mx-auto mb-3 text-red-400" />
-        <p className="text-lg font-medium text-red-600">글 목록 로딩 실패</p>
-        <p className="text-sm mt-1 text-slate-500">{loadError}</p>
+        <p className="text-lg font-medium text-at-error">글 목록 로딩 실패</p>
+        <p className="text-sm mt-1 text-at-text-weak">{loadError}</p>
         <button
           onClick={() => { setIsLoading(true); loadPosts() }}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-at-accent-light text-at-accent rounded-lg hover:bg-at-tag transition-colors text-sm font-medium"
         >
           <ArrowPathIcon className="h-4 w-4" />
           다시 시도
@@ -298,7 +298,7 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
 
   if (posts.length === 0) {
     return (
-      <div className="text-center py-12 text-slate-400">
+      <div className="text-center py-12 text-at-text-weak">
         <DocumentTextIcon className="h-12 w-12 mx-auto mb-3" />
         <p className="text-lg font-medium">아직 작성된 글이 없습니다</p>
         <p className="text-sm mt-1">&apos;AI 글쓰기&apos; 탭에서 첫 글을 만들어보세요</p>
@@ -315,18 +315,18 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
               type="checkbox"
               checked={posts.length > 0 && selectedIds.size === posts.length}
               onChange={toggleSelectAll}
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent"
             />
-            <span className="text-sm text-slate-500">전체 선택</span>
+            <span className="text-sm text-at-text-weak">전체 선택</span>
           </label>
-          <h2 className="text-lg font-semibold text-slate-800">생성된 글 ({posts.length})</h2>
+          <h2 className="text-lg font-semibold text-at-text">생성된 글 ({posts.length})</h2>
         </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <button
               onClick={handleBulkDelete}
               disabled={isBulkDeleting}
-              className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-sm text-at-error hover:text-at-error bg-at-error-bg hover:bg-at-error-bg px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
             >
               <TrashIcon className="h-4 w-4" />
               {isBulkDeleting ? '삭제 중...' : `선택 삭제 (${selectedIds.size})`}
@@ -334,7 +334,7 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
           )}
           <button
             onClick={() => { setIsLoading(true); loadPosts() }}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-at-text-weak hover:text-at-text-secondary transition-colors"
           >
             <ArrowPathIcon className="h-4 w-4" />
             새로고침
@@ -353,8 +353,8 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
             <div
               key={post.id}
               onClick={() => setSelectedPost(post)}
-              className={`bg-slate-50 rounded-xl border p-4 transition-colors cursor-pointer ${
-                selectedIds.has(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+              className={`bg-at-surface-alt rounded-xl border p-4 transition-colors cursor-pointer ${
+                selectedIds.has(post.id) ? 'border-blue-300 bg-at-accent-light/30' : 'border-at-border hover:border-at-border hover:shadow-sm'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -364,10 +364,10 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
                     checked={selectedIds.has(post.id)}
                     onChange={() => toggleSelect(post.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                    className="mt-1 w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent flex-shrink-0 cursor-pointer"
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-slate-800 truncate">{post.title || '(제목 없음)'}</h3>
+                    <h3 className="font-medium text-at-text truncate">{post.title || '(제목 없음)'}</h3>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${typeInfo.color}`}>
                         {typeInfo.label}
@@ -376,9 +376,9 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
                         {statusInfo.label}
                       </span>
                       {post.keyword && (
-                        <span className="text-xs text-slate-400">#{post.keyword}</span>
+                        <span className="text-xs text-at-text-weak">#{post.keyword}</span>
                       )}
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-at-text-weak">
                         {new Date(post.created_at).toLocaleDateString('ko-KR', {
                           year: 'numeric',
                           month: 'short',
@@ -390,11 +390,11 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
                         })}
                       </span>
                       {content && (
-                        <span className="text-xs text-slate-400">{content.wordCount}자</span>
+                        <span className="text-xs text-at-text-weak">{content.wordCount}자</span>
                       )}
                     </div>
                     {content?.body && (
-                      <p className="text-sm text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+                      <p className="text-sm text-at-text-weak mt-2 line-clamp-2 leading-relaxed">
                         {content.body.replace(/\[IMAGE:[^\]]*\]/g, '').replace(/#{1,3}\s/g, '').replace(/\*\*/g, '').slice(0, 150)}
                       </p>
                     )}
@@ -403,7 +403,7 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
                 <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => setSelectedPost(post)}
-                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    className="p-2 text-at-text-weak hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                     title="상세보기"
                   >
                     <EyeIcon className="h-4.5 w-4.5" />
@@ -411,7 +411,7 @@ function PostsContent({ viewPostId, onViewPostHandled }: { viewPostId?: string |
                   <button
                     onClick={() => handleDelete(post.id)}
                     disabled={deletingId === post.id}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-2 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-lg transition-colors disabled:opacity-50"
                     title="삭제"
                   >
                     <TrashIcon className="h-4.5 w-4.5" />
@@ -580,14 +580,14 @@ function PostEditModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* 모달 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-at-border">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold text-slate-800">글 상세</h3>
+            <h3 className="text-lg font-semibold text-at-text">글 상세</h3>
             <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${statusInfo.color}`}>
               {statusInfo.label}
             </span>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+          <button onClick={onClose} className="p-1.5 text-at-text-weak hover:text-at-text-secondary rounded-lg hover:bg-at-surface-alt">
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
@@ -596,18 +596,18 @@ function PostEditModal({
         <div className="px-6 py-5 space-y-4">
           {/* 제목 */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">제목</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1.5">제목</label>
             <input
               type="text"
               value={editedTitle}
               onChange={(e) => { setEditedTitle(e.target.value); setHasChanges(true) }}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             />
           </div>
 
           {/* 본문 (WYSIWYG 에디터 - 이미지 포함 렌더링) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">본문</label>
+            <label className="block text-sm font-medium text-at-text-secondary mb-1.5">본문</label>
             <ContentEditor
               body={editedBody}
               images={currentImages}
@@ -619,10 +619,10 @@ function PostEditModal({
           {/* 해시태그 */}
           {editedHashtags.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">해시태그</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">해시태그</label>
               <div className="flex flex-wrap gap-1.5">
                 {editedHashtags.map((tag, i) => (
-                  <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full">
+                  <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-at-accent-light text-at-accent text-xs rounded-full">
                     #{tag}
                     <button
                       onClick={() => { setEditedHashtags(editedHashtags.filter((_, idx) => idx !== i)); setHasChanges(true) }}
@@ -639,7 +639,7 @@ function PostEditModal({
           {/* 메시지 */}
           {saveMsg && (
             <div className={`flex items-center gap-2 text-sm p-3 rounded-lg ${
-              saveMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              saveMsg.type === 'success' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
             }`}>
               {saveMsg.type === 'success' ? <CheckCircleIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
               {saveMsg.text}
@@ -648,21 +648,21 @@ function PostEditModal({
         </div>
 
         {/* 모달 푸터 */}
-        <div className="flex justify-between items-center px-6 py-4 border-t border-slate-200">
+        <div className="flex justify-between items-center px-6 py-4 border-t border-at-border">
           <div className="flex gap-2">
             {canPublish && (
               <>
                 <button
                   onClick={handlePublishNow}
                   disabled={isPublishing}
-                  className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
                 >
                   {isPublishing ? '발행 중...' : '바로 발행'}
                 </button>
                 <button
                   onClick={() => setShowScheduleModal(true)}
                   disabled={isPublishing}
-                  className="px-4 py-2 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
                 >
                   예약 발행
                 </button>
@@ -672,14 +672,14 @@ function PostEditModal({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 text-sm text-at-text-secondary border border-at-border rounded-lg hover:bg-at-surface-alt transition-colors"
             >
               닫기
             </button>
             <button
               onClick={handleSave}
               disabled={saving || !hasChanges}
-              className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
             >
               {saving ? '저장 중...' : '저장'}
             </button>
@@ -711,7 +711,7 @@ function PostEditModal({
 // ─── 캘린더 ───
 function CalendarContent() {
   return (
-    <div className="text-center py-12 text-slate-400">
+    <div className="text-center py-12 text-at-text-weak">
       <CalendarDaysIcon className="h-12 w-12 mx-auto mb-3" />
       <p className="text-lg font-medium">콘텐츠 캘린더</p>
       <p className="text-sm mt-1">Phase 3에서 구현 예정</p>
@@ -842,10 +842,10 @@ function SettingsContent() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-slate-800">플랫폼 연동 설정</h2>
+      <h2 className="text-lg font-semibold text-at-text">플랫폼 연동 설정</h2>
 
       {isLoading ? (
-        <div className="text-center py-8 text-slate-400 text-sm">로딩 중...</div>
+        <div className="text-center py-8 text-at-text-weak text-sm">로딩 중...</div>
       ) : (
         PLATFORM_DEFS.map((platform) => {
           const setting = getSettingFor(platform.id)
@@ -853,19 +853,19 @@ function SettingsContent() {
           const hasConfig = setting && Object.keys(setting.config || {}).length > 0
 
           return (
-            <div key={platform.id} className="bg-slate-50 rounded-xl border border-slate-200 p-5 flex items-center justify-between">
+            <div key={platform.id} className="bg-at-surface-alt rounded-xl border border-at-border p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-slate-300'}`} />
+                <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-at-border'}`} />
                 <div>
-                  <div className="font-medium text-slate-800">{platform.name}</div>
-                  <div className={`text-sm ${isConnected ? 'text-green-600' : hasConfig ? 'text-amber-500' : 'text-slate-400'}`}>
+                  <div className="font-medium text-at-text">{platform.name}</div>
+                  <div className={`text-sm ${isConnected ? 'text-at-success' : hasConfig ? 'text-amber-500' : 'text-at-text-weak'}`}>
                     {isConnected ? '연동됨' : hasConfig ? '비활성' : '미연동'}
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => handleOpenEdit(platform)}
-                className="px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-white transition-colors"
+                className="px-4 py-2 text-sm border border-at-border rounded-lg text-at-text-secondary hover:bg-white transition-colors"
               >
                 설정
               </button>
@@ -883,9 +883,9 @@ function SettingsContent() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* 모달 헤더 */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-800">{editingDef.name} 설정</h3>
-              <button onClick={() => setEditingPlatform(null)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-at-border">
+              <h3 className="text-lg font-semibold text-at-text">{editingDef.name} 설정</h3>
+              <button onClick={() => setEditingPlatform(null)} className="p-1.5 text-at-text-weak hover:text-at-text-secondary rounded-lg hover:bg-at-surface-alt">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
@@ -894,10 +894,10 @@ function SettingsContent() {
             <div className="px-6 py-5 space-y-4">
               {/* 활성화 토글 */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">플랫폼 활성화</span>
+                <span className="text-sm font-medium text-at-text-secondary">플랫폼 활성화</span>
                 <button
                   onClick={() => setEditEnabled(!editEnabled)}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${editEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${editEnabled ? 'bg-indigo-600' : 'bg-at-border'}`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${editEnabled ? 'translate-x-5' : ''}`} />
                 </button>
@@ -906,14 +906,14 @@ function SettingsContent() {
               {/* 플랫폼별 설정 필드 */}
               {editingDef.fields.map((field) => (
                 <div key={field.key}>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{field.label}</label>
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1.5">{field.label}</label>
                   {field.type === 'textarea' ? (
                     <textarea
                       value={editConfig[field.key] || ''}
                       onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
                       placeholder={field.placeholder}
                       rows={3}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                      className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
                     />
                   ) : (
                     <input
@@ -921,7 +921,7 @@ function SettingsContent() {
                       value={editConfig[field.key] || ''}
                       onChange={(e) => setEditConfig({ ...editConfig, [field.key]: e.target.value })}
                       placeholder={field.placeholder}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                     />
                   )}
                 </div>
@@ -930,7 +930,7 @@ function SettingsContent() {
               {/* 메시지 */}
               {message && (
                 <div className={`flex items-center gap-2 text-sm p-3 rounded-lg ${
-                  message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                  message.type === 'success' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
                 }`}>
                   {message.type === 'success' ? <CheckCircleIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
                   {message.text}
@@ -939,17 +939,17 @@ function SettingsContent() {
             </div>
 
             {/* 모달 푸터 */}
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-at-border">
               <button
                 onClick={() => setEditingPlatform(null)}
-                className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 text-sm text-at-text-secondary border border-at-border rounded-lg hover:bg-at-surface-alt transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
               >
                 {saving ? '저장 중...' : '저장'}
               </button>

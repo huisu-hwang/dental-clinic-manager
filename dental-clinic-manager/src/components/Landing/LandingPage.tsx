@@ -309,11 +309,11 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
           >
             <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
               <div className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
-              <span className="text-sm text-slate-300 font-medium">현직 원장 개발</span>
+              <span className="text-sm text-at-text-weak font-medium">현직 원장 개발</span>
             </div>
             <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
               <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-lg shadow-blue-400/50" />
-              <span className="text-sm text-slate-300 font-medium">실제 병원 운영 중</span>
+              <span className="text-sm text-at-text-weak font-medium">실제 병원 운영 중</span>
             </div>
           </div>
         </div>
@@ -322,7 +322,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
           <button
             onClick={() => document.getElementById('story-2')?.scrollIntoView({ behavior: 'smooth' })}
-            className="flex flex-col items-center gap-1 text-at-text-weak hover:text-slate-300 transition-colors"
+            className="flex flex-col items-center gap-1 text-at-text-weak hover:text-at-text-weak transition-colors"
           >
             <span className="text-xs font-medium tracking-wider uppercase">Scroll</span>
             <ChevronDownIcon className="w-5 h-5" />
@@ -351,7 +351,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </p>
 
             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700/50 shadow-xl">
-              <p className="text-lg sm:text-xl text-slate-300 leading-relaxed">
+              <p className="text-lg sm:text-xl text-at-text-weak leading-relaxed">
                 매일 반복되는 <span className="text-white font-semibold">수기 기록</span>,
                 <span className="text-white font-semibold"> 엑셀 통계</span>,
                 <span className="text-white font-semibold"> 연차 계산</span>,
@@ -399,7 +399,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                   본질적 업무에 30%만 집중
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200 shadow-at-card">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-at-border shadow-at-card">
                 <div className="text-4xl mb-4">✨</div>
                 <h3 className="font-bold text-at-text mb-2">After</h3>
                 <p className="text-at-text-secondary">
@@ -525,7 +525,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             {[
-              { icon: ClockIcon, value: 50, suffix: '%', label: '업무 시간 단축', color: 'text-blue-400' },
+              { icon: ClockIcon, value: 50, suffix: '%', label: '업무 시간 단축', color: 'text-at-accent' },
               { icon: RocketLaunchIcon, value: 6, suffix: '가지', label: '핵심 기능 통합', color: 'text-green-400' },
               { icon: CurrencyDollarIcon, value: 0, suffix: '원', label: '설치 비용', color: 'text-yellow-400' },
               { icon: GlobeAltIcon, value: 24, suffix: '/7', label: '언제든 접근', color: 'text-purple-400' },

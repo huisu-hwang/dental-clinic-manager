@@ -427,7 +427,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                 </div>
               ) : conversations.length === 0 ? (
                 <div className="text-center py-8 px-4">
-                  <MessageSquare className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                  <MessageSquare className="w-10 h-10 mx-auto text-at-text-weak mb-2" />
                   <p className="text-sm text-at-text-weak">대화 기록이 없습니다</p>
                 </div>
               ) : (
@@ -438,7 +438,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                       className={cn(
                         'group relative rounded-xl transition-colors',
                         currentConversationId === conv.id
-                          ? 'bg-at-accent-light border border-blue-200'
+                          ? 'bg-at-accent-light border border-at-border'
                           : 'hover:bg-at-surface-alt'
                       )}
                     >
@@ -466,7 +466,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                           </button>
                           <button
                             onClick={() => setEditingTitleId(null)}
-                            className="p-1 text-at-text-weak hover:bg-gray-200 rounded"
+                            className="p-1 text-at-text-weak hover:bg-at-border rounded"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -499,7 +499,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                               e.stopPropagation();
                               setShowMenu(showMenu === conv.id ? null : conv.id);
                             }}
-                            className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-opacity"
+                            className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-at-border transition-opacity"
                           >
                             <MoreVertical className="w-4 h-4 text-at-text-weak" />
                           </button>
@@ -801,7 +801,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
             {message.attachments!.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-1 px-2 py-1 bg-at-tag text-blue-800 rounded text-xs"
+                className="flex items-center gap-1 px-2 py-1 bg-at-tag text-at-accent rounded text-xs"
                 title={file.parsedData.summary}
               >
                 {getFileIcon(file.type)}

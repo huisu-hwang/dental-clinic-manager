@@ -114,7 +114,7 @@ export default function PayrollPreview({
           <div className="flex space-x-3">
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              className="px-4 py-2 bg-at-accent text-white rounded-md hover:bg-at-accent-hover flex items-center"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -161,7 +161,7 @@ export default function PayrollPreview({
             {/* 헤더 */}
             <thead>
               <tr>
-                <th colSpan={4} className="border border-at-border bg-slate-200 py-2 text-center font-bold">
+                <th colSpan={4} className="border border-at-border bg-at-border py-2 text-center font-bold">
                   세부 내역
                 </th>
               </tr>
@@ -206,7 +206,7 @@ export default function PayrollPreview({
                     <td className="border border-at-border py-1.5 px-2">
                       {deduction?.label || ''}
                     </td>
-                    <td className={`border border-at-border py-1.5 px-2 text-right ${deduction && deduction.value < 0 ? 'text-green-700' : ''}`}>
+                    <td className={`border border-at-border py-1.5 px-2 text-right ${deduction && deduction.value < 0 ? 'text-at-success' : ''}`}>
                       {deduction && deduction.value !== 0 ? (deduction.value < 0 ? `△${formatCurrency(Math.abs(deduction.value))}` : formatCurrency(deduction.value)) : ''}
                     </td>
                   </tr>
@@ -230,12 +230,12 @@ export default function PayrollPreview({
               </tr>
 
               {/* 실수령액 행 */}
-              <tr className="bg-slate-200 font-bold">
+              <tr className="bg-at-border font-bold">
                 <td colSpan={2} className="border border-at-border"></td>
                 <td className="border border-at-border py-2 px-2 text-center">
                   실 수 령 액
                 </td>
-                <td className="border border-at-border py-2 px-2 text-right text-blue-700">
+                <td className="border border-at-border py-2 px-2 text-right text-at-accent">
                   {formatCurrency(statement.netPay)}
                 </td>
               </tr>
@@ -243,7 +243,7 @@ export default function PayrollPreview({
               {/* 기지급 현금 상여 및 차인지급액 */}
               {(statement.payments.cashBonus || 0) > 0 && (
                 <>
-                  <tr className="bg-amber-50">
+                  <tr className="bg-at-warning-bg">
                     <td colSpan={2} className="border border-at-border"></td>
                     <td className="border border-at-border py-1.5 px-2 text-center text-amber-700">
                       기지급 현금 상여
@@ -252,7 +252,7 @@ export default function PayrollPreview({
                       -{formatCurrency(statement.payments.cashBonus || 0)}
                     </td>
                   </tr>
-                  <tr className="bg-green-100 font-bold">
+                  <tr className="bg-at-success-bg font-bold">
                     <td colSpan={2} className="border border-at-border"></td>
                     <td className="border border-at-border py-2 px-2 text-center text-green-800">
                       차 인 지 급 액
@@ -306,7 +306,7 @@ export default function PayrollPreview({
           {/* 근태 정보 (있는 경우만 표시) */}
           {attendanceSummary && (
             <div className="mt-4 text-sm border border-at-border">
-              <div className="bg-slate-200 py-1.5 px-3 font-bold text-center border-b border-at-border">
+              <div className="bg-at-border py-1.5 px-3 font-bold text-center border-b border-at-border">
                 근태 현황
               </div>
               <div className="p-3">
@@ -325,31 +325,31 @@ export default function PayrollPreview({
                   </div>
                   <div className="flex justify-between">
                     <span>• 결근일수 :</span>
-                    <span className={attendanceSummary.absentDays > 0 ? 'text-red-600 font-medium' : ''}>
+                    <span className={attendanceSummary.absentDays > 0 ? 'text-at-error font-medium' : ''}>
                       {attendanceSummary.absentDays}일
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 지각횟수 :</span>
-                    <span className={attendanceSummary.lateCount > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.lateCount > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.lateCount}회
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 지각시간 :</span>
-                    <span className={attendanceSummary.totalLateMinutes > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.totalLateMinutes > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.totalLateMinutes}분
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 조퇴횟수 :</span>
-                    <span className={attendanceSummary.earlyLeaveCount > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.earlyLeaveCount > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.earlyLeaveCount}회
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 조퇴시간 :</span>
-                    <span className={attendanceSummary.totalEarlyLeaveMinutes > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.totalEarlyLeaveMinutes > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.totalEarlyLeaveMinutes}분
                     </span>
                   </div>
@@ -358,15 +358,15 @@ export default function PayrollPreview({
                 {/* 차감 내역 (있는 경우) */}
                 {attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
                   <div className="mt-3 pt-3 border-t border-at-border">
-                    <div className="font-medium text-red-700 mb-2">▶ 근태 관련 급여 차감 내역</div>
+                    <div className="font-medium text-at-error mb-2">▶ 근태 관련 급여 차감 내역</div>
                     <div className="space-y-1 text-xs">
                       {attendanceDeduction.deductionDetails.map((detail, index) => (
                         <div key={index} className="flex justify-between">
                           <span>• {detail.description}</span>
-                          <span className="text-red-600 font-medium">-{formatCurrency(detail.amount)}원</span>
+                          <span className="text-at-error font-medium">-{formatCurrency(detail.amount)}원</span>
                         </div>
                       ))}
-                      <div className="flex justify-between pt-2 border-t border-at-border font-medium text-red-700">
+                      <div className="flex justify-between pt-2 border-t border-at-border font-medium text-at-error">
                         <span>총 차감액</span>
                         <span>-{formatCurrency(attendanceDeduction.totalDeduction)}원</span>
                       </div>
@@ -382,7 +382,7 @@ export default function PayrollPreview({
 
           {/* 하단 정보 (세후 계약 안내) */}
           {statement.salaryType === 'net' && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+            <div className="mt-4 p-3 bg-at-accent-light border border-at-border rounded text-sm text-at-accent">
               ※ 본 급여명세서는 세후 계약 기준으로 작성되었습니다.
               실수령액 {formatCurrency(statement.netPay)}원을 기준으로 세전 금액이 역산되었습니다.
             </div>

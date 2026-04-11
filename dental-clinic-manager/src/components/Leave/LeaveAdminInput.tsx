@@ -148,7 +148,7 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
   if (loading && staff.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
       </div>
     )
   }
@@ -165,14 +165,14 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-md text-sm flex items-center">
           <CheckCircle className="w-4 h-4 mr-2" />
           {success}
         </div>
@@ -193,13 +193,13 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                   onClick={() => setSelectedUser(member.id)}
                   className={`p-4 border-b border-at-border cursor-pointer transition-colors ${
                     selectedUser === member.id
-                      ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                      ? 'bg-at-accent-light border-l-4 border-l-blue-500'
                       : 'hover:bg-at-surface-alt'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                      <div className="w-8 h-8 bg-at-border rounded-full flex items-center justify-center">
                         <User className="w-4 h-4 text-at-text" />
                       </div>
                       <div>
@@ -227,7 +227,7 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
           {selectedUser ? (
             <div className="space-y-4">
               {/* 선택된 직원 정보 */}
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <div className="p-4 bg-at-accent-light rounded-xl border border-at-border">
                 <div className="mb-2">
                   <p className="font-semibold text-at-text">{selectedStaff?.name}</p>
                   <p className="text-xs text-at-text">
@@ -239,11 +239,11 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-white rounded-xl p-2">
                     <p className="text-xs text-at-text">총 연차</p>
-                    <p className="font-bold text-blue-600">{selectedBalance?.total_days ?? 0}일</p>
+                    <p className="font-bold text-at-accent">{selectedBalance?.total_days ?? 0}일</p>
                   </div>
                   <div className="bg-white rounded-xl p-2">
                     <p className="text-xs text-at-text">사용</p>
-                    <p className="font-bold text-green-600">{selectedBalance?.used_days ?? 0}일</p>
+                    <p className="font-bold text-at-success">{selectedBalance?.used_days ?? 0}일</p>
                   </div>
                   <div className="bg-white rounded-xl p-2">
                     <p className="text-xs text-at-text">잔여</p>
@@ -334,7 +334,7 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:opacity-50"
                 >
                   {loading ? '처리 중...' : '조정 추가'}
                 </button>
@@ -346,15 +346,15 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                   <div className="p-3 border-b border-at-border bg-at-surface-alt">
                     <h5 className="font-medium text-at-text text-sm">조정 내역</h5>
                   </div>
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-at-border">
                     {adjustments.map((adj) => (
                       <div key={adj.id} className="p-3 flex items-center justify-between">
                         <div>
                           <div className="flex items-center space-x-2">
                             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                               adj.adjustment_type === 'deduct'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-green-100 text-green-700'
+                                ? 'bg-at-error-bg text-at-error'
+                                : 'bg-at-success-bg text-at-success'
                             }`}>
                               {adj.adjustment_type === 'deduct' ? '차감' : '추가'}
                             </span>
@@ -370,7 +370,7 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                         </div>
                         <button
                           onClick={() => handleDeleteAdjustment(adj.id)}
-                          className="p-1.5 text-at-text hover:text-red-600 hover:bg-red-50 rounded-xl"
+                          className="p-1.5 text-at-text hover:text-at-error hover:bg-at-error-bg rounded-xl"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

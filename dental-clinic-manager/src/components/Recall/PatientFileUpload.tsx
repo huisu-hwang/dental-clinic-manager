@@ -395,7 +395,7 @@ export default function PatientFileUpload({ onUpload, onCancel, isLoading, exclu
                 ? (!Object.values(columnMapping).includes('phone_number') && !Object.values(columnMapping).includes('patient_name'))
                 : (!Object.values(columnMapping).includes('patient_name') || !Object.values(columnMapping).includes('phone_number'))
               )}
-              className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isLoading ? (
                 <><span className="animate-spin">⏳</span>업로드 중...</>

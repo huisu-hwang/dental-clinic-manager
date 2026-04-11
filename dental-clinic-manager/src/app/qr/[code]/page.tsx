@@ -458,9 +458,9 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
     <div className="bg-white rounded-2xl shadow-xl p-8">
       {/* 아이콘 */}
       <div className="flex justify-center mb-6">
-        <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
+        <div className="w-24 h-24 bg-at-tag rounded-full flex items-center justify-center">
           <svg
-            className="w-16 h-16 text-blue-500"
+            className="w-16 h-16 text-at-accent"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -476,8 +476,8 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
       </div>
 
       {/* 제목 */}
-      <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">로그인 필요</h2>
-      <p className="text-gray-600 mb-6 text-center">
+      <h2 className="text-2xl font-bold text-at-text mb-2 text-center">로그인 필요</h2>
+      <p className="text-at-text-secondary mb-6 text-center">
         출퇴근 체크를 위해 로그인해주세요.
       </p>
 
@@ -485,10 +485,10 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
       {loading && autoLoginAttempted.current && !error && (
         <div className="text-center py-4">
           <div className="relative inline-block">
-            <div className="w-12 h-12 border-4 border-blue-200 rounded-full"></div>
-            <div className="absolute top-0 left-0 w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-12 h-12 border-4 border-at-border rounded-full"></div>
+            <div className="absolute top-0 left-0 w-12 h-12 border-4 border-at-accent border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <p className="text-gray-600 mt-3">자동 로그인 중...</p>
+          <p className="text-at-text-secondary mt-3">자동 로그인 중...</p>
         </div>
       )}
 
@@ -496,7 +496,7 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
       {(!loading || error) && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="qr-email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="qr-email" className="block text-sm font-medium text-at-text-secondary mb-1">
               이메일
             </label>
             <input
@@ -504,7 +504,7 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
               id="qr-email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-3 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               placeholder="email@example.com"
               disabled={loading}
               autoComplete="email"
@@ -512,7 +512,7 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
           </div>
 
           <div className="relative">
-            <label htmlFor="qr-password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="qr-password" className="block text-sm font-medium text-at-text-secondary mb-1">
               비밀번호
             </label>
             <input
@@ -520,7 +520,7 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
               id="qr-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-12"
+              className="w-full p-3 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent pr-12"
               placeholder="비밀번호 입력"
               disabled={loading}
               autoComplete="current-password"
@@ -532,15 +532,15 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
               tabIndex={-1}
             >
               {showPassword ? (
-                <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                <EyeSlashIcon className="h-5 w-5 text-at-text-weak" />
               ) : (
-                <EyeIcon className="h-5 w-5 text-gray-400" />
+                <EyeIcon className="h-5 w-5 text-at-text-weak" />
               )}
             </button>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -548,7 +548,7 @@ function InlineLoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-semibold rounded-lg transition-colors text-lg"
+            className="w-full py-4 bg-at-accent hover:bg-at-accent disabled:bg-blue-300 text-white font-semibold rounded-lg transition-colors text-lg"
           >
             {loading ? '로그인 중...' : '로그인하고 출퇴근 체크'}
           </button>
@@ -606,24 +606,24 @@ function ConfirmCheckoutScreen({
       </div>
 
       {/* 제목 */}
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">퇴근 하시겠습니까?</h2>
-      <p className="text-gray-600 mb-6">퇴근 처리 전 확인해주세요.</p>
+      <h2 className="text-2xl font-bold text-at-text mb-2">퇴근 하시겠습니까?</h2>
+      <p className="text-at-text-secondary mb-6">퇴근 처리 전 확인해주세요.</p>
 
       {/* 근무 정보 */}
-      <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-        <div className="flex justify-between py-2 border-b border-gray-200">
-          <span className="text-gray-600">출근 시간</span>
-          <span className="font-semibold text-gray-800">{formatTime(checkInTime)}</span>
+      <div className="bg-at-surface-alt rounded-lg p-4 mb-6 text-left">
+        <div className="flex justify-between py-2 border-b border-at-border">
+          <span className="text-at-text-secondary">출근 시간</span>
+          <span className="font-semibold text-at-text">{formatTime(checkInTime)}</span>
         </div>
-        <div className="flex justify-between py-2 border-b border-gray-200">
-          <span className="text-gray-600">현재 시간</span>
-          <span className="font-semibold text-gray-800">
+        <div className="flex justify-between py-2 border-b border-at-border">
+          <span className="text-at-text-secondary">현재 시간</span>
+          <span className="font-semibold text-at-text">
             {new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
         <div className="flex justify-between py-2">
-          <span className="text-gray-600">근무 시간</span>
-          <span className="font-semibold text-blue-600">{calculateWorkingTime()}</span>
+          <span className="text-at-text-secondary">근무 시간</span>
+          <span className="font-semibold text-at-accent">{calculateWorkingTime()}</span>
         </div>
       </div>
 
@@ -637,7 +637,7 @@ function ConfirmCheckoutScreen({
         </button>
         <button
           onClick={onCancel}
-          className="w-full py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors"
+          className="w-full py-4 bg-at-border hover:bg-at-border text-at-text-secondary font-semibold rounded-lg transition-colors"
         >
           취소
         </button>
@@ -652,14 +652,14 @@ function LoadingScreen({ isAuthLoading }: { isAuthLoading: boolean }) {
     <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
       <div className="flex justify-center mb-6">
         <div className="relative">
-          <div className="w-20 h-20 border-4 border-blue-200 rounded-full"></div>
-          <div className="absolute top-0 left-0 w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-20 h-20 border-4 border-at-border rounded-full"></div>
+          <div className="absolute top-0 left-0 w-20 h-20 border-4 border-at-accent border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+      <h2 className="text-2xl font-bold text-at-text mb-2">
         {isAuthLoading ? '인증 확인 중...' : '처리 중...'}
       </h2>
-      <p className="text-gray-600">
+      <p className="text-at-text-secondary">
         {isAuthLoading ? '로그인 상태를 확인하고 있습니다.' : '출퇴근 정보를 확인하고 있습니다.'}
       </p>
     </div>
@@ -697,10 +697,10 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
       {/* 아이콘 */}
       <div className="flex justify-center mb-6">
         <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
-          isCheckIn ? 'bg-green-100' : 'bg-blue-100'
+          isCheckIn ? 'bg-at-success-bg' : 'bg-at-tag'
         }`}>
           <svg
-            className={`w-16 h-16 ${isCheckIn ? 'text-green-500' : 'text-blue-500'}`}
+            className={`w-16 h-16 ${isCheckIn ? 'text-green-500' : 'text-at-accent'}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -716,17 +716,17 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
       </div>
 
       {/* 메시지 */}
-      <h2 className="text-3xl font-bold text-gray-800 mb-4">
+      <h2 className="text-3xl font-bold text-at-text mb-4">
         {isCheckIn ? '출근 완료!' : '퇴근 완료!'}
       </h2>
-      <p className="text-lg text-gray-600 mb-2">{message}</p>
-      <p className="text-sm text-gray-500">
+      <p className="text-lg text-at-text-secondary mb-2">{message}</p>
+      <p className="text-sm text-at-text-weak">
         {isCheckIn ? '오늘도 좋은 하루 되세요' : '수고하셨습니다'}
       </p>
 
       {/* 시간 표시 */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <p className="text-sm text-gray-500">
+      <div className="mt-6 pt-6 border-t border-at-border">
+        <p className="text-sm text-at-text-weak">
           {new Date().toLocaleString('ko-KR', {
             year: 'numeric',
             month: 'long',
@@ -739,7 +739,7 @@ function SuccessScreen({ message, actionType }: { message: string; actionType: s
       </div>
 
       {/* 자동 닫힘 안내 */}
-      <div className="mt-4 text-sm text-gray-400">
+      <div className="mt-4 text-sm text-at-text-weak">
         {countdown}초 후 자동으로 닫힙니다
       </div>
     </div>
@@ -775,7 +775,7 @@ function ErrorScreen({ message, canRetry, onRetry }: { message: string; canRetry
     <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
       {/* 아이콘 */}
       <div className="flex justify-center mb-6">
-        <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center">
+        <div className="w-24 h-24 bg-at-error-bg rounded-full flex items-center justify-center">
           <svg
             className="w-16 h-16 text-red-500"
             fill="none"
@@ -793,21 +793,21 @@ function ErrorScreen({ message, canRetry, onRetry }: { message: string; canRetry
       </div>
 
       {/* 메시지 */}
-      <h2 className="text-3xl font-bold text-gray-800 mb-4">처리 실패</h2>
-      <p className="text-lg text-gray-600 mb-6">{message}</p>
+      <h2 className="text-3xl font-bold text-at-text mb-4">처리 실패</h2>
+      <p className="text-lg text-at-text-secondary mb-6">{message}</p>
 
       {/* 재시도 버튼 */}
       {canRetry && onRetry && (
         <button
           onClick={onRetry}
-          className="w-full py-4 mb-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors text-lg"
+          className="w-full py-4 mb-4 bg-at-accent hover:bg-at-accent text-white font-semibold rounded-lg transition-colors text-lg"
         >
           다시 시도
         </button>
       )}
 
       {/* 안내 */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-left">
+      <div className="bg-at-warning-bg border border-yellow-200 rounded-lg p-4 text-sm text-left">
         <h3 className="font-semibold text-yellow-800 mb-2">문제 해결 가이드:</h3>
         <ul className="space-y-2 text-yellow-700">
           <li>
@@ -833,7 +833,7 @@ function ErrorScreen({ message, canRetry, onRetry }: { message: string; canRetry
       </div>
 
       {/* 자동 닫힘 안내 */}
-      <div className="mt-4 text-sm text-gray-400">
+      <div className="mt-4 text-sm text-at-text-weak">
         {countdown}초 후 자동으로 닫힙니다
       </div>
     </div>

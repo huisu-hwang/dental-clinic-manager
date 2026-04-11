@@ -521,7 +521,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                         )}
                         {photo.uploadError && (
                           <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-                            <span className="text-xs text-red-700 bg-white px-2 py-1 rounded font-medium">
+                            <span className="text-xs text-at-error bg-white px-2 py-1 rounded font-medium">
                               {photo.uploadError}
                             </span>
                           </div>
@@ -572,7 +572,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                         <button
                           type="button"
                           onClick={() => handlePhotoRemove(photo.id)}
-                          className="p-1 bg-red-50/90 rounded shadow-sm hover:bg-red-100"
+                          className="p-1 bg-at-error-bg/90 rounded shadow-sm hover:bg-at-error-bg"
                         >
                           <XMarkIcon className="h-3 w-3 text-red-500" />
                         </button>
@@ -604,21 +604,21 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
 
       {/* 환자 동의 확인 */}
       <div className={`rounded-xl border-2 p-5 ${
-        patientConsent ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-300'
+        patientConsent ? 'bg-at-success-bg border-green-300' : 'bg-at-warning-bg border-amber-300'
       }`}>
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
             checked={patientConsent}
             onChange={(e) => setPatientConsent(e.target.checked)}
-            className="w-5 h-5 mt-0.5 text-green-600 border-at-border rounded"
+            className="w-5 h-5 mt-0.5 text-at-success border-at-border rounded"
           />
           <div>
             <div className="flex items-center gap-2">
               {patientConsent ? (
-                <ShieldCheckIcon className="h-5 w-5 text-green-600" />
+                <ShieldCheckIcon className="h-5 w-5 text-at-success" />
               ) : (
-                <ExclamationTriangleIcon className="h-5 w-5 text-amber-600" />
+                <ExclamationTriangleIcon className="h-5 w-5 text-at-warning" />
               )}
               <span className="font-medium text-at-text">
                 환자 동의서 확인 <span className="text-red-500">*</span>

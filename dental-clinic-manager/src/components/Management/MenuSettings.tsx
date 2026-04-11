@@ -402,7 +402,7 @@ function SortableCategoryWithMenus({
       style={style}
       className={`
         rounded-xl border-2 overflow-hidden transition-all
-        ${isDragging ? 'shadow-xl ring-2 ring-blue-400' : ''}
+        ${isDragging ? 'shadow-xl ring-2 ring-at-accent' : ''}
         ${isDropOver ? 'border-at-accent bg-at-accent-light/50 ring-2 ring-at-accent' : 'border-at-border'}
         ${categoryAnimating === 'up' ? 'animate-bounce-up' : ''}
         ${categoryAnimating === 'down' ? 'animate-bounce-down' : ''}
@@ -650,16 +650,16 @@ function UnusedMenuPanel({ unusedMenus }: UnusedMenuPanelProps) {
         ${isOver ? 'border-amber-400 ring-2 ring-amber-300 shadow-lg' : 'border-at-border'}
       `}
     >
-      <div className={`px-4 py-3 border-b transition-colors ${isOver ? 'bg-amber-100 border-amber-200' : 'bg-amber-50 border-amber-200'}`}>
+      <div className={`px-4 py-3 border-b transition-colors ${isOver ? 'bg-amber-100 border-amber-200' : 'bg-at-warning-bg border-amber-200'}`}>
         <div className="flex items-center gap-2">
-          <EyeOff className="w-5 h-5 text-amber-600" />
+          <EyeOff className="w-5 h-5 text-at-warning" />
           <h3 className="font-semibold text-amber-800">미사용 메뉴</h3>
         </div>
       </div>
 
-      <div className={`px-4 py-3 border-b transition-colors ${isOver ? 'bg-amber-100/50 border-amber-200' : 'bg-amber-50/50 border-amber-100'}`}>
+      <div className={`px-4 py-3 border-b transition-colors ${isOver ? 'bg-amber-100/50 border-amber-200' : 'bg-at-warning-bg/50 border-amber-100'}`}>
         <div className="flex items-start gap-2">
-          <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <Info className="w-4 h-4 text-at-warning flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
             사용하지 않을 메뉴를 여기로 드래그하세요. 사이드바에 표시되지 않습니다.
           </p>
@@ -668,8 +668,8 @@ function UnusedMenuPanel({ unusedMenus }: UnusedMenuPanelProps) {
 
       <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto min-h-[100px]">
         {isOver && unusedMenus.length === 0 && (
-          <div className="p-4 rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 text-center">
-            <p className="text-sm text-amber-600 font-medium">여기에 놓으세요</p>
+          <div className="p-4 rounded-lg border-2 border-dashed border-amber-400 bg-at-warning-bg text-center">
+            <p className="text-sm text-at-warning font-medium">여기에 놓으세요</p>
           </div>
         )}
 

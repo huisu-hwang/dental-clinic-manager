@@ -235,7 +235,7 @@ export default function ClinicSelectionForm({
                       <button
                         key={clinic.id}
                         onClick={() => handleSelectClinic(clinic.id)}
-                        className="w-full p-3 hover:bg-at-accent-light text-left transition-colors border-b border-slate-100 last:border-b-0"
+                        className="w-full p-3 hover:bg-at-accent-light text-left transition-colors border-b border-at-border last:border-b-0"
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -245,7 +245,7 @@ export default function ClinicSelectionForm({
                               <p className="text-xs text-at-text-weak mt-1">{clinic.phone}</p>
                             )}
                           </div>
-                          <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-at-tag text-blue-800">
+                          <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-at-tag text-at-accent">
                             {clinic.current_users}/{clinic.max_users}
                           </span>
                         </div>
@@ -319,7 +319,7 @@ export default function ClinicSelectionForm({
                             )}
                           </div>
                           <div className="mt-3 flex items-center gap-2">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-at-tag text-blue-800">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-at-tag text-at-accent">
                               {clinic.current_users}/{clinic.max_users} 직원
                             </span>
                             {clinic.current_users >= clinic.max_users && (
@@ -344,7 +344,7 @@ export default function ClinicSelectionForm({
 
             {selectedClinicId && (
               <div className="mb-6 p-4 bg-at-accent-light rounded-xl">
-                <p className="text-sm text-blue-800">
+                <p className="text-sm text-at-accent">
                   <strong>선택한 병원:</strong> {clinics.find(c => c.id === selectedClinicId)?.name}
                 </p>
               </div>
@@ -516,7 +516,7 @@ export default function ClinicSelectionForm({
                     setError('')
                     setSuccess('')
                   }}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-at-text font-bold py-3 px-4 rounded-xl transition-colors"
+                  className="flex-1 bg-at-border hover:bg-at-border text-at-text font-bold py-3 px-4 rounded-xl transition-colors"
                   disabled={submitting}
                 >
                   취소

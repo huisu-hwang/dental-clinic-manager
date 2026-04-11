@@ -206,7 +206,7 @@ export default function ScheduleManagement() {
             <button
               onClick={loadClinicHours}
               disabled={loading || !selectedUser}
-              className="w-full px-4 py-2 rounded-xl font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 rounded-xl font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed"
             >
               병원 진료시간 가져오기
             </button>
@@ -426,7 +426,7 @@ function DayScheduleRow({
             </button>
             <button
               onClick={handleCancel}
-              className="px-3 py-1 bg-slate-300 text-at-text-secondary rounded hover:bg-slate-400"
+              className="px-3 py-1 bg-at-border text-at-text-secondary rounded hover:bg-slate-400"
             >
               취소
             </button>
@@ -434,7 +434,7 @@ function DayScheduleRow({
         ) : (
           <button
             onClick={() => setIsEditing(true)}
-            className="text-at-accent hover:text-blue-800 font-medium"
+            className="text-at-accent hover:text-at-accent font-medium"
           >
             수정
           </button>

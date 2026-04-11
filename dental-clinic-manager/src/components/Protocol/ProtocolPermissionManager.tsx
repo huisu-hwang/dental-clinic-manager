@@ -404,7 +404,7 @@ export default function ProtocolPermissionManager({
               </button>
               <button
                 onClick={() => handleSelectAll('can_edit')}
-                className="px-3 py-1.5 text-xs font-medium text-at-success bg-at-success-bg rounded-lg hover:bg-green-100"
+                className="px-3 py-1.5 text-xs font-medium text-at-success bg-at-success-bg rounded-lg hover:bg-at-success-bg"
               >
                 전체 수정
               </button>
@@ -416,13 +416,13 @@ export default function ProtocolPermissionManager({
               </button>
               <button
                 onClick={() => handleSelectAll('can_delete')}
-                className="px-3 py-1.5 text-xs font-medium text-at-error bg-at-error-bg rounded-lg hover:bg-red-100"
+                className="px-3 py-1.5 text-xs font-medium text-at-error bg-at-error-bg rounded-lg hover:bg-at-error-bg"
               >
                 전체 삭제
               </button>
               <button
                 onClick={handleSelectAllPermissions}
-                className="px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100"
+                className="px-3 py-1.5 text-xs font-medium text-at-warning bg-at-warning-bg rounded-lg hover:bg-amber-100"
               >
                 모든 권한
               </button>

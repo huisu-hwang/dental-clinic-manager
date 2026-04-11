@@ -150,7 +150,7 @@ export default function PasswordVerificationModal({
               type="button"
               onClick={handleClose}
               disabled={loading}
-              className="flex-1 bg-slate-200 hover:bg-slate-300 disabled:bg-at-surface-alt text-at-text-secondary font-medium py-3 px-4 rounded-md transition-colors"
+              className="flex-1 bg-at-border hover:bg-at-border disabled:bg-at-surface-alt text-at-text-secondary font-medium py-3 px-4 rounded-md transition-colors"
             >
               취소
             </button>

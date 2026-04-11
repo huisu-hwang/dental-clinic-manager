@@ -497,7 +497,7 @@ export default function ResignedPage() {
                 {/* 선택된 병원 표시 */}
                 {selectedClinicId && (
                   <div className="mt-2 p-2 bg-at-accent-light rounded-md">
-                    <p className="text-sm text-blue-800">
+                    <p className="text-sm text-at-accent">
                       선택된 병원: <strong>{selectedClinicName}</strong>
                     </p>
                   </div>
@@ -580,11 +580,11 @@ export default function ResignedPage() {
           </div>
 
           {/* 다음 단계 안내 */}
-          <div className="bg-at-accent-light border border-blue-200 rounded-md p-4 mb-6">
+          <div className="bg-at-accent-light border border-at-border rounded-md p-4 mb-6">
             <div className="flex items-start">
               <ArrowRightCircleIcon className="h-5 w-5 text-at-accent mr-2 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-blue-900 mb-1">다음 단계를 선택하세요</h3>
+                <h3 className="font-semibold text-at-accent mb-1">다음 단계를 선택하세요</h3>
                 <p className="text-sm text-at-accent">
                   새 병원을 등록하거나, 기존 병원에 가입 신청할 수 있습니다.
                 </p>
@@ -611,7 +611,7 @@ export default function ResignedPage() {
 
             <button
               onClick={handleLogout}
-              className="w-full bg-slate-200 hover:bg-slate-300 text-at-text font-bold py-3 px-4 rounded-md transition-colors"
+              className="w-full bg-at-border hover:bg-at-border text-at-text font-bold py-3 px-4 rounded-md transition-colors"
             >
               로그아웃
             </button>

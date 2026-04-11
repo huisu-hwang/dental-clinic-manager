@@ -111,7 +111,7 @@ export default function AttendanceHistory() {
             <div className="text-xs font-medium text-at-warning uppercase tracking-wider">지각</div>
             <div className="text-2xl font-bold text-yellow-700 mt-1">{stats.late}회</div>
           </div>
-          <div className="bg-at-accent-light rounded-xl p-4 border border-blue-200">
+          <div className="bg-at-accent-light rounded-xl p-4 border border-at-border">
             <div className="text-xs font-medium text-at-accent uppercase tracking-wider">총 근무시간</div>
             <div className="text-2xl font-bold text-at-accent mt-1">{Math.floor(stats.totalWorkMinutes / 60)}h</div>
           </div>
@@ -159,7 +159,7 @@ export default function AttendanceHistory() {
             <button
               onClick={loadRecords}
               disabled={loading}
-              className="w-full inline-flex items-center justify-center px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-slate-300 transition-colors font-medium"
+              className="w-full inline-flex items-center justify-center px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border transition-colors font-medium"
             >
               <Search className="w-4 h-4 mr-2" />
               {loading ? '조회 중...' : '조회'}

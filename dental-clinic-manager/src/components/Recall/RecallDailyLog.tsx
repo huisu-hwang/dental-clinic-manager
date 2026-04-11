@@ -157,7 +157,7 @@ export default function RecallDailyLog() {
             </div>
             <div className="bg-at-success-bg rounded-xl p-4 text-center">
               <CheckCircle className="w-5 h-5 text-at-success mx-auto mb-1.5" />
-              <p className="text-2xl font-bold text-green-700">{bookingCount}</p>
+              <p className="text-2xl font-bold text-at-success">{bookingCount}</p>
               <p className="text-xs text-at-success mt-0.5">예약 성공</p>
             </div>
             <div className="bg-at-accent-light rounded-xl p-4 text-center">

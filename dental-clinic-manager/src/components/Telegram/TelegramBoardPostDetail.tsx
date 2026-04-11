@@ -208,7 +208,7 @@ export default function TelegramBoardPostDetail({
 
           {/* 링크 목록 */}
           {(post.link_urls?.length ?? 0) > 0 && (
-            <div className="mb-4 p-3 bg-green-50 rounded-xl">
+            <div className="mb-4 p-3 bg-at-success-bg rounded-xl">
               <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center gap-1">
                 <Link2 className="w-4 h-4" />공유 링크
               </h4>
@@ -219,7 +219,7 @@ export default function TelegramBoardPostDetail({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-green-600 hover:text-green-800 hover:underline"
+                    className="flex items-center gap-2 text-sm text-at-success hover:text-green-800 hover:underline"
                   >
                     <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="truncate">{link.title || link.url}</span>

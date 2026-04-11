@@ -471,9 +471,9 @@ export default function PhoneDialSettingsInline() {
       )}
 
       {/* 한국 환경 가이드 */}
-      <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+      <div className="p-4 bg-at-warning-bg rounded-lg border border-amber-200">
         <div className="flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-at-warning flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
             <p className="font-semibold mb-2">추천 설정 안내</p>
             <div className="space-y-2 text-amber-700">

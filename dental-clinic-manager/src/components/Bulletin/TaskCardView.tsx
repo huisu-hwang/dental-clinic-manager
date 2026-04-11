@@ -26,8 +26,8 @@ interface TaskCardViewProps {
 const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']
 
 const STATUS_BADGE_STYLES: Record<TaskStatus, { bg: string; text: string; dot: string; border: string }> = {
-  pending: { bg: 'bg-at-surface-alt', text: 'text-at-text-secondary', dot: 'bg-gray-400', border: 'border-at-border' },
-  in_progress: { bg: 'bg-at-accent-light', text: 'text-at-accent', dot: 'bg-at-accent', border: 'border-blue-200' },
+  pending: { bg: 'bg-at-surface-alt', text: 'text-at-text-secondary', dot: 'bg-at-border', border: 'border-at-border' },
+  in_progress: { bg: 'bg-at-accent-light', text: 'text-at-accent', dot: 'bg-at-accent', border: 'border-at-border' },
   review: { bg: 'bg-purple-50', text: 'text-purple-700', dot: 'bg-purple-500', border: 'border-purple-200' },
   completed: { bg: 'bg-at-success-bg', text: 'text-at-success', dot: 'bg-green-500', border: 'border-green-200' },
   on_hold: { bg: 'bg-at-warning-bg', text: 'text-yellow-700', dot: 'bg-yellow-500', border: 'border-yellow-200' },
@@ -128,7 +128,7 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
             </div>
 
             {/* 업무 카드 목록 */}
-            <div className={`bg-white rounded-2xl border ${style.border} divide-y divide-gray-100`}>
+            <div className={`bg-white rounded-2xl border ${style.border} divide-y divide-at-border`}>
               {statusTasks.map((task) => (
                 <div
                   key={task.id}
@@ -210,7 +210,7 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                           {formatDate(task.due_date)}
                         </span>
                       ) : (
-                        <span className="text-sm text-gray-300">—</span>
+                        <span className="text-sm text-at-text-weak">—</span>
                       )}
                     </div>
 
@@ -222,7 +222,7 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                             {formatDate(task.completed_at)}
                           </span>
                         ) : (
-                          <span className="text-sm text-gray-300">—</span>
+                          <span className="text-sm text-at-text-weak">—</span>
                         )}
                       </div>
                     )}

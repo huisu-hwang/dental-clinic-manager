@@ -132,7 +132,7 @@ export default function DocumentDetail({
             <p className="text-at-text-secondary mb-4">{document.description}</p>
           )}
           {/* 메타 정보 */}
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-at-border">
             <div className="flex items-center gap-3 text-xs text-at-text-weak">
               <span className="text-at-text-secondary font-medium">{document.author_name}</span>
               <span>{formatDate(document.created_at)}</span>
@@ -252,7 +252,7 @@ export default function DocumentDetail({
         {/* 본문도 파일도 없는 경우 */}
         {!document.content && !document.file_url && (
           <div className="p-4 sm:p-6 text-center text-at-text-weak">
-            <FileText className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+            <FileText className="w-12 h-12 mx-auto text-at-text-weak mb-2" />
             <p>등록된 내용이 없습니다.</p>
           </div>
         )}
@@ -269,7 +269,7 @@ export default function DocumentDetail({
         </button>
         <button
           onClick={() => setShowShareDialog(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-accent bg-white border border-blue-200 rounded-xl hover:bg-at-accent-light transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-at-accent bg-white border border-at-border rounded-xl hover:bg-at-accent-light transition-colors"
         >
           <Share2 className="w-4 h-4" />
           공유

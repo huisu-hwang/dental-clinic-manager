@@ -620,7 +620,7 @@ export default function RecallManagement() {
                           <div className="w-44 bg-white rounded-xl shadow-xl border border-at-border py-1">
                             <button
                               onClick={() => { handleBulkExclude('family'); setShowExcludeDropdown(false) }}
-                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-at-text-secondary"
+                              className="w-full px-3 py-2.5 text-left text-sm hover:bg-at-warning-bg flex items-center gap-2 text-at-text-secondary"
                             >
                               <Heart className="w-4 h-4 text-amber-500" />
                               지인
@@ -748,11 +748,11 @@ export default function RecallManagement() {
             {/* 제외 환자 파일 업로드 */}
             {showExcludeUpload && (
               <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <UserX className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <div className="flex items-center gap-3 p-3 bg-at-warning-bg rounded-lg border border-amber-200">
+                  <UserX className="w-5 h-5 text-at-warning flex-shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-amber-800">제외 환자 파일 업로드</p>
-                    <p className="text-xs text-amber-600">업로드된 환자가 자동으로 리콜 제외 처리됩니다.</p>
+                    <p className="text-xs text-at-warning">업로드된 환자가 자동으로 리콜 제외 처리됩니다.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-amber-700">제외 사유:</label>

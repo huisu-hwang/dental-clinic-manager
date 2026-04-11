@@ -50,7 +50,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
       {/* 점심 초과근무 */}
       <div className={`rounded-lg border-2 transition-all ${data.lunch_overtime_minutes > 0 ? 'bg-orange-50 border-orange-300' : 'bg-at-surface-alt border-at-border'}`}>
         <div className="flex items-center gap-2 p-3">
-          <span className={`text-sm font-medium ${data.lunch_overtime_minutes > 0 ? 'text-orange-700' : 'text-slate-600'}`}>
+          <span className={`text-sm font-medium ${data.lunch_overtime_minutes > 0 ? 'text-orange-700' : 'text-at-text-secondary'}`}>
             점심 초과근무
           </span>
           <input
@@ -73,7 +73,7 @@ export default function OvertimeMealTable({ clinicId, date, isReadOnly, data, on
       {/* 저녁 초과근무 */}
       <div className={`rounded-lg border-2 transition-all ${data.dinner_overtime_minutes > 0 ? 'bg-violet-50 border-violet-300' : 'bg-at-surface-alt border-at-border'}`}>
         <div className="flex items-center gap-2 p-3">
-          <span className={`text-sm font-medium ${data.dinner_overtime_minutes > 0 ? 'text-violet-700' : 'text-slate-600'}`}>
+          <span className={`text-sm font-medium ${data.dinner_overtime_minutes > 0 ? 'text-violet-700' : 'text-at-text-secondary'}`}>
             저녁 초과근무
           </span>
           <input

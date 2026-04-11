@@ -111,7 +111,7 @@ export default function ContactHistoryModal({
                   {patient.appointment_time && ` ${patient.appointment_time}`}
                 </p>
                 {patient.appointment_notes && (
-                  <p className="text-xs text-green-700">{patient.appointment_notes}</p>
+                  <p className="text-xs text-at-success">{patient.appointment_notes}</p>
                 )}
               </div>
             </div>

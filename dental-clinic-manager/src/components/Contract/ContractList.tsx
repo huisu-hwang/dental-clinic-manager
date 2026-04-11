@@ -29,11 +29,11 @@ const STATUS_LABELS: Record<ContractStatus, string> = {
 }
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
+  draft: 'bg-at-surface-alt text-at-text',
   pending_employee_signature: 'bg-yellow-100 text-yellow-800',
-  pending_employer_signature: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800'
+  pending_employer_signature: 'bg-at-tag text-at-accent',
+  completed: 'bg-at-success-bg text-green-800',
+  cancelled: 'bg-at-error-bg text-red-800'
 }
 
 export default function ContractList({ currentUser, clinicId }: ContractListProps) {
@@ -272,14 +272,14 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+      <div className="p-4 bg-at-error-bg border border-red-200 rounded-xl">
         <p className="text-red-800">{error}</p>
         <button
           onClick={loadContracts}
@@ -327,7 +327,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
               type="text"
               placeholder="직원 이름으로 검색..."
               onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
             />
           </div>
 
@@ -337,7 +337,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
               onClick={() => handleStatusFilter('all')}
               className={`px-4 py-2 rounded-xl transition-colors text-sm font-medium ${
                 filters.status === undefined
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-at-accent text-white'
                   : 'bg-white text-at-text border border-at-border hover:bg-at-surface-alt'
               }`}
             >
@@ -349,7 +349,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                 onClick={() => handleStatusFilter(status)}
                 className={`px-4 py-2 rounded-xl transition-colors text-sm font-medium ${
                   filters.status === status
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-at-accent text-white'
                     : 'bg-white text-at-text border border-at-border hover:bg-at-surface-alt'
                 }`}
               >
@@ -375,7 +375,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
             {(currentUser.role === 'owner' || currentUser.role === 'manager') && !filters.status && !filters.search && (
               <button
                 onClick={handleCreateNew}
-                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
+                className="inline-flex items-center px-6 py-3 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover transition-colors font-medium"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 첫 계약서 작성하기
@@ -407,7 +407,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
+              <tbody className="bg-white divide-y divide-at-border">
                 {contracts.map(contract => (
                   <tr
                     key={contract.id}
@@ -426,7 +426,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                           <> ~ {formatDate(contract.contract_data.employment_period_end)}</>
                         )}
                         {contract.contract_data.is_permanent && (
-                          <span className="ml-2 text-blue-600 font-medium">(무기한)</span>
+                          <span className="ml-2 text-at-accent font-medium">(무기한)</span>
                         )}
                       </div>
                     </td>
@@ -454,7 +454,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                             e.stopPropagation()
                             handleContractClick(contract.id)
                           }}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-at-accent hover:text-at-accent"
                         >
                           보기
                         </button>
@@ -463,7 +463,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                             <span className="text-at-text">|</span>
                             <button
                               onClick={e => handleDeleteClick(contract, e)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-at-error hover:text-red-900"
                             >
                               삭제
                             </button>
@@ -504,7 +504,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
               <p className="text-at-text mb-4">
                 취소된 계약서를 영구적으로 삭제하시겠습니까?
                 <br />
-                <span className="text-red-600 font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>
+                <span className="text-at-error font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>
               </p>
               <div className="bg-at-surface-alt p-4 rounded-xl border border-at-border">
                 <p className="text-sm text-at-text mb-1">
@@ -517,7 +517,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                     <> ~ {formatDate(contractToDelete.contract_data.employment_period_end)}</>
                   )}
                   {contractToDelete.contract_data.is_permanent && (
-                    <span className="ml-2 text-blue-600">(무기한)</span>
+                    <span className="ml-2 text-at-accent">(무기한)</span>
                   )}
                 </p>
               </div>
@@ -526,7 +526,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
               <button
                 onClick={handleCancelDelete}
                 disabled={deleting}
-                className="px-4 py-2 text-at-text bg-at-surface-alt rounded-xl hover:bg-slate-200 disabled:opacity-50"
+                className="px-4 py-2 text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border disabled:opacity-50"
               >
                 취소
               </button>

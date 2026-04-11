@@ -10,13 +10,13 @@ import { appConfirm } from '@/components/ui/AppDialog'
 
 // 사용 가능한 색상 프리셋
 const COLOR_PRESETS = [
-  { bg: 'bg-gray-100', text: 'text-gray-700', label: '회색' },
-  { bg: 'bg-blue-100', text: 'text-blue-700', label: '파란색' },
-  { bg: 'bg-green-100', text: 'text-green-700', label: '초록색' },
+  { bg: 'bg-at-surface-alt', text: 'text-at-text-secondary', label: '회색' },
+  { bg: 'bg-at-tag', text: 'text-at-accent', label: '파란색' },
+  { bg: 'bg-at-success-bg', text: 'text-at-success', label: '초록색' },
   { bg: 'bg-yellow-100', text: 'text-yellow-700', label: '노란색' },
   { bg: 'bg-purple-100', text: 'text-purple-700', label: '보라색' },
   { bg: 'bg-orange-100', text: 'text-orange-700', label: '주황색' },
-  { bg: 'bg-red-100', text: 'text-red-700', label: '빨간색' },
+  { bg: 'bg-at-error-bg', text: 'text-at-error', label: '빨간색' },
   { bg: 'bg-pink-100', text: 'text-pink-700', label: '분홍색' },
   { bg: 'bg-indigo-100', text: 'text-indigo-700', label: '남색' },
   { bg: 'bg-teal-100', text: 'text-teal-700', label: '청록색' },

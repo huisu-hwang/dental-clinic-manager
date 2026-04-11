@@ -160,7 +160,7 @@ export default function TeamStatus() {
           <button
             onClick={loadTeamStatus}
             disabled={loading}
-            className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent disabled:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent disabled:bg-at-border transition-colors"
           >
             {loading ? '새로고침 중...' : '새로고침'}
           </button>
@@ -456,7 +456,7 @@ export default function TeamStatus() {
 
       {/* 도움말 */}
       {isToday && (
-        <div className="bg-at-accent-light border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+        <div className="bg-at-accent-light border border-at-border rounded-xl p-4 text-sm text-at-accent">
           <h3 className="font-semibold mb-2">💡 실시간 현황</h3>
           <ul className="space-y-1">
             <li>• 자동 새로고침을 켜면 1분마다 최신 정보로 업데이트됩니다.</li>

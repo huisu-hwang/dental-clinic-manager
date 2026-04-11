@@ -224,14 +224,14 @@ export default function RevenueForm({
         {/* 업로드된 파일 표시 */}
         {uploadedFile && (
           <div className="mt-3 flex items-center justify-center gap-2 text-sm">
-            <Check className="w-4 h-4 text-green-600" />
-            <span className="text-gray-700">{uploadedFile.name}</span>
+            <Check className="w-4 h-4 text-at-success" />
+            <span className="text-at-text-secondary">{uploadedFile.name}</span>
             <button
               onClick={() => {
                 setUploadedFile(null)
                 setParseResult(null)
               }}
-              className="text-gray-400 hover:text-red-500"
+              className="text-at-text-weak hover:text-red-500"
             >
               <X className="w-4 h-4" />
             </button>
@@ -273,7 +273,7 @@ export default function RevenueForm({
                 className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-right"
                 placeholder="0"
               />
-              <span className="absolute right-3 top-2 text-gray-400">원</span>
+              <span className="absolute right-3 top-2 text-at-text-weak">원</span>
             </div>
           </div>
           <div>
@@ -288,7 +288,7 @@ export default function RevenueForm({
                 className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-right"
                 placeholder="0"
               />
-              <span className="absolute right-3 top-2 text-gray-400">명</span>
+              <span className="absolute right-3 top-2 text-at-text-weak">명</span>
             </div>
           </div>
         </div>
@@ -307,7 +307,7 @@ export default function RevenueForm({
                 className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-right"
                 placeholder="0"
               />
-              <span className="absolute right-3 top-2 text-gray-400">원</span>
+              <span className="absolute right-3 top-2 text-at-text-weak">원</span>
             </div>
           </div>
           <div>
@@ -322,7 +322,7 @@ export default function RevenueForm({
                 className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-right"
                 placeholder="0"
               />
-              <span className="absolute right-3 top-2 text-gray-400">명</span>
+              <span className="absolute right-3 top-2 text-at-text-weak">명</span>
             </div>
           </div>
         </div>
@@ -341,7 +341,7 @@ export default function RevenueForm({
                 className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-right"
                 placeholder="0"
               />
-              <span className="absolute right-3 top-2 text-gray-400">원</span>
+              <span className="absolute right-3 top-2 text-at-text-weak">원</span>
             </div>
           </div>
           <div>

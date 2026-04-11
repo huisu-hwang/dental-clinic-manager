@@ -53,7 +53,7 @@ export default function NewsAccordion({
       </div>
 
       {/* 기사 목록 */}
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-at-border">
         {articles.length === 0 ? (
           <p className="p-4 text-center text-at-text-weak text-sm">{emptyMessage}</p>
         ) : (
@@ -68,7 +68,7 @@ export default function NewsAccordion({
               <span className="text-sm font-medium text-at-text-secondary group-hover:text-at-accent pr-3 line-clamp-2">
                 {article.title}
               </span>
-              <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-at-accent shrink-0" />
+              <ExternalLink className="w-4 h-4 text-at-text-weak group-hover:text-at-accent shrink-0" />
             </a>
           ))
         )}

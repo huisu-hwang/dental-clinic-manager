@@ -121,7 +121,7 @@ export default function TaskApproval() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
       </div>
     )
   }
@@ -150,7 +150,7 @@ export default function TaskApproval() {
         {/* 일괄 처리 버튼 */}
         {selectedIds.size > 0 && (
           <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-at-border">
-            <span className="text-sm text-slate-500">{selectedIds.size}건 선택됨</span>
+            <span className="text-sm text-at-text-weak">{selectedIds.size}건 선택됨</span>
             <button
               onClick={handleApprove}
               disabled={processing}
@@ -209,7 +209,7 @@ export default function TaskApproval() {
           <div className="w-16 h-16 bg-at-success-bg rounded-full flex items-center justify-center mx-auto mb-4">
             <FileCheck className="w-8 h-8 text-green-500" />
           </div>
-          <p className="text-slate-500 text-sm">결재 대기 중인 항목이 없습니다.</p>
+          <p className="text-at-text-weak text-sm">결재 대기 중인 항목이 없습니다.</p>
         </div>
       ) : (
         <>
@@ -217,7 +217,7 @@ export default function TaskApproval() {
           <div className="flex items-center justify-end">
             <button
               onClick={selectAll}
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-at-accent hover:text-at-accent"
             >
               {selectedIds.size === pendingTemplates.length ? '선택 해제' : '전체 선택'}
             </button>
@@ -243,7 +243,7 @@ export default function TaskApproval() {
                       </span>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-800">{staffMember?.name || '알 수 없음'}</span>
+                      <span className="font-medium text-at-text">{staffMember?.name || '알 수 없음'}</span>
                       <span className="text-xs text-at-text-weak ml-2">
                         {staffMember ? getRoleName(staffMember.role) : ''}
                       </span>
@@ -263,13 +263,13 @@ export default function TaskApproval() {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-slate-800">{template.title}</span>
+                          <span className="text-sm font-medium text-at-text">{template.title}</span>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-at-surface-alt text-at-text-secondary">
                             {loadPeriodConfig().labels[template.period] || template.period}
                           </span>
                         </div>
                         {template.description && (
-                          <p className="text-xs text-slate-500 mt-0.5">{template.description}</p>
+                          <p className="text-xs text-at-text-weak mt-0.5">{template.description}</p>
                         )}
                         <p className="text-xs text-at-text-weak mt-0.5">
                           요청자: {getStaffName(template.created_by)}

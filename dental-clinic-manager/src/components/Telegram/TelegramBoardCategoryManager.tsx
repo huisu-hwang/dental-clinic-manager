@@ -210,7 +210,7 @@ export default function TelegramBoardCategoryManager({ groupId, onBack }: Telegr
                           <option key={c.value} value={c.value}>{c.name}</option>
                         ))}
                       </select>
-                      <button onClick={handleSaveEdit} className="p-1 text-green-600 hover:text-green-700">
+                      <button onClick={handleSaveEdit} className="p-1 text-at-success hover:text-at-success">
                         <Check className="w-4 h-4" />
                       </button>
                       <button onClick={() => setEditingId(null)} className="p-1 text-at-text-weak hover:text-at-text-secondary">

@@ -221,7 +221,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                   </td>
                   <td className="px-2 py-2 text-center">
                     {(() => {
-                      if (row.gift_type === '없음') return <span className="text-slate-400">-</span>
+                      if (row.gift_type === '없음') return <span className="text-at-text-weak">-</span>
                       const gift = giftInventory.find(item => item.name === row.gift_type)
                       const totalStock = gift?.stock || 0
                       const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
@@ -236,7 +236,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       const remaining = actualStock - usedByPriorRows - (row.quantity || 1)
                       const displayRemaining = remaining >= 0 ? remaining : 0
                       return (
-                        <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-slate-700'}`}>
+                        <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-at-text-secondary'}`}>
                           {displayRemaining}
                         </span>
                       )
@@ -374,7 +374,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     <label className="block text-xs font-medium text-at-text-secondary mb-1">재고</label>
                     <div className="px-2 py-2 border border-at-border rounded-lg text-sm bg-at-surface-alt text-center">
                       {(() => {
-                        if (row.gift_type === '없음') return <span className="text-slate-400">-</span>
+                        if (row.gift_type === '없음') return <span className="text-at-text-weak">-</span>
                         const gift = giftInventory.find(item => item.name === row.gift_type)
                         const totalStock = gift?.stock || 0
                         const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
@@ -389,7 +389,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         const remaining = actualStock - usedByPriorRows - (row.quantity || 1)
                         const displayRemaining = remaining >= 0 ? remaining : 0
                         return (
-                          <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-slate-700'}`}>
+                          <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-at-text-secondary'}`}>
                             {displayRemaining}
                           </span>
                         )

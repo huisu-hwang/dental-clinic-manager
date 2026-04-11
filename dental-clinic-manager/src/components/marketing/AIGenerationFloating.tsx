@@ -65,12 +65,12 @@ export default function AIGenerationFloating() {
         ) : isCompleted ? (
           <>
             <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            <span className="text-xs font-medium text-green-600">완료</span>
+            <span className="text-xs font-medium text-at-success">완료</span>
           </>
         ) : (
           <>
             <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
-            <span className="text-xs font-medium text-red-600">실패</span>
+            <span className="text-xs font-medium text-at-error">실패</span>
           </>
         )}
         <ChevronUpIcon className="h-3 w-3 text-at-text" />
@@ -82,7 +82,7 @@ export default function AIGenerationFloating() {
     <div className="fixed bottom-4 right-4 z-50 w-80 bg-white rounded-xl shadow-2xl border border-at-border overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
       {/* 헤더 */}
       <div className={`flex items-center justify-between px-4 py-2.5 ${
-        isCompleted ? 'bg-green-50' : isError ? 'bg-red-50' : 'bg-gradient-to-r from-indigo-50 to-purple-50'
+        isCompleted ? 'bg-at-success-bg' : isError ? 'bg-at-error-bg' : 'bg-gradient-to-r from-indigo-50 to-purple-50'
       }`}>
         <div className="flex items-center gap-2">
           {isGenerating ? (
@@ -91,12 +91,12 @@ export default function AIGenerationFloating() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           ) : isCompleted ? (
-            <CheckCircleIcon className="h-4 w-4 text-green-600" />
+            <CheckCircleIcon className="h-4 w-4 text-at-success" />
           ) : (
-            <ExclamationCircleIcon className="h-4 w-4 text-red-600" />
+            <ExclamationCircleIcon className="h-4 w-4 text-at-error" />
           )}
           <span className={`text-sm font-semibold ${
-            isCompleted ? 'text-green-700' : isError ? 'text-red-700' : 'text-indigo-700'
+            isCompleted ? 'text-at-success' : isError ? 'text-at-error' : 'text-indigo-700'
           }`}>
             {isGenerating ? 'AI 글 생성 중' : isCompleted ? '생성 완료' : '생성 실패'}
           </span>
@@ -183,10 +183,10 @@ export default function AIGenerationFloating() {
         {/* 에러 시 */}
         {isError && (
           <div className="space-y-2">
-            <p className="text-xs text-red-600 line-clamp-2">{generationError}</p>
+            <p className="text-xs text-at-error line-clamp-2">{generationError}</p>
             <button
               onClick={handleDismiss}
-              className="w-full py-2 bg-at-surface-alt text-at-text text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors"
+              className="w-full py-2 bg-at-surface-alt text-at-text text-sm font-medium rounded-xl hover:bg-at-border transition-colors"
             >
               닫기
             </button>

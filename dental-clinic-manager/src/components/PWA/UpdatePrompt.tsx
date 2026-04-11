@@ -59,7 +59,7 @@ export default function UpdatePrompt({ autoReloadDelay = 0 }: UpdatePromptProps)
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-center pointer-events-none">
-      <div className="bg-blue-600 text-white rounded-xl shadow-2xl px-5 py-4 max-w-sm w-full pointer-events-auto animate-in slide-in-from-bottom-4">
+      <div className="bg-at-accent text-white rounded-xl shadow-2xl px-5 py-4 max-w-sm w-full pointer-events-auto animate-in slide-in-from-bottom-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-0.5">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -85,7 +85,7 @@ export default function UpdatePrompt({ autoReloadDelay = 0 }: UpdatePromptProps)
         </div>
         <button
           onClick={handleReload}
-          className="mt-3 w-full bg-white text-blue-600 text-sm font-semibold py-2 rounded-lg hover:bg-blue-50 transition-colors active:scale-[0.98]"
+          className="mt-3 w-full bg-white text-at-accent text-sm font-semibold py-2 rounded-lg hover:bg-at-accent-light transition-colors active:scale-[0.98]"
         >
           지금 새로고침
         </button>

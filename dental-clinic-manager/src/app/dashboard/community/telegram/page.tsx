@@ -93,19 +93,19 @@ export default function TelegramBoardListPage() {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-4 sm:p-6 space-y-6">
+      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-4 sm:p-6 space-y-6">
         {/* 신청 성공 메시지 */}
         {applySuccess && (
-          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-3 rounded-lg border border-green-200">
+          <div className="flex items-center gap-2 text-sm text-at-success bg-at-success-bg px-4 py-3 rounded-lg border border-green-200">
             게시판 신청이 접수되었습니다. 관리자 승인 후 활성화됩니다.
           </div>
         )}
 
         {/* 신청 에러 메시지 */}
         {applyError && (
-          <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-lg border border-red-200">
+          <div className="flex items-center gap-2 text-sm text-at-error bg-at-error-bg px-4 py-3 rounded-lg border border-red-200">
             {applyError}
-            <button onClick={() => setApplyError(null)} className="ml-auto text-red-400 hover:text-red-600">×</button>
+            <button onClick={() => setApplyError(null)} className="ml-auto text-red-400 hover:text-at-error">×</button>
           </div>
         )}
 
@@ -124,7 +124,7 @@ export default function TelegramBoardListPage() {
             <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
           </div>
         ) : groups.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-at-text-weak">
             <Inbox className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm font-medium">참여 중인 모임이 없습니다</p>
             <p className="text-xs mt-1">초대 링크를 통해 모임에 가입하거나, 위의 &quot;게시판 신청&quot; 버튼으로 새 게시판을 신청할 수 있습니다</p>
@@ -135,16 +135,16 @@ export default function TelegramBoardListPage() {
               <button
                 key={group.id}
                 onClick={() => router.push(`/dashboard/community/telegram/${group.board_slug}`)}
-                className="text-left p-4 rounded-xl border border-gray-200 hover:border-sky-300 hover:shadow-sm transition-all group"
+                className="text-left p-4 rounded-xl border border-at-border hover:border-sky-300 hover:shadow-sm transition-all group"
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${group.color_bg} group-hover:scale-105 transition-transform`}>
                     <Send className={`w-5 h-5 ${group.color_text}`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-800 truncate">{group.board_title}</h3>
+                    <h3 className="text-sm font-semibold text-at-text truncate">{group.board_title}</h3>
                     {group.board_description && (
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{group.board_description}</p>
+                      <p className="text-xs text-at-text-weak truncate mt-0.5">{group.board_description}</p>
                     )}
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default function TelegramBoardListPage() {
         {/* 공개 소모임 */}
         {publicGroups.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 mb-3">
+            <h3 className="text-sm font-semibold text-at-text-secondary flex items-center gap-1.5 mb-3">
               <Globe className="w-4 h-4 text-green-500" />
               공개 소모임
             </h3>
@@ -165,7 +165,7 @@ export default function TelegramBoardListPage() {
                 <button
                   key={group.id}
                   onClick={() => router.push(`/dashboard/community/telegram/${group.board_slug}`)}
-                  className="text-left p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:shadow-sm transition-all group"
+                  className="text-left p-4 rounded-xl border border-at-border hover:border-green-300 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${group.color_bg} group-hover:scale-105 transition-transform`}>
@@ -173,13 +173,13 @@ export default function TelegramBoardListPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <h3 className="text-sm font-semibold text-gray-800 truncate">{group.board_title}</h3>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 flex-shrink-0">
+                        <h3 className="text-sm font-semibold text-at-text truncate">{group.board_title}</h3>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-at-success-bg text-at-success flex-shrink-0">
                           {TELEGRAM_VISIBILITY_LABELS[group.visibility]}
                         </span>
                       </div>
                       {group.board_description && (
-                        <p className="text-xs text-gray-400 truncate mt-0.5">{group.board_description}</p>
+                        <p className="text-xs text-at-text-weak truncate mt-0.5">{group.board_description}</p>
                       )}
                     </div>
                   </div>

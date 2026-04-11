@@ -29,25 +29,25 @@ import {
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
   'Clear': <Sun className="w-10 h-10 text-yellow-500" />,
-  'Clouds': <Cloud className="w-10 h-10 text-gray-400" />,
+  'Clouds': <Cloud className="w-10 h-10 text-at-text-weak" />,
   'Rain': <CloudRain className="w-10 h-10 text-blue-500" />,
   'Snow': <CloudSnow className="w-10 h-10 text-blue-300" />,
-  'Drizzle': <CloudRain className="w-10 h-10 text-blue-400" />,
+  'Drizzle': <CloudRain className="w-10 h-10 text-at-accent" />,
   'Thunderstorm': <CloudRain className="w-10 h-10 text-purple-500" />,
-  'Mist': <Wind className="w-10 h-10 text-gray-400" />,
-  'Fog': <Wind className="w-10 h-10 text-gray-400" />,
+  'Mist': <Wind className="w-10 h-10 text-at-text-weak" />,
+  'Fog': <Wind className="w-10 h-10 text-at-text-weak" />,
 }
 
 // 내일 날씨용 작은 아이콘 매핑
 const weatherIconsSmall: Record<string, React.ReactNode> = {
   'Clear': <Sun className="w-8 h-8 text-yellow-500 opacity-70" />,
-  'Clouds': <Cloud className="w-8 h-8 text-gray-400 opacity-70" />,
+  'Clouds': <Cloud className="w-8 h-8 text-at-text-weak opacity-70" />,
   'Rain': <CloudRain className="w-8 h-8 text-blue-500 opacity-70" />,
   'Snow': <CloudSnow className="w-8 h-8 text-blue-300 opacity-70" />,
-  'Drizzle': <CloudRain className="w-8 h-8 text-blue-400 opacity-70" />,
+  'Drizzle': <CloudRain className="w-8 h-8 text-at-accent opacity-70" />,
   'Thunderstorm': <CloudRain className="w-8 h-8 text-purple-500 opacity-70" />,
-  'Mist': <Wind className="w-8 h-8 text-gray-400 opacity-70" />,
-  'Fog': <Wind className="w-8 h-8 text-gray-400 opacity-70" />,
+  'Mist': <Wind className="w-8 h-8 text-at-text-weak opacity-70" />,
+  'Fog': <Wind className="w-8 h-8 text-at-text-weak opacity-70" />,
 }
 
 // 현재 날씨 데이터 타입
@@ -925,7 +925,7 @@ export default function DashboardHome() {
                 <div className="space-y-3">
                   {/* 현재 날씨 */}
                   <div className="flex items-center gap-3">
-                    {weatherIcons[weather.current.main] || <Cloud className="w-10 h-10 text-gray-400" />}
+                    {weatherIcons[weather.current.main] || <Cloud className="w-10 h-10 text-at-text-weak" />}
                     <div className="flex-1">
                       <div className="flex items-center gap-1 text-xs text-at-text-secondary mb-0.5 tracking-[0.07px]">
                         <MapPin className="w-3 h-3" />
@@ -942,7 +942,7 @@ export default function DashboardHome() {
 
                   {/* 내일 날씨 */}
                   <div className="flex items-center gap-3">
-                    {weatherIconsSmall[weather.tomorrow.main] || <Cloud className="w-8 h-8 text-gray-400 opacity-70" />}
+                    {weatherIconsSmall[weather.tomorrow.main] || <Cloud className="w-8 h-8 text-at-text-weak opacity-70" />}
                     <div className="flex-1">
                       <div className="flex items-center gap-1 text-xs text-at-text-secondary mb-0.5 tracking-[0.07px]">
                         <Calendar className="w-3 h-3" />

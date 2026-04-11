@@ -383,7 +383,7 @@ export default function CheckInOut() {
             disabled={loading || isCheckedIn || isCheckedOut}
             className={`py-6 rounded-xl font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
               loading || isCheckedIn || isCheckedOut
-                ? 'bg-slate-300 cursor-not-allowed'
+                ? 'bg-at-border cursor-not-allowed'
                 : 'bg-at-accent hover:bg-at-accent active:bg-blue-700 shadow-at-card hover:shadow-lg'
             }`}
           >
@@ -396,7 +396,7 @@ export default function CheckInOut() {
             disabled={loading || !isCheckedIn || isCheckedOut}
             className={`py-6 rounded-xl font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
               loading || !isCheckedIn || isCheckedOut
-                ? 'bg-slate-300 cursor-not-allowed'
+                ? 'bg-at-border cursor-not-allowed'
                 : 'bg-green-500 hover:bg-green-600 active:bg-green-700 shadow-at-card hover:shadow-lg'
             }`}
           >
@@ -488,14 +488,14 @@ export default function CheckInOut() {
               <button
                 onClick={handleConfirmCheckout}
                 disabled={loading}
-                className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors text-lg"
+                className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-at-border text-white font-semibold rounded-xl transition-colors text-lg"
               >
                 {loading ? '처리 중...' : '퇴근하기'}
               </button>
               <button
                 onClick={handleCancelCheckout}
                 disabled={loading}
-                className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-at-text-secondary font-semibold rounded-xl transition-colors"
+                className="w-full py-3 bg-at-border hover:bg-at-border text-at-text-secondary font-semibold rounded-xl transition-colors"
               >
                 취소
               </button>

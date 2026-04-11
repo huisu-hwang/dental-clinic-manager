@@ -122,13 +122,13 @@ export default function CallModal({
 
   // 결과 선택 옵션 (간소화된 상태)
   const resultOptions: { value: PatientRecallStatus; label: string; icon: React.ReactNode; color: string }[] = [
-    { value: 'appointment_made', label: '예약 성공', icon: <Calendar className="w-5 h-5" />, color: 'bg-green-100 text-green-700 border-green-300' },
+    { value: 'appointment_made', label: '예약 성공', icon: <Calendar className="w-5 h-5" />, color: 'bg-at-success-bg text-at-success border-green-300' },
     { value: 'appointment_pending', label: '예약보류', icon: <Clock className="w-5 h-5" />, color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
     { value: 'already_booked', label: '이미예약', icon: <CheckCircle className="w-5 h-5" />, color: 'bg-cyan-100 text-cyan-700 border-cyan-300' },
     { value: 'no_answer', label: '부재중', icon: <PhoneMissed className="w-5 h-5" />, color: 'bg-orange-100 text-orange-700 border-orange-300' },
-    { value: 'call_rejected', label: '통화 거부', icon: <PhoneOff className="w-5 h-5" />, color: 'bg-red-100 text-red-700 border-red-300' },
-    { value: 'visit_refused', label: '내원 거부', icon: <XCircle className="w-5 h-5" />, color: 'bg-red-100 text-red-700 border-red-300' },
-    { value: 'invalid_number', label: '없는 번호', icon: <AlertCircle className="w-5 h-5" />, color: 'bg-gray-100 text-gray-700 border-gray-300' }
+    { value: 'call_rejected', label: '통화 거부', icon: <PhoneOff className="w-5 h-5" />, color: 'bg-at-error-bg text-at-error border-red-300' },
+    { value: 'visit_refused', label: '내원 거부', icon: <XCircle className="w-5 h-5" />, color: 'bg-at-error-bg text-at-error border-red-300' },
+    { value: 'invalid_number', label: '없는 번호', icon: <AlertCircle className="w-5 h-5" />, color: 'bg-at-surface-alt text-at-text-secondary border-at-border' }
   ]
 
   if (!isOpen || !patient) return null
@@ -140,9 +140,9 @@ export default function CallModal({
         <div className="flex items-center justify-between p-4 border-b border-at-border">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              callStatus === 'calling' ? 'bg-green-100' : 'bg-at-tag'
+              callStatus === 'calling' ? 'bg-at-success-bg' : 'bg-at-tag'
             }`}>
-              <Phone className={`w-5 h-5 ${callStatus === 'calling' ? 'text-green-600 animate-pulse' : 'text-at-accent'}`} />
+              <Phone className={`w-5 h-5 ${callStatus === 'calling' ? 'text-at-success animate-pulse' : 'text-at-accent'}`} />
             </div>
             <div>
               <h3 className="font-semibold text-at-text">전화 걸기</h3>
@@ -195,8 +195,8 @@ export default function CallModal({
           {/* 통화 중 표시 */}
           {callStatus === 'calling' && (
             <div className="py-6 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-                <Phone className="w-8 h-8 text-green-600 animate-pulse" />
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-at-success-bg flex items-center justify-center">
+                <Phone className="w-8 h-8 text-at-success animate-pulse" />
               </div>
               <p className="text-lg font-medium text-at-text">전화 연결 중...</p>
               <p className="text-sm text-at-text-weak mt-1">
@@ -265,7 +265,7 @@ export default function CallModal({
             <button
               onClick={handleSave}
               disabled={isSaving || !selectedResult}
-              className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSaving ? (
                 <>

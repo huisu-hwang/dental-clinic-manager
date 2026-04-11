@@ -326,7 +326,7 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                           e.stopPropagation()
                           handleDownload(document)
                         }}
-                        className="p-1 rounded hover:bg-gray-200 transition-colors text-at-text-weak hover:text-at-text-secondary"
+                        className="p-1 rounded hover:bg-at-border transition-colors text-at-text-weak hover:text-at-text-secondary"
                         title="다운로드"
                       >
                         <Download className="w-4 h-4" />

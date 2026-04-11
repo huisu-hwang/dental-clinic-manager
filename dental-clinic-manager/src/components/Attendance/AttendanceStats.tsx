@@ -260,43 +260,43 @@ export default function AttendanceStats() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handlePresetPeriod('thisWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 이번 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 지난 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 이번 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 지난 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('last3Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 최근 3개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('last6Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 최근 6개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisYear')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 올해
               </button>
@@ -357,7 +357,7 @@ export default function AttendanceStats() {
                   {statistics.present_days}/{statistics.total_work_days}일 출근
                 </div>
               </div>
-              <div className="bg-at-accent-light rounded-xl p-4 border border-blue-200">
+              <div className="bg-at-accent-light rounded-xl p-4 border border-at-border">
                 <div className="text-xs font-medium text-at-accent uppercase tracking-wider">총 근무시간</div>
                 <div className="text-2xl font-bold text-at-accent mt-1">
                   {Math.floor(statistics.total_work_minutes / 60)}h
@@ -451,7 +451,7 @@ export default function AttendanceStats() {
 
           {/* 근무 시간 분석 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-at-accent-light rounded-xl border border-blue-200">
+            <div className="text-center p-4 bg-at-accent-light rounded-xl border border-at-border">
               <p className="text-sm text-at-text-secondary mb-1">총 근무 시간</p>
               <p className="text-xl font-bold text-at-accent">
                 {formatMinutesToHours(statistics.total_work_minutes)}

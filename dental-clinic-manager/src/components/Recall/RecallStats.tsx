@@ -290,7 +290,7 @@ export default function RecallStats() {
                   <span className="text-sm text-at-text-weak">예약 성공</span>
                   <Calendar className="w-4 h-4 text-at-success" />
                 </div>
-                <p className="text-2xl font-bold text-green-700">{cur.appointment_count}</p>
+                <p className="text-2xl font-bold text-at-success">{cur.appointment_count}</p>
                 <div className="mt-1"><ChangeIndicator current={cur.appointment_count} previous={prev.appointment_count} /></div>
                 <p className="text-xs text-at-text-weak mt-0.5">{compareLabels.previous}: {prev.appointment_count}건</p>
               </div>
@@ -375,7 +375,7 @@ export default function RecallStats() {
           </h3>
           <div className="space-y-3">
             {[
-              { label: '리콜 전', value: stats.pending_count, barClass: 'bg-gray-400' },
+              { label: '리콜 전', value: stats.pending_count, barClass: 'bg-at-border' },
               { label: '연락 진행', value: stats.contacted_count - stats.appointment_count, barClass: 'bg-at-accent' },
               { label: '예약 성공', value: stats.appointment_count, barClass: 'bg-green-500' },
               { label: '거부/실패', value: stats.rejected_count + stats.invalid_count, barClass: 'bg-red-500' },

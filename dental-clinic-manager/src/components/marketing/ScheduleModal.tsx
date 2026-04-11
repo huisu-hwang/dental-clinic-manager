@@ -44,7 +44,7 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-at-border">
           <div className="flex items-center gap-2">
-            <CalendarDaysIcon className="h-5 w-5 text-blue-600" />
+            <CalendarDaysIcon className="h-5 w-5 text-at-accent" />
             <h3 className="text-base font-semibold text-at-text">예약 발행 설정</h3>
           </div>
           <button
@@ -57,7 +57,7 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
 
         {/* 본문 */}
         <div className="p-5 space-y-4">
-          <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded-xl px-3 py-2">
+          <div className="flex items-center gap-2 text-sm text-at-accent bg-at-accent-light rounded-xl px-3 py-2">
             <ClockIcon className="h-4 w-4 flex-shrink-0" />
             발행할 날짜와 시간을 설정해주세요.
           </div>
@@ -70,7 +70,7 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
                 value={scheduleDate}
                 min={today}
                 onChange={(e) => setScheduleDate(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
               />
             </div>
             <div>
@@ -79,7 +79,7 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
                 type="time"
                 value={scheduleTime}
                 onChange={(e) => setScheduleTime(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
               />
             </div>
           </div>
@@ -88,7 +88,7 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
             <div className="text-center text-sm text-at-text bg-at-surface-alt rounded-xl py-2">
               <span className="font-medium text-at-text">{scheduleDate}</span>
               {' '}
-              <span className="font-medium text-blue-600">{scheduleTime}</span>
+              <span className="font-medium text-at-accent">{scheduleTime}</span>
               에 발행됩니다.
             </div>
           )}
@@ -106,7 +106,7 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
           <button
             onClick={handleConfirm}
             disabled={isLoading || !scheduleDate || !scheduleTime}
-            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

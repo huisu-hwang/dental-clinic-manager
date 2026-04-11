@@ -481,7 +481,7 @@ export default function TelegramBoardPostList({
                   onClick={() => handleFilterChange(activeFilter === 'my_likes' ? 'all' : 'my_likes')}
                   className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors inline-flex items-center gap-0.5 ${
                     activeFilter === 'my_likes'
-                      ? 'bg-red-100 text-red-700'
+                      ? 'bg-at-error-bg text-at-error'
                       : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                   }`}
                 >

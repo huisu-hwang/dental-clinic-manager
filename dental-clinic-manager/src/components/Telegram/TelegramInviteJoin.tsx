@@ -121,7 +121,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 bg-at-success-bg rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-7 h-7 text-green-500" />
           </div>
           <h2 className="text-lg font-semibold text-at-text mb-2">가입 완료!</h2>

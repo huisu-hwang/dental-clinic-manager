@@ -40,10 +40,10 @@ function ChangeIndicator({ percent }: { percent: number | null }) {
 function SkeletonCard() {
   return (
     <div className="bg-white rounded-xl border border-at-border p-5 animate-pulse">
-      <div className="h-4 bg-slate-200 rounded w-24 mb-4" />
-      <div className="h-8 bg-slate-200 rounded w-32 mb-2" />
-      <div className="h-4 bg-slate-200 rounded w-24 mb-3" />
-      <div className="h-3 bg-slate-200 rounded w-16" />
+      <div className="h-4 bg-at-border rounded w-24 mb-4" />
+      <div className="h-8 bg-at-border rounded w-32 mb-2" />
+      <div className="h-4 bg-at-border rounded w-24 mb-3" />
+      <div className="h-3 bg-at-border rounded w-16" />
     </div>
   )
 }

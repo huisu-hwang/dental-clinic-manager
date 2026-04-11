@@ -41,8 +41,8 @@ export default function AdminTelegramGroupSetupGuide({ onCancel }: AdminTelegram
                 </div>
 
                 <div className="flex items-start gap-3 bg-white p-4 rounded-xl border border-at-border shadow-at-card">
-                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-xs font-bold text-green-600">3</span>
+                    <div className="w-6 h-6 rounded-full bg-at-success-bg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-at-success">3</span>
                     </div>
                     <div>
                         <h5 className="text-sm font-semibold text-at-text">설정 후 승인</h5>

@@ -170,9 +170,9 @@ export default function PatientList({
   const getElapsedColorClass = (dateStr?: string): string => {
     if (!dateStr) return 'text-at-text-weak'
     const months = getElapsedMonths(dateStr)
-    if (months < 6) return 'text-green-600'
-    if (months < 12) return 'text-amber-600'
-    return 'text-red-600'
+    if (months < 6) return 'text-at-success'
+    if (months < 12) return 'text-at-warning'
+    return 'text-at-error'
   }
 
   // 전체 선택 상태
@@ -663,7 +663,7 @@ export default function PatientList({
                           <button
                             onClick={() => onCallPatient(patient)}
                             title="전화 걸기"
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="p-2 text-at-success hover:bg-at-success-bg rounded-lg transition-colors"
                           >
                             <Phone className="w-5 h-5" />
                           </button>
@@ -695,7 +695,7 @@ export default function PatientList({
                           <button
                             onClick={() => onCallPatient(patient)}
                             title="전화 걸기"
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="p-2 text-at-success hover:bg-at-success-bg rounded-lg transition-colors"
                           >
                             <Phone className="w-5 h-5" />
                           </button>
@@ -729,7 +729,7 @@ export default function PatientList({
                                   <div className="w-40 bg-white rounded-xl shadow-xl border border-at-border py-1">
                                     <button
                                       onClick={() => { onExcludePatient(patient, 'family'); setExcludeDropdownId(null) }}
-                                      className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-at-text-secondary"
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-at-warning-bg flex items-center gap-2 text-at-text-secondary"
                                     >
                                       <Heart className="w-4 h-4 text-amber-500" />
                                       지인

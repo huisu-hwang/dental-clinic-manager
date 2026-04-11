@@ -180,18 +180,18 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
           {credentials && !showCredForm ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">사업자등록번호</span>
-                <span className="font-medium text-slate-800">
+                <span className="text-at-text-weak">사업자등록번호</span>
+                <span className="font-medium text-at-text">
                   {credentials.business_number.replace(/(\d{3})(\d{2})(\d{5})/, '$1-$2-$3')}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">로그인 방식</span>
-                <span className="font-medium text-slate-800">ID/PW</span>
+                <span className="text-at-text-weak">로그인 방식</span>
+                <span className="font-medium text-at-text">ID/PW</span>
               </div>
               {credentials.last_login_attempt && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">마지막 로그인</span>
+                  <span className="text-at-text-weak">마지막 로그인</span>
                   <span className="text-at-text-secondary text-xs">
                     {new Date(credentials.last_login_attempt).toLocaleString('ko-KR')}
                   </span>

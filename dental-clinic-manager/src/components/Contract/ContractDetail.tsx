@@ -233,14 +233,14 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   if (error || !contract) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+      <div className="p-4 bg-at-error-bg border border-red-200 rounded-xl">
         <p className="text-red-800">{error || '계약서를 찾을 수 없습니다.'}</p>
         <button onClick={() => router.back()} className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
           돌아가기
@@ -303,14 +303,14 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
     <div className="max-w-4xl mx-auto">
       {/* Action Bar */}
       <div className="mb-6 flex justify-between items-center print:hidden">
-        <button onClick={() => router.back()} className="px-4 py-2 text-gray-600 hover:text-gray-900">
+        <button onClick={() => router.back()} className="px-4 py-2 text-at-text-secondary hover:text-at-text">
           ← 목록으로
         </button>
         <div className="flex gap-3">
           {canSign('employer') && (
             <button
               onClick={() => handleSignClick('employer')}
-              className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+              className="px-6 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover transition-colors"
             >
               원장 서명
             </button>
@@ -328,8 +328,8 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
             disabled={isPdfGenerating}
             className={`px-4 py-2 rounded-xl transition-colors ${
               isPdfGenerating
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-at-border text-at-text-secondary cursor-not-allowed'
+                : 'bg-at-border text-at-text-secondary hover:bg-at-border'
             }`}
           >
             {isPdfGenerating ? '생성 중...' : 'PDF 다운로드'}
@@ -352,7 +352,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       </div>
 
       {/* Contract Document */}
-      <div ref={contractContentRef} className="contract-print-content bg-white p-8 md:p-12 rounded-xl shadow-lg border border-gray-200">
+      <div ref={contractContentRef} className="contract-print-content bg-white p-8 md:p-12 rounded-xl shadow-lg border border-at-border">
         {/* Title */}
         <h1 className="text-3xl font-bold text-center mb-8">근로계약서</h1>
 
@@ -361,9 +361,9 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           <span
             className={`px-4 py-2 rounded-full text-sm font-semibold ${
               contract.status === 'completed'
-                ? 'bg-green-100 text-green-800'
+                ? 'bg-at-success-bg text-green-800'
                 : contract.status === 'cancelled'
-                ? 'bg-red-100 text-red-800'
+                ? 'bg-at-error-bg text-red-800'
                 : 'bg-yellow-100 text-yellow-800'
             }`}
           >
@@ -387,7 +387,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           {/* Article 1 - 계약당사자 */}
           <section className="border-b pb-4">
             <h2 className="text-lg font-bold mb-3">제1조 (계약당사자)</h2>
-            <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded">
+            <div className="grid grid-cols-2 gap-4 p-3 bg-at-surface-alt rounded">
               <div>
                 <p className="font-semibold mb-2">갑 (사용자)</p>
                 <p className="text-xs">사업체명: {data.clinic_name || '하얀치과'}</p>
@@ -434,13 +434,13 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
                           <span>
                             {hours.open_time} ~ {hours.close_time}
                             {hours.break_start && hours.break_end && (
-                              <span className="text-gray-600 ml-2">
+                              <span className="text-at-text-secondary ml-2">
                                 (휴게: {hours.break_start} ~ {hours.break_end})
                               </span>
                             )}
                           </span>
                         ) : (
-                          <span className="text-gray-500">휴무</span>
+                          <span className="text-at-text-weak">휴무</span>
                         )}
                       </div>
                     )
@@ -449,7 +449,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
               ) : (
                 <p className="ml-4">근로시간: {data.work_start_time || '10:00'}부터 {data.work_end_time || '19:00'}까지</p>
               )}
-              <p className="ml-4 text-xs text-gray-600">* 담당직무: 진료</p>
+              <p className="ml-4 text-xs text-at-text-secondary">* 담당직무: 진료</p>
               <p>2. 휴게시간: 점심시간 포함 (1일 평균 1시간)</p>
               <p>3. 주휴일: 주 1회</p>
               <p>4. 근로시간은 휴게시간을 제하고 1일 평균 {workHoursInfo.avgHoursPerDay}시간, 주 {workHoursInfo.workDays}일(총 {workHoursInfo.totalHours}시간) 근무를 원칙으로 한다.</p>
@@ -466,7 +466,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           <section className="border-b pb-4">
             <h2 className="text-lg font-bold mb-3">제5조 (월지급액의 구성 및 지급)</h2>
             <div className="space-y-2">
-              <div className="grid grid-cols-4 gap-2 p-2 bg-gray-100 rounded text-xs text-center font-semibold">
+              <div className="grid grid-cols-4 gap-2 p-2 bg-at-surface-alt rounded text-xs text-center font-semibold">
                 <div>기본급</div>
                 <div>주휴수당</div>
                 <div>연장근로수당</div>
@@ -584,7 +584,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           </section>
 
           {/* Additional Agreements */}
-          <section className="mt-8 pt-6 border-t-2 border-gray-300">
+          <section className="mt-8 pt-6 border-t-2 border-at-border">
             <h2 className="text-xl font-bold text-center mb-6">연차 휴가 대체 합의서</h2>
             <div className="space-y-3 text-sm">
               <p>1. 근로기준법에 근거하여 법정 연차 휴가를 법정공휴일과 여름철에 휴무하는 것으로 연차휴가와 대체하는 것에 대하여 자유로운 의사로 합의하고, 이 합의서를 작성하여 그 말미에 근로자와 사용자가 함께 서명한다.</p>
@@ -592,14 +592,14 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
             </div>
           </section>
 
-          <section className="mt-8 pt-6 border-t-2 border-gray-300">
+          <section className="mt-8 pt-6 border-t-2 border-at-border">
             <h2 className="text-xl font-bold text-center mb-6">연장·야간·휴일근로 동의서</h2>
             <div className="text-sm text-center space-y-3">
               <p>본인은 {data.clinic_name || '하얀치과'}에 채용되어 업무를 수행함에 있어 근로기준법 규정에 의한 연장근로 / 야간근로 / 휴일근로에 동의합니다.</p>
             </div>
           </section>
 
-          <section className="mt-8 pt-6 border-t-2 border-gray-300">
+          <section className="mt-8 pt-6 border-t-2 border-at-border">
             <h2 className="text-xl font-bold text-center mb-6">비밀 유지 각서</h2>
             <div className="text-sm text-center space-y-3">
               <p>본인은 {data.clinic_name || '하얀치과'}에서 보고 들은 모든 것에 대하여 병원 직원 이외의 타인에게 함부로 발설하지 않고 비밀로 유지할 것을 약속하며, 이를 지키지 아니할 경우에는 그로 인해 병원이 입게 되는 손실에 대하여 공동 책임을 질 것을 서약함.</p>
@@ -621,19 +621,19 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
                     const employerSignature = signatureStatus.signatures.find(s => s.signer_type === 'employer')
                     return employerSignature ? (
                       <>
-                        <div className="bg-white border border-gray-300 rounded p-4 mb-2 flex justify-center items-center min-h-[120px]">
+                        <div className="bg-white border border-at-border rounded p-4 mb-2 flex justify-center items-center min-h-[120px]">
                           <img
                             src={employerSignature.signature_data}
                             alt="원장 서명"
                             className="max-h-24 w-auto"
                           />
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-at-text-secondary">
                           서명일: {contract.updated_at && formatDate(contract.updated_at)}
                         </p>
                       </>
                     ) : (
-                      <div className="bg-green-50 border border-green-200 rounded p-4 mb-2">
+                      <div className="bg-at-success-bg border border-green-200 rounded p-4 mb-2">
                         <p className="text-green-800 font-semibold">✓ 서명 완료</p>
                       </div>
                     )
@@ -641,13 +641,13 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
                 </div>
               ) : (
                 <div className="text-center">
-                  <div className="bg-gray-100 border border-gray-300 rounded p-4 mb-2">
-                    <p className="text-gray-600">서명 대기중</p>
+                  <div className="bg-at-surface-alt border border-at-border rounded p-4 mb-2">
+                    <p className="text-at-text-secondary">서명 대기중</p>
                   </div>
                   {canSign('employer') && (
                     <button
                       onClick={() => handleSignClick('employer')}
-                      className="text-sm text-blue-600 hover:text-blue-800"
+                      className="text-sm text-at-accent hover:text-at-accent"
                     >
                       서명하기 →
                     </button>
@@ -665,19 +665,19 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
                     const employeeSignature = signatureStatus.signatures.find(s => s.signer_type === 'employee')
                     return employeeSignature ? (
                       <>
-                        <div className="bg-white border border-gray-300 rounded p-4 mb-2 flex justify-center items-center min-h-[120px]">
+                        <div className="bg-white border border-at-border rounded p-4 mb-2 flex justify-center items-center min-h-[120px]">
                           <img
                             src={employeeSignature.signature_data}
                             alt="직원 서명"
                             className="max-h-24 w-auto"
                           />
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-at-text-secondary">
                           서명일: {contract.updated_at && formatDate(contract.updated_at)}
                         </p>
                       </>
                     ) : (
-                      <div className="bg-green-50 border border-green-200 rounded p-4 mb-2">
+                      <div className="bg-at-success-bg border border-green-200 rounded p-4 mb-2">
                         <p className="text-green-800 font-semibold">✓ 서명 완료</p>
                       </div>
                     )
@@ -685,13 +685,13 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
                 </div>
               ) : (
                 <div className="text-center">
-                  <div className="bg-gray-100 border border-gray-300 rounded p-4 mb-2">
-                    <p className="text-gray-600">서명 대기중</p>
+                  <div className="bg-at-surface-alt border border-at-border rounded p-4 mb-2">
+                    <p className="text-at-text-secondary">서명 대기중</p>
                   </div>
                   {canSign('employee') && (
                     <button
                       onClick={() => handleSignClick('employee')}
-                      className="text-sm text-blue-600 hover:text-blue-800"
+                      className="text-sm text-at-accent hover:text-at-accent"
                     >
                       서명하기 →
                     </button>
@@ -702,13 +702,13 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           </div>
 
           {/* Contract Date */}
-          <p className="text-center mt-8 text-gray-600">
+          <p className="text-center mt-8 text-at-text-secondary">
             작성일: {formatDate(contract.created_at)}
           </p>
 
           {/* 전자서명 법적 효력 고지 */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="bg-gray-50 p-4 rounded-xl text-xs text-gray-600">
+          <div className="mt-8 pt-6 border-t border-at-border">
+            <div className="bg-at-surface-alt p-4 rounded-xl text-xs text-at-text-secondary">
               <p className="font-medium mb-2">※ 전자 근로계약서 법적 효력 안내</p>
               <ul className="space-y-1 list-disc list-inside">
                 <li>본 전자 근로계약서는 근로기준법 제17조에 따른 근로조건 명시의무를 충족합니다.</li>

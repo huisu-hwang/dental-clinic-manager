@@ -869,7 +869,7 @@ export default function DocumentTemplates() {
           <Send className="w-4 h-4 inline-block mr-2" />
           보낸 문서
           {sentDocuments.length > 0 && (
-            <span className="ml-2 bg-slate-200 text-at-text-secondary text-xs px-2 py-0.5 rounded-full">
+            <span className="ml-2 bg-at-border text-at-text-secondary text-xs px-2 py-0.5 rounded-full">
               {sentDocuments.length}
             </span>
           )}
@@ -1113,7 +1113,7 @@ export default function DocumentTemplates() {
                   : 'bg-at-accent text-white shadow-at-card'
                 : OwnerOnlyDocumentTypes.includes(type)
                   ? 'bg-at-error-bg text-at-error hover:bg-at-error-bg border border-red-200'
-                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-slate-200'
+                  : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-border'
             }`}
           >
             <FileText className="w-4 h-4 inline-block mr-2" />
@@ -1134,14 +1134,14 @@ export default function DocumentTemplates() {
           {/* 직원 선택 - 원장만 다른 직원 선택 가능 (사직서는 본인 작성이므로 제외) */}
           {isOwner && staffList.length > 0 && documentType !== 'resignation' && (
             <div className="mb-6 p-4 bg-at-accent-light rounded-xl">
-              <label className="block text-sm font-medium text-blue-800 mb-2">
+              <label className="block text-sm font-medium text-at-accent mb-2">
                 <Users className="w-4 h-4 inline-block mr-1" />
                 직원 선택 (자동 입력)
               </label>
               <select
                 value={selectedStaff}
                 onChange={(e) => handleStaffSelect(e.target.value)}
-                className="w-full px-3 py-2 border border-blue-200 rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent bg-white"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent bg-white"
               >
                 <option value="">직원을 선택하세요</option>
                 {staffList.map((staff) => (
@@ -1211,8 +1211,8 @@ export default function DocumentTemplates() {
           {(documentType === 'recommended_resignation' || documentType === 'termination_notice') && (
             <div className="mt-6 pt-4 border-t space-y-4">
               {/* 발송 안내 */}
-              <div className="p-4 bg-at-accent-light border border-blue-200 rounded-xl">
-                <h4 className="font-semibold text-blue-800 mb-2">
+              <div className="p-4 bg-at-accent-light border border-at-border rounded-xl">
+                <h4 className="font-semibold text-at-accent mb-2">
                   {documentType === 'recommended_resignation' ? '📋 권고사직서 발송 안내' : '📋 해고통보서 발송 안내'}
                 </h4>
                 <ul className="text-sm text-at-accent space-y-1 list-disc list-inside">
@@ -1274,7 +1274,7 @@ export default function DocumentTemplates() {
                 disabled={isSubmitting || !selectedStaff || !(documentType === 'recommended_resignation' ? recommendedResignationData.ownerSignature : terminationNoticeData.ownerSignature)}
                 className={`w-full px-4 py-3 rounded-xl font-medium transition-colors ${
                   isSubmitting || !selectedStaff || !(documentType === 'recommended_resignation' ? recommendedResignationData.ownerSignature : terminationNoticeData.ownerSignature)
-                    ? 'bg-gray-300 text-at-text-weak cursor-not-allowed'
+                    ? 'bg-at-border text-at-text-weak cursor-not-allowed'
                     : documentType === 'recommended_resignation'
                       ? 'bg-amber-600 text-white hover:bg-amber-700'
                       : 'bg-red-600 text-white hover:bg-red-700'
@@ -1290,7 +1290,7 @@ export default function DocumentTemplates() {
           <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t">
             <button
               onClick={() => setShowPreview(!showPreview)}
-              className="flex-1 min-w-[100px] px-4 py-2 bg-at-surface-alt text-at-text-secondary rounded-xl hover:bg-slate-200 transition-colors"
+              className="flex-1 min-w-[100px] px-4 py-2 bg-at-surface-alt text-at-text-secondary rounded-xl hover:bg-at-border transition-colors"
             >
               {showPreview ? (
                 <>
@@ -1324,7 +1324,7 @@ export default function DocumentTemplates() {
                   disabled={isSubmitting}
                   className={`flex-1 min-w-[100px] px-4 py-2 rounded-xl transition-colors ${
                     isSubmitting
-                      ? 'bg-gray-400 text-at-text-secondary cursor-not-allowed'
+                      ? 'bg-at-border text-at-text-secondary cursor-not-allowed'
                       : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
                 >
@@ -1345,7 +1345,7 @@ export default function DocumentTemplates() {
               disabled={isPdfGenerating}
               className={`flex-1 min-w-[100px] px-4 py-2 rounded-xl transition-colors ${
                 isPdfGenerating
-                  ? 'bg-gray-400 text-at-text-secondary cursor-not-allowed'
+                  ? 'bg-at-border text-at-text-secondary cursor-not-allowed'
                   : 'bg-at-accent text-white hover:bg-at-accent-hover'
               }`}
             >
@@ -1531,7 +1531,7 @@ function ResignationForm({
   return (
     <div className="space-y-4">
       {/* 본인 정보 안내 */}
-      <div className="p-3 bg-at-accent-light border border-blue-200 rounded-xl">
+      <div className="p-3 bg-at-accent-light border border-at-border rounded-xl">
         <p className="text-sm text-at-accent">
           본인의 정보가 자동으로 입력되었습니다. 수정이 필요한 경우 인사담당자에게 문의하세요.
         </p>
@@ -3069,23 +3069,23 @@ function WelfarePaymentPreview({
 
       <div className="flex-1 flex flex-col justify-between">
         {/* 신청자 정보 테이블 */}
-        <table className="w-full table-fixed border-collapse border border-slate-400 mb-2 text-[10px]">
+        <table className="w-full table-fixed border-collapse border border-at-border mb-2 text-[10px]">
           <tbody>
             <tr>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 w-[16%] text-center">성명</td>
-              <td className="py-1 px-1.5 border border-slate-400 w-[34%]">{data.employeeName || '　'}</td>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 w-[16%] text-center">생년월일</td>
-              <td className="py-1 px-1.5 border border-slate-400 w-[34%]">{formatDate(data.birthDate) || '　'}</td>
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border w-[16%] text-center">성명</td>
+              <td className="py-1 px-1.5 border border-at-border w-[34%]">{data.employeeName || '　'}</td>
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border w-[16%] text-center">생년월일</td>
+              <td className="py-1 px-1.5 border border-at-border w-[34%]">{formatDate(data.birthDate) || '　'}</td>
             </tr>
             <tr>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">연락처</td>
-              <td className="py-1 px-1.5 border border-slate-400">{data.phone || '　'}</td>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">상호명</td>
-              <td className="py-1 px-1.5 border border-slate-400">{data.clinicName || '　'}</td>
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">연락처</td>
+              <td className="py-1 px-1.5 border border-at-border">{data.phone || '　'}</td>
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">상호명</td>
+              <td className="py-1 px-1.5 border border-at-border">{data.clinicName || '　'}</td>
             </tr>
             <tr>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">지급방법</td>
-              <td className="py-1 px-1.5 border border-slate-400" colSpan={3}>
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">지급방법</td>
+              <td className="py-1 px-1.5 border border-at-border" colSpan={3}>
                 <span className="mr-2">{data.paymentMethod === 'cash' ? '◉' : '○'} 현금</span>
                 <span className="mr-2">{data.paymentMethod === 'transfer' ? '◉' : '○'} 계좌이체</span>
                 <span>{data.paymentMethod === 'hospital_card' ? '◉' : '○'} 병원카드</span>
@@ -3093,35 +3093,35 @@ function WelfarePaymentPreview({
             </tr>
             {data.paymentMethod === 'transfer' && (
               <tr>
-                <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">예금주/은행</td>
-                <td className="py-1 px-1.5 border border-slate-400">
+                <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">예금주/은행</td>
+                <td className="py-1 px-1.5 border border-at-border">
                   {data.accountHolder || '　'} / {data.bankName || '　'}
                 </td>
-                <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">계좌번호</td>
-                <td className="py-1 px-1.5 border border-slate-400">{data.accountNumber || '　'}</td>
+                <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">계좌번호</td>
+                <td className="py-1 px-1.5 border border-at-border">{data.accountNumber || '　'}</td>
               </tr>
             )}
             <tr>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">지급요청일</td>
-              <td className="py-1 px-1.5 border border-slate-400">
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">지급요청일</td>
+              <td className="py-1 px-1.5 border border-at-border">
                 {requestDateParts.year || '____'}년 {requestDateParts.month || '__'}월 {requestDateParts.day || '__'}일
               </td>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">지급일자</td>
-              <td className="py-1 px-1.5 border border-slate-400">
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">지급일자</td>
+              <td className="py-1 px-1.5 border border-at-border">
                 20{paymentDateParts.year ? paymentDateParts.year.slice(-2) : '__'}년 {paymentDateParts.month || '__'}월 {paymentDateParts.day || '__'}일
               </td>
             </tr>
             <tr>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">지급금액</td>
-              <td className="py-1 px-1.5 border border-slate-400" colSpan={3}>
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">지급금액</td>
+              <td className="py-1 px-1.5 border border-at-border" colSpan={3}>
                 일금 {data.paymentAmount || '           '} 원정
               </td>
             </tr>
             <tr>
-              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-slate-400 text-center">
+              <td className="py-1 px-1.5 bg-at-surface-alt font-medium border border-at-border text-center">
                 지급사유
               </td>
-              <td className="py-1 px-1.5 border border-slate-400 break-words" colSpan={3}>
+              <td className="py-1 px-1.5 border border-at-border break-words" colSpan={3}>
                 {data.paymentReason || '　'}
               </td>
             </tr>
@@ -3134,7 +3134,7 @@ function WelfarePaymentPreview({
         </div>
 
         {/* 복지비 지급 동의 */}
-        <div className="border border-slate-400 p-1.5 mb-2">
+        <div className="border border-at-border p-1.5 mb-2">
           <p className="font-semibold mb-0.5 text-[10px]">복지비 지급 동의</p>
           <p className="text-[10px] leading-4">
             상기와 같은 사유로 복지비를 요청하며, 요청한 복지비 금액을 확인할 수 있도록
@@ -3142,7 +3142,7 @@ function WelfarePaymentPreview({
           </p>
           <div className="flex justify-end items-center gap-2 mt-1 text-[10px]">
             <span>동의자</span>
-            <span className="inline-block w-20 border-b border-slate-400 text-center">
+            <span className="inline-block w-20 border-b border-at-border text-center">
               {data.employeeName || '　'}
             </span>
             {data.applicantSignature ? (
@@ -3171,7 +3171,7 @@ function WelfarePaymentPreview({
         <div className="mt-auto space-y-1 text-[10px]">
           <div className="flex justify-center items-center gap-2">
             <span className="w-14 text-right">신청자 :</span>
-            <span className="inline-block w-24 border-b border-slate-400 text-center">
+            <span className="inline-block w-24 border-b border-at-border text-center">
               {data.employeeName || '　'}
             </span>
             {data.applicantSignature ? (
@@ -3186,7 +3186,7 @@ function WelfarePaymentPreview({
           </div>
           <div className="flex justify-center items-center gap-2">
             <span className="w-14 text-right">확인자 :</span>
-            <span className="inline-block w-24 border-b border-slate-400 text-center">
+            <span className="inline-block w-24 border-b border-at-border text-center">
 
             </span>
             {data.confirmSignature ? (
@@ -3232,7 +3232,7 @@ function CashPaymentForm({
   return (
     <div className="space-y-4">
       {/* 본인 정보 안내 */}
-      <div className="p-3 bg-at-accent-light border border-blue-200 rounded-xl">
+      <div className="p-3 bg-at-accent-light border border-at-border rounded-xl">
         <p className="text-sm text-at-accent">
           본인의 정보가 자동으로 입력되었습니다. 수정이 필요한 경우 인사담당자에게 문의하세요.
         </p>
@@ -3449,13 +3449,13 @@ function CashPaymentPreview({
         <div className="mt-auto space-y-1 text-[11px]">
           <div className="flex justify-center items-center gap-2">
             <span className="w-16 text-right">치 과 명 :</span>
-            <span className="inline-block w-32 border-b border-slate-400 text-center">
+            <span className="inline-block w-32 border-b border-at-border text-center">
               {data.clinicName || '　'}
             </span>
           </div>
           <div className="flex justify-center items-center gap-2">
             <span className="w-16 text-right">대 표 자 :</span>
-            <span className="inline-block w-32 border-b border-slate-400 text-center">
+            <span className="inline-block w-32 border-b border-at-border text-center">
               {data.representativeName || '　'}
             </span>
             {data.ownerSignature ? (
@@ -3470,19 +3470,19 @@ function CashPaymentPreview({
           </div>
           <div className="flex justify-center items-center gap-2">
             <span className="w-16 text-right">주 소 :</span>
-            <span className="inline-block w-32 border-b border-slate-400 text-center">　</span>
+            <span className="inline-block w-32 border-b border-at-border text-center">　</span>
           </div>
         </div>
 
         {/* 수령 확인란 */}
-        <div className="border border-slate-400 p-1.5 mt-2">
+        <div className="border border-at-border p-1.5 mt-2">
           <p className="font-semibold mb-0.5 text-[10px]">수령 확인</p>
           <p className="text-[10px] leading-4">
             상기 금액을 정히 수령하였음을 확인합니다.
           </p>
           <div className="flex justify-end items-center gap-2 mt-1 text-[10px]">
             <span>수령자</span>
-            <span className="inline-block w-20 border-b border-slate-400 text-center">
+            <span className="inline-block w-20 border-b border-at-border text-center">
               {data.employeeName || '　'}
             </span>
             {data.employeeSignature ? (

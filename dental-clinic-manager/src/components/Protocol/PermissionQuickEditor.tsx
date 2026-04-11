@@ -127,7 +127,7 @@ export default function PermissionQuickEditor({
                 permissions[key] ? activeColor : 'bg-at-surface-alt text-at-text-weak border-at-border hover:bg-at-surface-hover'
               }`}
             >
-              <span className={`w-2.5 h-2.5 rounded-full mr-3 ${permissions[key] ? 'bg-current' : 'bg-gray-300'}`} />
+              <span className={`w-2.5 h-2.5 rounded-full mr-3 ${permissions[key] ? 'bg-current' : 'bg-at-border'}`} />
               {label}
             </button>
           ))}

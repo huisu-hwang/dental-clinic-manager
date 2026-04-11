@@ -659,7 +659,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
                 </div>
 
                 {!isOwner && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <div className="mt-4 p-3 bg-at-warning-bg border border-amber-200 rounded-md">
                     <p className="text-sm text-amber-700">
                       이 설정은 대표 원장님만 변경할 수 있습니다.
                     </p>

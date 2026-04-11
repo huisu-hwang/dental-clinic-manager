@@ -118,7 +118,7 @@ export default function NoticeForm({ onGenerate, isGenerating }: NoticeFormProps
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
                 rows={3}
-                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm resize-y"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm resize-y"
               />
             ) : (
               <input
@@ -126,7 +126,7 @@ export default function NoticeForm({ onGenerate, isGenerating }: NoticeFormProps
                 value={formData[field.key] || ''}
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
-                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-indigo-500 text-sm"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
               />
             )}
           </div>
@@ -137,7 +137,7 @@ export default function NoticeForm({ onGenerate, isGenerating }: NoticeFormProps
       <button
         onClick={handleSubmit}
         disabled={isGenerating}
-        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
       >
         {isGenerating ? '공지문 생성 중...' : '공지문 생성'}
       </button>

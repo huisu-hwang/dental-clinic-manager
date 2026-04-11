@@ -339,7 +339,7 @@ export default function SystemMonitoring() {
                         <span className="text-at-text-secondary">사용량</span>
                         <span className="font-medium">{metrics.database.storageUsed}</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div className="w-full bg-at-border rounded-full h-2">
                         <div className="bg-at-accent h-2 rounded-full" style={{ width: '25%' }}></div>
                       </div>
                     </div>
@@ -387,7 +387,7 @@ export default function SystemMonitoring() {
                     <div key={alert.id} className={`p-4 rounded-xl border ${
                       alert.type === 'error' ? 'bg-at-error-bg border-red-200' :
                       alert.type === 'warning' ? 'bg-at-warning-bg border-yellow-200' :
-                      'bg-at-accent-light border-blue-200'
+                      'bg-at-accent-light border-at-border'
                     }`}>
                       <div className="flex items-start">
                         <ExclamationTriangleIcon className={`h-5 w-5 mr-3 mt-0.5 ${
@@ -399,7 +399,7 @@ export default function SystemMonitoring() {
                           <p className={`text-sm font-medium ${
                             alert.type === 'error' ? 'text-red-800' :
                             alert.type === 'warning' ? 'text-yellow-800' :
-                            'text-blue-800'
+                            'text-at-accent'
                           }`}>
                             {alert.message}
                           </p>

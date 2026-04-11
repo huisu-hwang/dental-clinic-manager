@@ -205,7 +205,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
   if (loading && holidays.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
       </div>
     )
   }
@@ -233,14 +233,14 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-md text-sm flex items-center">
           <CheckCircle className="w-4 h-4 mr-2" />
           {success}
         </div>
@@ -361,7 +361,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   className={`px-3 py-1.5 text-sm rounded-full cursor-pointer transition-colors ${
                     formData.excluded_roles.includes(role)
                       ? 'bg-orange-100 text-orange-700 border border-orange-300'
-                      : 'bg-at-surface-alt text-at-text border border-at-border hover:bg-slate-200'
+                      : 'bg-at-surface-alt text-at-text border border-at-border hover:bg-at-border'
                   }`}
                 >
                   <input
@@ -435,7 +435,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                       holiday.is_applied
-                        ? 'bg-green-100 text-green-600'
+                        ? 'bg-at-success-bg text-at-success'
                         : 'bg-orange-100 text-orange-600'
                     }`}>
                       <Calendar className="w-5 h-5" />
@@ -445,7 +445,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                         <h4 className="font-medium text-at-text">{holiday.holiday_name}</h4>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                           holiday.is_applied
-                            ? 'bg-green-100 text-green-700'
+                            ? 'bg-at-success-bg text-at-success'
                             : 'bg-yellow-100 text-yellow-700'
                         }`}>
                           {holiday.is_applied ? '적용완료' : '미적용'}
@@ -459,7 +459,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   </div>
                   <div className="flex items-center space-x-2">
                     {holiday.deduct_from_annual && (
-                      <span className="px-2 py-1 text-xs font-medium bg-red-50 text-red-600 rounded">
+                      <span className="px-2 py-1 text-xs font-medium bg-at-error-bg text-at-error rounded">
                         차감 {holiday.deduct_days}일
                       </span>
                     )}
@@ -514,7 +514,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                       <p className="text-sm text-at-text mb-1">차감 제외 직급:</p>
                       <div className="flex flex-wrap gap-1">
                         {holiday.excluded_roles.map((role: string) => (
-                          <span key={role} className="px-2 py-0.5 text-xs bg-slate-200 text-at-text rounded-full">
+                          <span key={role} className="px-2 py-0.5 text-xs bg-at-border text-at-text rounded-full">
                             {getRoleLabel(role)}
                           </span>
                         ))}
@@ -530,14 +530,14 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                         적용된 직원 ({applications[holiday.id].length}명)
                       </p>
                       <div className="max-h-40 overflow-y-auto border border-at-border rounded-xl bg-white">
-                        <div className="divide-y divide-slate-100">
+                        <div className="divide-y divide-at-border">
                           {applications[holiday.id].map((app: any) => (
                             <div key={app.id} className="px-3 py-2 flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                 <span className="font-medium text-at-text">{app.users?.name}</span>
                                 <span className="text-xs text-at-text">({getRoleLabel(app.users?.role)})</span>
                               </div>
-                              <span className="text-red-600">-{app.deducted_days}일</span>
+                              <span className="text-at-error">-{app.deducted_days}일</span>
                             </div>
                           ))}
                         </div>
@@ -555,7 +555,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                               e.stopPropagation()
                               handleDelete(holiday.id)
                             }}
-                            className="px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 flex items-center"
+                            className="px-3 py-1.5 text-sm font-medium text-at-error bg-white border border-red-200 rounded-xl hover:bg-at-error-bg flex items-center"
                           >
                             <Trash2 className="w-4 h-4 mr-1" />
                             삭제

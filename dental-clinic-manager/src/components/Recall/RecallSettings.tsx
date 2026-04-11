@@ -51,7 +51,7 @@ function ServerIpChecker() {
   }
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+    <div className="bg-at-warning-bg border border-amber-200 rounded-lg p-4">
       <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
         <AlertCircle className="w-5 h-5" />
         중요: 서버 IP 등록 필요
@@ -87,7 +87,7 @@ function ServerIpChecker() {
           {error && <span className="text-sm text-at-error">{error}</span>}
         </div>
         {serverIp && (
-          <p className="text-xs text-amber-600 mt-2">
+          <p className="text-xs text-at-warning mt-2">
             ⚠️ 위 IP를 알리고 관리자 페이지에 등록하세요. 서버리스 환경(Vercel 등)에서는 IP가 변경될 수 있습니다.
           </p>
         )}

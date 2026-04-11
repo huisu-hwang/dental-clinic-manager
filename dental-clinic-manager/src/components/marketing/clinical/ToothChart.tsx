@@ -208,14 +208,14 @@ export default function ToothChart({ selectedTeeth, onChange, disabled }: ToothC
       onMouseLeave={handleMouseUp}
     >
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-slate-700">시술 부위</h4>
+        <h4 className="text-sm font-semibold text-at-text-secondary">시술 부위</h4>
         <div className="flex items-center gap-2">
           {selectedTeeth.length > 0 && (
             <button
               type="button"
               onClick={clearAll}
               disabled={disabled}
-              className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+              className="text-xs text-red-400 hover:text-at-error transition-colors disabled:opacity-50"
             >
               초기화
             </button>
@@ -243,7 +243,7 @@ export default function ToothChart({ selectedTeeth, onChange, disabled }: ToothC
               className={`px-2 py-0.5 text-[11px] rounded-full border transition-colors disabled:opacity-50 ${
                 allSelected
                   ? 'bg-indigo-100 border-indigo-300 text-indigo-700'
-                  : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
+                  : 'bg-white border-at-border text-at-text-weak hover:border-indigo-300 hover:text-indigo-600'
               }`}
             >
               {label}
@@ -253,7 +253,7 @@ export default function ToothChart({ selectedTeeth, onChange, disabled }: ToothC
       </div>
 
       {/* 치아 차트 SVG */}
-      <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 select-none">
+      <div className="bg-at-surface-alt rounded-xl border border-at-border p-4 select-none">
         <svg
           viewBox="0 -10 580 110"
           className="w-full"
@@ -296,7 +296,7 @@ export default function ToothChart({ selectedTeeth, onChange, disabled }: ToothC
 
       {/* 호버 정보 */}
       {hoveredTooth && (
-        <p className="text-xs text-slate-400 text-center">
+        <p className="text-xs text-at-text-weak text-center">
           #{hoveredTooth} {TOOTH_NAMES[hoveredTooth] || ''}
         </p>
       )}
@@ -304,7 +304,7 @@ export default function ToothChart({ selectedTeeth, onChange, disabled }: ToothC
       {/* 선택된 치아 표시 */}
       {selectedTeeth.length > 0 && (
         <div className="flex items-start gap-2">
-          <span className="text-xs text-slate-500 whitespace-nowrap mt-0.5">선택:</span>
+          <span className="text-xs text-at-text-weak whitespace-nowrap mt-0.5">선택:</span>
           <div className="flex flex-wrap gap-1">
             {selectedTeeth.sort((a, b) => a - b).map((t) => (
               <span
@@ -326,7 +326,7 @@ export default function ToothChart({ selectedTeeth, onChange, disabled }: ToothC
         </div>
       )}
 
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[11px] text-at-text-weak">
         치아를 클릭하거나 드래그하여 시술 부위를 선택하세요. 영역 버튼으로 빠르게 선택할 수 있습니다.
       </p>
     </div>

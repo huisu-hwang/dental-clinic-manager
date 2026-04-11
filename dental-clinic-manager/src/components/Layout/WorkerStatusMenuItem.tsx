@@ -39,7 +39,7 @@ const STATUS_COLOR: Record<Status, string> = {
   online: 'bg-green-500',
   offline: 'bg-amber-500',
   'not-installed': 'bg-red-400',
-  loading: 'bg-slate-300 animate-pulse',
+  loading: 'bg-at-border animate-pulse',
 }
 
 const STATUS_LABEL: Record<Status, string> = {

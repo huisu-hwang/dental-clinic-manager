@@ -276,7 +276,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                       <button
                         onClick={handleSave}
                         disabled={isSaving || editedContent === selectedPrompt.system_prompt}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-at-border disabled:cursor-not-allowed"
                       >
                         {isSaving ? '저장중...' : '저장'}
                       </button>
@@ -372,7 +372,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                         isTesting ||
                         (activeCategory === 'image' ? !testImagePrompt : (!testTopic || !testKeyword))
                       }
-                      className="w-full py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 disabled:bg-at-border disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isTesting ? (
                         <>

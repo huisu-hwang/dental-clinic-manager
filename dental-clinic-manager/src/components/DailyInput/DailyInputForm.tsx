@@ -747,11 +747,11 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   // 섹션 헤더 컴포넌트
   const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
     <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
-      <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
+      <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-at-accent-light text-at-accent">
         <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </div>
       <h3 className="text-sm sm:text-base font-semibold text-at-text">
-        <span className="text-blue-600 mr-1">{number}.</span>
+        <span className="text-at-accent mr-1">{number}.</span>
         {title}
       </h3>
     </div>
@@ -788,10 +788,10 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
       {/* 외부 변경 알림 배너 */}
       {hasExternalUpdate && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-3">
+        <div className="bg-at-warning-bg border-b border-amber-200 px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <RefreshCw className="w-4 h-4 text-amber-600" />
+              <RefreshCw className="w-4 h-4 text-at-warning" />
               <span className="text-sm text-amber-800">
                 다른 사용자가 이 보고서를 수정했습니다.
               </span>
@@ -820,7 +820,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               <input
                 type="date"
                 id="report-date"
-                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
                 value={reportDate}
                 onChange={(e) => handleDateChange(e.target.value)}
                 disabled={loading || !canCreate}
@@ -833,11 +833,11 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         <div>
           <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-at-accent-light text-at-accent">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
               <h3 className="text-sm sm:text-base font-semibold text-at-text">
-                <span className="text-blue-600 mr-1">2.</span>
+                <span className="text-at-accent mr-1">2.</span>
                 환자 상담 결과
               </h3>
             </div>
@@ -845,7 +845,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               type="button"
               onClick={handleSaveAndNavigateToLogs}
               disabled={loading}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-at-accent bg-at-accent-light hover:bg-at-tag border border-at-border rounded-xl transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
               title="현재 보고서를 저장하고 상담 상세 기록 페이지로 이동"
             >
               <span className="hidden sm:inline">상담 상세 기록</span>
@@ -864,15 +864,15 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         <div>
           <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-at-accent-light text-at-accent">
                 <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
               <h3 className="text-sm sm:text-base font-semibold text-at-text">
-                <span className="text-blue-600 mr-1">3.</span>
+                <span className="text-at-accent mr-1">3.</span>
                 환자 리콜 결과
               </h3>
               {recallSynced && (
-                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-at-success-bg text-at-success rounded-full">
                   자동 연동
                 </span>
               )}
@@ -881,7 +881,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               type="button"
               onClick={() => syncRecallData(reportDate)}
               disabled={recallSyncing}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group disabled:opacity-50"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-at-accent bg-at-accent-light hover:bg-at-tag border border-at-border rounded-xl transition-colors group disabled:opacity-50"
               title="리콜 데이터 새로고침"
             >
               <RefreshCw className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${recallSyncing ? 'animate-spin' : ''}`} />
@@ -895,12 +895,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               <div className="text-2xl font-bold text-at-text">{recallCount}</div>
               <div className="text-xs text-at-text mt-0.5">리콜 처리 건수</div>
             </div>
-            <div className="bg-green-50 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-green-600">{recallBookingCount}</div>
+            <div className="bg-at-success-bg rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-at-success">{recallBookingCount}</div>
               <div className="text-xs text-at-text mt-0.5">예약 성공</div>
             </div>
-            <div className="bg-blue-50 rounded-xl p-3 text-center">
-              <div className="text-2xl font-bold text-blue-600">
+            <div className="bg-at-accent-light rounded-xl p-3 text-center">
+              <div className="text-2xl font-bold text-at-accent">
                 {recallCount > 0 ? Math.round((recallBookingCount / recallCount) * 100) : 0}%
               </div>
               <div className="text-xs text-at-text mt-0.5">예약 성공률</div>
@@ -909,8 +909,8 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
           {/* 예약 성공 환자 */}
           {recallBookingNames && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl">
-              <div className="text-xs font-medium text-green-700 mb-1">예약 성공 환자</div>
+            <div className="mb-4 p-3 bg-at-success-bg border border-green-200 rounded-xl">
+              <div className="text-xs font-medium text-at-success mb-1">예약 성공 환자</div>
               <div className="text-sm text-green-800">{recallBookingNames}</div>
             </div>
           )}
@@ -943,13 +943,13 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
                         <th className="px-3 py-2 text-left text-xs font-medium text-at-text hidden sm:table-cell">처리시간</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-at-border">
                       {recallPatients.map((patient, idx) => (
                         <tr key={patient.id || idx} className="hover:bg-at-surface-alt">
                           <td className="px-3 py-2 font-medium text-at-text">{patient.patient_name}</td>
                           <td className="px-3 py-2 text-at-text">{patient.phone_number}</td>
                           <td className="px-3 py-2">
-                            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${RECALL_STATUS_COLORS[patient.status] || 'bg-gray-100 text-gray-700'}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${RECALL_STATUS_COLORS[patient.status] || 'bg-at-surface-alt text-at-text-secondary'}`}>
                               {RECALL_STATUS_LABELS[patient.status] || patient.status}
                             </span>
                           </td>
@@ -984,18 +984,18 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         <div>
           <div className="flex items-center justify-between pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-50 text-blue-600">
+              <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-at-accent-light text-at-accent">
                 <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
               <h3 className="text-sm sm:text-base font-semibold text-at-text">
-                <span className="text-blue-600 mr-1">4.</span>
+                <span className="text-at-accent mr-1">4.</span>
                 선물 및 리뷰 관리
               </h3>
             </div>
             <button
               type="button"
               onClick={() => router.push('/dashboard?tab=settings')}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium text-at-accent bg-at-accent-light hover:bg-at-tag border border-at-border rounded-xl transition-colors group"
               title="재고 관리 페이지로 이동"
             >
               <Package className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -1057,7 +1057,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             <textarea
               id="special-notes"
               rows={3}
-              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
               placeholder="오늘 업무 중 특이사항이나 기록할 내용을 작성해주세요."
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
@@ -1082,7 +1082,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           <button
             type="button"
             onClick={(e) => handleSave(e)}
-            className="inline-flex items-center justify-center px-5 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
+            className="inline-flex items-center justify-center px-5 py-2.5 sm:py-2 bg-at-accent hover:bg-at-accent-hover text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
             disabled={loading || isReadOnly}
           >
             <Save className="w-4 h-4 mr-2" />

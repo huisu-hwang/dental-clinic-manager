@@ -384,7 +384,7 @@ export default function TaskDetail({
               step="5"
               value={progress}
               onChange={(e) => handleProgressChange(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-xl appearance-none cursor-pointer"
+              className="w-full h-2 bg-at-border rounded-xl appearance-none cursor-pointer"
               disabled={!isAssignee && !onEdit}
             />
             {progress !== task.progress && (
@@ -419,7 +419,7 @@ export default function TaskDetail({
             <div className="space-y-4 mb-4">
               {comments.map((comment) => (
                 <div key={comment.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-at-border flex items-center justify-center flex-shrink-0">
                     <User className="w-4 h-4 text-at-text-weak" />
                   </div>
                   <div className="flex-1">

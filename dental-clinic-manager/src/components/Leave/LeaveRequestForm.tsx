@@ -253,14 +253,14 @@ export default function LeaveRequestForm({
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-accent-light text-at-accent">
             <Calendar className="w-4 h-4" />
           </div>
-          <h3 className="text-base font-semibold text-slate-800">연차 신청</h3>
+          <h3 className="text-base font-semibold text-at-text">연차 신청</h3>
         </div>
         <button
           onClick={onCancel}
-          className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+          className="p-2 text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt rounded-lg"
         >
           <X className="w-5 h-5" />
         </button>
@@ -268,10 +268,10 @@ export default function LeaveRequestForm({
 
       {/* 잔여 연차 안내 */}
       {balance && (
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+        <div className="mb-6 p-4 bg-at-accent-light rounded-lg border border-at-border">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600">잔여 연차</span>
-            <span className="font-semibold text-blue-600">{balance.remaining_days}일</span>
+            <span className="text-at-text-secondary">잔여 연차</span>
+            <span className="font-semibold text-at-accent">{balance.remaining_days}일</span>
           </div>
         </div>
       )}
@@ -289,32 +289,32 @@ export default function LeaveRequestForm({
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-amber-600" />
+                <AlertTriangle className="w-6 h-6 text-at-warning" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800">잔여 연차가 부족합니다</h3>
+              <h3 className="text-lg font-semibold text-at-text">잔여 연차가 부족합니다</h3>
             </div>
 
-            <div className="bg-amber-50 rounded-lg p-4 mb-6">
+            <div className="bg-at-warning-bg rounded-lg p-4 mb-6">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-600">신청 일수</span>
-                <span className="font-semibold text-slate-800">{totalDays}일</span>
+                <span className="text-at-text-secondary">신청 일수</span>
+                <span className="font-semibold text-at-text">{totalDays}일</span>
               </div>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-600">잔여 연차</span>
-                <span className="font-semibold text-blue-600">{balance?.remaining_days ?? 0}일</span>
+                <span className="text-at-text-secondary">잔여 연차</span>
+                <span className="font-semibold text-at-accent">{balance?.remaining_days ?? 0}일</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t border-amber-200">
-                <span className="text-slate-600">부족한 일수</span>
-                <span className="font-semibold text-amber-600">{unpaidDays}일</span>
+                <span className="text-at-text-secondary">부족한 일수</span>
+                <span className="font-semibold text-at-warning">{unpaidDays}일</span>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 mb-4">
-              부족한 <span className="font-semibold text-amber-600">{unpaidDays}일</span>을 무급휴가로 신청하시겠습니까?
+            <p className="text-sm text-at-text-secondary mb-4">
+              부족한 <span className="font-semibold text-at-warning">{unpaidDays}일</span>을 무급휴가로 신청하시겠습니까?
             </p>
 
-            <div className="bg-blue-50 rounded-lg p-3 mb-6 border border-blue-100">
-              <p className="text-xs text-blue-700">
+            <div className="bg-at-accent-light rounded-lg p-3 mb-6 border border-at-border">
+              <p className="text-xs text-at-accent">
                 <span className="font-semibold">💡 안내:</span> 1년 미만 근무자의 경우, 매월 만근 시 연차가 1일씩 증가합니다.
                 연차가 증가하면 무급휴가로 신청한 일수가 <span className="font-semibold">자동으로 유급휴가(연차)로 전환</span>됩니다.
               </p>
@@ -327,7 +327,7 @@ export default function LeaveRequestForm({
                   setShowUnpaidConfirm(false)
                   setUnpaidDays(0)
                 }}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-lg hover:bg-at-surface-alt transition-colors"
               >
                 취소
               </button>
@@ -347,7 +347,7 @@ export default function LeaveRequestForm({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 연차 종류 선택 */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             연차 종류 *
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -358,8 +358,8 @@ export default function LeaveRequestForm({
                 onClick={() => setFormData({ ...formData, leave_type_id: type.id, half_day_type: '' })}
                 className={`p-3 border rounded-lg text-left transition-all ${
                   formData.leave_type_id === type.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    ? 'border-at-accent bg-at-accent-light'
+                    : 'border-at-border hover:border-at-border'
                 }`}
               >
                 <div className="flex items-center space-x-2">
@@ -370,7 +370,7 @@ export default function LeaveRequestForm({
                   <span className="font-medium text-sm">{type.name}</span>
                 </div>
                 {type.description && (
-                  <p className="text-xs text-slate-500 mt-1">{type.description}</p>
+                  <p className="text-xs text-at-text-weak mt-1">{type.description}</p>
                 )}
               </button>
             ))}
@@ -380,7 +380,7 @@ export default function LeaveRequestForm({
         {/* 날짜 선택 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">
               시작일 *
             </label>
             <input
@@ -398,14 +398,14 @@ export default function LeaveRequestForm({
                 })
               }}
               min={new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               required
             />
           </div>
 
           {selectedType?.code !== 'half_day' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 종료일 *
               </label>
               <input
@@ -413,7 +413,7 @@ export default function LeaveRequestForm({
                 value={formData.end_date}
                 onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                 min={formData.start_date || new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 required
               />
             </div>
@@ -423,7 +423,7 @@ export default function LeaveRequestForm({
         {/* 반차 타입 선택 */}
         {selectedType?.code === 'half_day' && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">
               오전/오후 선택 *
             </label>
             <div className="flex space-x-4">
@@ -435,7 +435,7 @@ export default function LeaveRequestForm({
                     value={type}
                     checked={formData.half_day_type === type}
                     onChange={(e) => setFormData({ ...formData, half_day_type: e.target.value as HalfDayType })}
-                    className="w-4 h-4 text-blue-600"
+                    className="w-4 h-4 text-at-accent"
                   />
                   <span className="text-sm">{type === 'AM' ? '오전 반차' : '오후 반차'}</span>
                 </label>
@@ -446,20 +446,20 @@ export default function LeaveRequestForm({
 
         {/* 신청 일수 표시 */}
         {formData.start_date && formData.end_date && (
-          <div className="p-4 bg-slate-50 rounded-lg">
+          <div className="p-4 bg-at-surface-alt rounded-lg">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">신청 일수</span>
-              <span className="text-lg font-semibold text-slate-800">
+              <span className="text-sm text-at-text-secondary">신청 일수</span>
+              <span className="text-lg font-semibold text-at-text">
                 {totalDays > 0 ? `${totalDays}일` : '0일'}
               </span>
             </div>
             {totalDays > 0 && selectedType?.deduct_from_annual && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-at-text-weak mt-1">
                 * 연차에서 차감됩니다
               </p>
             )}
             {totalDays === 0 && selectedType?.code !== 'half_day' && (
-              <p className="text-xs text-amber-600 mt-1">
+              <p className="text-xs text-at-warning mt-1">
                 * 선택한 기간에 병원 근무일이 없습니다
               </p>
             )}
@@ -468,7 +468,7 @@ export default function LeaveRequestForm({
 
         {/* 사유 */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label className="block text-sm font-medium text-at-text-secondary mb-1">
             신청 사유
             {selectedType?.requires_proof && <span className="text-red-500 ml-1">*</span>}
           </label>
@@ -476,12 +476,12 @@ export default function LeaveRequestForm({
             value={formData.reason}
             onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             placeholder="연차 사유를 입력해주세요"
             required={selectedType?.requires_proof}
           />
           {selectedType?.proof_description && (
-            <p className="mt-1 text-xs text-amber-600">
+            <p className="mt-1 text-xs text-at-warning">
               * {selectedType.proof_description} 필요
             </p>
           )}
@@ -494,28 +494,28 @@ export default function LeaveRequestForm({
               type="checkbox"
               checked={formData.emergency}
               onChange={(e) => setFormData({ ...formData, emergency: e.target.checked })}
-              className="w-4 h-4 text-blue-600 rounded"
+              className="w-4 h-4 text-at-accent rounded"
             />
-            <span className="text-sm text-slate-700">긴급 신청</span>
+            <span className="text-sm text-at-text-secondary">긴급 신청</span>
           </label>
-          <p className="text-xs text-slate-500 mt-1 ml-6">
+          <p className="text-xs text-at-text-weak mt-1 ml-6">
             긴급한 경우 체크하면 승인자에게 알림이 발송됩니다
           </p>
         </div>
 
         {/* 버튼 */}
-        <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+        <div className="flex justify-end space-x-3 pt-4 border-t border-at-border">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+            className="px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-lg hover:bg-at-surface-alt"
           >
             취소
           </button>
           <button
             type="submit"
             disabled={loading || !canSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-at-accent rounded-lg hover:bg-at-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? '신청 중...' : '연차 신청'}
           </button>

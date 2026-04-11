@@ -170,7 +170,7 @@ export default function ContributionVoteDisplay({
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="w-4 h-4 text-yellow-500" />
-    if (rank === 2) return <Trophy className="w-4 h-4 text-gray-400" />
+    if (rank === 2) return <Trophy className="w-4 h-4 text-at-text-weak" />
     if (rank === 3) return <Trophy className="w-4 h-4 text-amber-700" />
     return <span className="text-xs text-at-text-weak w-4 text-center">{rank}</span>
   }
@@ -185,7 +185,7 @@ export default function ContributionVoteDisplay({
           {isClosed ? (
             <span className="text-xs px-2 py-0.5 rounded-full bg-at-surface-alt text-at-text-secondary">종료</span>
           ) : (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">진행 중</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-at-success-bg text-at-success">진행 중</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -344,7 +344,7 @@ export default function ContributionVoteDisplay({
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           candidate.rank === 1 ? 'bg-yellow-400' :
-                          candidate.rank === 2 ? 'bg-gray-400' :
+                          candidate.rank === 2 ? 'bg-at-border' :
                           candidate.rank === 3 ? 'bg-amber-600' :
                           'bg-orange-300'
                         }`}

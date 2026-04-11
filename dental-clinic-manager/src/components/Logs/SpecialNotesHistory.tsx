@@ -203,8 +203,8 @@ export default function SpecialNotesHistory() {
           <div key={date} className="border border-at-border rounded-xl bg-white overflow-hidden">
             {/* 메인 카드 */}
             <div
-              className={`p-3 sm:p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
-                expandedDate === date ? 'bg-slate-50' : ''
+              className={`p-3 sm:p-4 cursor-pointer hover:bg-at-surface-alt transition-colors ${
+                expandedDate === date ? 'bg-at-surface-alt' : ''
               }`}
               onClick={() => editCount > 1 && handleExpandDate(date)}
             >
@@ -255,7 +255,7 @@ export default function SpecialNotesHistory() {
                         key={history.id}
                         className={`p-2 sm:p-3 rounded-lg ${
                           index === 0
-                            ? 'bg-blue-50 border border-blue-200'
+                            ? 'bg-at-accent-light border border-at-border'
                             : 'bg-white border border-at-border'
                         }`}
                       >
@@ -308,7 +308,7 @@ export default function SpecialNotesHistory() {
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-at-text-weak hover:text-at-text-secondary"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -338,7 +338,7 @@ export default function SpecialNotesHistory() {
       {/* 결과 표시 영역 */}
       <div className="max-h-96 overflow-y-auto p-2 sm:p-3">
         {loading ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-at-text-weak">
             데이터 로딩 중...
           </div>
         ) : searchQuery && searchResults.length > 0 ? (

@@ -343,7 +343,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           </button>
           <button
             onClick={() => handleStatClick('pending')}
-            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-gray-200 ring-2 ring-gray-500' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
+            className={`rounded-xl p-3 text-center transition-all ${statusFilter === 'pending' ? 'bg-at-border ring-2 ring-gray-500' : 'bg-at-surface-alt hover:bg-at-surface-alt'}`}
           >
             <p className="text-2xl font-bold text-at-text-secondary">{stats.pending}</p>
             <p className="text-xs text-at-text-weak">대기</p>

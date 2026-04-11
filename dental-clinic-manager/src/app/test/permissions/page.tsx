@@ -144,7 +144,7 @@ export default function PermissionsTestPage() {
                 return (
                   <div key={perm.key} className="flex items-center space-x-2">
                     <span className={`w-4 h-4 rounded-full ${
-                      hasPerm ? 'bg-green-500' : 'bg-gray-300'
+                      hasPerm ? 'bg-green-500' : 'bg-at-border'
                     }`} />
                     <span className={`text-sm ${hasPerm ? 'text-at-success' : 'text-at-text-weak'}`}>
                       {perm.label}
