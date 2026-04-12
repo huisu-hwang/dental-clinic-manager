@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote, Package, Clock } from 'lucide-react'
+import { Calendar, Users, Phone, PhoneOff, HeartHandshake, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote, Package, Clock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
@@ -18,7 +18,7 @@ import type { ConsultRowData, GiftRowData, HappyCallRowData, CashRegisterRowData
 import type { OvertimeMealRowData } from '@/types'
 import { overtimeMealService } from '@/lib/overtimeMealService'
 import type { UserProfile } from '@/contexts/AuthContext'
-import { appAlert } from '@/components/ui/AppDialog'
+import { appAlert, appConfirm } from '@/components/ui/AppDialog'
 
 // Feature Flag: 신규 아키텍처 사용 여부
 const USE_NEW_ARCHITECTURE = process.env.NEXT_PUBLIC_USE_NEW_DAILY_REPORT === 'true'
@@ -611,7 +611,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     }
   }
 
-  const resetForm = () => {
+  const resetForm = async () => {
+    const confirmed = await appConfirm('입력된 모든 내용이 초기화됩니다. 계속하시겠습니까?')
+    if (!confirmed) return
     const today = getTodayString()
     setReportDate(today)
     handleDateChange(today)
@@ -793,7 +795,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
             </div>
             <button
               onClick={handleRefreshData}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-md transition-colors"
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-xl transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               새로고침
@@ -807,20 +809,18 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         {/* 기본 정보 */}
         <div>
           <SectionHeader number={1} title="기본 정보" icon={Calendar} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="report-date" className="block text-sm font-medium text-at-text mb-1.5">
-                보고 일자
-              </label>
-              <input
-                type="date"
-                id="report-date"
-                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
-                value={reportDate}
-                onChange={(e) => handleDateChange(e.target.value)}
-                disabled={loading || !canCreate}
-              />
-            </div>
+          <div className="max-w-xs">
+            <label htmlFor="report-date" className="block text-sm font-medium text-at-text mb-1.5">
+              보고 일자
+            </label>
+            <input
+              type="date"
+              id="report-date"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
+              value={reportDate}
+              onChange={(e) => handleDateChange(e.target.value)}
+              disabled={loading || !canCreate}
+            />
           </div>
         </div>
 
@@ -916,7 +916,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               <button
                 type="button"
                 onClick={() => setShowRecallLog(!showRecallLog)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-at-text bg-at-surface-alt hover:bg-at-surface-alt rounded-xl transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-at-text bg-at-surface-alt hover:bg-at-surface-hover border border-at-border rounded-xl transition-colors"
               >
                 <span>리콜 상세 기록 ({recallPatients.length}건)</span>
                 <svg
@@ -932,9 +932,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
                   <table className="w-full text-sm">
                     <thead className="bg-at-surface-alt">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text">환자명</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text">전화번호</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text">상태</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">환자명</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">전화번호</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">상태</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-at-text hidden sm:table-cell">처리시간</th>
                       </tr>
                     </thead>
@@ -963,14 +963,17 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           )}
 
           {recallPatients.length === 0 && !recallSyncing && (
-            <div className="text-center py-4 text-sm text-at-text">
-              이 날짜에 처리된 리콜 기록이 없습니다.
+            <div className="text-center py-8 space-y-2">
+              <div className="text-at-text-weak opacity-40">
+                <PhoneOff className="w-8 h-8 mx-auto" />
+              </div>
+              <p className="text-sm text-at-text-secondary">이 날짜에 처리된 리콜 기록이 없습니다.</p>
             </div>
           )}
 
           {recallSyncing && (
-            <div className="text-center py-4 text-sm text-at-text">
-              리콜 데이터 불러오는 중...
+            <div className="text-center py-8 space-y-2">
+              <p className="text-sm text-at-text-secondary">리콜 데이터 불러오는 중...</p>
             </div>
           )}
         </div>
@@ -1013,7 +1016,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
         {/* 해피콜 결과 */}
         <div>
-          <SectionHeader number={5} title="해피콜 결과" icon={Phone} />
+          <SectionHeader number={5} title="해피콜 결과" icon={HeartHandshake} />
           <HappyCallTable
             happyCallRows={happyCallRows}
             onHappyCallRowsChange={setHappyCallRows}
@@ -1049,10 +1052,13 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         <div>
           <SectionHeader number={8} title="기타 특이사항" icon={FileText} />
           <div>
+            <label htmlFor="special-notes" className="block text-sm font-medium text-at-text mb-1.5">
+              기타 특이사항
+            </label>
             <textarea
               id="special-notes"
               rows={3}
-              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
+              className={`w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors resize-none ${isReadOnly ? 'bg-at-surface-alt text-at-text-secondary cursor-not-allowed' : 'bg-white'}`}
               placeholder="오늘 업무 중 특이사항이나 기록할 내용을 작성해주세요."
               value={specialNotes}
               onChange={(e) => setSpecialNotes(e.target.value)}
@@ -1064,7 +1070,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
       {/* 저장 버튼 영역 */}
       {(canCreate || canEdit) && (
-        <div className="px-3 sm:px-6 py-3 sm:py-4 bg-at-surface-alt border-t border-at-border flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+        <div className="sticky bottom-0 z-10 px-4 sm:px-6 py-3 sm:py-4 bg-white/95 backdrop-blur-sm border-t border-at-border flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
           <button
             type="button"
             onClick={resetForm}

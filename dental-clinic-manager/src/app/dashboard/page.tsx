@@ -10,7 +10,7 @@ import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
-import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
+import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3, BookOpen } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import MenuSettings from '@/components/Management/MenuSettings'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
@@ -833,14 +833,15 @@ export default function DashboardPage() {
           {/* 사용 안내 */}
           {activeTab === 'guide' && (
             <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-              <header className="text-center">
-                <h1 className="text-4xl font-bold text-at-text mb-2">
-                  치과 관리 시스템 사용 안내
-                </h1>
-                <p className="text-lg text-at-text-secondary">
-                  업무 효율성을 높이는 다양한 기능을 만나보세요.
-                </p>
-              </header>
+              <div className="flex items-center gap-3 pb-4 border-b border-at-border">
+                <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-at-accent" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-at-text">사용 안내</h2>
+                  <p className="text-xs text-at-text-secondary mt-0.5">업무 효율성을 높이는 다양한 기능을 만나보세요.</p>
+                </div>
+              </div>
 
               <main>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

@@ -120,9 +120,11 @@ export default function CommunityPage() {
         <div className="flex-1">
           {/* 페이지 헤더 */}
           <div className="flex items-center justify-between pb-4 border-b border-at-border mb-4">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5 text-at-accent" />
-              <h1 className="text-xl font-bold text-at-text">자유게시판</h1>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-at-accent" />
+              </div>
+              <h2 className="text-lg font-bold text-at-text">자유게시판</h2>
             </div>
             {user?.role === 'master_admin' && (
               <button

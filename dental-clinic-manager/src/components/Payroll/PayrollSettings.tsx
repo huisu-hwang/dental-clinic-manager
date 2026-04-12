@@ -404,7 +404,7 @@ export default function PayrollSettings() {
             <select
               value={selectedEmployeeId || ''}
               onChange={(e) => setSelectedEmployeeId(e.target.value || null)}
-              className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             >
               <option value="">직원을 선택하세요</option>
               {employees.map(emp => (
@@ -424,7 +424,7 @@ export default function PayrollSettings() {
                   급여 설정 완료
                 </span>
               ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-700">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-at-warning-bg text-at-warning">
                   <AlertCircle className="w-4 h-4 mr-1" />
                   급여 설정 필요
                 </span>
@@ -434,7 +434,7 @@ export default function PayrollSettings() {
         </div>
 
         {loadingEmployee && (
-          <div className="mt-4 text-sm text-emerald-600">
+          <div className="mt-4 text-sm text-at-accent">
             직원 정보를 불러오는 중...
           </div>
         )}
@@ -496,7 +496,7 @@ export default function PayrollSettings() {
                         handleFieldChange('baseSalary', value)
                       }
                     }}
-                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     placeholder="금액을 입력하세요"
                   />
                   <span className="absolute right-3 top-2 text-at-text">원</span>
@@ -511,7 +511,7 @@ export default function PayrollSettings() {
                     type="number"
                     value={formState.bonus || ''}
                     onChange={(e) => handleFieldChange('bonus', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text">원</span>
@@ -528,7 +528,7 @@ export default function PayrollSettings() {
                     type="number"
                     value={formState.mealAllowance || ''}
                     onChange={(e) => handleFieldChange('mealAllowance', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     placeholder="200000"
                   />
                   <span className="absolute right-3 top-2 text-at-text">원</span>
@@ -545,7 +545,7 @@ export default function PayrollSettings() {
                     type="number"
                     value={formState.vehicleAllowance || ''}
                     onChange={(e) => handleFieldChange('vehicleAllowance', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text">원</span>
@@ -560,7 +560,7 @@ export default function PayrollSettings() {
                 <button
                   type="button"
                   onClick={handleRecalculateInsurance}
-                  className="inline-flex items-center text-xs text-emerald-600 hover:text-emerald-800"
+                  className="inline-flex items-center text-xs text-at-accent hover:text-at-accent-hover"
                 >
                   <RefreshCw className="w-3 h-3 mr-1" />
                   4대보험 재계산
@@ -568,7 +568,7 @@ export default function PayrollSettings() {
               </div>
 
               {/* 4대보험 */}
-              <div className="p-3 bg-at-surface-alt rounded-md space-y-3">
+              <div className="p-3 bg-at-surface-alt rounded-xl space-y-3">
                 <p className="text-xs text-at-text mb-2">
                   4대보험료는 1월에 결정되어 연말까지 유지됩니다.
                 </p>
@@ -581,7 +581,7 @@ export default function PayrollSettings() {
                       type="number"
                       value={formState.nationalPension || ''}
                       onChange={(e) => handleFieldChange('nationalPension', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     />
                     <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
@@ -595,7 +595,7 @@ export default function PayrollSettings() {
                       type="number"
                       value={formState.healthInsurance || ''}
                       onChange={(e) => handleFieldChange('healthInsurance', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     />
                     <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
@@ -609,7 +609,7 @@ export default function PayrollSettings() {
                       type="number"
                       value={formState.longTermCare || ''}
                       onChange={(e) => handleFieldChange('longTermCare', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     />
                     <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
@@ -623,7 +623,7 @@ export default function PayrollSettings() {
                       type="number"
                       value={formState.employmentInsurance || ''}
                       onChange={(e) => handleFieldChange('employmentInsurance', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     />
                     <span className="absolute right-3 top-2 text-at-text">원</span>
                   </div>
@@ -631,7 +631,7 @@ export default function PayrollSettings() {
               </div>
 
               {/* 소득세 관련 정보 */}
-              <div className="p-3 bg-at-accent-light rounded-md space-y-3">
+              <div className="p-3 bg-at-accent-light rounded-xl space-y-3">
                 <p className="text-xs text-at-accent mb-2">
                   소득세는 간이세액표에 따라 자동 계산됩니다.
                 </p>
@@ -644,7 +644,7 @@ export default function PayrollSettings() {
                   <select
                     value={formState.familyCount}
                     onChange={(e) => handleFieldChange('familyCount', parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(n => (
                       <option key={n} value={n}>{n}명</option>
@@ -660,7 +660,7 @@ export default function PayrollSettings() {
                   <select
                     value={formState.childCount}
                     onChange={(e) => handleFieldChange('childCount', parseInt(e.target.value))}
-                    className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                   >
                     {[0, 1, 2, 3, 4, 5].map(n => (
                       <option key={n} value={n}>{n}명</option>
@@ -677,7 +677,7 @@ export default function PayrollSettings() {
                     type="number"
                     value={formState.otherDeductions || ''}
                     onChange={(e) => handleFieldChange('otherDeductions', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 pr-12 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text">원</span>
@@ -707,7 +707,7 @@ export default function PayrollSettings() {
                     setDeductLateMinutes(newValue)
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    deductLateMinutes ? 'bg-emerald-600' : 'bg-at-border'
+                    deductLateMinutes ? 'bg-at-accent' : 'bg-at-border'
                   }`}
                 >
                   <span
@@ -732,7 +732,7 @@ export default function PayrollSettings() {
                     setDeductEarlyLeaveMinutes(newValue)
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    deductEarlyLeaveMinutes ? 'bg-emerald-600' : 'bg-at-border'
+                    deductEarlyLeaveMinutes ? 'bg-at-accent' : 'bg-at-border'
                   }`}
                 >
                   <span
@@ -753,7 +753,7 @@ export default function PayrollSettings() {
                   type="button"
                   onClick={() => setIncludeOvertimePay(!includeOvertimePay)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    includeOvertimePay ? 'bg-emerald-600' : 'bg-at-border'
+                    includeOvertimePay ? 'bg-at-accent' : 'bg-at-border'
                   }`}
                 >
                   <span
@@ -782,7 +782,7 @@ export default function PayrollSettings() {
                     console.log('[PayrollSettings] Radio: Setting applyToPast to false')
                     setApplyToPast(false)
                   }}
-                  className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
+                  className="mr-3 h-4 w-4 text-at-accent focus:ring-at-accent"
                 />
                 <div>
                   <span className="text-sm font-medium text-at-text">앞으로의 급여명세서에만 적용</span>
@@ -798,7 +798,7 @@ export default function PayrollSettings() {
                     console.log('[PayrollSettings] Radio: Setting applyToPast to true')
                     setApplyToPast(true)
                   }}
-                  className="mr-3 h-4 w-4 text-emerald-600 focus:ring-emerald-500"
+                  className="mr-3 h-4 w-4 text-at-accent focus:ring-at-accent"
                 />
                 <div>
                   <span className="text-sm font-medium text-at-text">과거 급여명세서에도 적용</span>
@@ -812,7 +812,7 @@ export default function PayrollSettings() {
           <div className="mt-6 flex items-center justify-end gap-4">
             {/* 저장 메시지 */}
             {saveMessage && (
-              <div className={`flex items-center px-4 py-2 rounded-md text-sm font-medium animate-fade-in ${
+              <div className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium animate-fade-in ${
                 saveMessage.type === 'success'
                   ? 'bg-at-success-bg border border-green-300 text-at-success'
                   : 'bg-at-error-bg border border-red-300 text-at-error'
@@ -830,7 +830,7 @@ export default function PayrollSettings() {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-6 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover focus:ring-2 focus:ring-at-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4 mr-2" />
               {saving ? '저장 중...' : '설정 저장'}

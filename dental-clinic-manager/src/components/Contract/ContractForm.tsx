@@ -291,7 +291,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         <div className="border border-at-border p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">근로 기간</h3>
           {selectedEmployee?.hire_date && formData.employment_period_start === selectedEmployee.hire_date && (
-            <div className="mb-3 p-2 bg-at-success-bg border border-green-200 rounded-md">
+            <div className="mb-3 p-2 bg-at-success-bg border border-green-200 rounded-xl">
               <p className="text-sm text-at-success">
                 직원의 입사일({selectedEmployee.hire_date})이 계약 시작일에 자동으로 입력되었습니다.
               </p>
@@ -416,7 +416,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
           <h3 className="text-lg font-semibold mb-3">근무 스케줄</h3>
           {selectedEmployee && formData.work_hours_detail ? (
             <>
-              <div className="mb-4 p-3 bg-at-accent-light border border-at-border rounded-md">
+              <div className="mb-4 p-3 bg-at-accent-light border border-at-border rounded-xl">
                 <p className="text-sm text-at-accent">
                   <span className="font-semibold">{selectedEmployee.name}</span>님의 개인 근무 스케줄이 자동으로 반영되었습니다.
                   필요시 아래에서 수정할 수 있습니다.
@@ -438,7 +438,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                   const daySchedule = formData.work_hours_detail?.[key]
                   const isWorking = daySchedule?.isWorking ?? false
                   return (
-                    <div key={key} className={`p-3 rounded-md border ${isWorking ? 'bg-white border-at-border' : 'bg-at-surface-alt border-at-border'}`}>
+                    <div key={key} className={`p-3 rounded-xl border ${isWorking ? 'bg-white border-at-border' : 'bg-at-surface-alt border-at-border'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <label className="flex items-center cursor-pointer">
                           <input
@@ -515,7 +515,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               </div>
             </>
           ) : (
-            <div className="p-4 bg-at-warning-bg border border-yellow-200 rounded-md">
+            <div className="p-4 bg-at-warning-bg border border-yellow-200 rounded-xl">
               <p className="text-sm text-yellow-800">
                 직원을 선택하면 근무 스케줄이 자동으로 표시됩니다.
               </p>

@@ -1021,7 +1021,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                               {category.isCustom && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleDeleteCategory(category.id) }}
-                                  className="p-1 rounded hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-all"
+                                  className="p-1 rounded hover:bg-at-error-bg opacity-0 group-hover:opacity-100 transition-all"
                                   title="카테고리 삭제"
                                 >
                                   <Trash2 className="w-3 h-3 text-red-400" />
@@ -1158,7 +1158,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     className={`
                       group flex items-center justify-center w-full py-1.5 rounded-lg transition-all duration-200
                       ${hasActive && !isExpanded
-                        ? 'text-blue-600 bg-blue-50'
+                        ? 'text-at-accent bg-at-accent-light'
                         : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
                       }
                     `}
@@ -1346,9 +1346,9 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
           onClick={handleWorkerDownload}
           disabled={isDownloadingWorker}
           title={isCollapsed ? (isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드') : undefined}
-          className={`group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full text-at-text-weak hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full text-at-text-weak hover:bg-at-success-bg hover:text-at-success disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <Download className={`w-5 h-5 flex-shrink-0 text-at-text-weak group-hover:text-green-600 ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
+          <Download className={`w-5 h-5 flex-shrink-0 text-at-text-weak group-hover:text-at-success ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
           {!isCollapsed && <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드'}</span>}
         </button>
         {bottomFixedMenus.map(tab => {

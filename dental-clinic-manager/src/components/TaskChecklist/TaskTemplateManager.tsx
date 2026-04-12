@@ -1157,14 +1157,14 @@ export default function TaskTemplateManager() {
                 if (userDrafts.length === 0) return null
                 return (
                   <div className="px-4 sm:px-6 py-2 bg-at-warning-bg border-b border-yellow-200 flex items-center justify-between">
-                    <span className="text-xs text-yellow-700">
+                    <span className="text-xs text-at-warning">
                       결재 대기: 초안 {userDrafts.filter(t => t.status === 'draft').length}건
                       {userDrafts.some(t => t.status === 'rejected') && `, 반려 ${userDrafts.filter(t => t.status === 'rejected').length}건`}
                     </span>
                     <button
                       onClick={() => handleSubmitForApproval(userDrafts.map(t => t.id))}
                       disabled={submitting}
-                      className="inline-flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-md hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
                     >
                       <Send className="w-3 h-3 mr-1" />
                       {submitting ? '요청 중...' : `결재 요청 (${userDrafts.length})`}

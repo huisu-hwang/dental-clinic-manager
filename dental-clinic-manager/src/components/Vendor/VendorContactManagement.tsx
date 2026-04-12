@@ -1155,7 +1155,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 <button
                   onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
                   disabled={dialingPhone === contact.phone}
-                  className="px-3 py-1 bg-at-accent-light text-at-accent text-xs font-medium rounded-md hover:bg-at-tag transition-colors flex items-center gap-1 flex-shrink-0"
+                  className="px-3 py-1 bg-at-accent-light text-at-accent text-xs font-medium rounded-xl hover:bg-at-tag transition-colors flex items-center gap-1 flex-shrink-0"
                 >
                   {dialingPhone === contact.phone ? (
                     <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
@@ -1176,7 +1176,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   <button
                     onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone2!) }}
                     disabled={dialingPhone === contact.phone2}
-                    className="px-3 py-1 bg-at-accent-light text-at-accent text-xs font-medium rounded-md hover:bg-at-tag transition-colors flex items-center gap-1 flex-shrink-0"
+                    className="px-3 py-1 bg-at-accent-light text-at-accent text-xs font-medium rounded-xl hover:bg-at-tag transition-colors flex items-center gap-1 flex-shrink-0"
                   >
                     {dialingPhone === contact.phone2 ? (
                       <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
@@ -1225,9 +1225,9 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             <div className="border-t border-at-border px-4 py-2.5 flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5 ${
                   contact.is_favorite
-                    ? 'bg-at-warning-bg text-at-warning hover:bg-yellow-100'
+                    ? 'bg-at-warning-bg text-at-warning hover:bg-at-warning-bg'
                     : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-alt'
                 }`}
               >
@@ -1238,7 +1238,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {canEdit && (
                 <button
                   onClick={(e) => { e.stopPropagation(); openEditContact(contact) }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-alt transition-colors flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-medium rounded-xl bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-alt transition-colors flex items-center gap-1.5"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   수정
@@ -1248,7 +1248,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {canDelete && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(contact.id) }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-at-error-bg text-at-error hover:bg-at-error-bg transition-colors flex items-center gap-1.5 ml-auto"
+                  className="px-3 py-1.5 text-xs font-medium rounded-xl bg-at-error-bg text-at-error hover:bg-at-error-bg transition-colors flex items-center gap-1.5 ml-auto"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   삭제

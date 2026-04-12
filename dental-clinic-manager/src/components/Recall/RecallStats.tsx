@@ -99,7 +99,7 @@ function TrendChart({ trends }: { trends: RecallDailyTrend[] }) {
                 {t.total_processed > 0 ? (
                   <>
                     <div className="w-full bg-at-tag rounded-t transition-all" style={{ height: `${otherHeight}%`, minHeight: otherHeight > 0 ? '2px' : 0 }} />
-                    <div className="w-full bg-green-500 rounded-b transition-all" style={{ height: `${apptHeight}%`, minHeight: apptHeight > 0 ? '2px' : 0 }} />
+                    <div className="w-full bg-at-success rounded-b transition-all" style={{ height: `${apptHeight}%`, minHeight: apptHeight > 0 ? '2px' : 0 }} />
                   </>
                 ) : (
                   <div className="w-full bg-at-surface-alt rounded" style={{ height: '2px' }} />
@@ -113,7 +113,7 @@ function TrendChart({ trends }: { trends: RecallDailyTrend[] }) {
         })}
       </div>
       <div className="flex items-center justify-center gap-4 text-xs text-at-text-weak">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded-sm inline-block" /> 예약 성공</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 bg-at-success rounded-sm inline-block" /> 예약 성공</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 bg-at-tag rounded-sm inline-block" /> 기타 처리</span>
       </div>
     </div>
@@ -206,28 +206,28 @@ export default function RecallStats() {
     <div className="space-y-6">
       {/* 주요 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Users className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.total_patients}</span>
           </div>
           <p className="text-blue-100 mt-2">전체 환자</p>
         </div>
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 text-white">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Calendar className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.appointment_count}</span>
           </div>
           <p className="text-green-100 mt-2">예약 성공</p>
         </div>
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-4 text-white">
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Phone className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.contacted_count}</span>
           </div>
           <p className="text-purple-100 mt-2">연락 완료</p>
         </div>
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-4 text-white">
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between">
             <Percent className="w-8 h-8 opacity-80" />
             <span className="text-3xl font-bold">{stats.success_rate}%</span>
@@ -237,7 +237,7 @@ export default function RecallStats() {
       </div>
 
       {/* 기간별 통계 */}
-      <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+      <div className="bg-white rounded-xl border border-at-border p-6 shadow-at-card">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-semibold text-at-text flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-at-accent" />
@@ -248,7 +248,7 @@ export default function RecallStats() {
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-xl transition-all ${
                   period === p ? 'bg-white text-at-accent shadow-sm' : 'text-at-text-weak hover:text-at-text-secondary'
                 }`}
               >
@@ -356,7 +356,7 @@ export default function RecallStats() {
       </div>
 
       {/* 최근 14일 추이 차트 */}
-      <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+      <div className="bg-white rounded-xl border border-at-border p-6 shadow-at-card">
         <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-at-accent" />
           최근 14일 추이
@@ -368,7 +368,7 @@ export default function RecallStats() {
 
       {/* 상태별 분포 + 오늘 활동 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+        <div className="bg-white rounded-xl border border-at-border p-6 shadow-at-card">
           <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-at-accent" />
             전체 상태별 분포
@@ -377,8 +377,8 @@ export default function RecallStats() {
             {[
               { label: '리콜 전', value: stats.pending_count, barClass: 'bg-at-border' },
               { label: '연락 진행', value: stats.contacted_count - stats.appointment_count, barClass: 'bg-at-accent' },
-              { label: '예약 성공', value: stats.appointment_count, barClass: 'bg-green-500' },
-              { label: '거부/실패', value: stats.rejected_count + stats.invalid_count, barClass: 'bg-red-500' },
+              { label: '예약 성공', value: stats.appointment_count, barClass: 'bg-at-success' },
+              { label: '거부/실패', value: stats.rejected_count + stats.invalid_count, barClass: 'bg-at-error' },
             ].map(({ label, value, barClass }) => (
               <div key={label}>
                 <div className="flex items-center justify-between text-sm mb-1">
@@ -393,7 +393,7 @@ export default function RecallStats() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+        <div className="bg-white rounded-xl border border-at-border p-6 shadow-at-card">
           <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-at-accent" />
             오늘 활동
@@ -409,7 +409,7 @@ export default function RecallStats() {
                 </div>
                 <div className="text-center p-4 bg-at-success-bg rounded-xl">
                   <Calendar className="w-6 h-6 text-at-success mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-green-900">{todayActivity.appointmentsMade}</p>
+                  <p className="text-2xl font-bold text-at-success">{todayActivity.appointmentsMade}</p>
                   <p className="text-sm text-at-success">예약 성공</p>
                 </div>
               </div>
@@ -460,7 +460,7 @@ export default function RecallStats() {
       </div>
 
       {/* 진행률 */}
-      <div className="bg-white rounded-2xl border border-at-border p-6 shadow-at-card">
+      <div className="bg-white rounded-xl border border-at-border p-6 shadow-at-card">
         <h3 className="text-lg font-semibold text-at-text mb-4 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-at-accent" />
           전체 진행률
@@ -486,14 +486,14 @@ export default function RecallStats() {
           <div className="flex items-center gap-3 p-3 bg-at-success-bg rounded-xl">
             <CheckCircle className="w-8 h-8 text-at-success" />
             <div>
-              <p className="text-2xl font-bold text-green-900">{stats.appointment_count}</p>
+              <p className="text-2xl font-bold text-at-success">{stats.appointment_count}</p>
               <p className="text-sm text-at-success">예약 성공</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 bg-at-error-bg rounded-xl">
             <XCircle className="w-8 h-8 text-at-error" />
             <div>
-              <p className="text-2xl font-bold text-red-900">{stats.rejected_count + stats.invalid_count}</p>
+              <p className="text-2xl font-bold text-at-error">{stats.rejected_count + stats.invalid_count}</p>
               <p className="text-sm text-at-error">실패/거부</p>
             </div>
           </div>

@@ -154,7 +154,7 @@ export default function TaskApproval() {
             <button
               onClick={handleApprove}
               disabled={processing}
-              className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 bg-at-success hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4 mr-1.5" />
               {processing ? '처리 중...' : '승인'}
@@ -162,7 +162,7 @@ export default function TaskApproval() {
             <button
               onClick={() => setShowRejectDialog(true)}
               disabled={processing}
-              className="inline-flex items-center px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 bg-at-error hover:bg-red-700 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
             >
               <XCircle className="w-4 h-4 mr-1.5" />
               반려
@@ -194,7 +194,7 @@ export default function TaskApproval() {
               <button
                 onClick={handleReject}
                 disabled={!rejectionReason.trim() || processing}
-                className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 disabled:opacity-50"
+                className="px-4 py-2 bg-at-error hover:bg-red-700 text-white text-sm font-medium rounded-xl disabled:opacity-50"
               >
                 {processing ? '처리 중...' : '반려'}
               </button>
@@ -207,7 +207,7 @@ export default function TaskApproval() {
       {pendingTemplates.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-8 text-center">
           <div className="w-16 h-16 bg-at-success-bg rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileCheck className="w-8 h-8 text-green-500" />
+            <FileCheck className="w-8 h-8 text-at-success" />
           </div>
           <p className="text-at-text-weak text-sm">결재 대기 중인 항목이 없습니다.</p>
         </div>
@@ -292,10 +292,10 @@ export default function TaskApproval() {
                             }
                           }}
                           disabled={processing}
-                          className="p-1.5 rounded-lg hover:bg-at-success-bg transition-colors"
+                          className="p-1.5 rounded-xl hover:bg-at-success-bg transition-colors"
                           title="승인"
                         >
-                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          <CheckCircle2 className="w-5 h-5 text-at-success" />
                         </button>
                         <button
                           onClick={() => {
@@ -303,10 +303,10 @@ export default function TaskApproval() {
                             setShowRejectDialog(true)
                           }}
                           disabled={processing}
-                          className="p-1.5 rounded-lg hover:bg-at-error-bg transition-colors"
+                          className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                           title="반려"
                         >
-                          <XCircle className="w-5 h-5 text-red-500" />
+                          <XCircle className="w-5 h-5 text-at-error" />
                         </button>
                       </div>
                     </div>

@@ -226,7 +226,7 @@ export default function LogsSection({
               <div className="flex gap-1 sm:gap-2 flex-wrap">
                 <button
                   onClick={() => setConsultFilter('all')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
                     consultFilter === 'all'
                       ? 'bg-at-accent text-white'
                       : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
@@ -236,7 +236,7 @@ export default function LogsSection({
                 </button>
                 <button
                   onClick={() => setConsultFilter('completed')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
                     consultFilter === 'completed'
                       ? 'bg-at-success text-white'
                       : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
@@ -246,7 +246,7 @@ export default function LogsSection({
                 </button>
                 <button
                   onClick={() => setConsultFilter('incomplete')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
                     consultFilter === 'incomplete'
                       ? 'bg-at-warning text-white'
                       : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
@@ -372,7 +372,7 @@ export default function LogsSection({
               <div className="flex gap-1 sm:gap-2 flex-wrap">
                 <button
                   onClick={() => setGiftSort('default')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
                     giftSort === 'default'
                       ? 'bg-at-accent text-white'
                       : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
@@ -382,7 +382,7 @@ export default function LogsSection({
                 </button>
                 <button
                   onClick={() => setGiftSort('type')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
                     giftSort === 'type'
                       ? 'bg-purple-600 text-white'
                       : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
@@ -392,7 +392,7 @@ export default function LogsSection({
                 </button>
                 <button
                   onClick={() => setGiftSort('date')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
                     giftSort === 'date'
                       ? 'bg-indigo-600 text-white'
                       : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'

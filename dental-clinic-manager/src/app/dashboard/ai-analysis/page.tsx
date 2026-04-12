@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import AIChat from '@/components/AIAnalysis/AIChat';
-import { AlertCircle, Lock } from 'lucide-react';
+import { AlertCircle, Lock, Brain } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 
@@ -92,9 +92,16 @@ export default function AIAnalysisPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       {/* 페이지 제목 */}
-      <div className="pb-4 border-b border-at-border">
-        <h1 className="text-xl font-bold text-at-text">AI 데이터 분석</h1>
-        <p className="text-sm text-at-text-weak mt-1">자연어로 병원 데이터를 분석하고 인사이트를 얻으세요</p>
+      <div className="flex items-center justify-between pb-4 border-b border-at-border">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <Brain className="w-4 h-4 text-at-accent" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-at-text">AI 데이터 분석</h2>
+            <p className="text-xs text-at-text-secondary mt-0.5">자연어로 병원 데이터를 분석하고 인사이트를 얻으세요</p>
+          </div>
+        </div>
       </div>
       {/* 메인 콘텐츠 */}
       <div className="h-[calc(100vh-200px)]">

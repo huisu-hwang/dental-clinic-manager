@@ -693,7 +693,7 @@ export default function PayrollForm() {
             <select
               value={selectedEmployeeId || ''}
               onChange={(e) => setSelectedEmployeeId(e.target.value || null)}
-              className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             >
               <option value="">직원을 선택하세요</option>
               {employees.map(emp => (
@@ -717,7 +717,7 @@ export default function PayrollForm() {
                 setSelectedYear(year)
                 setSelectedMonth(month)
               }}
-              className="w-full px-3 py-2 border border-at-border rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             >
               {yearMonthOptions.map(opt => (
                 <option key={`${opt.year}-${opt.month}`} value={`${opt.year}-${opt.month}`}>
@@ -729,7 +729,7 @@ export default function PayrollForm() {
         </div>
 
         {loadingPayroll && (
-          <div className="mt-4 text-sm text-emerald-600">
+          <div className="mt-4 text-sm text-at-accent">
             급여 명세서를 불러오는 중...
           </div>
         )}
@@ -919,12 +919,12 @@ export default function PayrollForm() {
 
             {/* 근태 요약 그리드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="p-3 bg-emerald-50 rounded-xl text-center">
-                <p className="text-xs text-emerald-600 mb-1">출근 일수</p>
-                <p className="text-xl font-bold text-emerald-700">
+              <div className="p-3 bg-at-success-bg rounded-xl text-center">
+                <p className="text-xs text-at-success mb-1">출근 일수</p>
+                <p className="text-xl font-bold text-at-success">
                   {attendanceSummary.presentDays}일
                 </p>
-                <p className="text-xs text-emerald-500">
+                <p className="text-xs text-at-success">
                   / {attendanceSummary.totalWorkDays}일
                 </p>
               </div>
@@ -1015,7 +1015,7 @@ export default function PayrollForm() {
                   type="number"
                   value={formState.cashBonus || ''}
                   onChange={(e) => handleCashBonusChange(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 pr-12 border border-amber-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="w-full px-3 py-2 pr-12 border border-amber-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   placeholder="0"
                   min="0"
                 />
@@ -1023,7 +1023,7 @@ export default function PayrollForm() {
               </div>
             </div>
             {formState.cashBonus > 0 && (
-              <div className="flex items-center px-3 py-1.5 bg-at-warning-bg rounded-md border border-amber-200 mt-6">
+              <div className="flex items-center px-3 py-1.5 bg-at-warning-bg rounded-xl border border-amber-200 mt-6">
                 <span className="text-sm text-amber-700 font-medium">
                   {formatCurrency(formState.cashBonus)}원
                 </span>
@@ -1059,7 +1059,7 @@ export default function PayrollForm() {
                     type="number"
                     value={formState.yearEndIncomeTax || ''}
                     onChange={(e) => handleYearEndSettlementChange('yearEndIncomeTax', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
@@ -1072,7 +1072,7 @@ export default function PayrollForm() {
                     type="number"
                     value={formState.yearEndLocalTax || ''}
                     onChange={(e) => handleYearEndSettlementChange('yearEndLocalTax', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
@@ -1090,7 +1090,7 @@ export default function PayrollForm() {
                     type="number"
                     value={formState.nationalPensionAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('nationalPensionAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
@@ -1103,7 +1103,7 @@ export default function PayrollForm() {
                     type="number"
                     value={formState.healthInsuranceAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('healthInsuranceAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
@@ -1116,7 +1116,7 @@ export default function PayrollForm() {
                     type="number"
                     value={formState.longTermCareAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('longTermCareAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
@@ -1129,7 +1129,7 @@ export default function PayrollForm() {
                     type="number"
                     value={formState.employmentInsuranceAdjustment || ''}
                     onChange={(e) => handleYearEndSettlementChange('employmentInsuranceAdjustment', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-md focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
+                    className="w-full px-3 py-2 pr-12 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="0"
                   />
                   <span className="absolute right-3 top-2 text-at-text text-sm">원</span>
@@ -1145,7 +1145,7 @@ export default function PayrollForm() {
               + (formState.longTermCareAdjustment || 0) + (formState.employmentInsuranceAdjustment || 0)
             if (total === 0) return null
             return (
-              <div className={`mt-4 p-3 rounded-md border ${total > 0 ? 'bg-at-error-bg border-red-200' : 'bg-at-success-bg border-green-200'}`}>
+              <div className={`mt-4 p-3 rounded-xl border ${total > 0 ? 'bg-at-error-bg border-red-200' : 'bg-at-success-bg border-green-200'}`}>
                 <div className="flex justify-between items-center">
                   <span className={`text-sm font-medium ${total > 0 ? 'text-at-error' : 'text-at-success'}`}>
                     연말정산 {total > 0 ? '추가 납부' : '환급'} 합계
@@ -1449,7 +1449,7 @@ export default function PayrollForm() {
             <button
               type="button"
               onClick={handlePreview}
-              className="px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              className="px-6 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover focus:ring-2 focus:ring-at-accent focus:ring-offset-2"
             >
               명세서 미리보기 / 인쇄
             </button>

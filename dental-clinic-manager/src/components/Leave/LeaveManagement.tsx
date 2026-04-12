@@ -91,7 +91,7 @@ const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance
             )}
             {(balance?.unpaid_days ?? 0) > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-at-surface-alt rounded-lg">
-                <span className="w-2 h-2 rounded-full bg-gray-500"></span>
+                <span className="w-2 h-2 rounded-full bg-at-text-weak"></span>
                 <span className="text-sm text-at-text-secondary">무급휴가 {balance?.unpaid_days}일</span>
               </div>
             )}
@@ -281,7 +281,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
         </div>
@@ -809,7 +809,7 @@ function AllEmployeeBalances() {
                                         <div>
                                           <label className="block text-xs font-medium text-at-text-weak mb-1">종류</label>
                                           <select
-                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-xl focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.leave_type_id}
                                             onChange={(e) => updateEditField('leave_type_id', e.target.value)}
                                           >
@@ -824,7 +824,7 @@ function AllEmployeeBalances() {
                                           <label className="block text-xs font-medium text-at-text-weak mb-1">시작일</label>
                                           <input
                                             type="date"
-                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-xl focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.start_date}
                                             onChange={(e) => updateEditField('start_date', e.target.value)}
                                           />
@@ -835,7 +835,7 @@ function AllEmployeeBalances() {
                                           <label className="block text-xs font-medium text-at-text-weak mb-1">종료일</label>
                                           <input
                                             type="date"
-                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-xl focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.end_date}
                                             min={editingRequest.start_date}
                                             onChange={(e) => updateEditField('end_date', e.target.value)}
@@ -850,7 +850,7 @@ function AllEmployeeBalances() {
                                             type="number"
                                             step="0.5"
                                             min="0.5"
-                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-xl focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.total_days}
                                             onChange={(e) => updateEditField('total_days', parseFloat(e.target.value) || 0)}
                                           />
@@ -862,7 +862,7 @@ function AllEmployeeBalances() {
                                         <div>
                                           <label className="block text-xs font-medium text-at-text-weak mb-1">반차</label>
                                           <select
-                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-xl focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.half_day_type || ''}
                                             onChange={(e) => updateEditField('half_day_type', e.target.value || null)}
                                           >
@@ -877,7 +877,7 @@ function AllEmployeeBalances() {
                                           <label className="block text-xs font-medium text-at-text-weak mb-1">사유</label>
                                           <input
                                             type="text"
-                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-xl focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             placeholder="사유 입력"
                                             value={editingRequest.reason}
                                             onChange={(e) => updateEditField('reason', e.target.value)}
@@ -889,7 +889,7 @@ function AllEmployeeBalances() {
                                       <div className="flex justify-end gap-2 pt-1">
                                         <button
                                           onClick={cancelEditing}
-                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-at-text-secondary bg-at-surface-alt hover:bg-at-border rounded-md transition-colors"
+                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-at-text-secondary bg-at-surface-alt hover:bg-at-border rounded-xl transition-colors"
                                           disabled={saving}
                                         >
                                           <X className="w-3 h-3" />
@@ -897,7 +897,7 @@ function AllEmployeeBalances() {
                                         </button>
                                         <button
                                           onClick={saveEditing}
-                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-at-accent hover:bg-at-accent-hover rounded-md transition-colors disabled:opacity-50"
+                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-at-accent hover:bg-at-accent-hover rounded-xl transition-colors disabled:opacity-50"
                                           disabled={saving}
                                         >
                                           <Save className="w-3 h-3" />
@@ -946,7 +946,7 @@ function AllEmployeeBalances() {
                                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                                         isCompleted
                                           ? 'bg-at-success-bg text-at-success'
-                                          : 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-at-warning-bg text-at-warning'
                                       }`}>
                                         {status}
                                       </span>
@@ -957,7 +957,7 @@ function AllEmployeeBalances() {
                                               e.stopPropagation()
                                               startEditing(request)
                                             }}
-                                            className="p-1.5 text-at-text-weak hover:text-at-accent hover:bg-at-accent-light rounded-md transition-colors"
+                                            className="p-1.5 text-at-text-weak hover:text-at-accent hover:bg-at-accent-light rounded-xl transition-colors"
                                             title="수정"
                                           >
                                             <Pencil className="w-3.5 h-3.5" />
@@ -967,7 +967,7 @@ function AllEmployeeBalances() {
                                               e.stopPropagation()
                                               handleDelete(request.id, item.user_name)
                                             }}
-                                            className="p-1.5 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-md transition-colors"
+                                            className="p-1.5 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-xl transition-colors"
                                             title="삭제"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
