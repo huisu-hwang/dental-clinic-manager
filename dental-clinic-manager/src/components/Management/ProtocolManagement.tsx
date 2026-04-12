@@ -848,7 +848,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
   }
 
   return (
-    <div>
+    <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
       {/* 헤더 - hideHeader가 true면 숨김 */}
       {!hideHeader && (
         <div className="flex items-center gap-3 pb-4 border-b border-at-border mb-4">

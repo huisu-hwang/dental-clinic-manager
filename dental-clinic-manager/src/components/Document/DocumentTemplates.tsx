@@ -838,7 +838,7 @@ export default function DocumentTemplates() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       {/* 헤더 */}
       <div className="print:hidden">
         <h2 className="text-2xl font-bold text-at-text">문서 양식</h2>

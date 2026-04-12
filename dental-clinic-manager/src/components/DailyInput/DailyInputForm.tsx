@@ -758,7 +758,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   )
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       {/* 보고서 헤더 */}
       <div className="flex items-center justify-between pb-4 border-b border-at-border">
         <div className="flex items-center gap-3">

@@ -95,7 +95,7 @@ export default function PayrollManagement() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
       {/* 헤더 */}
       <div className="flex items-center justify-between pb-4 border-b border-at-border">
         <div className="flex items-center gap-3">
