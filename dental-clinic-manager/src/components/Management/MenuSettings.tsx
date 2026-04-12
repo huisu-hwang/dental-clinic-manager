@@ -1434,7 +1434,7 @@ export default function MenuSettings() {
   const sortedCategories = [...categories].sort((a, b) => a.order - b.order)
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       <style jsx global>{`
         @keyframes bounce-up {
           0%, 100% { transform: translateY(0); }
