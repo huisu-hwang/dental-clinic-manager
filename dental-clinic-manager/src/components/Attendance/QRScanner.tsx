@@ -81,7 +81,7 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
   return (
     <div className="space-y-4">
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+        <div className="p-3 bg-at-error-bg border border-red-200 rounded-xl text-sm text-red-800">
           {error}
           <button
             onClick={startScanner}
@@ -95,13 +95,13 @@ export default function QRScanner({ onScanSuccess, onScanError }: QRScannerProps
       {/* QR 스캐너 영역 - 항상 표시 */}
       <div
         id={scannerIdRef.current}
-        className="rounded-lg overflow-hidden border-4 border-blue-500 bg-gray-900"
+        className="rounded-xl overflow-hidden border-4 border-at-accent bg-gray-900"
         style={{ minHeight: '300px' }}
       />
 
       {!error && (
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-          <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>
+        <div className="flex items-center justify-center space-x-2 text-sm text-at-text-secondary">
+          <div className="animate-pulse w-2 h-2 bg-at-accent rounded-full"></div>
           <span>스캔 중...</span>
         </div>
       )}

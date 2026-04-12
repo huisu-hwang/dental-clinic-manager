@@ -1,0 +1,67 @@
+<h2>상세 내용을 어떻게 보여줄까요?</h2>
+<p class="subtitle">클릭했을 때 상세 내용이 나타나는 방식을 선택해 주세요</p>
+
+<div class="options">
+
+  <div class="option" data-choice="modal" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>모달 팝업</h3>
+      <p>화면 중앙에 팝업 창이 뜨고 배경이 어두워짐<br>닫기 버튼 또는 배경 클릭으로 닫음</p>
+      <div style="margin-top:12px;position:relative;background:#f8fafc;border-radius:8px;padding:12px;min-height:80px">
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <div style="background:white;border-radius:10px;padding:12px 16px;width:70%;box-shadow:0 10px 25px rgba(0,0,0,0.2)">
+            <div style="font-size:11px;font-weight:600;color:#1e293b;margin-bottom:6px">📋 오늘의 상담 목록</div>
+            <div style="font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:4px">홍길동 · 임플란트 · ✅ 성공</div>
+            <div style="font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:4px">김영희 · 교정 · ❌ 보류</div>
+            <div style="font-size:10px;color:#94a3b8;text-align:right">✕ 닫기</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#94a3b8">대시보드 배경 (어두워짐)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="slideover" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>슬라이드 패널</h3>
+      <p>화면 오른쪽에서 패널이 슬라이드로 등장<br>큰 목록도 여유롭게 표시 가능</p>
+      <div style="margin-top:12px;background:#f8fafc;border-radius:8px;padding:12px;display:flex;gap:8px;min-height:80px;overflow:hidden">
+        <div style="flex:1;font-size:10px;color:#94a3b8">대시보드 내용...</div>
+        <div style="width:55%;background:white;border-radius:8px 0 0 8px;padding:10px;box-shadow:-4px 0 12px rgba(0,0,0,0.1);border-left:3px solid #3b82f6">
+          <div style="font-size:11px;font-weight:600;color:#1e293b;margin-bottom:6px">📋 오늘의 상담 목록</div>
+          <div style="font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:4px">홍길동 · 임플란트</div>
+          <div style="font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9;padding-bottom:4px;margin-bottom:4px">김영희 · 교정</div>
+          <div style="font-size:10px;color:#64748b">이철수 · 스케일링</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="inline" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>인라인 확장</h3>
+      <p>카드 아래에 상세 내용이 펼쳐짐<br>페이지 이동 없이 자연스러운 흐름</p>
+      <div style="margin-top:12px;background:#f8fafc;border-radius:8px;padding:10px">
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <div style="background:#dcfce7;border:2px solid #16a34a;border-radius:8px;padding:6px 10px;text-align:center;flex:1">
+            <div style="font-size:14px;font-weight:bold;color:#16a34a">3/5</div>
+            <div style="font-size:9px;color:#64748b">성공/상담 ▼</div>
+          </div>
+          <div style="background:#fff7ed;border-radius:8px;padding:6px 10px;text-align:center;flex:1">
+            <div style="font-size:14px;font-weight:bold;color:#ea580c">2/8</div>
+            <div style="font-size:9px;color:#64748b">예약/리콜</div>
+          </div>
+        </div>
+        <div style="background:white;border-radius:6px;padding:8px;border:1px solid #e2e8f0">
+          <div style="font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9;padding-bottom:3px;margin-bottom:3px">홍길동 · 임플란트 · ✅</div>
+          <div style="font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9;padding-bottom:3px;margin-bottom:3px">김영희 · 교정 · ❌</div>
+          <div style="font-size:10px;color:#64748b">이철수 · 스케일링 · ✅</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

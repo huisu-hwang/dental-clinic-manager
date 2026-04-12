@@ -8,7 +8,7 @@ interface BlindedContentPlaceholderProps {
 
 export default function BlindedContentPlaceholder({ type }: BlindedContentPlaceholderProps) {
   return (
-    <div className="flex items-center gap-2 py-4 px-4 bg-gray-50 rounded-lg text-gray-400">
+    <div className="flex items-center gap-2 py-4 px-4 bg-at-surface-alt rounded-xl text-at-text-weak">
       <EyeOff className="w-4 h-4" />
       <span className="text-sm">
         {type === 'post'

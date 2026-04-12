@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { EyeIcon, EyeSlashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { dataService } from '@/lib/dataService'
 import { getSupabase } from '@/lib/supabase'
@@ -82,9 +83,9 @@ export default function SignupForm({
   useEffect(() => {
     if (formData.confirmPassword) {
       if (formData.password === formData.confirmPassword) {
-        setPasswordMatch({ message: '비밀번호가 일치합니다.', color: 'text-green-600' });
+        setPasswordMatch({ message: '비밀번호가 일치합니다.', color: 'text-at-success' });
       } else {
-        setPasswordMatch({ message: '비밀번호가 일치하지 않습니다.', color: 'text-red-600' });
+        setPasswordMatch({ message: '비밀번호가 일치하지 않습니다.', color: 'text-at-error' });
       }
     } else {
       setPasswordMatch({ message: '', color: '' });
@@ -342,29 +343,27 @@ export default function SignupForm({
         <div className="text-center mb-8">
           <button
             onClick={onBackToLanding}
-            className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-4"
+            className="inline-flex items-center text-at-accent hover:text-at-accent font-medium mb-4"
           >
             ← 돌아가기
           </button>
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">🦷</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
+            <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
+            <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">회원가입</h2>
-          <p className="text-slate-600">치과 정보를 입력하여 계정을 생성하세요</p>
+          <h2 className="text-3xl font-bold text-at-text mb-2">회원가입</h2>
+          <p className="text-at-text-secondary">치과 정보를 입력하여 계정을 생성하세요</p>
         </div>
 
         {/* Form */}
-        <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
+        <div className="bg-white p-8 rounded-2xl shadow-at-card border border-at-border">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 로그인 정보 */}
-            <div className="pb-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">로그인 정보</h3>
+            <div className="pb-4 border-b border-at-border">
+              <h3 className="text-lg font-semibold text-at-text mb-4">로그인 정보</h3>
 
               <div>
-                <label htmlFor="userId" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="userId" className="block text-sm font-medium text-at-text-secondary mb-1">
                   이메일 주소 (아이디) *
                 </label>
                 <input
@@ -373,7 +372,7 @@ export default function SignupForm({
                   name="userId"
                   value={formData.userId}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                   placeholder="email@example.com"
                   disabled={loading}
                   autoComplete="off"
@@ -381,7 +380,7 @@ export default function SignupForm({
               </div>
 
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="name" className="block text-sm font-medium text-at-text-secondary mb-1">
                   이름 *
                 </label>
                 <input
@@ -390,7 +389,7 @@ export default function SignupForm({
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                   placeholder="홍길동"
                   required
                   disabled={loading}
@@ -398,7 +397,7 @@ export default function SignupForm({
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="phone" className="block text-sm font-medium text-at-text-secondary mb-1">
                   전화번호 *
                 </label>
                 <input
@@ -410,7 +409,7 @@ export default function SignupForm({
                     const formatted = autoFormatPhoneNumber(e.target.value);
                     setFormData(prev => ({ ...prev, phone: formatted.value }));
                   }}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                   placeholder="010-1234-5678"
                   maxLength={13}
                   required
@@ -419,7 +418,7 @@ export default function SignupForm({
               </div>
 
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="address" className="block text-sm font-medium text-at-text-secondary mb-1">
                   주소 *
                 </label>
                 <input
@@ -428,7 +427,7 @@ export default function SignupForm({
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                   placeholder="서울시 강남구 테헤란로 123"
                   required
                   disabled={loading}
@@ -436,8 +435,8 @@ export default function SignupForm({
               </div>
 
               <div>
-                <label htmlFor="residentNumber" className="block text-sm font-medium text-slate-700 mb-1">
-                  주민등록번호 * <span className="text-xs text-slate-500">(암호화되어 저장됩니다)</span>
+                <label htmlFor="residentNumber" className="block text-sm font-medium text-at-text-secondary mb-1">
+                  주민등록번호 * <span className="text-xs text-at-text-weak">(암호화되어 저장됩니다)</span>
                 </label>
                 <input
                   type="text"
@@ -448,19 +447,19 @@ export default function SignupForm({
                     const formatted = autoFormatResidentNumber(e.target.value);
                     setFormData(prev => ({ ...prev, residentNumber: formatted.value }));
                   }}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                   placeholder="123456-7890123"
                   maxLength={14}
                   required
                   disabled={loading}
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-at-text-weak mt-1">
                   ※ 근로계약서 작성 시 필요합니다. 암호화되어 안전하게 보관됩니다.
                 </p>
               </div>
 
               <div className="relative">
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-at-text-secondary mb-1">
                   비밀번호 *
                 </label>
                 <input
@@ -469,7 +468,7 @@ export default function SignupForm({
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent pr-10"
                   placeholder="6글자 이상"
                   disabled={loading}
                   autoComplete="new-password"
@@ -480,15 +479,15 @@ export default function SignupForm({
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                    <EyeSlashIcon className="h-5 w-5 text-at-text-weak" />
                   ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                    <EyeIcon className="h-5 w-5 text-at-text-weak" />
                   )}
                 </button>
               </div>
 
               <div className="relative">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-at-text-secondary mb-1">
                   비밀번호 확인 *
                 </label>
                 <input
@@ -497,7 +496,7 @@ export default function SignupForm({
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent pr-10"
                   placeholder="비밀번호를 다시 입력하세요"
                   disabled={loading}
                   autoComplete="new-password"
@@ -508,9 +507,9 @@ export default function SignupForm({
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                    <EyeSlashIcon className="h-5 w-5 text-at-text-weak" />
                   ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                    <EyeIcon className="h-5 w-5 text-at-text-weak" />
                   )}
                 </button>
               </div>
@@ -521,7 +520,7 @@ export default function SignupForm({
               )}
 
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="role" className="block text-sm font-medium text-at-text-secondary mb-1">
                   직책 *
                 </label>
                 <select
@@ -529,7 +528,7 @@ export default function SignupForm({
                   name="role"
                   value={formData.role}
                   onChange={handleInputChange}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent bg-white"
                   disabled={loading}
                 >
                   <option value="owner">대표원장</option>
@@ -545,11 +544,11 @@ export default function SignupForm({
             {formData.role === 'owner' ? (
               // 대표원장 선택 시: 신규 치과 정보 입력
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">치과 정보</h3>
+                <h3 className="text-lg font-semibold text-at-text mb-4">치과 정보</h3>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="clinicOwnerName" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicOwnerName" className="block text-sm font-medium text-at-text-secondary mb-1">
                       원장 이름 *
                     </label>
                     <input
@@ -558,24 +557,24 @@ export default function SignupForm({
                       name="clinicOwnerName"
                       value={formData.clinicOwnerName}
                       onChange={handleInputChange}
-                      className={`w-full p-3 border rounded-md ${
+                      className={`w-full p-3 border rounded-xl ${
                         formData.role === 'owner'
-                          ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed'
-                          : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                          ? 'bg-at-surface-alt border-at-border text-at-text-secondary cursor-not-allowed'
+                          : 'border-at-border focus:ring-at-accent focus:border-at-accent'
                       }`}
                       placeholder="홍길동"
                       disabled={loading || formData.role === 'owner'}
                       readOnly={formData.role === 'owner'}
                     />
                     {formData.role === 'owner' && (
-                      <p className="mt-1 text-xs text-blue-600">
+                      <p className="mt-1 text-xs text-at-accent">
                         ℹ️ 대표원장 이름이 자동으로 사용됩니다
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label htmlFor="clinicName" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicName" className="block text-sm font-medium text-at-text-secondary mb-1">
                       치과명 *
                     </label>
                     <input
@@ -584,7 +583,7 @@ export default function SignupForm({
                       name="clinicName"
                       value={formData.clinicName}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       placeholder="○○치과"
                       disabled={loading}
                     />
@@ -592,7 +591,7 @@ export default function SignupForm({
                 </div>
 
                 <div>
-                  <label htmlFor="clinicAddress" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="clinicAddress" className="block text-sm font-medium text-at-text-secondary mb-1">
                     치과 주소 *
                   </label>
                   <input
@@ -601,7 +600,7 @@ export default function SignupForm({
                     name="clinicAddress"
                     value={formData.clinicAddress}
                     onChange={handleInputChange}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                     placeholder="서울시 강남구 테헤란로 123 4층"
                     disabled={loading}
                   />
@@ -609,7 +608,7 @@ export default function SignupForm({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="clinicPhone" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicPhone" className="block text-sm font-medium text-at-text-secondary mb-1">
                       치과 전화번호 *
                     </label>
                     <input
@@ -621,7 +620,7 @@ export default function SignupForm({
                         const formatted = autoFormatPhoneNumber(e.target.value);
                         setFormData(prev => ({ ...prev, clinicPhone: formatted.value }));
                       }}
-                      className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       placeholder="02-1234-5678"
                       maxLength={13}
                       disabled={loading}
@@ -629,7 +628,7 @@ export default function SignupForm({
                   </div>
 
                   <div>
-                    <label htmlFor="clinicEmail" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="clinicEmail" className="block text-sm font-medium text-at-text-secondary mb-1">
                       이메일 주소 *
                     </label>
                     <input
@@ -638,17 +637,17 @@ export default function SignupForm({
                       name="clinicEmail"
                       value={formData.clinicEmail}
                       onChange={handleInputChange}
-                      className={`w-full p-3 border rounded-md ${
+                      className={`w-full p-3 border rounded-xl ${
                         formData.role === 'owner'
-                          ? 'bg-slate-100 border-slate-300 text-slate-600 cursor-not-allowed'
-                          : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                          ? 'bg-at-surface-alt border-at-border text-at-text-secondary cursor-not-allowed'
+                          : 'border-at-border focus:ring-at-accent focus:border-at-accent'
                       }`}
                       placeholder="clinic@example.com"
                       disabled={loading || formData.role === 'owner'}
                       readOnly={formData.role === 'owner'}
                     />
                     {formData.role === 'owner' && (
-                      <p className="mt-1 text-xs text-blue-600">
+                      <p className="mt-1 text-xs text-at-accent">
                         ℹ️ 대표원장 이메일이 자동으로 사용됩니다
                       </p>
                     )}
@@ -658,13 +657,13 @@ export default function SignupForm({
             ) : (
               // 그 외 직책 선택 시: 기존 치과 검색
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">소속 병원 선택</h3>
+                <h3 className="text-lg font-semibold text-at-text mb-4">소속 병원 선택</h3>
                 <div>
-                  <label htmlFor="clinicSearch" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="clinicSearch" className="block text-sm font-medium text-at-text-secondary mb-1">
                     병원 검색 *
                   </label>
                   <div className="relative">
-                    <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-slate-400 z-10" />
+                    <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-at-text-weak z-10" />
                     <input
                       type="text"
                       id="clinicSearch"
@@ -676,15 +675,15 @@ export default function SignupForm({
                       }}
                       onFocus={() => setShowClinicSearchResults(clinicSearchQuery.length > 0)}
                       onBlur={() => setTimeout(() => setShowClinicSearchResults(false), 200)}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full pl-10 pr-4 py-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
                       disabled={loading || isSearchingClinics}
                     />
 
                     {/* 검색 결과 드롭다운 */}
                     {showClinicSearchResults && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-at-border rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
                         {isSearchingClinics ? (
-                          <div className="p-4 text-center text-sm text-slate-500">
+                          <div className="p-4 text-center text-sm text-at-text-weak">
                             병원 목록을 불러오는 중...
                           </div>
                         ) : (
@@ -705,13 +704,13 @@ export default function SignupForm({
                                     setClinicSearchQuery(`${clinic.name} - ${clinic.address}`)
                                     setShowClinicSearchResults(false)
                                   }}
-                                  className="w-full p-3 hover:bg-blue-50 text-left transition-colors border-b border-slate-100 last:border-b-0"
+                                  className="w-full p-3 hover:bg-at-accent-light text-left transition-colors border-b border-at-border last:border-b-0"
                                 >
                                   <div>
-                                    <p className="font-medium text-slate-800">{clinic.name}</p>
-                                    <p className="text-sm text-slate-500 mt-1">{clinic.address}</p>
+                                    <p className="font-medium text-at-text">{clinic.name}</p>
+                                    <p className="text-sm text-at-text-weak mt-1">{clinic.address}</p>
                                     {clinic.phone && (
-                                      <p className="text-xs text-slate-400 mt-1">{clinic.phone}</p>
+                                      <p className="text-xs text-at-text-weak mt-1">{clinic.phone}</p>
                                     )}
                                   </div>
                                 </button>
@@ -720,12 +719,12 @@ export default function SignupForm({
                               clinic.name.toLowerCase().includes(clinicSearchQuery.toLowerCase()) ||
                               clinic.address.toLowerCase().includes(clinicSearchQuery.toLowerCase())
                             ).length === 0 && (
-                              <div className="p-4 text-center text-sm text-slate-500">
+                              <div className="p-4 text-center text-sm text-at-text-weak">
                                 검색 결과가 없습니다
                               </div>
                             )}
                             {!clinicSearchQuery && publicClinics.length === 0 && (
-                              <div className="p-4 text-center text-sm text-slate-500">
+                              <div className="p-4 text-center text-sm text-at-text-weak">
                                 등록 가능한 병원이 없습니다
                               </div>
                             )}
@@ -737,8 +736,8 @@ export default function SignupForm({
 
                   {/* 선택된 병원 표시 */}
                   {selectedClinicId && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded-md">
-                      <p className="text-sm text-blue-800">
+                    <div className="mt-2 p-2 bg-at-accent-light rounded-xl">
+                      <p className="text-sm text-at-accent">
                         선택된 병원: <strong>{selectedClinicName}</strong>
                       </p>
                     </div>
@@ -748,16 +747,16 @@ export default function SignupForm({
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-6 shadow-md">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 shadow-at-card">
                 <div className="flex items-start space-x-3 mb-4">
                   <div className="flex-shrink-0">
-                    <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-6 w-6 text-at-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -770,7 +769,7 @@ export default function SignupForm({
                 <div className="space-y-3">
                   <button
                     onClick={handleGoToEmailProvider}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition-colors shadow-sm hover:shadow-md flex items-center justify-center space-x-2"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-at-card hover:shadow-at-card flex items-center justify-center space-x-2"
                   >
                     <span>📧</span>
                     <span>이메일 인증하러 가기</span>
@@ -781,7 +780,7 @@ export default function SignupForm({
                       name: formData.name,
                       role: formData.role
                     })}
-                    className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2.5 px-4 rounded-md transition-colors"
+                    className="w-full bg-at-border hover:bg-at-border text-at-text-secondary font-medium py-2.5 px-4 rounded-xl transition-colors"
                   >
                     나중에 하기
                   </button>
@@ -793,7 +792,7 @@ export default function SignupForm({
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-xl transition-colors"
               >
                 {loading ? '가입 중...' : '회원가입 완료'}
               </button>
@@ -801,11 +800,11 @@ export default function SignupForm({
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-slate-600">
+            <p className="text-at-text-secondary">
               이미 계정이 있으신가요?{' '}
               <button
                 onClick={onShowLogin}
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-at-accent hover:text-at-accent font-medium"
               >
                 로그인하기
               </button>

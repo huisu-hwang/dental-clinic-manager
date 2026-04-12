@@ -55,7 +55,7 @@ export default function ProtocolVersionHistory({
       )
     }
     return (
-      <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+      <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-at-tag text-at-accent">
         Minor
       </span>
     )
@@ -64,8 +64,8 @@ export default function ProtocolVersionHistory({
   if (versions.length === 0) {
     return (
       <div className="text-center py-8">
-        <ClockIcon className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-        <p className="text-slate-600">버전 히스토리가 없습니다.</p>
+        <ClockIcon className="h-12 w-12 text-at-text-weak mx-auto mb-4" />
+        <p className="text-at-text-secondary">버전 히스토리가 없습니다.</p>
       </div>
     )
   }
@@ -79,8 +79,8 @@ export default function ProtocolVersionHistory({
         return (
           <div
             key={version.id}
-            className={`border rounded-lg ${
-              isCurrent ? 'border-blue-300 bg-blue-50' : 'border-slate-200'
+            className={`border rounded-xl ${
+              isCurrent ? 'border-at-accent bg-at-accent-light' : 'border-at-border'
             }`}
           >
             {/* Version Header */}
@@ -88,18 +88,18 @@ export default function ProtocolVersionHistory({
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold text-slate-800">
+                    <h3 className="text-lg font-semibold text-at-text">
                       버전 {version.version_number}
                     </h3>
                     {getChangeTypeBadge(version.change_type)}
                     {isCurrent && (
-                      <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-at-success-bg text-at-success">
                         현재 버전
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 mb-2">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-at-text-secondary mb-2">
                     <span className="flex items-center">
                       <ClockIcon className="h-4 w-4 mr-1" />
                       {formatDate(version.created_at)}
@@ -113,7 +113,7 @@ export default function ProtocolVersionHistory({
                   </div>
 
                   {version.change_summary && (
-                    <p className="text-sm text-slate-700 bg-slate-50 p-2 rounded">
+                    <p className="text-sm text-at-text-secondary bg-at-surface-alt p-2 rounded-lg">
                       {version.change_summary}
                     </p>
                   )}
@@ -123,7 +123,7 @@ export default function ProtocolVersionHistory({
                   {!isCurrent && canRestore && (
                     <button
                       onClick={() => onRestore(version.id)}
-                      className="flex items-center px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-md border border-blue-300"
+                      className="flex items-center px-3 py-1.5 text-sm text-at-accent hover:bg-at-accent-light rounded-xl border border-at-accent"
                       title="이 버전으로 복원"
                     >
                       <ArrowUturnLeftIcon className="h-4 w-4 mr-1" />
@@ -132,7 +132,7 @@ export default function ProtocolVersionHistory({
                   )}
                   <button
                     onClick={() => toggleVersion(version.id)}
-                    className="p-2 text-slate-500 hover:bg-slate-100 rounded-md"
+                    className="p-2 text-at-text-weak hover:bg-at-surface-hover rounded-xl"
                     title={isExpanded ? '내용 숨기기' : '내용 보기'}
                   >
                     {isExpanded ? (
@@ -147,7 +147,7 @@ export default function ProtocolVersionHistory({
 
             {/* Version Content */}
             {isExpanded && (
-              <div className="border-t border-slate-200 p-4 bg-white">
+              <div className="border-t border-at-border p-4 bg-white">
                 <TiptapEditor
                   content={version.content}
                   onChange={() => {}}

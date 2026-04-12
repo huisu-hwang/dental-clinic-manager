@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import {
   ChevronDownIcon,
   CheckCircleIcon,
@@ -185,25 +186,23 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       {/* Header - Glass Morphism */}
-      <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-xl z-50 border-b border-slate-200/50 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-xl z-50 border-b border-at-border/50 shadow-at-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-xl">🦷</span>
-              </div>
-              <span className="text-xl font-bold text-slate-800">클리닉 매니저</span>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl shadow-at-card" />
+              <span className="text-xl font-bold text-at-text">클리닉 매니저</span>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={onShowLogin}
-                className="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium transition-colors"
+                className="px-4 py-2 text-at-text-secondary hover:text-at-text font-medium transition-colors"
               >
                 로그인
               </button>
               <button
                 onClick={onShowSignup}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg"
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition-all shadow-at-card hover:shadow-lg"
               >
                 시작하기
               </button>
@@ -216,7 +215,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
       <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden bg-slate-950">
         {/* 배경 그라데이션 (더 부드럽게) */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-500/20 rounded-full filter blur-[120px] opacity-40" />
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-at-accent/20 rounded-full filter blur-[120px] opacity-40" />
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-indigo-500/20 rounded-full filter blur-[120px] opacity-40" />
 
         {/* 그리드 패턴 */}
@@ -252,7 +251,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.15] tracking-tight mb-6">
               <span
-                className="block mb-2 sm:mb-4 text-slate-400 text-2xl sm:text-3xl md:text-4xl font-medium opacity-0 animate-fade-in"
+                className="block mb-2 sm:mb-4 text-at-text-weak text-2xl sm:text-3xl md:text-4xl font-medium opacity-0 animate-fade-in"
                 style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}
               >
                 "좋은 시스템 없이
@@ -267,14 +266,14 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                 className="block opacity-0 animate-fade-in"
                 style={{ animationDelay: '0.6s', animationFillMode: 'forwards' }}
               >
-                없다<span className="text-slate-400">"</span>
+                없다<span className="text-at-text-weak">"</span>
               </span>
             </h1>
           </div>
 
           {/* 서브 카피 */}
           <p
-            className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed opacity-0 animate-fade-in"
+            className="text-at-text-weak text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed opacity-0 animate-fade-in"
             style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}
           >
             반복되는 업무에서 벗어나,<br className="sm:hidden" />{' '}
@@ -295,7 +294,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </button>
             <button
               onClick={() => document.getElementById('story-2')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-8 py-4 text-slate-400 hover:text-white font-medium transition-colors flex items-center gap-2"
+              className="px-8 py-4 text-at-text-weak hover:text-white font-medium transition-colors flex items-center gap-2"
             >
               자세히 알아보기
               <ChevronDownIcon className="w-5 h-5" />
@@ -309,11 +308,11 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
           >
             <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
               <div className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
-              <span className="text-sm text-slate-300 font-medium">현직 원장 개발</span>
+              <span className="text-sm text-at-text-weak font-medium">현직 원장 개발</span>
             </div>
             <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
               <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-lg shadow-blue-400/50" />
-              <span className="text-sm text-slate-300 font-medium">실제 병원 운영 중</span>
+              <span className="text-sm text-at-text-weak font-medium">실제 병원 운영 중</span>
             </div>
           </div>
         </div>
@@ -322,7 +321,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
           <button
             onClick={() => document.getElementById('story-2')?.scrollIntoView({ behavior: 'smooth' })}
-            className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors"
+            className="flex flex-col items-center gap-1 text-at-text-weak hover:text-at-text-weak transition-colors"
           >
             <span className="text-xs font-medium tracking-wider uppercase">Scroll</span>
             <ChevronDownIcon className="w-5 h-5" />
@@ -351,7 +350,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </p>
 
             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700/50 shadow-xl">
-              <p className="text-lg sm:text-xl text-slate-300 leading-relaxed">
+              <p className="text-lg sm:text-xl text-at-text-weak leading-relaxed">
                 매일 반복되는 <span className="text-white font-semibold">수기 기록</span>,
                 <span className="text-white font-semibold"> 엑셀 통계</span>,
                 <span className="text-white font-semibold"> 연차 계산</span>,
@@ -376,12 +375,12 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                 <HeartIcon className="w-8 h-8 text-white" />
               </div>
               <div>
-                <span className="text-blue-600 font-semibold text-sm tracking-wider uppercase">The Solution</span>
-                <h2 className="text-2xl font-bold text-slate-800">본질에 집중하세요</h2>
+                <span className="text-at-accent font-semibold text-sm tracking-wider uppercase">The Solution</span>
+                <h2 className="text-2xl font-bold text-at-text">본질에 집중하세요</h2>
               </div>
             </div>
 
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-medium text-slate-800 leading-relaxed mb-8">
+            <p className="text-2xl sm:text-3xl lg:text-4xl font-medium text-at-text leading-relaxed mb-8">
               좋은 시스템은
               <br />
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -390,29 +389,29 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
             </p>
 
             <div className="grid sm:grid-cols-2 gap-6 mb-8">
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <div className="bg-at-surface-alt rounded-2xl p-6 border border-at-border shadow-at-card">
                 <div className="text-4xl mb-4">🔄</div>
-                <h3 className="font-bold text-slate-800 mb-2">Before</h3>
-                <p className="text-slate-600">
+                <h3 className="font-bold text-at-text mb-2">Before</h3>
+                <p className="text-at-text-secondary">
                   반복 업무에 <span className="text-red-500 font-semibold">70%</span>의 에너지 소모
                   <br />
                   본질적 업무에 30%만 집중
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200 shadow-sm">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-at-border shadow-at-card">
                 <div className="text-4xl mb-4">✨</div>
-                <h3 className="font-bold text-slate-800 mb-2">After</h3>
-                <p className="text-slate-600">
-                  반복 업무를 <span className="text-blue-600 font-semibold">시스템</span>이 처리
+                <h3 className="font-bold text-at-text mb-2">After</h3>
+                <p className="text-at-text-secondary">
+                  반복 업무를 <span className="text-at-accent font-semibold">시스템</span>이 처리
                   <br />
-                  <span className="text-blue-600 font-semibold">본질에 집중</span>할 에너지 확보
+                  <span className="text-at-accent font-semibold">본질에 집중</span>할 에너지 확보
                 </p>
               </div>
             </div>
 
             <div className="text-center">
-              <p className="text-xl text-slate-700 font-medium">
-                그래야 <span className="text-blue-600 font-bold">병원의 지속적인 성장</span>을 도모할 수 있습니다.
+              <p className="text-xl text-at-text-secondary font-medium">
+                그래야 <span className="text-at-accent font-bold">병원의 지속적인 성장</span>을 도모할 수 있습니다.
               </p>
             </div>
           </StoryBlock>
@@ -424,11 +423,11 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <StoryBlock>
             <div className="text-center mb-12">
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-6">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-at-tag text-at-accent rounded-full text-sm font-semibold mb-6">
                 <SparklesIcon className="w-4 h-4" />
                 Why Dental Manager?
               </span>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-800 leading-tight">
+              <h2 className="text-3xl sm:text-4xl font-bold text-at-text leading-tight">
                 실제로 이러한 필요성을 느낀
                 <br />
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -437,40 +436,40 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
               </h2>
             </div>
 
-            <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-slate-100">
+            <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-at-border">
               <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
                 <div className="w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
                   <span className="text-3xl">👨‍⚕️</span>
                 </div>
                 <div className="text-center sm:text-left">
-                  <p className="text-slate-500 text-sm mb-1">개발자이자 사용자</p>
-                  <p className="text-2xl font-bold text-slate-800">현직 치과 원장</p>
+                  <p className="text-at-text-weak text-sm mb-1">개발자이자 사용자</p>
+                  <p className="text-2xl font-bold text-at-text">현직 치과 원장</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-lg text-slate-700">
+                  <p className="text-lg text-at-text-secondary">
                     <span className="font-semibold">현장의 불편함</span>을 직접 경험하고 해결한 솔루션
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-lg text-slate-700">
+                  <p className="text-lg text-at-text-secondary">
                     <span className="font-semibold">본인 병원에서 매일 사용</span>하며 지속적으로 개선 중
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-lg text-slate-700">
+                  <p className="text-lg text-at-text-secondary">
                     치과 업무 흐름을 <span className="font-semibold">정확히 이해</span>한 맞춤형 설계
                   </p>
                 </div>
               </div>
 
-              <div className="mt-8 pt-8 border-t border-slate-100">
-                <p className="text-slate-600 italic text-center">
+              <div className="mt-8 pt-8 border-t border-at-border">
+                <p className="text-at-text-secondary italic text-center">
                   "직접 쓰면서 불편한 건 바로바로 고칩니다.<br />
                   제가 매일 쓰니까요."
                 </p>
@@ -484,13 +483,13 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
       <section id="features" className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <span className="inline-block px-4 py-1.5 bg-slate-100 text-slate-600 font-semibold text-sm rounded-full mb-4">
+            <span className="inline-block px-4 py-1.5 bg-at-surface-alt text-at-text-secondary font-semibold text-sm rounded-full mb-4">
               FEATURES
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-at-text mb-4">
               반복 업무를 효율적으로 처리하세요
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg text-at-text-secondary max-w-2xl mx-auto">
               치과 운영에 필요한 핵심 기능들을 하나의 플랫폼에서
             </p>
           </div>
@@ -504,8 +503,8 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                   <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg transition-all duration-300`}>
                     <Icon className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-800 mb-3">{feature.title}</h3>
-                  <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+                  <h3 className="text-xl font-bold text-at-text mb-3">{feature.title}</h3>
+                  <p className="text-at-text-secondary leading-relaxed">{feature.description}</p>
                 </FeatureCard>
               )
             })}
@@ -513,7 +512,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
 
           {/* 추가 기능 */}
           <div className="mt-12 text-center">
-            <p className="text-slate-500">
+            <p className="text-at-text-weak">
               + 급여 명세서 관리, 병원 설정, PDF 내보내기 등 더 많은 기능
             </p>
           </div>
@@ -525,7 +524,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             {[
-              { icon: ClockIcon, value: 50, suffix: '%', label: '업무 시간 단축', color: 'text-blue-400' },
+              { icon: ClockIcon, value: 50, suffix: '%', label: '업무 시간 단축', color: 'text-at-accent' },
               { icon: RocketLaunchIcon, value: 6, suffix: '가지', label: '핵심 기능 통합', color: 'text-green-400' },
               { icon: CurrencyDollarIcon, value: 0, suffix: '원', label: '설치 비용', color: 'text-yellow-400' },
               { icon: GlobeAltIcon, value: 24, suffix: '/7', label: '언제든 접근', color: 'text-purple-400' },
@@ -539,7 +538,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                   <div className="text-4xl sm:text-5xl font-bold text-white mb-2">
                     <CountUp end={stat.value} suffix={stat.suffix} />
                   </div>
-                  <div className="text-slate-400">{stat.label}</div>
+                  <div className="text-at-text-weak">{stat.label}</div>
                 </div>
               )
             })}
@@ -573,7 +572,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={onShowSignup}
-              className="group px-10 py-4 bg-white text-slate-900 font-bold text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2 justify-center"
+              className="group px-10 py-4 bg-white text-at-text font-bold text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2 justify-center"
             >
               무료로 시작하기
               <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -589,22 +588,22 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
       </section>
 
       {/* ========== FAQ SECTION ========== */}
-      <section id="faq" className="py-24 bg-slate-50">
+      <section id="faq" className="py-24 bg-at-surface-alt">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">자주 묻는 질문</h2>
+            <h2 className="text-3xl font-bold text-at-text mb-4">자주 묻는 질문</h2>
           </div>
 
           <div className="space-y-4">
             {faqs.map((faq, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 transition-all hover:shadow-md">
+              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-at-card border border-at-border transition-all hover:shadow-at-card">
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
+                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-at-surface-alt transition-colors"
                 >
-                  <span className="font-semibold text-slate-800 pr-4">{faq.question}</span>
+                  <span className="font-semibold text-at-text pr-4">{faq.question}</span>
                   <ChevronDownIcon
-                    className={`w-5 h-5 text-slate-500 transition-transform duration-300 flex-shrink-0 ${openFaq === i ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-at-text-weak transition-transform duration-300 flex-shrink-0 ${openFaq === i ? 'rotate-180' : ''}`}
                   />
                 </button>
                 <div
@@ -613,7 +612,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
                   }`}
                 >
                   <div className="px-6 pb-5">
-                    <p className="text-slate-600 leading-relaxed">{faq.answer}</p>
+                    <p className="text-at-text-secondary leading-relaxed">{faq.answer}</p>
                   </div>
                 </div>
               </div>
@@ -627,12 +626,10 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-xl">🦷</span>
-              </div>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl shadow-at-card" />
               <span className="text-xl font-bold text-white">클리닉 매니저</span>
             </div>
-            <div className="flex items-center gap-4 text-slate-400 text-sm">
+            <div className="flex items-center gap-4 text-at-text-weak text-sm">
               <div className="flex items-center gap-2">
                 <LockClosedIcon className="w-4 h-4" />
                 <span>안전한 데이터 보호</span>
@@ -672,7 +669,7 @@ function FeatureCard({ children, glowColor }: { children: React.ReactNode; glowC
   return (
     <div
       ref={ref}
-      className={`group bg-slate-50 hover:bg-white rounded-2xl p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 border border-slate-100 ${glowColor || ''} ${
+      className={`group bg-at-surface-alt hover:bg-white rounded-2xl p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 border border-at-border ${glowColor || ''} ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
       }`}
     >

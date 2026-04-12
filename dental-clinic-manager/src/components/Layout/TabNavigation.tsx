@@ -243,7 +243,7 @@ function DroppableZone({ id, children, isEditMode }: { id: string; children: Rea
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg transition-all duration-200 ${isOver ? 'bg-blue-50/60 ring-1 ring-dashed ring-blue-300 py-1' : ''}`}
+      className={`rounded-lg transition-all duration-200 ${isOver ? 'bg-at-accent-light/60 ring-1 ring-dashed ring-at-accent py-1' : ''}`}
     >
       {children}
     </div>
@@ -760,10 +760,10 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
         {[...Array(5)].map((_, i) => (
           <div
             key={i}
-            className="flex items-center space-x-3 py-2.5 px-3 rounded-lg animate-pulse"
+            className="flex items-center space-x-3 py-2.5 px-3 rounded-xl animate-pulse"
           >
-            <div className="w-5 h-5 bg-slate-200 rounded" />
-            <div className="h-4 bg-slate-200 rounded w-20" />
+            <div className="w-5 h-5 bg-at-surface-hover rounded" />
+            <div className="h-4 bg-at-surface-hover rounded w-20" />
           </div>
         ))}
       </nav>
@@ -780,8 +780,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       if (!category) return null
       const CategoryIcon = categoryIconMap[category.icon] || Briefcase
       return (
-        <div className="flex items-center space-x-2.5 py-2.5 px-3 rounded-lg bg-white shadow-lg border border-blue-200 text-sm font-semibold text-slate-700 w-52">
-          <GripVertical className="w-4 h-4 text-blue-400" />
+        <div className="flex items-center space-x-2.5 py-2.5 px-3 rounded-xl bg-at-surface shadow-at-card border border-at-border text-sm font-semibold text-at-text w-52">
+          <GripVertical className="w-4 h-4 text-at-text-weak" />
           <CategoryIcon className="w-5 h-5" />
           <span>{category.label}</span>
         </div>
@@ -794,9 +794,9 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       if (!tab) return null
       const Icon = tab.icon
       return (
-        <div className="flex items-center space-x-2.5 py-1.5 px-3 rounded-lg bg-white shadow-lg border border-blue-200 text-[13px] font-medium text-slate-600 w-48">
-          <GripVertical className="w-3.5 h-3.5 text-blue-400" />
-          <Icon className="w-4 h-4 text-slate-400" />
+        <div className="flex items-center space-x-2.5 py-1.5 px-3 rounded-xl bg-at-surface shadow-at-card border border-at-border text-[13px] font-medium text-at-text-secondary w-48">
+          <GripVertical className="w-3.5 h-3.5 text-at-text-weak" />
+          <Icon className="w-4 h-4 text-at-text-weak" />
           <span>{tab.label}</span>
         </div>
       )
@@ -823,20 +823,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             className={`
               group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
               ${isActive
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
               }
-              ${itemIsDragging ? 'ring-2 ring-blue-300' : ''}
-              border border-dashed border-transparent hover:border-blue-200 cursor-default
+              ${itemIsDragging ? 'ring-2 ring-at-accent' : ''}
+              border border-dashed border-transparent hover:border-at-border cursor-default
             `}
           >
             <span
               {...itemListeners}
-              className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 rounded hover:bg-blue-100/50 transition-colors"
+              className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 rounded hover:bg-at-accent-light transition-colors"
             >
-              <GripVertical className={`w-3.5 h-3.5 ${isActive ? 'text-white/70' : 'text-blue-400'}`} />
+              <GripVertical className={`w-3.5 h-3.5 ${isActive ? 'text-at-accent' : 'text-at-text-weak'}`} />
             </span>
-            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-500'}`} />
+            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
             <span className="truncate">{tab.label}</span>
           </div>
         )}
@@ -848,17 +848,17 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   const renderIconPicker = (categoryId: string) => {
     if (showIconPicker !== categoryId) return null
     return (
-      <div className="absolute top-full left-0 mt-1 p-2 bg-white rounded-lg shadow-lg border border-slate-200 z-50 grid grid-cols-5 gap-1 w-48">
+      <div className="absolute top-full left-0 mt-1 p-2 bg-at-surface rounded-lg shadow-at-card border border-at-border z-50 grid grid-cols-5 gap-1 w-48">
         {CATEGORY_ICON_OPTIONS.map(iconName => {
           const IconComp = iconNameToComponent[iconName] || HelpCircle
           return (
             <button
               key={iconName}
               onClick={(e) => { e.stopPropagation(); handleChangeIcon(categoryId, iconName) }}
-              className="p-1.5 rounded hover:bg-blue-50 transition-colors flex items-center justify-center"
+              className="p-1.5 rounded hover:bg-at-accent-light transition-colors flex items-center justify-center"
               title={iconName}
             >
-              <IconComp className="w-4 h-4 text-slate-600" />
+              <IconComp className="w-4 h-4 text-at-text-secondary" />
             </button>
           )
         })}
@@ -876,8 +876,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             className={`
               flex items-center space-x-1.5 py-1 px-2.5 rounded-lg text-xs font-medium transition-all duration-200
               ${isEditMode
-                ? 'bg-blue-500 text-white hover:bg-blue-600'
-                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                ? 'bg-at-accent text-white hover:bg-at-accent-hover'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover'
               }
             `}
           >
@@ -913,10 +913,10 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               return (
                 <button
                   key={tab.id}
-                  className="group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium w-full opacity-60 cursor-default text-slate-600"
+                  className="group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium w-full opacity-60 cursor-default text-at-text-secondary"
                   disabled
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0 text-slate-400" />
+                  <Icon className="w-5 h-5 flex-shrink-0 text-at-text-weak" />
                   <span className="truncate">{tab.label}</span>
                 </button>
               )
@@ -925,7 +925,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             {/* 구분선 */}
             {topFixedMenus.length > 0 && (
               <div className="pt-2 pb-1">
-                <div className="h-px bg-slate-200" />
+                <div className="h-px bg-at-border" />
               </div>
             )}
 
@@ -933,7 +933,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             <DroppableZone id="drop-uncategorized" isEditMode={true}>
               {uncategorizedMenus.length > 0 && (
                 <div className="space-y-0.5 pb-2">
-                  <div className="text-[11px] text-slate-400 font-medium px-3 py-1">미분류</div>
+                  <div className="text-[11px] text-at-text-weak font-medium px-3 py-1">미분류</div>
                   <SortableContext items={uncategorizedDndIds} strategy={verticalListSortingStrategy}>
                     <div className="pl-3 space-y-0.5">
                       {uncategorizedMenus.map(tab => renderEditMenuItem(tab))}
@@ -942,7 +942,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                 </div>
               )}
               {uncategorizedMenus.length === 0 && (
-                <div className="text-[11px] text-slate-300 text-center py-2 border border-dashed border-slate-200 rounded-lg mb-2">
+                <div className="text-[11px] text-at-text-weak text-center py-2 border border-dashed border-at-border rounded-lg mb-2">
                   여기에 드롭하면 미분류로 이동
                 </div>
               )}
@@ -964,13 +964,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                         {/* 카테고리 헤더 */}
                         {isEditing ? (
                           // 수정 모드
-                          <div className="flex items-center space-x-1.5 py-1.5 px-2 rounded-lg bg-blue-50 border border-blue-200">
+                          <div className="flex items-center space-x-1.5 py-1.5 px-2 rounded-lg bg-at-accent-light border border-at-border">
                             <div className="relative">
                               <button
                                 onClick={(e) => { e.stopPropagation(); setShowIconPicker(showIconPicker === category.id ? null : category.id) }}
-                                className="p-1 rounded hover:bg-blue-100 transition-colors"
+                                className="p-1 rounded hover:bg-at-surface-hover transition-colors"
                               >
-                                {(() => { const IC = categoryIconMap[editingCategoryIcon] || Briefcase; return <IC className="w-4 h-4 text-blue-500" /> })()}
+                                {(() => { const IC = categoryIconMap[editingCategoryIcon] || Briefcase; return <IC className="w-4 h-4 text-at-accent" /> })()}
                               </button>
                               {renderIconPicker(category.id)}
                             </div>
@@ -979,13 +979,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                               value={editingCategoryName}
                               onChange={e => setEditingCategoryName(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') handleSaveCategory(); if (e.key === 'Escape') { setEditingCategoryId(null); setShowIconPicker(null) } }}
-                              className="flex-1 text-sm font-semibold bg-transparent border-none outline-none text-slate-700 min-w-0"
+                              className="flex-1 text-sm font-semibold bg-transparent border-none outline-none text-at-text min-w-0"
                             />
-                            <button onClick={handleSaveCategory} className="p-1 rounded hover:bg-blue-100 transition-colors">
-                              <Check className="w-3.5 h-3.5 text-blue-500" />
+                            <button onClick={handleSaveCategory} className="p-1 rounded hover:bg-at-surface-hover transition-colors">
+                              <Check className="w-3.5 h-3.5 text-at-accent" />
                             </button>
-                            <button onClick={() => { setEditingCategoryId(null); setShowIconPicker(null) }} className="p-1 rounded hover:bg-slate-200 transition-colors">
-                              <X className="w-3.5 h-3.5 text-slate-400" />
+                            <button onClick={() => { setEditingCategoryId(null); setShowIconPicker(null) }} className="p-1 rounded hover:bg-at-surface-hover transition-colors">
+                              <X className="w-3.5 h-3.5 text-at-text-weak" />
                             </button>
                           </div>
                         ) : (
@@ -994,18 +994,18 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                             className={`
                               group flex items-center justify-between w-full py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200
                               ${hasActive
-                                ? 'text-blue-600 bg-blue-50'
-                                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                                ? 'text-at-accent bg-at-accent-light'
+                                : 'text-at-text hover:text-at-text hover:bg-at-surface-alt'
                               }
-                              border border-dashed border-blue-200
+                              border border-dashed border-at-border
                             `}
                           >
                             <div className="flex items-center space-x-2.5">
                               <span
                                 {...listeners}
-                                className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 rounded hover:bg-blue-100 transition-colors"
+                                className="cursor-grab active:cursor-grabbing p-0.5 -ml-1 rounded hover:bg-at-accent-light transition-colors"
                               >
-                                <GripVertical className="w-4 h-4 text-blue-400" />
+                                <GripVertical className="w-4 h-4 text-at-text-weak" />
                               </span>
                               <CategoryIcon className="w-5 h-5" />
                               <span>{category.label}</span>
@@ -1013,10 +1013,10 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                             <div className="flex items-center space-x-0.5">
                               <button
                                 onClick={(e) => { e.stopPropagation(); startEditCategory(category) }}
-                                className="p-1 rounded hover:bg-blue-100 opacity-0 group-hover:opacity-100 transition-all"
+                                className="p-1 rounded hover:bg-at-accent-light opacity-0 group-hover:opacity-100 transition-all"
                                 title="카테고리 수정"
                               >
-                                <Pencil className="w-3 h-3 text-slate-400" />
+                                <Pencil className="w-3 h-3 text-at-text-weak" />
                               </button>
                               {category.isCustom && (
                                 <button
@@ -1039,7 +1039,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                               {categoryTabs.map(tab => renderEditMenuItem(tab))}
                             </SortableContext>
                             {categoryTabs.length === 0 && (
-                              <div className="text-[11px] text-slate-300 text-center py-2 border border-dashed border-slate-200 rounded-lg">
+                              <div className="text-[11px] text-at-text-weak text-center py-2 border border-dashed border-at-border rounded-lg">
                                 메뉴를 여기에 드롭
                               </div>
                             )}
@@ -1054,27 +1054,27 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
 
             {/* 카테고리 추가 */}
             {isAddingCategory ? (
-              <div className="flex items-center space-x-1.5 py-1.5 px-3 mt-1 rounded-lg bg-slate-50 border border-dashed border-slate-300">
-                <Plus className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <div className="flex items-center space-x-1.5 py-1.5 px-3 mt-1 rounded-lg bg-at-surface-alt border border-dashed border-at-border">
+                <Plus className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                 <input
                   ref={newCategoryInputRef}
                   value={newCategoryName}
                   onChange={e => setNewCategoryName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleAddCategory(); if (e.key === 'Escape') { setIsAddingCategory(false); setNewCategoryName('') } }}
                   placeholder="카테고리 이름"
-                  className="flex-1 text-sm bg-transparent border-none outline-none text-slate-700 placeholder-slate-300 min-w-0"
+                  className="flex-1 text-sm bg-transparent border-none outline-none text-at-text placeholder-at-text-weak min-w-0"
                 />
-                <button onClick={handleAddCategory} className="p-1 rounded hover:bg-slate-200 transition-colors">
-                  <Check className="w-3.5 h-3.5 text-blue-500" />
+                <button onClick={handleAddCategory} className="p-1 rounded hover:bg-at-surface-hover transition-colors">
+                  <Check className="w-3.5 h-3.5 text-at-accent" />
                 </button>
-                <button onClick={() => { setIsAddingCategory(false); setNewCategoryName('') }} className="p-1 rounded hover:bg-slate-200 transition-colors">
-                  <X className="w-3.5 h-3.5 text-slate-400" />
+                <button onClick={() => { setIsAddingCategory(false); setNewCategoryName('') }} className="p-1 rounded hover:bg-at-surface-hover transition-colors">
+                  <X className="w-3.5 h-3.5 text-at-text-weak" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => setIsAddingCategory(true)}
-                className="flex items-center space-x-2 py-2 px-3 mt-1 rounded-lg text-xs font-medium text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all w-full"
+                className="flex items-center space-x-2 py-2 px-3 mt-1 rounded-lg text-xs font-medium text-at-text-weak hover:text-at-accent hover:bg-at-accent-light transition-all w-full"
               >
                 <Plus className="w-4 h-4" />
                 <span>카테고리 추가</span>
@@ -1215,16 +1215,16 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                   className={`
                     group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
                     ${tab.isPremiumLocked
-                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      ? 'text-at-text-weak cursor-not-allowed opacity-50'
                       : isActive
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-at-text-weak' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                   <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-slate-300 flex-shrink-0" />}
+                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-at-text-weak flex-shrink-0" />}
                 </button>
               )
             })}
@@ -1241,16 +1241,16 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                   className={`
                     group flex items-center space-x-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 w-full
                     ${tab.isPremiumLocked
-                      ? 'text-slate-300 cursor-not-allowed opacity-50'
+                      ? 'text-at-text-weak cursor-not-allowed opacity-50'
                       : isActive
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${tab.isPremiumLocked ? 'text-at-text-weak' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                   <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-slate-300 flex-shrink-0" />}
+                  {tab.isPremiumLocked && <Lock className="w-3.5 h-3.5 ml-auto text-at-text-weak flex-shrink-0" />}
                 </button>
               )
             })}
@@ -1258,7 +1258,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             {/* 구분선 */}
             {(topFixedMenus.length > 0 || uncategorizedMenus.length > 0) && visibleCategories.length > 0 && (
               <div className="pt-2 pb-1">
-                <div className="h-px bg-slate-200" />
+                <div className="h-px bg-at-border" />
               </div>
             )}
 
@@ -1279,8 +1279,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     className={`
                       group flex items-center justify-between w-full py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200
                       ${hasActive && !isExpanded
-                        ? 'text-blue-600 bg-blue-50'
-                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'text-at-accent bg-at-accent-light'
+                        : 'text-at-text hover:text-at-text hover:bg-at-surface-alt'
                       }
                     `}
                   >
@@ -1288,7 +1288,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                       <CategoryIcon className="w-5 h-5" />
                       <span>{category.label}</span>
                       {hasActive && !isExpanded && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-at-accent animate-pulse" />
                       )}
                     </div>
                     <ChevronDown
@@ -1315,16 +1315,16 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                             className={`
                               group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
                               ${tab.isPremiumLocked
-                                ? 'text-slate-300 cursor-not-allowed opacity-50'
+                                ? 'text-at-text-weak cursor-not-allowed opacity-50'
                                 : isActive
-                                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
-                                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                                  ? 'bg-at-accent-light text-at-accent'
+                                  : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                               }
                             `}
                           >
-                            <Icon className={`w-4 h-4 flex-shrink-0 ${tab.isPremiumLocked ? 'text-slate-300' : isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-500'}`} />
+                            <Icon className={`w-4 h-4 flex-shrink-0 ${tab.isPremiumLocked ? 'text-at-text-weak' : isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                             <span className="truncate">{tab.label}</span>
-                            {tab.isPremiumLocked && <Lock className="w-3 h-3 ml-auto text-slate-300 flex-shrink-0" />}
+                            {tab.isPremiumLocked && <Lock className="w-3 h-3 ml-auto text-at-text-weak flex-shrink-0" />}
                           </button>
                         )
                       })}
@@ -1338,7 +1338,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       </div>
 
       {/* 하단 영역: 워커 상태 + 워커 다운로드 + 하단 고정 메뉴들 */}
-      <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
+      <div className="pt-2 border-t border-at-border mt-2 space-y-1">
         {/* 워커 상태 (프리미엄 기능 활성화된 사용자만 표시, 축소 시 숨김) */}
         {!isCollapsed && <WorkerStatusMenuItem />}
         {/* 워커 다운로드 버튼 */}
@@ -1346,9 +1346,9 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
           onClick={handleWorkerDownload}
           disabled={isDownloadingWorker}
           title={isCollapsed ? (isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드') : undefined}
-          className={`group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full text-slate-500 hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full text-at-text-weak hover:bg-green-50 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <Download className={`w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-green-600 ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
+          <Download className={`w-5 h-5 flex-shrink-0 text-at-text-weak group-hover:text-green-600 ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
           {!isCollapsed && <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드'}</span>}
         </button>
         {bottomFixedMenus.map(tab => {
@@ -1363,13 +1363,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               className={`
                 group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full
                 ${isActive
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/25'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                  ? 'bg-at-accent-light text-at-accent'
+                  : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                 }
                 ${isEditMode ? 'opacity-60 cursor-default' : ''}
               `}
             >
-              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+              <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
               {!isCollapsed && <span className="truncate">{tab.label}</span>}
             </button>
           )
@@ -1396,20 +1396,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       {/* Mac 워커 설치 모달 */}
       {showWorkerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowWorkerModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-at-surface rounded-2xl shadow-at-card w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <Monitor className="w-5 h-5 text-slate-600" />
-                <h2 className="text-base font-semibold text-slate-800">통합 워커 설치 (Mac)</h2>
+                <Monitor className="w-5 h-5 text-at-text-secondary" />
+                <h2 className="text-base font-semibold text-at-text">통합 워커 설치 (Mac)</h2>
               </div>
-              <button onClick={() => setShowWorkerModal(false)} className="p-1 rounded-lg hover:bg-slate-100">
-                <X className="w-4 h-4 text-slate-400" />
+              <button onClick={() => setShowWorkerModal(false)} className="p-1 rounded-lg hover:bg-at-surface-hover">
+                <X className="w-4 h-4 text-at-text-weak" />
               </button>
             </div>
 
-            <ol className="text-sm text-slate-600 space-y-1.5 mb-4">
-              <li><span className="font-medium text-slate-700">1.</span> <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-xs font-mono">Cmd + Space</kbd> → <span className="font-medium">Terminal</span> 검색 후 실행</li>
-              <li><span className="font-medium text-slate-700">2.</span> 아래 명령어를 복사하여 Terminal에 붙여넣고 <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-xs font-mono">Enter</kbd></li>
+            <ol className="text-sm text-at-text-secondary space-y-1.5 mb-4">
+              <li><span className="font-medium text-at-text">1.</span> <kbd className="px-1.5 py-0.5 rounded bg-at-surface-alt text-xs font-mono">Cmd + Space</kbd> → <span className="font-medium">Terminal</span> 검색 후 실행</li>
+              <li><span className="font-medium text-at-text">2.</span> 아래 명령어를 복사하여 Terminal에 붙여넣고 <kbd className="px-1.5 py-0.5 rounded bg-at-surface-alt text-xs font-mono">Enter</kbd></li>
             </ol>
 
             <div className="relative">
@@ -1433,12 +1433,12 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               className={`mt-3 w-full py-2.5 rounded-xl text-sm font-medium transition-all ${
                 copiedWorkerCmd
                   ? 'bg-green-500 text-white'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  : 'bg-at-accent hover:bg-at-accent-hover text-white'
               }`}
             >
               {copiedWorkerCmd ? '✓ 명령어 복사 완료' : '명령어 복사하기'}
             </button>
-            <p className="mt-2 text-xs text-slate-400 text-center">Terminal에 붙여넣기하면 Gatekeeper 경고 없이 설치됩니다</p>
+            <p className="mt-2 text-xs text-at-text-weak text-center">Terminal에 붙여넣기하면 Gatekeeper 경고 없이 설치됩니다</p>
           </div>
         </div>
       )}

@@ -1,0 +1,79 @@
+[     197ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth:0
+[    1477ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[    1666ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[    1667ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[    1672ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[    1672ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[    1672ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[    1908ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    1909ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[    1909ms] [LOG] AuthContext: storage에서 사용자 정보 복원 {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:204
+[    1909ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[    1925ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    2184ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    2184ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    2579ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3210ms] [LOG] [Fast Refresh] done in 631ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3476ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3505ms] [LOG] [Fast Refresh] done in 29ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4587ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[    4600ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4620ms] [LOG] [Fast Refresh] done in 20ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5323ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5351ms] [LOG] [Fast Refresh] done in 28ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6438ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[    6493ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[    6500ms] [LOG] [Fast Refresh] done in 1176ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6500ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7323ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7364ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8901ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth:0
+[   10156ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[   10323ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[   10323ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[   10327ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[   10328ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[   10328ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[   10453ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[   10454ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[   10454ms] [LOG] AuthContext: storage에서 사용자 정보 복원 {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:204
+[   10454ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[   10468ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[   10468ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[   10468ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[   11081ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11785ms] [LOG] [Fast Refresh] done in 704ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12171ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12211ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13324ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[   13339ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   13353ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13374ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[   14132ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   14165ms] [LOG] [Fast Refresh] done in 34ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   15803ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth:0
+[   17110ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[   17258ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[   17259ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[   17263ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[   17263ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[   17264ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[   17387ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[   17387ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[   17387ms] [LOG] AuthContext: storage에서 사용자 정보 복원 {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:204
+[   17388ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[   17404ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[   17671ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[   17671ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[   17887ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   18620ms] [LOG] [Fast Refresh] done in 732ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   18780ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   18819ms] [LOG] [Fast Refresh] done in 38ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   19869ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[   19887ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   19907ms] [LOG] [Fast Refresh] done in 21ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   20596ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   20627ms] [LOG] [Fast Refresh] done in 30ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   21887ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0
+[   21921ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   21967ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/auth?_rsc=1i477:0

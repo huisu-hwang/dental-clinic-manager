@@ -1,0 +1,204 @@
+<h2>아코디언 방식 — 하나만 열림</h2>
+<p class="subtitle">다른 항목 클릭 시 이전 내용은 자동으로 닫힙니다</p>
+
+<style>
+.section-box { background:#f8fafc; border-radius:12px; padding:16px; margin-bottom:20px; border:1px solid #e2e8f0; }
+.section-title { font-size:13px; font-weight:600; color:#374151; margin-bottom:12px; }
+.stat-card {
+  background:white; border-radius:8px; padding:10px 14px; text-align:center;
+  cursor:pointer; border:1.5px solid transparent; transition:all 0.15s;
+}
+.stat-card:hover { border-color:#3b82f6; box-shadow:0 2px 8px rgba(59,130,246,0.12); }
+.stat-card.active { border-color:#3b82f6; background:#eff6ff; }
+.stat-card .hint { font-size:9px; color:#94a3b8; margin-top:2px; }
+.expand-panel {
+  display:none; background:white; border:1px solid #e2e8f0; border-radius:8px;
+  margin-top:8px; overflow:hidden;
+}
+.expand-panel.open { display:block; animation:slideDown 0.18s ease; }
+@keyframes slideDown { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+.expand-header { background:#f1f5f9; padding:8px 14px; font-size:11px; font-weight:600; color:#475569; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; }
+.expand-row { display:flex; align-items:center; padding:7px 14px; border-bottom:1px solid #f8fafc; font-size:12px; gap:8px; }
+.expand-row:last-child { border-bottom:none; }
+.badge { font-size:10px; padding:2px 7px; border-radius:99px; font-weight:500; }
+.badge-success { background:#dcfce7; color:#16a34a; }
+.badge-fail { background:#fee2e2; color:#dc2626; }
+.badge-review { background:#fef3c7; color:#d97706; }
+.tag { font-size:10px; padding:1px 6px; border-radius:99px; }
+.tag-present { background:#dcfce7; color:#16a34a; }
+.tag-late { background:#fef9c3; color:#854d0e; }
+.tag-absent { background:#fee2e2; color:#dc2626; }
+.tag-out { background:#dbeafe; color:#1d4ed8; }
+</style>
+
+<!-- ═══ A. 오늘의 현황 ═══ -->
+<div class="section-box">
+  <div class="section-title">📊 A. 오늘의 현황</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+    <div class="stat-card" id="card-consult" onclick="openPanel('group-today','panel-consult','card-consult')">
+      <div style="font-size:18px;font-weight:bold;color:#16a34a">3<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">5</span></div>
+      <div style="font-size:11px;color:#64748b">성공/상담</div>
+      <div class="hint">▼ 상담 목록</div>
+    </div>
+    <div class="stat-card" id="card-recall" onclick="openPanel('group-today','panel-recall','card-recall')">
+      <div style="font-size:18px;font-weight:bold;color:#ea580c">2<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">8</span></div>
+      <div style="font-size:11px;color:#64748b">예약/리콜</div>
+      <div class="hint">▼ 리콜 현황</div>
+    </div>
+    <div class="stat-card" id="card-gift" onclick="openPanel('group-today','panel-gift','card-gift')">
+      <div style="font-size:18px;font-weight:bold;color:#7c3aed">1<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">3</span></div>
+      <div style="font-size:11px;color:#64748b">리뷰/선물</div>
+      <div class="hint">▼ 선물 목록</div>
+    </div>
+  </div>
+
+  <div class="expand-panel" id="panel-consult" data-group="group-today">
+    <div class="expand-header"><span>📋 오늘 상담 목록</span><span style="color:#94a3b8;font-weight:400">5건</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">홍길동</span><span style="color:#64748b;flex:1">임플란트 상담</span><span class="badge badge-success">✓ 성공</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">김영희</span><span style="color:#64748b;flex:1">교정 상담</span><span class="badge badge-fail">✗ 보류</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">이철수</span><span style="color:#64748b;flex:1">라미네이트</span><span class="badge badge-success">✓ 성공</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">박지영</span><span style="color:#64748b;flex:1">미백 상담</span><span class="badge badge-success">✓ 성공</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">최민준</span><span style="color:#64748b;flex:1">충치 치료</span><span class="badge badge-fail">✗ 보류</span></div>
+  </div>
+  <div class="expand-panel" id="panel-recall" data-group="group-today">
+    <div class="expand-header"><span>📞 오늘 리콜 현황</span><span style="color:#94a3b8;font-weight:400">예약 2 / 8건</span></div>
+    <div class="expand-row"><span style="color:#64748b;width:60px">예약완료</span><div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;justify-content:flex-end"><span class="badge badge-success">홍길동</span><span class="badge badge-success">김영희</span></div></div>
+    <div class="expand-row"><span style="color:#64748b;width:60px">미예약</span><div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;justify-content:flex-end"><span class="badge badge-fail">이철수</span><span class="badge badge-fail">박지영</span><span class="badge badge-fail">+4명</span></div></div>
+  </div>
+  <div class="expand-panel" id="panel-gift" data-group="group-today">
+    <div class="expand-header"><span>🎁 오늘 선물/리뷰 목록</span><span style="color:#94a3b8;font-weight:400">3건</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">홍길동</span><span style="color:#64748b;flex:1">치약세트 × 1</span><span class="badge badge-review">리뷰 ✓</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">김영희</span><span style="color:#64748b;flex:1">칫솔세트 × 2</span><span style="font-size:10px;color:#94a3b8">리뷰 없음</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">이철수</span><span style="color:#64748b;flex:1">구강세정기 × 1</span><span style="font-size:10px;color:#94a3b8">리뷰 없음</span></div>
+  </div>
+</div>
+
+<!-- ═══ B. 팀 출퇴근 현황 ═══ -->
+<div class="section-box">
+  <div class="section-title">👥 B. 팀 출퇴근 현황</div>
+  <div style="background:white;border-radius:8px;padding:12px">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center">
+      <div class="stat-card" id="card-checkin" style="padding:8px 4px" onclick="openPanel('group-att','panel-checkin','card-checkin')">
+        <div style="font-size:15px;font-weight:bold;color:#16a34a">4<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">6</span></div>
+        <div style="font-size:9px;color:#16a34a">출근</div>
+      </div>
+      <div class="stat-card" id="card-checkout" style="padding:8px 4px" onclick="openPanel('group-att','panel-checkout','card-checkout')">
+        <div style="font-size:15px;font-weight:bold;color:#2563eb">1</div>
+        <div style="font-size:9px;color:#2563eb">퇴근</div>
+      </div>
+      <div class="stat-card" id="card-absent" style="padding:8px 4px" onclick="openPanel('group-att','panel-absent','card-absent')">
+        <div style="font-size:15px;font-weight:bold;color:#ea580c">1</div>
+        <div style="font-size:9px;color:#ea580c">결근</div>
+      </div>
+      <div class="stat-card" id="card-late" style="padding:8px 4px" onclick="openPanel('group-att','panel-late','card-late')">
+        <div style="font-size:15px;font-weight:bold;color:#ca8a04">1</div>
+        <div style="font-size:9px;color:#ca8a04">지각</div>
+      </div>
+      <div class="stat-card" id="card-early" style="padding:8px 4px" onclick="openPanel('group-att','panel-early','card-early')">
+        <div style="font-size:15px;font-weight:bold;color:#dc2626">0</div>
+        <div style="font-size:9px;color:#dc2626">조퇴</div>
+      </div>
+      <div class="stat-card" id="card-over" style="padding:8px 4px" onclick="openPanel('group-att','panel-over','card-over')">
+        <div style="font-size:15px;font-weight:bold;color:#7c3aed">1</div>
+        <div style="font-size:9px;color:#7c3aed">초과</div>
+      </div>
+    </div>
+
+    <div class="expand-panel" id="panel-checkin" data-group="group-att">
+      <div class="expand-header"><span>🟢 출근 직원</span><span style="color:#94a3b8;font-weight:400">4명</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">김간호</span><span style="color:#64748b;flex:1">09:01 출근</span><span class="tag tag-present">정상출근</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">이실장</span><span style="color:#64748b;flex:1">09:15 출근</span><span class="tag tag-late">지각 15분</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">박데스크</span><span style="color:#64748b;flex:1">08:58 출근</span><span class="tag tag-present">정상출근</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">최위생사</span><span style="color:#64748b;flex:1">09:00 출근</span><span class="tag tag-present">정상출근</span></div>
+    </div>
+    <div class="expand-panel" id="panel-checkout" data-group="group-att">
+      <div class="expand-header"><span>🔵 퇴근 직원</span><span style="color:#94a3b8;font-weight:400">1명</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">박데스크</span><span style="color:#64748b;flex:1">09:00 → 18:32</span><span class="tag tag-out">퇴근완료</span></div>
+    </div>
+    <div class="expand-panel" id="panel-absent" data-group="group-att">
+      <div class="expand-header"><span>🔴 결근 직원</span><span style="color:#94a3b8;font-weight:400">1명</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">정직원</span><span style="color:#64748b;flex:1">미출근</span><span class="tag tag-absent">결근</span></div>
+    </div>
+    <div class="expand-panel" id="panel-late" data-group="group-att">
+      <div class="expand-header"><span>🟡 지각 직원</span><span style="color:#94a3b8;font-weight:400">1명</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">이실장</span><span style="color:#64748b;flex:1">09:15 출근 (15분 지각)</span><span class="tag tag-late">지각</span></div>
+    </div>
+    <div class="expand-panel" id="panel-early" data-group="group-att">
+      <div class="expand-header"><span>조퇴 직원</span><span style="color:#94a3b8;font-weight:400">0명</span></div>
+      <div class="expand-row"><span style="color:#94a3b8;font-size:12px">해당 직원 없음</span></div>
+    </div>
+    <div class="expand-panel" id="panel-over" data-group="group-att">
+      <div class="expand-header"><span>🟣 초과근무 직원</span><span style="color:#94a3b8;font-weight:400">1명</span></div>
+      <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">최위생사</span><span style="color:#64748b;flex:1">18:00 → 19:10 (70분 초과)</span><span class="tag" style="background:#ede9fe;color:#7c3aed">초과근무</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ C. 주간 통계 ═══ -->
+<div class="section-box">
+  <div class="section-title">📈 C. 주간 통계</div>
+  <div style="background:white;border-radius:8px;padding:12px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div class="stat-card" id="card-wconsult" onclick="openPanel('group-weekly','panel-wconsult','card-wconsult')">
+        <div style="font-size:16px;font-weight:bold;color:#16a34a">12<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">20</span></div>
+        <div style="font-size:10px;color:#64748b">성공/상담 (60%)</div>
+        <div class="hint">▼ 일별 보기</div>
+      </div>
+      <div class="stat-card" id="card-wrecall" onclick="openPanel('group-weekly','panel-wrecall','card-wrecall')">
+        <div style="font-size:16px;font-weight:bold;color:#ea580c">8<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">15</span></div>
+        <div style="font-size:10px;color:#64748b">예약/리콜</div>
+        <div class="hint">▼ 일별 보기</div>
+      </div>
+      <div class="stat-card" id="card-wgift" onclick="openPanel('group-weekly','panel-wgift','card-wgift')">
+        <div style="font-size:16px;font-weight:bold;color:#7c3aed">5<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">3</span></div>
+        <div style="font-size:10px;color:#64748b">선물/리뷰</div>
+        <div class="hint">▼ 일별 보기</div>
+      </div>
+    </div>
+
+    <div class="expand-panel" id="panel-wconsult" data-group="group-weekly">
+      <div class="expand-header"><span>📅 이번 주 상담 일별 현황</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">월</span><span style="color:#64748b;flex:1">3.31</span><span style="font-weight:600;color:#16a34a;width:40px;text-align:right">2/4</span><div style="width:80px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:5px"><div style="width:50%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">화</span><span style="color:#64748b;flex:1">4.01</span><span style="font-weight:600;color:#16a34a;width:40px;text-align:right">4/5</span><div style="width:80px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:5px"><div style="width:80%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">수</span><span style="color:#64748b;flex:1">4.02</span><span style="font-weight:600;color:#16a34a;width:40px;text-align:right">3/6</span><div style="width:80px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:5px"><div style="width:50%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">목</span><span style="color:#64748b;flex:1">4.03</span><span style="font-weight:600;color:#16a34a;width:40px;text-align:right">3/5</span><div style="width:80px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:5px"><div style="width:60%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#3b82f6;width:30px;font-weight:600">오늘</span><span style="color:#64748b;flex:1">4.04</span><span style="font-weight:600;color:#3b82f6;width:40px;text-align:right">진행중</span><div style="width:80px;margin-left:8px"></div></div>
+    </div>
+    <div class="expand-panel" id="panel-wrecall" data-group="group-weekly">
+      <div class="expand-header"><span>📅 이번 주 리콜 일별 현황</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">월</span><span style="color:#64748b;flex:1">3.31</span><span style="font-weight:600;color:#ea580c">예약 1 / 리콜 3</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">화</span><span style="color:#64748b;flex:1">4.01</span><span style="font-weight:600;color:#ea580c">예약 3 / 리콜 4</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">수</span><span style="color:#64748b;flex:1">4.02</span><span style="font-weight:600;color:#ea580c">예약 2 / 리콜 4</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">목</span><span style="color:#64748b;flex:1">4.03</span><span style="font-weight:600;color:#ea580c">예약 2 / 리콜 4</span></div>
+      <div class="expand-row"><span style="color:#3b82f6;width:30px;font-weight:600">오늘</span><span style="color:#64748b;flex:1">4.04</span><span style="font-weight:600;color:#3b82f6">진행중</span></div>
+    </div>
+    <div class="expand-panel" id="panel-wgift" data-group="group-weekly">
+      <div class="expand-header"><span>📅 이번 주 선물/리뷰 일별 현황</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">월</span><span style="color:#64748b;flex:1">3.31</span><span style="font-weight:600;color:#7c3aed">선물 2 · 리뷰 1</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">화</span><span style="color:#64748b;flex:1">4.01</span><span style="font-weight:600;color:#7c3aed">선물 1 · 리뷰 0</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">수</span><span style="color:#64748b;flex:1">4.02</span><span style="font-weight:600;color:#7c3aed">선물 1 · 리뷰 1</span></div>
+      <div class="expand-row"><span style="color:#475569;width:30px;font-weight:500">목</span><span style="color:#64748b;flex:1">4.03</span><span style="font-weight:600;color:#7c3aed">선물 1 · 리뷰 1</span></div>
+      <div class="expand-row"><span style="color:#3b82f6;width:30px;font-weight:600">오늘</span><span style="color:#64748b;flex:1">4.04</span><span style="font-weight:600;color:#3b82f6">진행중</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openPanel(group, panelId, cardId) {
+  // 같은 그룹의 모든 패널 닫기, 카드 비활성화
+  document.querySelectorAll('[data-group="' + group + '"]').forEach(function(el) {
+    el.classList.remove('open');
+  });
+  document.querySelectorAll('[id^="card-"]').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  // 클릭한 패널이 이미 열려있으면 닫기 (토글)
+  var panel = document.getElementById(panelId);
+  var card = document.getElementById(cardId);
+  if (panel && !panel.classList.contains('open')) {
+    panel.classList.add('open');
+    if (card) card.classList.add('active');
+  }
+}
+</script>

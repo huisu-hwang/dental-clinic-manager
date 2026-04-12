@@ -48,12 +48,12 @@ interface AnalyzedPost {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: '대기중', color: 'bg-gray-100 text-gray-700' },
-  collecting: { label: '수집중', color: 'bg-blue-100 text-blue-700' },
+  pending: { label: '대기중', color: 'bg-at-surface-alt text-at-text-secondary' },
+  collecting: { label: '수집중', color: 'bg-at-tag text-at-accent' },
   analyzing_quantitative: { label: '정량 분석중', color: 'bg-indigo-100 text-indigo-700' },
   analyzing_qualitative: { label: '정성 분석중', color: 'bg-purple-100 text-purple-700' },
-  completed: { label: '완료', color: 'bg-green-100 text-green-700' },
-  failed: { label: '실패', color: 'bg-red-100 text-red-700' },
+  completed: { label: '완료', color: 'bg-at-success-bg text-at-success' },
+  failed: { label: '실패', color: 'bg-at-error-bg text-at-error' },
 }
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -201,11 +201,11 @@ export default function KeywordAnalysis() {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">키워드 분석</h3>
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${workerOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${workerOnline ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'}`}>
               <span className={`w-2 h-2 rounded-full ${workerOnline ? 'bg-green-500' : 'bg-red-500'}`} />
               SEO 워커 {workerOnline ? '온라인' : '오프라인'}
             </span>
-            <button onClick={() => { fetchAnalyses(); checkWorkerStatus(); }} className="p-1 hover:bg-gray-100 rounded">
+            <button onClick={() => { fetchAnalyses(); checkWorkerStatus(); }} className="p-1 hover:bg-at-surface-alt rounded">
               <ArrowPathIcon className="w-4 h-4" />
             </button>
           </div>
@@ -218,13 +218,13 @@ export default function KeywordAnalysis() {
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && startAnalysis()}
             placeholder="분석할 키워드를 입력하세요"
-            className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-at-accent"
             disabled={loading}
           />
           <button
             onClick={startAnalysis}
             disabled={loading || !keyword.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-at-accent text-white rounded-lg hover:bg-at-accent-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? (
               <><ArrowPathIcon className="w-4 h-4 animate-spin" /> 분석중...</>
@@ -235,7 +235,7 @@ export default function KeywordAnalysis() {
         </div>
 
         {loading && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+          <div className="bg-at-accent-light border border-at-border rounded-lg p-3 text-sm text-at-accent">
             네이버 블로그 검색 → 상위 5개 글 수집 → 정량/정성 분석 진행 중... (약 1~3분 소요)
           </div>
         )}
@@ -245,7 +245,7 @@ export default function KeywordAnalysis() {
       <div className="bg-white rounded-lg border p-4">
         <h4 className="font-semibold mb-3">분석 히스토리</h4>
         {analyses.length === 0 ? (
-          <p className="text-gray-500 text-sm">아직 분석 결과가 없습니다.</p>
+          <p className="text-at-text-weak text-sm">아직 분석 결과가 없습니다.</p>
         ) : (
           <div className="space-y-2">
             {analyses.map((a) => (
@@ -253,19 +253,19 @@ export default function KeywordAnalysis() {
                 key={a.id}
                 onClick={() => loadAnalysisDetail(a.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                  selectedAnalysis?.id === a.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                  selectedAnalysis?.id === a.id ? 'border-at-accent bg-at-accent-light' : 'hover:bg-at-surface-alt'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <ChartBarIcon className="w-4 h-4 text-gray-400" />
+                    <ChartBarIcon className="w-4 h-4 text-at-text-weak" />
                     <span className="font-medium">{a.keyword}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[a.status]?.color || 'bg-gray-100'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_LABELS[a.status]?.color || 'bg-at-surface-alt'}`}>
                       {STATUS_LABELS[a.status]?.label || a.status}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-at-text-weak">
                       {new Date(a.created_at).toLocaleDateString('ko-KR')}
                     </span>
                   </div>
@@ -280,7 +280,7 @@ export default function KeywordAnalysis() {
       {selectedAnalysis && selectedAnalysis.status === 'completed' && (
         <div className="space-y-4">
           {loadingPosts ? (
-            <div className="bg-white rounded-lg border p-8 text-center text-gray-500">
+            <div className="bg-white rounded-lg border p-8 text-center text-at-text-weak">
               <ArrowPathIcon className="w-6 h-6 animate-spin mx-auto mb-2" />
               결과 로딩중...
             </div>
@@ -295,12 +295,12 @@ export default function KeywordAnalysis() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">#{post.rank}</span>
-                            <a href={post.post_url} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline line-clamp-1">
+                            <span className="bg-at-tag text-at-accent px-2 py-0.5 rounded text-xs font-bold">#{post.rank}</span>
+                            <a href={post.post_url} target="_blank" rel="noopener noreferrer" className="font-medium text-at-accent hover:underline line-clamp-1">
                               {post.title}
                             </a>
                           </div>
-                          <p className="text-xs text-gray-500">{post.blog_name}</p>
+                          <p className="text-xs text-at-text-weak">{post.blog_name}</p>
                         </div>
                       </div>
                     </div>
@@ -313,7 +313,7 @@ export default function KeywordAnalysis() {
                 <h4 className="font-semibold mb-3">정량 분석 (13개 항목)</h4>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50">
+                    <tr className="border-b bg-at-surface-alt">
                       <th className="text-left p-2">항목</th>
                       {posts.map((p) => (
                         <th key={p.id} className="text-center p-2 min-w-[80px]">#{p.rank}</th>
@@ -336,8 +336,8 @@ export default function KeywordAnalysis() {
                       { label: '공감 수', key: 'like_count' },
                       { label: '태그 수', key: 'tag_count' },
                     ].map((row) => (
-                      <tr key={row.key} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-medium text-gray-700">{row.label}</td>
+                      <tr key={row.key} className="border-b hover:bg-at-surface-alt">
+                        <td className="p-2 font-medium text-at-text-secondary">{row.label}</td>
                         {posts.map((p) => {
                           const val = (p as unknown as Record<string, unknown>)[row.key];
                           let display: string;
@@ -357,7 +357,7 @@ export default function KeywordAnalysis() {
                 <h4 className="font-semibold mb-3">정성 분석 (10개 항목)</h4>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50">
+                    <tr className="border-b bg-at-surface-alt">
                       <th className="text-left p-2">항목</th>
                       {posts.map((p) => (
                         <th key={p.id} className="text-center p-2 min-w-[80px]">#{p.rank}</th>
@@ -377,8 +377,8 @@ export default function KeywordAnalysis() {
                       { label: '광고 표시', key: 'has_ad_disclosure', isBool: true },
                       { label: '멀티미디어', key: 'multimedia_level', isLabel: true },
                     ].map((row) => (
-                      <tr key={row.key} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-medium text-gray-700">{row.label}</td>
+                      <tr key={row.key} className="border-b hover:bg-at-surface-alt">
+                        <td className="p-2 font-medium text-at-text-secondary">{row.label}</td>
                         {posts.map((p) => {
                           const val = (p as unknown as Record<string, unknown>)[row.key];
                           let display: string;
@@ -452,7 +452,7 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-gray-50">
+            <tr className="border-b bg-at-surface-alt">
               <th className="text-left p-2 w-8">#</th>
               <th className="text-left p-2">키워드</th>
               <th className="text-center p-2">총 빈도</th>
@@ -464,10 +464,10 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
           </thead>
           <tbody>
             {keywords.map((kw, idx) => (
-              <tr key={kw.keyword} className="border-b hover:bg-gray-50">
-                <td className="p-2 text-gray-400">{idx + 1}</td>
+              <tr key={kw.keyword} className="border-b hover:bg-at-surface-alt">
+                <td className="p-2 text-at-text-weak">{idx + 1}</td>
                 <td className="p-2 font-medium">{kw.keyword}</td>
-                <td className="text-center p-2 font-semibold text-blue-700">{kw.frequency}</td>
+                <td className="text-center p-2 font-semibold text-at-accent">{kw.frequency}</td>
                 <td className="text-center p-2">
                   <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-medium">
                     {kw.postCount}/{posts.length}
@@ -476,11 +476,11 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
                 {(kw.perPostFrequency || []).map((freq, i) => (
                   <td key={i} className="text-center p-2">
                     <span className={`inline-block min-w-[28px] px-1.5 py-0.5 rounded text-xs font-medium ${
-                      freq === 0 ? 'bg-gray-100 text-gray-400' :
-                      freq <= 3 ? 'bg-blue-100 text-blue-700' :
-                      freq <= 7 ? 'bg-blue-200 text-blue-800' :
-                      freq <= 15 ? 'bg-blue-300 text-blue-900' :
-                      'bg-blue-500 text-white'
+                      freq === 0 ? 'bg-at-surface-alt text-at-text-weak' :
+                      freq <= 3 ? 'bg-at-tag text-at-accent' :
+                      freq <= 7 ? 'bg-blue-200 text-at-accent' :
+                      freq <= 15 ? 'bg-blue-300 text-at-accent' :
+                      'bg-at-accent text-white'
                     }`}>
                       {freq}
                     </span>
@@ -488,7 +488,7 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
                 ))}
                 {/* perPostFrequency가 없는 경우 빈 셀 */}
                 {(!kw.perPostFrequency || kw.perPostFrequency.length === 0) && posts.map((p) => (
-                  <td key={p.id} className="text-center p-2 text-gray-300">-</td>
+                  <td key={p.id} className="text-center p-2 text-at-text-weak">-</td>
                 ))}
               </tr>
             ))}
@@ -498,14 +498,14 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
 
       {/* 키워드 빈도 막대 그래프 (상위 10개) */}
       <div>
-        <h5 className="text-sm font-semibold text-gray-600 mb-3">키워드 빈도 분포 (상위 10개)</h5>
+        <h5 className="text-sm font-semibold text-at-text-secondary mb-3">키워드 빈도 분포 (상위 10개)</h5>
         <div className="space-y-2">
           {keywords.slice(0, 10).map((kw) => {
             const widthPercent = Math.max((kw.frequency / maxFreq) * 100, 2)
             return (
               <div key={kw.keyword} className="flex items-center gap-2">
-                <span className="w-28 text-sm truncate text-right text-gray-700">{kw.keyword}</span>
-                <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                <span className="w-28 text-sm truncate text-right text-at-text-secondary">{kw.keyword}</span>
+                <div className="flex-1 bg-at-surface-alt rounded-full h-5 overflow-hidden">
                   <div
                     className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
                     style={{ width: `${widthPercent}%` }}
@@ -516,7 +516,7 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
                   </div>
                 </div>
                 {widthPercent <= 15 && (
-                  <span className="text-xs text-gray-500 w-8">{kw.frequency}</span>
+                  <span className="text-xs text-at-text-weak w-8">{kw.frequency}</span>
                 )}
               </div>
             )
@@ -527,10 +527,10 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
       {/* 공통 태그 */}
       {textMining.commonTags && textMining.commonTags.length > 0 && (
         <div>
-          <h5 className="text-sm font-semibold text-gray-600 mb-2">공통 태그</h5>
+          <h5 className="text-sm font-semibold text-at-text-secondary mb-2">공통 태그</h5>
           <div className="flex flex-wrap gap-1.5">
             {textMining.commonTags.map((tag) => (
-              <span key={tag} className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+              <span key={tag} className="px-2.5 py-1 bg-at-success-bg text-at-success rounded-full text-xs font-medium">
                 #{tag}
               </span>
             ))}
@@ -541,12 +541,12 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
       {/* 제목 패턴 */}
       {textMining.titlePatterns && textMining.titlePatterns.length > 0 && (
         <div>
-          <h5 className="text-sm font-semibold text-gray-600 mb-2">상위 글 제목 패턴</h5>
+          <h5 className="text-sm font-semibold text-at-text-secondary mb-2">상위 글 제목 패턴</h5>
           <div className="space-y-1">
             {textMining.titlePatterns.map((title, i) => (
               <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="text-gray-400 w-6 text-right">#{i + 1}</span>
-                <span className="text-gray-700">{title}</span>
+                <span className="text-at-text-weak w-6 text-right">#{i + 1}</span>
+                <span className="text-at-text-secondary">{title}</span>
               </div>
             ))}
           </div>
@@ -555,9 +555,9 @@ function TextMiningSection({ textMining, posts }: { textMining: TextMiningData; 
 
       {/* 경쟁 글 통계 요약 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-blue-50 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-blue-700">{textMining.avgBodyLength.toLocaleString()}</div>
-          <div className="text-xs text-blue-600">평균 본문 길이(자)</div>
+        <div className="bg-at-accent-light rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-at-accent">{textMining.avgBodyLength.toLocaleString()}</div>
+          <div className="text-xs text-at-accent">평균 본문 길이(자)</div>
         </div>
         <div className="bg-indigo-50 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-indigo-700">{textMining.avgImageCount}</div>
@@ -593,7 +593,7 @@ function AnalysisSummaryView({ summary }: { summary: Record<string, unknown> }) 
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b bg-gray-50">
+          <tr className="border-b bg-at-surface-alt">
             <th className="text-left p-2">항목</th>
             <th className="text-center p-2">평균</th>
             <th className="text-center p-2">중앙값</th>

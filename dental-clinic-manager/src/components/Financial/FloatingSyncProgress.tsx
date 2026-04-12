@@ -69,7 +69,7 @@ export default function FloatingSyncProgress() {
     >
       <div className={`rounded-2xl shadow-lg border overflow-hidden backdrop-blur-sm ${
         isActiveJob
-          ? 'bg-white/95 border-blue-200 shadow-blue-100/50'
+          ? 'bg-white/95 border-at-border shadow-blue-100/50'
           : currentJob?.status === 'completed'
             ? 'bg-white/95 border-emerald-200 shadow-emerald-100/50'
             : 'bg-white/95 border-red-200 shadow-red-100/50'
@@ -77,21 +77,21 @@ export default function FloatingSyncProgress() {
         {/* Header */}
         <div className={`px-3 py-2.5 flex items-center justify-between ${
           isActiveJob
-            ? 'bg-blue-50/80'
+            ? 'bg-at-accent-light/80'
             : currentJob?.status === 'completed'
               ? 'bg-emerald-50/80'
-              : 'bg-red-50/80'
+              : 'bg-at-error-bg/80'
         }`}>
           <div className="flex items-center gap-2 min-w-0">
             {isActiveJob ? (
-              <RefreshCw className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+              <RefreshCw className="w-4 h-4 text-at-accent animate-spin shrink-0" />
             ) : currentJob?.status === 'completed' ? (
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             ) : (
-              <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <XCircle className="w-4 h-4 text-at-error shrink-0" />
             )}
             <span className={`text-xs font-bold truncate ${
-              isActiveJob ? 'text-blue-800' : currentJob?.status === 'completed' ? 'text-emerald-800' : 'text-red-800'
+              isActiveJob ? 'text-at-accent' : currentJob?.status === 'completed' ? 'text-emerald-800' : 'text-red-800'
             }`}>
               {isActiveJob
                 ? '홈택스 동기화 중...'
@@ -107,14 +107,14 @@ export default function FloatingSyncProgress() {
               onClick={() => setExpanded(!expanded)}
               className="p-1 rounded-lg hover:bg-white/60 transition-colors"
             >
-              {expanded ? <Minimize2 className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
+              {expanded ? <Minimize2 className="w-3.5 h-3.5 text-at-text-weak" /> : <ChevronDown className="w-3.5 h-3.5 text-at-text-weak" />}
             </button>
             {!isActiveJob && (
               <button
                 onClick={handleDismiss}
                 className="p-1 rounded-lg hover:bg-white/60 transition-colors"
               >
-                <X className="w-3.5 h-3.5 text-slate-500" />
+                <X className="w-3.5 h-3.5 text-at-text-weak" />
               </button>
             )}
           </div>
@@ -127,15 +127,15 @@ export default function FloatingSyncProgress() {
             {isActiveJob && (
               <>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">
+                  <span className="text-at-text-weak">
                     {currentJob?.status === 'pending' ? '워커 대기 중...' : '데이터 수집 중...'}
                   </span>
-                  <span className="font-bold text-blue-700">{completed}/{total}</span>
+                  <span className="font-bold text-at-accent">{completed}/{total}</span>
                 </div>
-                <div className="w-full bg-blue-100 rounded-full h-1.5">
+                <div className="w-full bg-at-tag rounded-full h-1.5">
                   {total > 0 ? (
                     <div
-                      className="h-1.5 bg-blue-600 rounded-full transition-all duration-500"
+                      className="h-1.5 bg-at-accent rounded-full transition-all duration-500"
                       style={{ width: `${Math.max(5, percent)}%` }}
                     />
                   ) : (
@@ -156,16 +156,16 @@ export default function FloatingSyncProgress() {
                       isDone
                         ? 'bg-emerald-50 text-emerald-700'
                         : isActiveJob
-                          ? 'bg-slate-50 text-slate-600'
+                          ? 'bg-at-surface-alt text-at-text-secondary'
                           : currentJob?.status === 'failed'
-                            ? 'bg-red-50 text-red-600'
-                            : 'bg-slate-50 text-slate-500'
+                            ? 'bg-at-error-bg text-at-error'
+                            : 'bg-at-surface-alt text-at-text-weak'
                     }`}
                   >
                     {isDone ? (
                       <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-500" />
                     ) : isActiveJob ? (
-                      <Loader2 className="w-3 h-3 shrink-0 animate-spin text-blue-500" />
+                      <Loader2 className="w-3 h-3 shrink-0 animate-spin text-at-accent" />
                     ) : (
                       <XCircle className="w-3 h-3 shrink-0 text-red-400" />
                     )}
@@ -177,7 +177,7 @@ export default function FloatingSyncProgress() {
 
             {/* Error message */}
             {currentJob?.status === 'failed' && currentJob.error_message && (
-              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2 py-1.5">
+              <p className="text-xs text-at-error bg-at-error-bg rounded-lg px-2 py-1.5">
                 {currentJob.error_message}
               </p>
             )}
@@ -187,7 +187,7 @@ export default function FloatingSyncProgress() {
               <button
                 onClick={() => cancelSync()}
                 disabled={cancelling}
-                className="w-full py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                className="w-full py-1.5 text-xs font-bold text-at-error bg-at-error-bg border border-red-200 rounded-xl hover:bg-at-error-bg disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
               >
                 {cancelling ? (
                   <Loader2 className="w-3 h-3 animate-spin" />

@@ -1,0 +1,75 @@
+<h2>어떤 항목을 클릭 시 상세 내용으로 보여줄까요?</h2>
+<p class="subtitle">클릭 시 상세 보기를 추가할 항목을 선택하세요 (복수 선택 가능)</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="today-stats" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>오늘의 현황 카드</h3>
+      <p>성공/상담 · 예약/리콜 · 리뷰/선물 카드 클릭 시<br>
+      → 오늘 상담 목록, 선물 목록, 리콜 목록 모달 표시</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="background:#f1faf5;border:1px solid #86efac;border-radius:8px;padding:8px 12px;text-align:center;flex:1">
+          <div style="font-size:18px;font-weight:bold;color:#16a34a">3<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">5</span></div>
+          <div style="font-size:11px;color:#64748b">성공/상담</div>
+        </div>
+        <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:8px 12px;text-align:center;flex:1">
+          <div style="font-size:18px;font-weight:bold;color:#ea580c">2<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">8</span></div>
+          <div style="font-size:11px;color:#64748b">예약/리콜</div>
+        </div>
+        <div style="background:#faf5ff;border:1px solid #c4b5fd;border-radius:8px;padding:8px 12px;text-align:center;flex:1">
+          <div style="font-size:18px;font-weight:bold;color:#7c3aed">1<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">3</span></div>
+          <div style="font-size:11px;color:#64748b">리뷰/선물</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="attendance" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>팀 출퇴근 현황</h3>
+      <p>출근/퇴근/결근/지각/조퇴/초과 숫자 클릭 시<br>
+      → 해당 상태 직원 목록 모달 표시 (이름·시간 포함)</p>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <div style="background:#f1faf5;border-radius:6px;padding:6px 10px;text-align:center">
+          <div style="font-size:16px;font-weight:bold;color:#16a34a">4<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">6</span></div>
+          <div style="font-size:10px;color:#16a34a">출근</div>
+        </div>
+        <div style="background:#eff6ff;border-radius:6px;padding:6px 10px;text-align:center">
+          <div style="font-size:16px;font-weight:bold;color:#2563eb">1</div>
+          <div style="font-size:10px;color:#2563eb">퇴근</div>
+        </div>
+        <div style="background:#fff7ed;border-radius:6px;padding:6px 10px;text-align:center">
+          <div style="font-size:16px;font-weight:bold;color:#ea580c">1</div>
+          <div style="font-size:10px;color:#ea580c">결근</div>
+        </div>
+        <div style="background:#fefce8;border-radius:6px;padding:6px 10px;text-align:center">
+          <div style="font-size:16px;font-weight:bold;color:#ca8a04">0</div>
+          <div style="font-size:10px;color:#ca8a04">지각</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="weekly-stats" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>주간 통계</h3>
+      <p>주간 합산 숫자 클릭 시<br>
+      → 요일별 일별 상세 데이터 모달 표시</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="background:#f1faf5;border-radius:8px;padding:8px 12px;text-align:center;flex:1">
+          <div style="font-size:16px;font-weight:bold;color:#16a34a">12<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">20</span></div>
+          <div style="font-size:10px;color:#64748b">성공/상담 (60%)</div>
+        </div>
+        <div style="background:#fff7ed;border-radius:8px;padding:8px 12px;text-align:center;flex:1">
+          <div style="font-size:16px;font-weight:bold;color:#ea580c">8<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">15</span></div>
+          <div style="font-size:10px;color:#64748b">예약/리콜</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

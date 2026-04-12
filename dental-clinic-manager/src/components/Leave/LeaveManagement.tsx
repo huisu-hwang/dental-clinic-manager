@@ -34,12 +34,12 @@ import { appConfirm } from '@/components/ui/AppDialog'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-accent-light text-at-accent">
       <Icon className="w-4 h-4" />
     </div>
-    <h3 className="text-base font-semibold text-slate-800">
-      <span className="text-blue-600 mr-1">{number}.</span>
+    <h3 className="text-base font-semibold text-at-text">
+      <span className="text-at-accent mr-1">{number}.</span>
       {title}
     </h3>
   </div>
@@ -51,25 +51,25 @@ const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance
   const hasSpecialLeave = (balance?.family_event_days ?? 0) > 0 || (balance?.unpaid_days ?? 0) > 0
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-      <h4 className="text-sm font-medium text-slate-600 mb-4">내 연차 현황</h4>
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-at-border">
+      <h4 className="text-sm font-medium text-at-text-secondary mb-4">내 연차 현황</h4>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-xs text-slate-500 mb-1">총 연차</p>
-          <p className="text-2xl font-bold text-blue-600">{balance?.total_days ?? 0}일</p>
+          <p className="text-xs text-at-text-weak mb-1">총 연차</p>
+          <p className="text-2xl font-bold text-at-accent">{balance?.total_days ?? 0}일</p>
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-xs text-slate-500 mb-1">사용</p>
-          <p className="text-2xl font-bold text-green-600">{balance?.used_days ?? 0}일</p>
+          <p className="text-xs text-at-text-weak mb-1">사용</p>
+          <p className="text-2xl font-bold text-at-success">{balance?.used_days ?? 0}일</p>
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-xs text-slate-500 mb-1">승인 대기</p>
-          <p className="text-2xl font-bold text-yellow-600">{balance?.pending_days ?? 0}일</p>
+          <p className="text-xs text-at-text-weak mb-1">승인 대기</p>
+          <p className="text-2xl font-bold text-at-warning">{balance?.pending_days ?? 0}일</p>
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm">
-          <p className="text-xs text-slate-500 mb-1">잔여</p>
-          <p className={`text-2xl font-bold ${(balance?.remaining_days ?? 0) < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
+          <p className="text-xs text-at-text-weak mb-1">잔여</p>
+          <p className={`text-2xl font-bold ${(balance?.remaining_days ?? 0) < 0 ? 'text-at-error' : 'text-indigo-600'}`}>
             {balance?.remaining_days ?? 0}일
           </p>
           {(balance?.remaining_days ?? 0) < 0 && (
@@ -80,8 +80,8 @@ const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance
 
       {/* 특별휴가 사용 현황 (경조사, 무급휴가) */}
       {hasSpecialLeave && (
-        <div className="mt-4 pt-4 border-t border-blue-200">
-          <p className="text-xs text-slate-500 mb-2">특별휴가 사용 현황</p>
+        <div className="mt-4 pt-4 border-t border-at-border">
+          <p className="text-xs text-at-text-weak mb-2">특별휴가 사용 현황</p>
           <div className="flex gap-4">
             {(balance?.family_event_days ?? 0) > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg">
@@ -90,16 +90,16 @@ const LeaveBalanceCard = ({ balance, hireDate }: { balance: EmployeeLeaveBalance
               </div>
             )}
             {(balance?.unpaid_days ?? 0) > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-at-surface-alt rounded-lg">
                 <span className="w-2 h-2 rounded-full bg-gray-500"></span>
-                <span className="text-sm text-gray-700">무급휴가 {balance?.unpaid_days}일</span>
+                <span className="text-sm text-at-text-secondary">무급휴가 {balance?.unpaid_days}일</span>
               </div>
             )}
           </div>
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+      <div className="mt-4 flex items-center justify-between text-sm text-at-text-weak">
         <span>근속연수: {yearsOfService.toFixed(1)}년</span>
         {hireDate && <span>입사일: {new Date(hireDate).toLocaleDateString('ko-KR')}</span>}
       </div>
@@ -249,7 +249,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
       </div>
     )
   }
@@ -257,21 +257,21 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
   return (
     <div className="space-y-6">
       {/* 탭 네비게이션 */}
-      <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-200">
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
               activeTab === tab.id
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
             }`}
           >
             <tab.icon className="w-4 h-4 mr-2" />
             {tab.label}
             {tab.badge !== undefined && tab.badge > 0 && (
-              <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-600">
+              <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-at-error-bg text-at-error">
                 {tab.badge}
               </span>
             )}
@@ -281,7 +281,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
         </div>
@@ -296,21 +296,21 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
 
           <SectionHeader number={2} title="내 연차 신청 내역" icon={FileText} />
 
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+          <div className="overflow-x-auto border border-at-border rounded-lg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">기간</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">종류</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">일수</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">사유</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">상태</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">관리</th>
+                <tr className="bg-at-surface-alt border-b border-at-border">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary">기간</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary">종류</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary">일수</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary">사유</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary">상태</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-at-text-secondary">관리</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-at-border">
                 {myRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-slate-50">
+                  <tr key={request.id} className="hover:bg-at-surface-alt">
                     <td className="px-4 py-3">
                       <span className="font-medium">
                         {new Date(request.start_date).toLocaleDateString('ko-KR')}
@@ -322,7 +322,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
                         </>
                       )}
                       {request.half_day_type && (
-                        <span className="ml-2 text-xs text-slate-500">
+                        <span className="ml-2 text-xs text-at-text-weak">
                           ({request.half_day_type === 'AM' ? '오전' : '오후'})
                         </span>
                       )}
@@ -338,8 +338,8 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
                         {request.leave_types?.name}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{request.total_days}일</td>
-                    <td className="px-4 py-3 text-slate-600 max-w-xs truncate">
+                    <td className="px-4 py-3 text-at-text-secondary">{request.total_days}일</td>
+                    <td className="px-4 py-3 text-at-text-secondary max-w-xs truncate">
                       {request.reason || '-'}
                     </td>
                     <td className="px-4 py-3">
@@ -347,7 +347,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
                         {LEAVE_STATUS_NAMES[request.status as keyof typeof LEAVE_STATUS_NAMES]}
                       </span>
                       {request.status === 'pending' && request.current_step && request.total_steps && (
-                        <span className="ml-2 text-xs text-slate-400">
+                        <span className="ml-2 text-xs text-at-text-weak">
                           ({request.current_step}/{request.total_steps}단계)
                         </span>
                       )}
@@ -356,7 +356,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
                       {request.status === 'pending' && (
                         <button
                           onClick={() => handleCancelRequest(request.id)}
-                          className="text-red-600 hover:text-red-700 text-sm"
+                          className="text-at-error hover:text-at-error text-sm"
                         >
                           취소
                         </button>
@@ -366,7 +366,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
                 ))}
                 {myRequests.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={6} className="px-4 py-8 text-center text-at-text-weak">
                       연차 신청 내역이 없습니다.
                     </td>
                   </tr>
@@ -462,7 +462,7 @@ const LeaveByTypeCell = ({
   emptyText?: string
 }) => {
   if (!byType || Object.keys(byType).length === 0) {
-    return <span className="text-slate-400">{emptyText}</span>
+    return <span className="text-at-text-weak">{emptyText}</span>
   }
 
   // 필터가 있으면 해당 종류만 표시
@@ -473,7 +473,7 @@ const LeaveByTypeCell = ({
   })
 
   if (filteredEntries.length === 0) {
-    return <span className="text-slate-400">{emptyText}</span>
+    return <span className="text-at-text-weak">{emptyText}</span>
   }
 
   return (
@@ -685,33 +685,33 @@ function AllEmployeeBalances() {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   return (
     <>
-      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+      <div className="overflow-x-auto border border-at-border rounded-lg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직원</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">직급</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">총 연차</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+            <tr className="bg-at-surface-alt border-b border-at-border">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary">직원</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary">직급</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-at-text-secondary">총 연차</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-at-text-secondary">
                 <div>이미 사용</div>
-                <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
+                <div className="text-[10px] text-at-text-weak font-normal">(연차/반차/병가)</div>
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+              <th className="px-4 py-3 text-center text-xs font-semibold text-at-text-secondary">
                 <div>사용 예정</div>
-                <div className="text-[10px] text-slate-400 font-normal">(연차/반차/병가)</div>
+                <div className="text-[10px] text-at-text-weak font-normal">(연차/반차/병가)</div>
               </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">잔여</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600">사용률</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-at-text-secondary">잔여</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-at-text-secondary">사용률</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-at-border">
             {balances.map((item) => {
               const usageRate = item.total_days > 0
                 ? Math.round((item.used_days / item.total_days) * 100)
@@ -724,20 +724,20 @@ function AllEmployeeBalances() {
               return (
                 <React.Fragment key={item.id}>
                   <tr
-                    className={`hover:bg-slate-50 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
+                    className={`hover:bg-at-surface-alt cursor-pointer transition-colors ${isSelected ? 'bg-at-accent-light' : ''}`}
                     onClick={() => handleRowClick(item.user_id)}
                   >
-                    <td className="px-4 py-3 font-medium text-slate-800">
+                    <td className="px-4 py-3 font-medium text-at-text">
                       <div className="flex items-center gap-2">
                         {isSelected ? (
-                          <ChevronDown className="w-4 h-4 text-blue-500" />
+                          <ChevronDown className="w-4 h-4 text-at-accent" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-slate-400" />
+                          <ChevronRight className="w-4 h-4 text-at-text-weak" />
                         )}
                         <div>
                           <div>{item.user_name || '알 수 없음'}</div>
                           {item.leave_period_start && item.leave_period_end && (
-                            <div className="text-[10px] text-slate-400 font-normal">
+                            <div className="text-[10px] text-at-text-weak font-normal">
                               {item.leave_period_start.slice(5).replace('-', '/')} ~ {item.leave_period_end.slice(5).replace('-', '/')}
                             </div>
                           )}
@@ -745,50 +745,50 @@ function AllEmployeeBalances() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-at-tag text-at-accent">
                         {getRoleLabel(item.user_role)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center font-medium">{item.total_days}일</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <span className="font-medium text-green-600">{usedDeductTotal}일</span>
+                        <span className="font-medium text-at-success">{usedDeductTotal}일</span>
                         <LeaveByTypeCell byType={item.used_by_type} emptyText="" />
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <span className="font-medium text-yellow-600">{pendingDeductTotal}일</span>
+                        <span className="font-medium text-at-warning">{pendingDeductTotal}일</span>
                         <LeaveByTypeCell byType={item.pending_by_type} emptyText="" />
                       </div>
                     </td>
-                    <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-red-600' : 'text-indigo-600'}`}>
+                    <td className={`px-4 py-3 text-center font-semibold ${item.remaining_days < 0 ? 'text-at-error' : 'text-indigo-600'}`}>
                       {item.remaining_days}일
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <div className="w-16 bg-slate-200 rounded-full h-2">
+                        <div className="w-16 bg-at-border rounded-full h-2">
                           <div
-                            className="bg-blue-500 h-2 rounded-full"
+                            className="bg-at-accent h-2 rounded-full"
                             style={{ width: `${Math.min(usageRate, 100)}%` }}
                           />
                         </div>
-                        <span className="text-xs text-slate-500">{usageRate}%</span>
+                        <span className="text-xs text-at-text-weak">{usageRate}%</span>
                       </div>
                     </td>
                   </tr>
                   {/* 선택된 직원의 연차 내역 */}
                   {isSelected && (
                     <tr>
-                      <td colSpan={7} className="px-0 py-0 bg-slate-50">
-                        <div className="px-6 py-4 border-t border-slate-200">
-                          <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <td colSpan={7} className="px-0 py-0 bg-at-surface-alt">
+                        <div className="px-6 py-4 border-t border-at-border">
+                          <h4 className="text-sm font-semibold text-at-text-secondary mb-3 flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
                             {item.user_name}님의 연차 사용 내역
                           </h4>
                           {loadingRequests ? (
                             <div className="flex justify-center py-4">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-at-accent"></div>
                             </div>
                           ) : selectedUserRequests.length > 0 ? (
                             <div className="space-y-2">
@@ -807,9 +807,9 @@ function AllEmployeeBalances() {
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                         {/* 연차 종류 */}
                                         <div>
-                                          <label className="block text-xs font-medium text-slate-500 mb-1">종류</label>
+                                          <label className="block text-xs font-medium text-at-text-weak mb-1">종류</label>
                                           <select
-                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.leave_type_id}
                                             onChange={(e) => updateEditField('leave_type_id', e.target.value)}
                                           >
@@ -821,10 +821,10 @@ function AllEmployeeBalances() {
 
                                         {/* 시작일 */}
                                         <div>
-                                          <label className="block text-xs font-medium text-slate-500 mb-1">시작일</label>
+                                          <label className="block text-xs font-medium text-at-text-weak mb-1">시작일</label>
                                           <input
                                             type="date"
-                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.start_date}
                                             onChange={(e) => updateEditField('start_date', e.target.value)}
                                           />
@@ -832,10 +832,10 @@ function AllEmployeeBalances() {
 
                                         {/* 종료일 */}
                                         <div>
-                                          <label className="block text-xs font-medium text-slate-500 mb-1">종료일</label>
+                                          <label className="block text-xs font-medium text-at-text-weak mb-1">종료일</label>
                                           <input
                                             type="date"
-                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.end_date}
                                             min={editingRequest.start_date}
                                             onChange={(e) => updateEditField('end_date', e.target.value)}
@@ -845,12 +845,12 @@ function AllEmployeeBalances() {
 
                                         {/* 일수 */}
                                         <div>
-                                          <label className="block text-xs font-medium text-slate-500 mb-1">일수</label>
+                                          <label className="block text-xs font-medium text-at-text-weak mb-1">일수</label>
                                           <input
                                             type="number"
                                             step="0.5"
                                             min="0.5"
-                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.total_days}
                                             onChange={(e) => updateEditField('total_days', parseFloat(e.target.value) || 0)}
                                           />
@@ -860,9 +860,9 @@ function AllEmployeeBalances() {
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {/* 반차 타입 */}
                                         <div>
-                                          <label className="block text-xs font-medium text-slate-500 mb-1">반차</label>
+                                          <label className="block text-xs font-medium text-at-text-weak mb-1">반차</label>
                                           <select
-                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             value={editingRequest.half_day_type || ''}
                                             onChange={(e) => updateEditField('half_day_type', e.target.value || null)}
                                           >
@@ -874,10 +874,10 @@ function AllEmployeeBalances() {
 
                                         {/* 사유 */}
                                         <div>
-                                          <label className="block text-xs font-medium text-slate-500 mb-1">사유</label>
+                                          <label className="block text-xs font-medium text-at-text-weak mb-1">사유</label>
                                           <input
                                             type="text"
-                                            className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="w-full px-2 py-1.5 text-sm border border-at-border rounded-md focus:outline-none focus:ring-1 focus:ring-at-accent"
                                             placeholder="사유 입력"
                                             value={editingRequest.reason}
                                             onChange={(e) => updateEditField('reason', e.target.value)}
@@ -889,7 +889,7 @@ function AllEmployeeBalances() {
                                       <div className="flex justify-end gap-2 pt-1">
                                         <button
                                           onClick={cancelEditing}
-                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-at-text-secondary bg-at-surface-alt hover:bg-at-border rounded-md transition-colors"
                                           disabled={saving}
                                         >
                                           <X className="w-3 h-3" />
@@ -897,7 +897,7 @@ function AllEmployeeBalances() {
                                         </button>
                                         <button
                                           onClick={saveEditing}
-                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-at-accent hover:bg-at-accent-hover rounded-md transition-colors disabled:opacity-50"
                                           disabled={saving}
                                         >
                                           <Save className="w-3 h-3" />
@@ -912,7 +912,7 @@ function AllEmployeeBalances() {
                                 return (
                                   <div
                                     key={request.id}
-                                    className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-slate-200 group"
+                                    className="flex items-center justify-between bg-white rounded-lg px-4 py-3 border border-at-border group"
                                   >
                                     <div className="flex items-center gap-4">
                                       <span
@@ -924,20 +924,20 @@ function AllEmployeeBalances() {
                                       >
                                         {request.leave_types?.name || '연차'}
                                       </span>
-                                      <span className="text-sm text-slate-700">
+                                      <span className="text-sm text-at-text-secondary">
                                         {formatDate(request.start_date)}
                                         {request.start_date !== request.end_date && ` ~ ${formatDate(request.end_date)}`}
                                       </span>
                                       {request.half_day_type && (
-                                        <span className="text-xs text-slate-500">
+                                        <span className="text-xs text-at-text-weak">
                                           ({request.half_day_type === 'AM' ? '오전' : '오후'})
                                         </span>
                                       )}
-                                      <span className="text-sm text-slate-500">
+                                      <span className="text-sm text-at-text-weak">
                                         ({request.total_days}일)
                                       </span>
                                       {request.reason && (
-                                        <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                                        <span className="text-xs text-at-text-weak truncate max-w-[200px]">
                                           {request.reason}
                                         </span>
                                       )}
@@ -945,7 +945,7 @@ function AllEmployeeBalances() {
                                     <div className="flex items-center gap-2">
                                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                                         isCompleted
-                                          ? 'bg-green-100 text-green-700'
+                                          ? 'bg-at-success-bg text-at-success'
                                           : 'bg-yellow-100 text-yellow-700'
                                       }`}>
                                         {status}
@@ -957,7 +957,7 @@ function AllEmployeeBalances() {
                                               e.stopPropagation()
                                               startEditing(request)
                                             }}
-                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                            className="p-1.5 text-at-text-weak hover:text-at-accent hover:bg-at-accent-light rounded-md transition-colors"
                                             title="수정"
                                           >
                                             <Pencil className="w-3.5 h-3.5" />
@@ -967,7 +967,7 @@ function AllEmployeeBalances() {
                                               e.stopPropagation()
                                               handleDelete(request.id, item.user_name)
                                             }}
-                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                            className="p-1.5 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-md transition-colors"
                                             title="삭제"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -980,7 +980,7 @@ function AllEmployeeBalances() {
                               })}
                             </div>
                           ) : (
-                            <p className="text-sm text-slate-500 text-center py-4">
+                            <p className="text-sm text-at-text-weak text-center py-4">
                               승인된 연차 내역이 없습니다.
                             </p>
                           )}
@@ -993,7 +993,7 @@ function AllEmployeeBalances() {
             })}
             {balances.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-at-text-weak">
                   등록된 연차 현황이 없습니다.
                 </td>
               </tr>

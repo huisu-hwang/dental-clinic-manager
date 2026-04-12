@@ -1,0 +1,520 @@
+[     741ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[     896ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[     897ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:62
+[     901ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[     901ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:64
+[     901ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:68
+[     996ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[     997ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:97
+[     997ms] [LOG] AuthContext: storage에서 사용자 정보 복원 {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:200
+[     997ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:355
+[    1017ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:210
+[    1017ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    1017ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    1759ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1808ms] [LOG] [Fast Refresh] done in 49ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2414ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2462ms] [LOG] [Fast Refresh] done in 48ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3076ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3123ms] [LOG] [Fast Refresh] done in 47ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3743ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3792ms] [LOG] [Fast Refresh] done in 49ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4490ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4531ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5144ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5189ms] [LOG] [Fast Refresh] done in 44ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5946ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5982ms] [LOG] [Fast Refresh] done in 36ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6586ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6631ms] [LOG] [Fast Refresh] done in 45ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7231ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7273ms] [LOG] [Fast Refresh] done in 41ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7921ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7967ms] [LOG] [Fast Refresh] done in 45ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8560ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8612ms] [LOG] [Fast Refresh] done in 52ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9228ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9268ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10171ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10208ms] [LOG] [Fast Refresh] done in 37ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10815ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10855ms] [LOG] [Fast Refresh] done in 41ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11416ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11459ms] [LOG] [Fast Refresh] done in 44ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12043ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12086ms] [LOG] [Fast Refresh] done in 43ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12662ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12709ms] [LOG] [Fast Refresh] done in 47ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13302ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   13386ms] [LOG] [Fast Refresh] done in 85ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13923ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   13923ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   13924ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   13924ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   14018ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   14114ms] [LOG] [Fast Refresh] done in 95ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   14691ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   14692ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   14692ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   14692ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   14786ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   14826ms] [LOG] [Fast Refresh] done in 39ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   15322ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   15323ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   15323ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   15323ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   15408ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   15445ms] [LOG] [Fast Refresh] done in 37ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   15924ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   15924ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   15925ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   15925ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   16011ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   16048ms] [LOG] [Fast Refresh] done in 37ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   16530ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   16531ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   16531ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   16531ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   16615ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   16650ms] [LOG] [Fast Refresh] done in 36ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   17190ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   17190ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   17190ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   17190ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   17285ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   17327ms] [LOG] [Fast Refresh] done in 41ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   17838ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   17838ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   17838ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   17838ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   17932ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   17970ms] [LOG] [Fast Refresh] done in 38ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   18474ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   18474ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   18474ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   18474ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   18562ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   18601ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   19112ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   19113ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   19113ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   19113ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   19201ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   19240ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   19748ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   19748ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   19748ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   19748ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   19841ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   19884ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   20372ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   20372ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   20372ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   20372ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   20462ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   20510ms] [LOG] [Fast Refresh] done in 48ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   21002ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   21002ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   21002ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   21003ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   21090ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   21129ms] [LOG] [Fast Refresh] done in 39ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   21615ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   21615ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   21616ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   21616ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   21715ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   21761ms] [LOG] [Fast Refresh] done in 46ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   22301ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   22301ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   22301ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   22301ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   22392ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   22436ms] [LOG] [Fast Refresh] done in 43ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   23219ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   23220ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   23220ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   23220ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   23326ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   23359ms] [LOG] [Fast Refresh] done in 33ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   24074ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   24074ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   24075ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   24075ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   24183ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   24222ms] [LOG] [Fast Refresh] done in 39ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   24860ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   24860ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   24860ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   24860ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   24977ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   25029ms] [LOG] [Fast Refresh] done in 52ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   26489ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   26489ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   26490ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   26490ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   26717ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   26717ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   26718ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   26719ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27026ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[   27027ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[   27028ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[   27034ms] [LOG] [Supabase] Environment check: {NODE_ENV: development, hasUrl: true, hasKey: true, urlValue: https://beahjntkmkfhpcbhfnrr.s..., keyValue: eyJhbGciOiJIUzI1NiIs...} @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:34
+[   27035ms] [LOG] [Supabase] Creating client... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:63
+[   27035ms] [LOG] [Supabase] Custom storage adapter initialized @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:67
+[   27037ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[   27039ms] [LOG] [Supabase] Client created successfully with custom storage @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:89
+[   27042ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[   27043ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[   27043ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[   27044ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[   27081ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27081ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27082ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27082ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27123ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   27150ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   27151ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   27153ms] [LOG] [ensureConnection] No session found, attempting refresh... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:49
+[   27153ms] [LOG] [ensureConnection] Refresh attempt 1/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[   27154ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[   27154ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[   27155ms] [LOG] [ensureConnection] No session found, attempting refresh... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:49
+[   27155ms] [LOG] [ensureConnection] Refresh attempt 1/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[   27155ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[   27155ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[   27156ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   27156ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   27156ms] [LOG] [Supabase] Auth state change: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[   27156ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   27157ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   27157ms] [WARNING] [ensureConnection] Refresh attempt 1 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[   27157ms] [LOG] [ensureConnection] Waiting 1000ms before retry... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:76
+[   27158ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   27158ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[   27167ms] [WARNING] [ensureConnection] Refresh attempt 1 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[   27167ms] [LOG] [ensureConnection] Waiting 1000ms before retry... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:76
+[   27168ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   27168ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[   27538ms] [LOG] [Fast Refresh] done in 416ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   27651ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27651ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27651ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27651ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27738ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   27746ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27748ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27749ms] [LOG] Current selectors: {weekSelector: 2026-W14, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27749ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27784ms] [LOG] [Fast Refresh] done in 46ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   28158ms] [LOG] [ensureConnection] Refresh attempt 2/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[   28158ms] [WARNING] [ensureConnection] Refresh attempt 2 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[   28158ms] [ERROR] [ensureConnection] All refresh attempts failed @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28159ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[   28161ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[   28161ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[   28161ms] [LOG] Auth state changed: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:210
+[   28161ms] [LOG] [ensureConnection] Redirecting to login page... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:93
+[   28162ms] [ERROR] [ensureConnection] Error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28162ms] [ERROR] [usePremiumFeatures] Unexpected error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28165ms] [LOG] [Supabase] Auth state change: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[   28165ms] [LOG] [Supabase] User signed out @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:97
+[   28168ms] [LOG] [ensureConnection] Refresh attempt 2/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[   28169ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28169ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28169ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[   28169ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[   28169ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[   28170ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[   28403ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   28408ms] [WARNING] [ensureConnection] Refresh attempt 2 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[   28408ms] [ERROR] [ensureConnection] All refresh attempts failed @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28408ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28409ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28409ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[   28409ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[   28409ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[   28409ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[   28409ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[   28409ms] [LOG] Auth state changed: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:210
+[   28410ms] [LOG] [ensureConnection] Redirecting to login page... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:93
+[   28410ms] [ERROR] [ensureConnection] Error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28410ms] [ERROR] [usePremiumFeatures] Unexpected error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   28410ms] [LOG] [Supabase] Auth state change: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[   28410ms] [LOG] [Supabase] User signed out @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:97
+[   28509ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238302696 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238312424 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238313335 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238314974 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238299990 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238301448 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238294500 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238303339 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238309236 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238296617 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238311740 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238293098 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238293763 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238314189 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238297949 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238305447 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238304812 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238295844 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238307308 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238297271 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238307954 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238310494 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238309871 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238306650 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238300847 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31510ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238304045 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31511ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238306048 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31511ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238295162 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31511ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238302075 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31511ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238298594 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31511ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238308600 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31511ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238311127 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   31511ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1775238299246 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   33283ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   33320ms] [LOG] [Fast Refresh] done in 37ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   34398ms] [LOG] [Fast Refresh] done in 1115ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   34675ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   34684ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   35175ms] [ERROR] Error fetching notifications: TypeError: Failed to fetch
+    at useClinicNotifications.useCallback[fetchNotifications] (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:28:40)
+    at useClinicNotifications.useEffect (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:119:13)
+    at Object.react_stack_bottom_frame (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:23669:20)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at commitHookEffectListMount (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12345:29)
+    at commitHookPassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12466:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14387:13)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14390:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14390:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14390:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   35176ms] [ERROR] Error fetching notifications: TypeError: Failed to fetch
+    at useClinicNotifications.useCallback[fetchNotifications] (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:28:40)
+    at useClinicNotifications.useEffect (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:119:13)
+    at Object.react_stack_bottom_frame (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:23669:20)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at commitHookEffectListMount (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12345:29)
+    at commitHookPassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12466:11)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14563:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at doubleInvokeEffectsOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16566:11)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16530:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   36993ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[   37131ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[   37131ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:62
+[   37135ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[   37135ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:64
+[   37135ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:68
+[   37239ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[   37240ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:97
+[   37240ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:355
+[   37328ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[   37328ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[   37329ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:210
+[   37710ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   38201ms] [LOG] [Fast Refresh] done in 490ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   38310ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   38343ms] [LOG] [Fast Refresh] done in 34ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   38953ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   38973ms] [LOG] [Fast Refresh] done in 20ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   39505ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   39535ms] [LOG] [Fast Refresh] done in 30ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   40174ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   40211ms] [LOG] [Fast Refresh] done in 37ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   41151ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   41229ms] [LOG] [Fast Refresh] done in 78ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   41975ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   42000ms] [LOG] [Fast Refresh] done in 25ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   44118ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/manifest.webmanifest:0
+[   44143ms] [LOG] [Fast Refresh] done in 2168ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   44161ms] [ERROR] Manifest fetch from http://localhost:3000/manifest.webmanifest failed, code 404 @ http://localhost:3000/?session_expired=true:0
+[   44227ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   44958ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   44991ms] [LOG] [Fast Refresh] done in 33ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   45621ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   45651ms] [LOG] [Fast Refresh] done in 31ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   46422ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   46472ms] [LOG] [Fast Refresh] done in 50ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   47430ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   47489ms] [LOG] [Fast Refresh] done in 59ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   48198ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   48239ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   48996ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   49041ms] [LOG] [Fast Refresh] done in 46ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   49804ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   49844ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   50641ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   50680ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   51423ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   51460ms] [LOG] [Fast Refresh] done in 37ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   52651ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   52706ms] [LOG] [Fast Refresh] done in 54ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   53784ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   53834ms] [LOG] [Fast Refresh] done in 50ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   54848ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   54910ms] [LOG] [Fast Refresh] done in 63ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   55547ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   55581ms] [LOG] [Fast Refresh] done in 33ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   56341ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   56374ms] [LOG] [Fast Refresh] done in 32ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   57044ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   57080ms] [LOG] [Fast Refresh] done in 35ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   57755ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   57790ms] [LOG] [Fast Refresh] done in 36ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   58474ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   58511ms] [LOG] [Fast Refresh] done in 38ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   59179ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   59214ms] [LOG] [Fast Refresh] done in 35ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   59866ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   59901ms] [LOG] [Fast Refresh] done in 35ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   60679ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   60820ms] [LOG] [Fast Refresh] done in 141ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   61743ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   61807ms] [LOG] [Fast Refresh] done in 65ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   62497ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   62532ms] [LOG] [Fast Refresh] done in 35ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   63185ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   63223ms] [LOG] [Fast Refresh] done in 38ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   63871ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   63907ms] [LOG] [Fast Refresh] done in 36ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   64615ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   64650ms] [LOG] [Fast Refresh] done in 34ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   65322ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   65380ms] [LOG] [Fast Refresh] done in 59ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   66326ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   66359ms] [LOG] [Fast Refresh] done in 34ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   67025ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   67062ms] [LOG] [Fast Refresh] done in 38ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   67716ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   67760ms] [LOG] [Fast Refresh] done in 45ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   68479ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   68520ms] [LOG] [Fast Refresh] done in 41ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   69207ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   69241ms] [LOG] [Fast Refresh] done in 34ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   69971ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   70008ms] [LOG] [Fast Refresh] done in 37ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   70714ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   70754ms] [LOG] [Fast Refresh] done in 39ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   71548ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   71631ms] [LOG] [Fast Refresh] done in 84ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   72336ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   72357ms] [LOG] [Fast Refresh] done in 20ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   73044ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   73099ms] [LOG] [Fast Refresh] done in 56ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   76347ms] [LOG] [Fast Refresh] done in 3304ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   76398ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   77576ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   77627ms] [LOG] [Fast Refresh] done in 51ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13

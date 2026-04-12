@@ -146,14 +146,14 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
     <div className="space-y-4">
       {/* 메시지 */}
       {error && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-start gap-2 p-3 bg-at-error-bg border border-at-border rounded-xl text-sm text-at-error">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{error}</span>
           <button onClick={() => setError(null)} className="ml-auto"><X className="w-4 h-4" /></button>
         </div>
       )}
       {success && (
-        <div className="flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700">
+        <div className="flex items-start gap-2 p-3 bg-at-success-bg border border-at-border rounded-xl text-sm text-at-success">
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{success}</span>
           <button onClick={() => setSuccess(null)} className="ml-auto"><X className="w-4 h-4" /></button>
@@ -161,15 +161,15 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
       )}
 
       {/* 인증정보 섹션 */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
+        <div className="p-4 border-b border-at-border flex items-center justify-between bg-at-surface-alt">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-indigo-500" />
-            <h3 className="font-bold text-slate-800 text-sm">홈택스 인증정보</h3>
+            <h3 className="font-bold text-at-text text-sm">홈택스 인증정보</h3>
           </div>
           {credentials && (
             <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${credentials.last_login_success ? 'bg-emerald-100 text-emerald-700' : credentials.last_login_success === false ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${credentials.last_login_success ? 'bg-at-success-bg text-at-success' : credentials.last_login_success === false ? 'bg-at-error-bg text-at-error' : 'bg-at-surface-alt text-at-text-secondary'}`}>
                 {credentials.last_login_success ? '연동 정상' : credentials.last_login_success === false ? '로그인 실패' : '미확인'}
               </span>
             </div>
@@ -180,25 +180,25 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
           {credentials && !showCredForm ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">사업자등록번호</span>
-                <span className="font-medium text-slate-800">
+                <span className="text-at-text-weak">사업자등록번호</span>
+                <span className="font-medium text-at-text">
                   {credentials.business_number.replace(/(\d{3})(\d{2})(\d{5})/, '$1-$2-$3')}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">로그인 방식</span>
-                <span className="font-medium text-slate-800">ID/PW</span>
+                <span className="text-at-text-weak">로그인 방식</span>
+                <span className="font-medium text-at-text">ID/PW</span>
               </div>
               {credentials.last_login_attempt && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">마지막 로그인</span>
-                  <span className="text-slate-600 text-xs">
+                  <span className="text-at-text-weak">마지막 로그인</span>
+                  <span className="text-at-text-secondary text-xs">
                     {new Date(credentials.last_login_attempt).toLocaleString('ko-KR')}
                   </span>
                 </div>
               )}
               {credentials.last_login_error && (
-                <div className="p-2 bg-red-50 rounded-lg text-xs text-red-600">
+                <div className="p-2 bg-at-error-bg rounded-xl text-xs text-at-error">
                   {credentials.last_login_error}
                 </div>
               )}
@@ -211,13 +211,13 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
                     setResidentNumber('')
                     setShowCredForm(true)
                   }}
-                  className="flex-1 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors"
+                  className="flex-1 py-2 text-sm font-medium text-at-accent bg-at-accent-light rounded-xl hover:bg-at-tag transition-colors"
                 >
                   수정
                 </button>
                 <button
                   onClick={handleDeleteCredentials}
-                  className="py-2 px-4 text-sm font-medium text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+                  className="py-2 px-4 text-sm font-medium text-at-error bg-at-error-bg rounded-xl hover:bg-at-error-bg transition-colors"
                 >
                   삭제
                 </button>
@@ -226,30 +226,30 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
           ) : (
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">사업자등록번호</label>
+                <label className="text-xs font-medium text-at-text-secondary mb-1 block">사업자등록번호</label>
                 <input
                   type="text"
                   value={bizNo}
                   onChange={(e) => setBizNo(e.target.value)}
                   placeholder="000-00-00000"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">홈택스 아이디</label>
+                <label className="text-xs font-medium text-at-text-secondary mb-1 block">홈택스 아이디</label>
                 <input
                   type="text"
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
                   placeholder="홈택스 로그인 아이디"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                <label className="text-xs font-medium text-at-text-secondary mb-1 flex items-center gap-1.5">
                   홈택스 비밀번호
                   {credentials && !loginPw && (
-                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                    <span className="flex items-center gap-0.5 text-at-success font-medium">
                       <Check className="w-3 h-3" />저장됨
                     </span>
                   )}
@@ -260,22 +260,22 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
                     value={loginPw}
                     onChange={(e) => setLoginPw(e.target.value)}
                     placeholder={credentials ? '변경하려면 입력 (비워두면 기존값 유지)' : '홈택스 로그인 비밀번호'}
-                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 pr-10 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-at-text-weak hover:text-at-text"
                   >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                <label className="text-xs font-medium text-at-text-secondary mb-1 flex items-center gap-1.5">
                   주민등록번호 (생년월일 + 뒷자리 1자리)
                   {credentials?.has_resident_number && !residentNumber && (
-                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                    <span className="flex items-center gap-0.5 text-at-success font-medium">
                       <Check className="w-3 h-3" />저장됨
                     </span>
                   )}
@@ -292,23 +292,23 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
                     }}
                     placeholder={credentials?.has_resident_number ? '변경하려면 입력 (비워두면 기존값 유지)' : '000000-0'}
                     maxLength={8}
-                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 pr-10 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-at-text-weak hover:text-at-text"
                   >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">홈택스 ID/PW 로그인 시 본인확인에 필요합니다</p>
+                <p className="text-[10px] text-at-text-weak mt-1">홈택스 ID/PW 로그인 시 본인확인에 필요합니다</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={handleSaveCredentials}
                   disabled={saving}
-                  className="flex-1 py-2 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-1"
+                  className="flex-1 py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   저장
@@ -316,7 +316,7 @@ export default function HometaxCredentialsSettings({ clinicId }: HometaxCredenti
                 {credentials && (
                   <button
                     onClick={() => setShowCredForm(false)}
-                    className="py-2 px-4 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                    className="py-2 px-4 text-sm font-medium text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-at-surface-hover transition-colors"
                   >
                     취소
                   </button>

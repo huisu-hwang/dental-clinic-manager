@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import {
   X,
   Phone,
-  PhoneCall,
   PhoneOff,
   PhoneMissed,
   Calendar,
@@ -12,7 +11,6 @@ import {
   XCircle,
   Clock,
   User,
-  MessageSquare,
   AlertCircle
 } from 'lucide-react'
 import type { RecallPatient, PatientRecallStatus } from '@/types/recall'
@@ -124,36 +122,36 @@ export default function CallModal({
 
   // 결과 선택 옵션 (간소화된 상태)
   const resultOptions: { value: PatientRecallStatus; label: string; icon: React.ReactNode; color: string }[] = [
-    { value: 'appointment_made', label: '예약 성공', icon: <Calendar className="w-5 h-5" />, color: 'bg-green-100 text-green-700 border-green-300' },
+    { value: 'appointment_made', label: '예약 성공', icon: <Calendar className="w-5 h-5" />, color: 'bg-at-success-bg text-at-success border-green-300' },
     { value: 'appointment_pending', label: '예약보류', icon: <Clock className="w-5 h-5" />, color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
     { value: 'already_booked', label: '이미예약', icon: <CheckCircle className="w-5 h-5" />, color: 'bg-cyan-100 text-cyan-700 border-cyan-300' },
     { value: 'no_answer', label: '부재중', icon: <PhoneMissed className="w-5 h-5" />, color: 'bg-orange-100 text-orange-700 border-orange-300' },
-    { value: 'call_rejected', label: '통화 거부', icon: <PhoneOff className="w-5 h-5" />, color: 'bg-red-100 text-red-700 border-red-300' },
-    { value: 'visit_refused', label: '내원 거부', icon: <XCircle className="w-5 h-5" />, color: 'bg-red-100 text-red-700 border-red-300' },
-    { value: 'invalid_number', label: '없는 번호', icon: <AlertCircle className="w-5 h-5" />, color: 'bg-gray-100 text-gray-700 border-gray-300' }
+    { value: 'call_rejected', label: '통화 거부', icon: <PhoneOff className="w-5 h-5" />, color: 'bg-at-error-bg text-at-error border-red-300' },
+    { value: 'visit_refused', label: '내원 거부', icon: <XCircle className="w-5 h-5" />, color: 'bg-at-error-bg text-at-error border-red-300' },
+    { value: 'invalid_number', label: '없는 번호', icon: <AlertCircle className="w-5 h-5" />, color: 'bg-at-surface-alt text-at-text-secondary border-at-border' }
   ]
 
   if (!isOpen || !patient) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-at-card w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-at-border">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              callStatus === 'calling' ? 'bg-green-100' : 'bg-blue-100'
+              callStatus === 'calling' ? 'bg-at-success-bg' : 'bg-at-tag'
             }`}>
-              <Phone className={`w-5 h-5 ${callStatus === 'calling' ? 'text-green-600 animate-pulse' : 'text-blue-600'}`} />
+              <Phone className={`w-5 h-5 ${callStatus === 'calling' ? 'text-at-success animate-pulse' : 'text-at-accent'}`} />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">전화 걸기</h3>
-              <p className="text-sm text-gray-500">{patient.patient_name}</p>
+              <h3 className="font-semibold text-at-text">전화 걸기</h3>
+              <p className="text-sm text-at-text-weak">{patient.patient_name}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-at-text-weak hover:text-at-text-secondary"
           >
             <X className="w-6 h-6" />
           </button>
@@ -162,22 +160,22 @@ export default function CallModal({
         {/* 내용 */}
         <div className="p-4 space-y-4">
           {/* 환자 정보 */}
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border">
-              <User className="w-6 h-6 text-gray-400" />
+          <div className="flex items-center gap-4 p-4 bg-at-surface-alt rounded-xl">
+            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border border-at-border">
+              <User className="w-6 h-6 text-at-text-weak" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-gray-900">{patient.patient_name}</p>
-              <p className="text-lg font-bold text-blue-600">{displayPhoneNumber(patient.phone_number)}</p>
+              <p className="font-medium text-at-text">{patient.patient_name}</p>
+              <p className="text-lg font-bold text-at-accent">{displayPhoneNumber(patient.phone_number)}</p>
               {patient.chart_number && (
-                <p className="text-sm text-gray-500">차트: {patient.chart_number}</p>
+                <p className="text-sm text-at-text-weak">차트: {patient.chart_number}</p>
               )}
             </div>
           </div>
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-at-error-bg text-at-error rounded-lg">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <p className="text-sm">{error}</p>
             </div>
@@ -187,7 +185,7 @@ export default function CallModal({
           {callStatus === 'ready' && (
             <button
               onClick={handleCall}
-              className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center justify-center gap-2 text-lg font-medium transition-colors"
+              className="w-full py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center justify-center gap-2 text-lg font-medium transition-colors"
             >
               <Phone className="w-6 h-6" />
               전화 걸기
@@ -197,16 +195,16 @@ export default function CallModal({
           {/* 통화 중 표시 */}
           {callStatus === 'calling' && (
             <div className="py-6 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-                <Phone className="w-8 h-8 text-green-600 animate-pulse" />
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-at-success-bg flex items-center justify-center">
+                <Phone className="w-8 h-8 text-at-success animate-pulse" />
               </div>
-              <p className="text-lg font-medium text-gray-900">전화 연결 중...</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-lg font-medium text-at-text">전화 연결 중...</p>
+              <p className="text-sm text-at-text-weak mt-1">
                 {deviceType === 'mobile' ? '전화 앱이 열립니다' : '전화 프로그램으로 연결됩니다'}
               </p>
               <button
                 onClick={() => setCallStatus('ended')}
-                className="mt-4 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="mt-4 px-4 py-2 text-at-text-secondary hover:bg-at-surface-hover rounded-xl"
               >
                 통화 완료 / 결과 입력
               </button>
@@ -217,7 +215,7 @@ export default function CallModal({
           {callStatus === 'ended' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-at-text-secondary mb-3">
                   통화 결과 선택
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -225,10 +223,10 @@ export default function CallModal({
                     <button
                       key={option.value}
                       onClick={() => setSelectedResult(option.value)}
-                      className={`p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
+                      className={`p-3 rounded-xl border-2 flex items-center gap-2 transition-all ${
                         selectedResult === option.value
                           ? option.color + ' border-current'
-                          : 'border-gray-200 hover:border-gray-300'
+                          : 'border-at-border hover:border-at-border'
                       }`}
                     >
                       {option.icon}
@@ -240,7 +238,7 @@ export default function CallModal({
 
               {/* 메모 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-at-text-secondary mb-2">
                   메모 (선택)
                 </label>
                 <textarea
@@ -248,7 +246,7 @@ export default function CallModal({
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
                   placeholder="통화 내용이나 특이사항을 입력하세요..."
-                  className="w-full p-3 border border-gray-300 rounded-lg resize-none text-sm"
+                  className="w-full p-3 border border-at-border rounded-xl resize-none text-sm"
                 />
               </div>
             </>
@@ -256,10 +254,10 @@ export default function CallModal({
         </div>
 
         {/* 푸터 */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 p-4 border-t border-at-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-at-text-secondary border border-at-border rounded-xl hover:bg-at-surface-hover"
           >
             취소
           </button>
@@ -267,7 +265,7 @@ export default function CallModal({
             <button
               onClick={handleSave}
               disabled={isSaving || !selectedResult}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSaving ? (
                 <>

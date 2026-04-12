@@ -10,12 +10,12 @@ import AdminAttendanceStats from './AdminAttendanceStats'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+    <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-at-accent-light text-at-accent">
       <Icon className="w-4 h-4" />
     </div>
-    <h3 className="text-base font-semibold text-slate-800">
-      <span className="text-blue-600 mr-1">{number}.</span>
+    <h3 className="text-base font-semibold text-at-text">
+      <span className="text-at-accent mr-1">{number}.</span>
       {title}
     </h3>
   </div>
@@ -150,9 +150,9 @@ export default function AttendanceStats() {
   }
 
   const getAttendanceRateColor = (rate: number) => {
-    if (rate >= 95) return 'text-green-600'
-    if (rate >= 85) return 'text-yellow-600'
-    return 'text-red-600'
+    if (rate >= 95) return 'text-at-success'
+    if (rate >= 85) return 'text-at-warning'
+    return 'text-at-error'
   }
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
@@ -162,13 +162,13 @@ export default function AttendanceStats() {
     <div className="space-y-6">
       {/* 관리자용 뷰 선택 탭 */}
       {canViewAllStats && (
-        <div className="bg-white rounded-lg shadow p-1 inline-flex">
+        <div className="bg-white rounded-xl shadow p-1 inline-flex">
           <button
             onClick={() => setStatsView('personal')}
-            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               statsView === 'personal'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-at-accent text-white'
+                : 'text-at-text-secondary hover:bg-at-surface-alt'
             }`}
           >
             <User className="w-4 h-4 mr-2" />
@@ -176,10 +176,10 @@ export default function AttendanceStats() {
           </button>
           <button
             onClick={() => setStatsView('team')}
-            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               statsView === 'team'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-at-accent text-white'
+                : 'text-at-text-secondary hover:bg-at-surface-alt'
             }`}
           >
             <Users className="w-4 h-4 mr-2" />
@@ -198,13 +198,13 @@ export default function AttendanceStats() {
         <SectionHeader number={1} title="기간 선택" icon={Calendar} />
 
         {/* 기간 선택 모드 탭 */}
-        <div className="flex mb-4 bg-slate-100 rounded-lg p-1">
+        <div className="flex mb-4 bg-at-surface-alt rounded-xl p-1">
           <button
             onClick={() => setPeriodMode('monthly')}
-            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               periodMode === 'monthly'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-at-accent shadow-at-card'
+                : 'text-at-text-secondary hover:text-at-text'
             }`}
           >
             <Calendar className="w-4 h-4 mr-2" />
@@ -212,10 +212,10 @@ export default function AttendanceStats() {
           </button>
           <button
             onClick={() => setPeriodMode('custom')}
-            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               periodMode === 'custom'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-at-accent shadow-at-card'
+                : 'text-at-text-secondary hover:text-at-text'
             }`}
           >
             <CalendarRange className="w-4 h-4 mr-2" />
@@ -226,11 +226,11 @@ export default function AttendanceStats() {
         {periodMode === 'monthly' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">년도</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">년도</label>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
               >
                 {years.map((year) => (
                   <option key={year} value={year}>
@@ -240,11 +240,11 @@ export default function AttendanceStats() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1.5">월</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">월</label>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
               >
                 {months.map((month) => (
                   <option key={month} value={month}>
@@ -260,43 +260,43 @@ export default function AttendanceStats() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handlePresetPeriod('thisWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 이번 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastWeek')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 지난 주
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 이번 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('lastMonth')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 지난 달
               </button>
               <button
                 onClick={() => handlePresetPeriod('last3Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 최근 3개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('last6Months')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 최근 6개월
               </button>
               <button
                 onClick={() => handlePresetPeriod('thisYear')}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary hover:bg-at-border transition-colors"
               >
                 올해
               </button>
@@ -305,31 +305,31 @@ export default function AttendanceStats() {
             {/* 직접 기간 선택 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">시작일</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1.5">시작일</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">종료일</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1.5">종료일</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate}
                   max={formatDateString(new Date())}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
                 />
               </div>
             </div>
 
             {/* 선택된 기간 표시 */}
-            <div className="text-sm text-slate-600 bg-blue-50 px-3 py-2 rounded-lg">
-              선택 기간: <span className="font-medium text-blue-700">{startDate}</span> ~ <span className="font-medium text-blue-700">{endDate}</span>
+            <div className="text-sm text-at-text-secondary bg-at-accent-light px-3 py-2 rounded-xl">
+              선택 기간: <span className="font-medium text-at-accent">{startDate}</span> ~ <span className="font-medium text-at-accent">{endDate}</span>
             </div>
           </div>
         )}
@@ -338,8 +338,8 @@ export default function AttendanceStats() {
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-slate-500">통계 로딩 중...</span>
+            <div className="w-5 h-5 border-2 border-at-accent border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-at-text-weak">통계 로딩 중...</span>
           </div>
         </div>
       ) : statistics ? (
@@ -348,35 +348,35 @@ export default function AttendanceStats() {
           <div>
             <SectionHeader number={2} title="주요 지표" icon={BarChart3} />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <div className="text-xs font-medium text-green-600 uppercase tracking-wider">출근율</div>
+              <div className="bg-at-success-bg rounded-xl p-4 border border-green-200">
+                <div className="text-xs font-medium text-at-success uppercase tracking-wider">출근율</div>
                 <div className={`text-2xl font-bold mt-1 ${getAttendanceRateColor(statistics.attendance_rate)}`}>
                   {statistics.attendance_rate.toFixed(1)}%
                 </div>
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs text-at-text-weak mt-1">
                   {statistics.present_days}/{statistics.total_work_days}일 출근
                 </div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="text-xs font-medium text-blue-600 uppercase tracking-wider">총 근무시간</div>
-                <div className="text-2xl font-bold text-blue-700 mt-1">
+              <div className="bg-at-accent-light rounded-xl p-4 border border-at-border">
+                <div className="text-xs font-medium text-at-accent uppercase tracking-wider">총 근무시간</div>
+                <div className="text-2xl font-bold text-at-accent mt-1">
                   {Math.floor(statistics.total_work_minutes / 60)}h
                 </div>
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs text-at-text-weak mt-1">
                   일평균 {formatMinutesToHours(statistics.avg_work_minutes_per_day)}
                 </div>
               </div>
-              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                <div className="text-xs font-medium text-yellow-600 uppercase tracking-wider">지각</div>
+              <div className="bg-at-warning-bg rounded-xl p-4 border border-yellow-200">
+                <div className="text-xs font-medium text-at-warning uppercase tracking-wider">지각</div>
                 <div className="text-2xl font-bold text-yellow-700 mt-1">{statistics.late_count}회</div>
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs text-at-text-weak mt-1">
                   총 {statistics.total_late_minutes}분
                 </div>
               </div>
-              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
                 <div className="text-xs font-medium text-purple-600 uppercase tracking-wider">초과근무</div>
                 <div className="text-2xl font-bold text-purple-700 mt-1">{statistics.overtime_count}회</div>
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs text-at-text-weak mt-1">
                   총 {formatMinutesToHours(statistics.total_overtime_minutes)}
                 </div>
               </div>
@@ -388,58 +388,58 @@ export default function AttendanceStats() {
             <SectionHeader number={3} title="상세 통계" icon={Clock} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* 근무 일수 통계 */}
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <h4 className="font-semibold text-slate-800 mb-3">근무 일수</h4>
+              <div className="bg-at-surface-alt rounded-xl p-4 border border-at-border">
+                <h4 className="font-semibold text-at-text mb-3">근무 일수</h4>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">총 근무 예정일</span>
-                    <span className="font-semibold text-slate-800">{statistics.total_work_days}일</span>
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">총 근무 예정일</span>
+                    <span className="font-semibold text-at-text">{statistics.total_work_days}일</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">출근</span>
-                    <span className="font-semibold text-green-600">{statistics.present_days}일</span>
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">출근</span>
+                    <span className="font-semibold text-at-success">{statistics.present_days}일</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">결근</span>
-                    <span className="font-semibold text-red-600">{statistics.absent_days}일</span>
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">결근</span>
+                    <span className="font-semibold text-at-error">{statistics.absent_days}일</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">연차</span>
-                    <span className="font-semibold text-blue-600">{statistics.leave_days}일</span>
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">연차</span>
+                    <span className="font-semibold text-at-accent">{statistics.leave_days}일</span>
                   </div>
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-slate-600 text-sm">공휴일</span>
-                    <span className="font-semibold text-slate-600">{statistics.holiday_days}일</span>
+                    <span className="text-at-text-secondary text-sm">공휴일</span>
+                    <span className="font-semibold text-at-text-secondary">{statistics.holiday_days}일</span>
                   </div>
                 </div>
               </div>
 
               {/* 근태 현황 */}
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <h4 className="font-semibold text-slate-800 mb-3">근태 현황</h4>
+              <div className="bg-at-surface-alt rounded-xl p-4 border border-at-border">
+                <h4 className="font-semibold text-at-text mb-3">근태 현황</h4>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">지각 횟수</span>
-                    <span className="font-semibold text-yellow-600">{statistics.late_count}회</span>
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">지각 횟수</span>
+                    <span className="font-semibold text-at-warning">{statistics.late_count}회</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">총 지각 시간</span>
-                    <span className="font-semibold text-yellow-600">
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">총 지각 시간</span>
+                    <span className="font-semibold text-at-warning">
                       {formatMinutesToHours(statistics.total_late_minutes)}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">평균 지각 시간</span>
-                    <span className="font-semibold text-yellow-600">
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">평균 지각 시간</span>
+                    <span className="font-semibold text-at-warning">
                       {statistics.avg_late_minutes.toFixed(0)}분
                     </span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                    <span className="text-slate-600 text-sm">조퇴 횟수</span>
+                  <div className="flex justify-between items-center py-2 border-b border-at-border">
+                    <span className="text-at-text-secondary text-sm">조퇴 횟수</span>
                     <span className="font-semibold text-orange-600">{statistics.early_leave_count}회</span>
                   </div>
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-slate-600 text-sm">총 조퇴 시간</span>
+                    <span className="text-at-text-secondary text-sm">총 조퇴 시간</span>
                     <span className="font-semibold text-orange-600">
                       {formatMinutesToHours(statistics.total_early_leave_minutes)}
                     </span>
@@ -451,20 +451,20 @@ export default function AttendanceStats() {
 
           {/* 근무 시간 분석 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-slate-600 mb-1">총 근무 시간</p>
-              <p className="text-xl font-bold text-blue-600">
+            <div className="text-center p-4 bg-at-accent-light rounded-xl border border-at-border">
+              <p className="text-sm text-at-text-secondary mb-1">총 근무 시간</p>
+              <p className="text-xl font-bold text-at-accent">
                 {formatMinutesToHours(statistics.total_work_minutes)}
               </p>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-sm text-slate-600 mb-1">일평균 근무 시간</p>
-              <p className="text-xl font-bold text-green-600">
+            <div className="text-center p-4 bg-at-success-bg rounded-xl border border-green-200">
+              <p className="text-sm text-at-text-secondary mb-1">일평균 근무 시간</p>
+              <p className="text-xl font-bold text-at-success">
                 {formatMinutesToHours(statistics.avg_work_minutes_per_day)}
               </p>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-sm text-slate-600 mb-1">초과 근무 시간</p>
+            <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-200">
+              <p className="text-sm text-at-text-secondary mb-1">초과 근무 시간</p>
               <p className="text-xl font-bold text-purple-600">
                 {formatMinutesToHours(statistics.total_overtime_minutes)}
               </p>
@@ -472,25 +472,25 @@ export default function AttendanceStats() {
           </div>
 
           {/* 업데이트 정보 */}
-          <div className="text-sm text-slate-500 text-center">
+          <div className="text-sm text-at-text-weak text-center">
             마지막 업데이트: {new Date(statistics.last_calculated_at).toLocaleString('ko-KR')}
           </div>
         </>
       ) : (
-        <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-          <BarChart3 className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <p className="text-slate-600 mb-2">선택한 기간의 통계가 없습니다.</p>
-          <p className="text-sm text-slate-500">출퇴근 기록이 있으면 자동으로 통계가 생성됩니다.</p>
+        <div className="text-center py-12 bg-at-surface-alt rounded-xl border border-at-border">
+          <BarChart3 className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
+          <p className="text-at-text-secondary mb-2">선택한 기간의 통계가 없습니다.</p>
+          <p className="text-sm text-at-text-weak">출퇴근 기록이 있으면 자동으로 통계가 생성됩니다.</p>
         </div>
       )}
 
       {/* 안내 */}
-      <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+      <div className="p-4 bg-at-surface-alt rounded-xl border border-at-border">
         <div className="flex items-start space-x-2">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 text-at-accent flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-medium text-slate-600 mb-1">안내사항</p>
-            <ul className="text-xs text-slate-500 space-y-0.5 list-disc list-inside">
+            <p className="text-xs font-medium text-at-text-secondary mb-1">안내사항</p>
+            <ul className="text-xs text-at-text-weak space-y-0.5 list-disc list-inside">
               <li>통계는 매월 자동으로 계산되며, &apos;통계 새로고침&apos; 버튼으로 수동 업데이트할 수 있습니다.</li>
               <li>출근율 = (출근 일수 / 총 근무 예정일) × 100</li>
               <li>지각, 조퇴, 초과근무는 설정된 근무 스케줄 기준으로 계산됩니다.</li>

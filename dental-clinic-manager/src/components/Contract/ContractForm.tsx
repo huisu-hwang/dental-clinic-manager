@@ -213,20 +213,20 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       <h2 className="text-2xl font-bold mb-6">근로계약서 작성</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Employee Selection */}
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="bg-at-accent-light p-4 rounded-xl">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             직원 선택 <span className="text-red-500">*</span>
           </label>
           <select
             onChange={handleEmployeeSelect}
             value={selectedEmployee?.id || ''}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
           >
             <option value="">-- 직원을 선택하세요 --</option>
             {employees.map(employee => (
@@ -236,7 +236,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
             ))}
           </select>
           {selectedEmployee && (
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-at-text-secondary">
               선택된 직원의 정보가 자동으로 입력됩니다.
             </p>
           )}
@@ -244,43 +244,43 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
 
         {/* Employee Information (Auto-filled) */}
         {selectedEmployee && (
-          <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
+          <div className="border border-at-border p-4 rounded-xl bg-at-surface-alt">
             <h3 className="text-lg font-semibold mb-3">근로자 정보</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">성명</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">성명</label>
                 <input
                   type="text"
                   value={formData.employee_name || ''}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100"
+                  className="w-full px-3 py-2 border border-at-border rounded bg-at-surface-alt"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">주민등록번호</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">주민등록번호</label>
                 <input
                   type="text"
                   value={formatResidentNumber(formData.employee_resident_number || '')}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100"
+                  className="w-full px-3 py-2 border border-at-border rounded bg-at-surface-alt"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">전화번호</label>
                 <input
                   type="text"
                   value={formData.employee_phone || ''}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100"
+                  className="w-full px-3 py-2 border border-at-border rounded bg-at-surface-alt"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">주소</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">주소</label>
                 <input
                   type="text"
                   value={formData.employee_address || ''}
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100"
+                  className="w-full px-3 py-2 border border-at-border rounded bg-at-surface-alt"
                 />
               </div>
             </div>
@@ -288,18 +288,18 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         )}
 
         {/* Contract Period */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-at-border p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">근로 기간</h3>
           {selectedEmployee?.hire_date && formData.employment_period_start === selectedEmployee.hire_date && (
-            <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-sm text-green-700">
+            <div className="mb-3 p-2 bg-at-success-bg border border-green-200 rounded-md">
+              <p className="text-sm text-at-success">
                 직원의 입사일({selectedEmployee.hire_date})이 계약 시작일에 자동으로 입력되었습니다.
               </p>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 시작일 <span className="text-red-500">*</span>
               </label>
               <input
@@ -308,18 +308,18 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 value={formData.employment_period_start || ''}
                 onChange={handleInputChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">종료일</label>
               <input
                 type="date"
                 name="employment_period_end"
                 value={formData.employment_period_end || ''}
                 onChange={handleInputChange}
                 disabled={formData.is_permanent}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt"
               />
             </div>
           </div>
@@ -330,19 +330,19 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 name="is_permanent"
                 checked={formData.is_permanent || false}
                 onChange={handleInputChange}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-at-border text-at-accent focus:ring-at-accent"
               />
-              <span className="ml-2 text-sm text-gray-700">무기한 계약 (종료일 없음)</span>
+              <span className="ml-2 text-sm text-at-text-secondary">무기한 계약 (종료일 없음)</span>
             </label>
           </div>
         </div>
 
         {/* Salary Information */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-at-border p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">급여 정보</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 기본급 (월) <span className="text-red-500">*</span>
               </label>
               <input
@@ -353,11 +353,11 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 required
                 min="0"
                 step="10000"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">급여 지급일</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">급여 지급일</label>
               <input
                 type="number"
                 name="salary_payment_day"
@@ -365,7 +365,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 onChange={handleInputChange}
                 min="1"
                 max="31"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
             </div>
           </div>
@@ -373,7 +373,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
           {/* Allowances */}
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">식대</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">식대</label>
               <input
                 type="number"
                 name="allowance_meal"
@@ -381,11 +381,11 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 onChange={handleInputChange}
                 min="0"
                 step="10000"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">교통비</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">교통비</label>
               <input
                 type="number"
                 name="allowance_transport"
@@ -393,11 +393,11 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 onChange={handleInputChange}
                 min="0"
                 step="10000"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">기타 수당</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">기타 수당</label>
               <input
                 type="number"
                 name="allowance_other"
@@ -405,19 +405,19 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 onChange={handleInputChange}
                 min="0"
                 step="10000"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
             </div>
           </div>
         </div>
 
         {/* Work Schedule */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-at-border p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">근무 스케줄</h3>
           {selectedEmployee && formData.work_hours_detail ? (
             <>
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-800">
+              <div className="mb-4 p-3 bg-at-accent-light border border-at-border rounded-md">
+                <p className="text-sm text-at-accent">
                   <span className="font-semibold">{selectedEmployee.name}</span>님의 개인 근무 스케줄이 자동으로 반영되었습니다.
                   필요시 아래에서 수정할 수 있습니다.
                   (주 <span className="font-semibold">{formData.work_days_per_week || 0}일</span> 근무)
@@ -438,60 +438,60 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                   const daySchedule = formData.work_hours_detail?.[key]
                   const isWorking = daySchedule?.isWorking ?? false
                   return (
-                    <div key={key} className={`p-3 rounded-md border ${isWorking ? 'bg-white border-gray-300' : 'bg-gray-100 border-gray-200'}`}>
+                    <div key={key} className={`p-3 rounded-md border ${isWorking ? 'bg-white border-at-border' : 'bg-at-surface-alt border-at-border'}`}>
                       <div className="flex items-center justify-between mb-2">
                         <label className="flex items-center cursor-pointer">
                           <input
                             type="checkbox"
                             checked={isWorking}
                             onChange={(e) => handleDayWorkingToggle(key, e.target.checked)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                            className="rounded border-at-border text-at-accent focus:ring-at-accent mr-2"
                           />
-                          <span className={`font-medium ${isWorking ? 'text-gray-900' : 'text-gray-500'}`}>
+                          <span className={`font-medium ${isWorking ? 'text-at-text' : 'text-at-text-weak'}`}>
                             {label}
                           </span>
                         </label>
                         {!isWorking && (
-                          <span className="text-sm text-gray-500">휴무</span>
+                          <span className="text-sm text-at-text-weak">휴무</span>
                         )}
                       </div>
 
                       {isWorking && (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">시작</label>
+                            <label className="block text-xs text-at-text-secondary mb-1">시작</label>
                             <input
                               type="time"
                               value={daySchedule?.start || ''}
                               onChange={(e) => handleDayTimeChange(key, 'start', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">종료</label>
+                            <label className="block text-xs text-at-text-secondary mb-1">종료</label>
                             <input
                               type="time"
                               value={daySchedule?.end || ''}
                               onChange={(e) => handleDayTimeChange(key, 'end', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">휴게 시작</label>
+                            <label className="block text-xs text-at-text-secondary mb-1">휴게 시작</label>
                             <input
                               type="time"
                               value={daySchedule?.breakStart || ''}
                               onChange={(e) => handleDayTimeChange(key, 'breakStart', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-600 mb-1">휴게 종료</label>
+                            <label className="block text-xs text-at-text-secondary mb-1">휴게 종료</label>
                             <input
                               type="time"
                               value={daySchedule?.breakEnd || ''}
                               onChange={(e) => handleDayTimeChange(key, 'breakEnd', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
                             />
                           </div>
                         </div>
@@ -503,19 +503,19 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
 
               {/* 연차 휴가일수 */}
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">연차 휴가일수</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">연차 휴가일수</label>
                 <input
                   type="number"
                   name="annual_leave_days"
                   value={formData.annual_leave_days || 15}
                   onChange={handleInputChange}
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
                 />
               </div>
             </>
           ) : (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div className="p-4 bg-at-warning-bg border border-yellow-200 rounded-md">
               <p className="text-sm text-yellow-800">
                 직원을 선택하면 근무 스케줄이 자동으로 표시됩니다.
               </p>
@@ -524,7 +524,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         </div>
 
         {/* Social Insurance */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-at-border p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">4대보험 가입</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <label className="inline-flex items-center">
@@ -533,7 +533,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 name="social_insurance"
                 checked={formData.social_insurance || false}
                 onChange={handleInputChange}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-at-border text-at-accent focus:ring-at-accent"
               />
               <span className="ml-2 text-sm">국민연금</span>
             </label>
@@ -543,7 +543,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 name="health_insurance"
                 checked={formData.health_insurance || false}
                 onChange={handleInputChange}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-at-border text-at-accent focus:ring-at-accent"
               />
               <span className="ml-2 text-sm">건강보험</span>
             </label>
@@ -553,7 +553,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 name="employment_insurance"
                 checked={formData.employment_insurance || false}
                 onChange={handleInputChange}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-at-border text-at-accent focus:ring-at-accent"
               />
               <span className="ml-2 text-sm">고용보험</span>
             </label>
@@ -563,7 +563,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 name="pension_insurance"
                 checked={formData.pension_insurance || false}
                 onChange={handleInputChange}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-at-border text-at-accent focus:ring-at-accent"
               />
               <span className="ml-2 text-sm">산재보험</span>
             </label>
@@ -571,7 +571,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
         </div>
 
         {/* Additional Notes */}
-        <div className="border border-gray-200 p-4 rounded-lg">
+        <div className="border border-at-border p-4 rounded-xl">
           <h3 className="text-lg font-semibold mb-3">특약 사항</h3>
           <textarea
             name="special_terms"
@@ -579,7 +579,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
             onChange={handleInputChange}
             rows={4}
             placeholder="특별한 근로 조건이나 약정 사항을 입력하세요."
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
           />
         </div>
 
@@ -588,7 +588,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
           <button
             type="submit"
             disabled={loading || !selectedEmployee}
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            className="flex-1 px-6 py-3 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             {loading ? '생성 중...' : '근로계약서 생성'}
           </button>
@@ -597,7 +597,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-6 py-3 bg-white border border-at-border text-at-text-secondary rounded-xl hover:bg-at-surface-alt disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               취소
             </button>
@@ -606,7 +606,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       </form>
 
       {/* Info Notice */}
-      <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-2">
+      <div className="mt-6 p-4 bg-at-warning-bg border border-yellow-200 rounded-xl space-y-2">
         <p className="text-sm text-yellow-800">
           <span className="font-semibold">📝 안내:</span> 근로계약서 생성 후 원장과 근로자가 각각 서명해야 계약이 완료됩니다.
         </p>

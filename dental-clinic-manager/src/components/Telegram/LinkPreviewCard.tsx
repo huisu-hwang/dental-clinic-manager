@@ -48,7 +48,7 @@ export default function LinkPreviewCard({ url }: LinkPreviewCardProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-400">
+      <div className="flex items-center gap-2 p-3 bg-at-surface-alt rounded-xl text-xs text-at-text-weak">
         <Loader2 className="w-3 h-3 animate-spin" />
         링크 미리보기 로딩 중...
       </div>
@@ -64,12 +64,11 @@ export default function LinkPreviewCard({ url }: LinkPreviewCardProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors group"
+      className="block border border-at-border rounded-xl overflow-hidden hover:border-at-border transition-colors group"
     >
       <div className="flex">
-        {/* OG 이미지 */}
         {preview.image && (
-          <div className="w-32 h-24 flex-shrink-0 bg-gray-100">
+          <div className="w-32 h-24 flex-shrink-0 bg-at-surface-alt">
             <img
               src={preview.image}
               alt=""
@@ -81,19 +80,18 @@ export default function LinkPreviewCard({ url }: LinkPreviewCardProps) {
           </div>
         )}
 
-        {/* 텍스트 내용 */}
         <div className="flex-1 p-3 min-w-0">
           <div className="flex items-center gap-1 mb-1">
-            <span className="text-xs text-gray-400 truncate">{preview.siteName || new URL(url).hostname}</span>
-            <ExternalLink className="w-3 h-3 text-gray-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <span className="text-xs text-at-text-weak truncate">{preview.siteName || new URL(url).hostname}</span>
+            <ExternalLink className="w-3 h-3 text-at-text-weak flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           {preview.title && (
-            <p className="text-sm font-medium text-gray-900 line-clamp-1 mb-0.5">
+            <p className="text-sm font-medium text-at-text line-clamp-1 mb-0.5">
               {preview.title}
             </p>
           )}
           {preview.description && (
-            <p className="text-xs text-gray-500 line-clamp-2">
+            <p className="text-xs text-at-text-secondary line-clamp-2">
               {preview.description}
             </p>
           )}

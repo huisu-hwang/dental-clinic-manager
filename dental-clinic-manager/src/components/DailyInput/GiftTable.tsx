@@ -132,28 +132,28 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
   return (
     <div>
       {/* 데스크탑: 테이블 형식 */}
-      <div className="hidden sm:block overflow-x-auto border border-slate-200 rounded-lg">
+      <div className="hidden sm:block overflow-x-auto border border-at-border rounded-xl">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">환자명</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">선물 종류</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">수량</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">재고</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">리뷰</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">비고</th>
+            <tr className="bg-at-surface-alt border-b border-at-border">
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">환자명</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">선물 종류</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider w-20">수량</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider w-20">재고</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider w-28">리뷰</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">비고</th>
               <th className="px-4 py-3 w-12"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-at-border">
             {giftRows.map((row, index) => {
               const category = getCategoryForGift(row.gift_type)
               return (
-                <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={index} className="hover:bg-at-surface-hover transition-colors">
                   <td className="px-4 py-2">
                     <input
                       type="text"
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                       placeholder="홍길동"
                       value={row.patient_name}
                       onChange={(e) => updateRow(index, 'patient_name', e.target.value)}
@@ -163,7 +163,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                   <td className="px-4 py-2">
                     <div className="flex flex-col gap-1">
                       <select
-                        className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                        className="w-full px-3 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white appearance-none cursor-pointer"
                         style={{
                           backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                           backgroundPosition: 'right 0.5rem center',
@@ -209,7 +209,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       type="number"
                       min="1"
                       max="99"
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+                      className="w-full px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent text-center"
                       value={row.quantity || 1}
                       onChange={(e) => {
                         const newQuantity = parseInt(e.target.value, 10) || 1
@@ -221,7 +221,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                   </td>
                   <td className="px-2 py-2 text-center">
                     {(() => {
-                      if (row.gift_type === '없음') return <span className="text-slate-400">-</span>
+                      if (row.gift_type === '없음') return <span className="text-at-text-weak">-</span>
                       const gift = giftInventory.find(item => item.name === row.gift_type)
                       const totalStock = gift?.stock || 0
                       const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
@@ -236,7 +236,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       const remaining = actualStock - usedByPriorRows - (row.quantity || 1)
                       const displayRemaining = remaining >= 0 ? remaining : 0
                       return (
-                        <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-slate-700'}`}>
+                        <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-at-text-secondary'}`}>
                           {displayRemaining}
                         </span>
                       )
@@ -244,7 +244,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                   </td>
                   <td className="px-4 py-2">
                     <select
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                      className="w-full px-3 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white appearance-none cursor-pointer"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                       value={row.naver_review}
                       onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
@@ -257,7 +257,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                   <td className="px-4 py-2">
                     <input
                       type="text"
-                      className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                       placeholder="비고"
                       value={row.notes}
                       onChange={(e) => updateRow(index, 'notes', e.target.value)}
@@ -266,7 +266,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                   </td>
                   <td className="px-4 py-2 text-center">
                     <button
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1.5 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => removeRow(index)}
                       disabled={isReadOnly}
                       title="삭제"
@@ -286,11 +286,11 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
         {giftRows.map((row, index) => {
           const category = getCategoryForGift(row.gift_type)
           return (
-            <div key={index} className="border border-slate-200 rounded-lg p-3 bg-white">
+            <div key={index} className="border border-at-border rounded-xl p-3 bg-white">
               <div className="flex justify-between items-start mb-3">
-                <span className="text-xs font-medium text-slate-500">#{index + 1}</span>
+                <span className="text-xs font-medium text-at-text-weak">#{index + 1}</span>
                 <button
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1.5 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => removeRow(index)}
                   disabled={isReadOnly}
                   title="삭제"
@@ -300,10 +300,10 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">환자명</label>
+                  <label className="block text-xs font-medium text-at-text-secondary mb-1">환자명</label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                     placeholder="홍길동"
                     value={row.patient_name}
                     onChange={(e) => updateRow(index, 'patient_name', e.target.value)}
@@ -312,9 +312,9 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">선물 종류</label>
+                    <label className="block text-xs font-medium text-at-text-secondary mb-1">선물 종류</label>
                     <select
-                      className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                      className="w-full px-3 py-2 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white appearance-none cursor-pointer"
                       style={{
                         backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                         backgroundPosition: 'right 0.5rem center',
@@ -355,12 +355,12 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">수량</label>
+                    <label className="block text-xs font-medium text-at-text-secondary mb-1">수량</label>
                     <input
                       type="number"
                       min="1"
                       max="99"
-                      className="w-full px-2 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
+                      className="w-full px-2 py-2 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent text-center"
                       value={row.quantity || 1}
                       onChange={(e) => {
                         const newQuantity = parseInt(e.target.value, 10) || 1
@@ -371,10 +371,10 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">재고</label>
-                    <div className="px-2 py-2 border border-slate-200 rounded-md text-sm bg-slate-50 text-center">
+                    <label className="block text-xs font-medium text-at-text-secondary mb-1">재고</label>
+                    <div className="px-2 py-2 border border-at-border rounded-lg text-sm bg-at-surface-alt text-center">
                       {(() => {
-                        if (row.gift_type === '없음') return <span className="text-slate-400">-</span>
+                        if (row.gift_type === '없음') return <span className="text-at-text-weak">-</span>
                         const gift = giftInventory.find(item => item.name === row.gift_type)
                         const totalStock = gift?.stock || 0
                         const totalSavedUsage = baseUsageByGift[row.gift_type] || 0
@@ -389,7 +389,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                         const remaining = actualStock - usedByPriorRows - (row.quantity || 1)
                         const displayRemaining = remaining >= 0 ? remaining : 0
                         return (
-                          <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-slate-700'}`}>
+                          <span className={`font-medium ${displayRemaining <= 0 ? 'text-red-500' : displayRemaining <= 3 ? 'text-amber-500' : 'text-at-text-secondary'}`}>
                             {displayRemaining}
                           </span>
                         )
@@ -399,9 +399,9 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">리뷰</label>
+                    <label className="block text-xs font-medium text-at-text-secondary mb-1">리뷰</label>
                     <select
-                      className="w-full px-2 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                      className="w-full px-2 py-2 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white appearance-none cursor-pointer"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.25rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25em 1.25em', paddingRight: '1.5rem' }}
                       value={row.naver_review}
                       onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
@@ -412,10 +412,10 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">비고</label>
+                    <label className="block text-xs font-medium text-at-text-secondary mb-1">비고</label>
                     <input
                       type="text"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                       placeholder="비고"
                       value={row.notes}
                       onChange={(e) => updateRow(index, 'notes', e.target.value)}
@@ -431,7 +431,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
 
       <button
         onClick={addRow}
-        className="mt-3 inline-flex items-center px-3 py-2 sm:py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center sm:justify-start"
+        className="mt-3 inline-flex items-center px-3 py-2 sm:py-1.5 text-sm font-medium text-at-accent hover:text-at-accent hover:bg-at-accent-light rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center sm:justify-start"
         disabled={isReadOnly}
       >
         <Plus className="w-4 h-4 mr-1" />

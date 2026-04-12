@@ -575,22 +575,22 @@ export default function EnhancedTiptapEditor({
         Table.configure({
           resizable: true,
           HTMLAttributes: {
-            class: 'protocol-table border-collapse border border-slate-300'
+            class: 'protocol-table border-collapse border border-at-border'
           }
         }),
         TableRow.configure({
           HTMLAttributes: {
-            class: 'border border-slate-300'
+            class: 'border border-at-border'
           }
         }),
         TableHeader.configure({
           HTMLAttributes: {
-            class: 'border border-slate-300 bg-slate-100 p-2 font-bold text-left'
+            class: 'border border-at-border bg-at-surface-alt p-2 font-bold text-left'
           }
         }),
         TableCell.configure({
           HTMLAttributes: {
-            class: 'border border-slate-300 p-2'
+            class: 'border border-at-border p-2'
           }
         }),
       ] : []),
@@ -805,8 +805,8 @@ export default function EnhancedTiptapEditor({
   const addWarningBox = useCallback(() => {
     if (!editor) return
     editor.chain().focus().insertContent(
-      '<div class="warning-box bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4">' +
-      '<p class="flex items-start"><span class="text-yellow-600 font-bold mr-2">⚠️ 주의:</span>' +
+      '<div class="warning-box bg-at-warning-bg border-l-4 border-yellow-400 p-4 my-4">' +
+      '<p class="flex items-start"><span class="text-at-warning font-bold mr-2">⚠️ 주의:</span>' +
       '<span>여기에 주의사항을 입력하세요.</span></p></div>'
     ).run()
   }, [editor])
@@ -817,23 +817,23 @@ export default function EnhancedTiptapEditor({
 
   if (!editable) {
     return (
-      <div className="border border-slate-200 rounded-lg bg-white">
+      <div className="border border-at-border rounded-lg bg-white">
         <EditorContent editor={editor} />
       </div>
     )
   }
 
   return (
-    <div className="border border-slate-300 rounded-lg bg-white" {...getRootProps()}>
+    <div className="border border-at-border rounded-lg bg-white" {...getRootProps()}>
       {/* 툴바 */}
-      <div className="border-b border-slate-300 bg-slate-50 p-3 flex flex-wrap gap-1 sticky top-0 z-10">
+      <div className="border-b border-at-border bg-at-surface-alt p-3 flex flex-wrap gap-1 sticky top-0 z-10">
         {/* 텍스트 서식 */}
         <div className="flex gap-1">
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-2 rounded hover:bg-slate-200 transition-colors ${
-              editor.isActive('bold') ? 'bg-slate-300' : ''
+            className={`p-2 rounded hover:bg-at-border transition-colors ${
+              editor.isActive('bold') ? 'bg-at-border' : ''
             }`}
             title="굵게"
           >
@@ -842,8 +842,8 @@ export default function EnhancedTiptapEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-2 rounded hover:bg-slate-200 transition-colors ${
-              editor.isActive('italic') ? 'bg-slate-300' : ''
+            className={`p-2 rounded hover:bg-at-border transition-colors ${
+              editor.isActive('italic') ? 'bg-at-border' : ''
             }`}
             title="기울임"
           >
@@ -852,8 +852,8 @@ export default function EnhancedTiptapEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleCode().run()}
-            className={`p-2 rounded hover:bg-slate-200 transition-colors ${
-              editor.isActive('code') ? 'bg-slate-300' : ''
+            className={`p-2 rounded hover:bg-at-border transition-colors ${
+              editor.isActive('code') ? 'bg-at-border' : ''
             }`}
             title="코드"
           >
@@ -861,14 +861,14 @@ export default function EnhancedTiptapEditor({
           </button>
         </div>
 
-        <div className="w-px h-8 bg-slate-300" />
+        <div className="w-px h-8 bg-at-border" />
 
         {/* 텍스트 색상 */}
         <div className="relative flex gap-1">
           <button
             type="button"
             onClick={() => { setShowColorPicker(!showColorPicker); setShowLineHeightPicker(false) }}
-            className="p-2 rounded hover:bg-slate-200 transition-colors relative"
+            className="p-2 rounded hover:bg-at-border transition-colors relative"
             title="글자 색"
           >
             <span className="text-sm font-bold">A</span>
@@ -879,8 +879,8 @@ export default function EnhancedTiptapEditor({
           </button>
 
           {showColorPicker && (
-            <div className="absolute top-12 left-0 bg-white border border-slate-300 rounded-lg shadow-lg p-3 z-20 min-w-[200px]">
-              <div className="text-xs text-slate-600 mb-2 font-medium">기본 색상</div>
+            <div className="absolute top-12 left-0 bg-white border border-at-border rounded-lg shadow-lg p-3 z-20 min-w-[200px]">
+              <div className="text-xs text-at-text-secondary mb-2 font-medium">기본 색상</div>
               <div className="flex gap-2 mb-3">
                 {[
                   { color: '#000000', name: '검정' },
@@ -897,16 +897,16 @@ export default function EnhancedTiptapEditor({
                       editor.chain().focus().setColor(color).run()
                       setShowColorPicker(false)
                     }}
-                    className="w-8 h-8 rounded border-2 border-slate-300 hover:scale-110 hover:border-slate-500 transition-all"
+                    className="w-8 h-8 rounded border-2 border-at-border hover:scale-110 hover:border-slate-500 transition-all"
                     style={{ backgroundColor: color }}
                     title={name}
                   />
                 ))}
               </div>
 
-              <div className="border-t border-slate-200 pt-3 mt-3">
+              <div className="border-t border-at-border pt-3 mt-3">
                 <label
-                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded transition-colors"
+                  className="flex items-center gap-2 cursor-pointer hover:bg-at-surface-alt p-2 rounded transition-colors"
                   onMouseDown={(e) => e.preventDefault()} // 에디터 focus 유지
                 >
                   <input
@@ -915,9 +915,9 @@ export default function EnhancedTiptapEditor({
                       editor.chain().focus().setColor(e.target.value).run()
                       setShowColorPicker(false)
                     }}
-                    className="w-8 h-8 rounded border border-slate-300 cursor-pointer"
+                    className="w-8 h-8 rounded border border-at-border cursor-pointer"
                   />
-                  <span className="text-sm text-slate-700">사용자 정의 색상</span>
+                  <span className="text-sm text-at-text-secondary">사용자 정의 색상</span>
                 </label>
               </div>
 
@@ -928,7 +928,7 @@ export default function EnhancedTiptapEditor({
                   editor.chain().focus().unsetColor().run()
                   setShowColorPicker(false)
                 }}
-                className="w-full mt-3 px-2 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+                className="w-full mt-3 px-2 py-2 text-sm bg-at-surface-alt hover:bg-at-border rounded transition-colors"
               >
                 기본 색상으로 재설정
               </button>
@@ -941,7 +941,7 @@ export default function EnhancedTiptapEditor({
           <button
             type="button"
             onClick={() => { setShowLineHeightPicker(!showLineHeightPicker); setShowColorPicker(false) }}
-            className="p-2 rounded hover:bg-slate-200 transition-colors flex items-center gap-1"
+            className="p-2 rounded hover:bg-at-border transition-colors flex items-center gap-1"
             title="줄간격"
           >
             <Bars3Icon className="h-4 w-4" />
@@ -949,8 +949,8 @@ export default function EnhancedTiptapEditor({
           </button>
 
           {showLineHeightPicker && (
-            <div className="absolute top-12 left-0 bg-white border border-slate-300 rounded-lg shadow-lg p-3 z-20 min-w-[140px]">
-              <div className="text-xs text-slate-600 mb-2 font-medium">줄간격</div>
+            <div className="absolute top-12 left-0 bg-white border border-at-border rounded-lg shadow-lg p-3 z-20 min-w-[140px]">
+              <div className="text-xs text-at-text-secondary mb-2 font-medium">줄간격</div>
               <div className="flex flex-col gap-1">
                 {[
                   { value: '1', label: '1.0 (좁게)' },
@@ -968,7 +968,7 @@ export default function EnhancedTiptapEditor({
                       editor.chain().focus().setLineHeight(value).run()
                       setShowLineHeightPicker(false)
                     }}
-                    className="px-3 py-2 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+                    className="px-3 py-2 text-sm text-left hover:bg-at-surface-alt rounded transition-colors"
                   >
                     {label}
                   </button>
@@ -981,7 +981,7 @@ export default function EnhancedTiptapEditor({
                   editor.chain().focus().unsetLineHeight().run()
                   setShowLineHeightPicker(false)
                 }}
-                className="w-full mt-3 px-2 py-2 text-sm bg-slate-100 hover:bg-slate-200 rounded transition-colors"
+                className="w-full mt-3 px-2 py-2 text-sm bg-at-surface-alt hover:bg-at-border rounded transition-colors"
               >
                 기본값으로 재설정
               </button>
@@ -989,7 +989,7 @@ export default function EnhancedTiptapEditor({
           )}
         </div>
 
-        <div className="w-px h-8 bg-slate-300" />
+        <div className="w-px h-8 bg-at-border" />
 
         {/* 제목 */}
         <div className="flex gap-1">
@@ -1005,8 +1005,8 @@ export default function EnhancedTiptapEditor({
                   editor.chain().focus().setHeading({ level: level as 1 | 2 | 3 }).run()
                 }
               }}
-              className={`px-3 py-2 rounded hover:bg-slate-200 text-sm font-semibold transition-colors ${
-                editor.isActive('heading', { level }) ? 'bg-slate-300' : ''
+              className={`px-3 py-2 rounded hover:bg-at-border text-sm font-semibold transition-colors ${
+                editor.isActive('heading', { level }) ? 'bg-at-border' : ''
               }`}
               title={`제목 ${level}`}
             >
@@ -1015,15 +1015,15 @@ export default function EnhancedTiptapEditor({
           ))}
         </div>
 
-        <div className="w-px h-8 bg-slate-300" />
+        <div className="w-px h-8 bg-at-border" />
 
         {/* 리스트 */}
         <div className="flex gap-1">
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-2 rounded hover:bg-slate-200 transition-colors ${
-              editor.isActive('bulletList') ? 'bg-slate-300' : ''
+            className={`p-2 rounded hover:bg-at-border transition-colors ${
+              editor.isActive('bulletList') ? 'bg-at-border' : ''
             }`}
             title="글머리 기호"
           >
@@ -1032,8 +1032,8 @@ export default function EnhancedTiptapEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`p-2 rounded hover:bg-slate-200 transition-colors ${
-              editor.isActive('orderedList') ? 'bg-slate-300' : ''
+            className={`p-2 rounded hover:bg-at-border transition-colors ${
+              editor.isActive('orderedList') ? 'bg-at-border' : ''
             }`}
             title="번호 매기기"
           >
@@ -1042,8 +1042,8 @@ export default function EnhancedTiptapEditor({
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleTaskList().run()}
-            className={`p-2 rounded hover:bg-slate-200 transition-colors ${
-              editor.isActive('taskList') ? 'bg-slate-300' : ''
+            className={`p-2 rounded hover:bg-at-border transition-colors ${
+              editor.isActive('taskList') ? 'bg-at-border' : ''
             }`}
             title="체크리스트"
           >
@@ -1051,24 +1051,24 @@ export default function EnhancedTiptapEditor({
           </button>
         </div>
 
-        <div className="w-px h-8 bg-slate-300" />
+        <div className="w-px h-8 bg-at-border" />
 
         {/* 미디어 삽입 */}
         <div className="flex gap-1 items-center">
-          <label className="p-2 rounded hover:bg-slate-200 cursor-pointer transition-colors flex items-center justify-center" title="이미지 삽입">
+          <label className="p-2 rounded hover:bg-at-border cursor-pointer transition-colors flex items-center justify-center" title="이미지 삽입">
             <PhotoIcon className="h-4 w-4" />
             <input {...getInputProps()} className="hidden" />
           </label>
           <button
             type="button"
             onClick={addYoutubeVideo}
-            className="p-2 rounded hover:bg-slate-200 transition-colors"
+            className="p-2 rounded hover:bg-at-border transition-colors"
             title="YouTube 동영상"
           >
             <VideoCameraIcon className="h-4 w-4" />
           </button>
           {enableVideoUpload && (
-            <label className={`p-2 rounded hover:bg-slate-200 cursor-pointer transition-colors flex items-center justify-center ${videoUploading ? 'opacity-50 pointer-events-none' : ''}`} title="동영상 파일 업로드">
+            <label className={`p-2 rounded hover:bg-at-border cursor-pointer transition-colors flex items-center justify-center ${videoUploading ? 'opacity-50 pointer-events-none' : ''}`} title="동영상 파일 업로드">
               <FilmIcon className="h-4 w-4" />
               <input
                 type="file"
@@ -1086,7 +1086,7 @@ export default function EnhancedTiptapEditor({
             <button
               type="button"
               onClick={addTable}
-              className="p-2 rounded hover:bg-slate-200 transition-colors"
+              className="p-2 rounded hover:bg-at-border transition-colors"
               title="표 삽입"
             >
               <TableCellsIcon className="h-4 w-4" />
@@ -1095,14 +1095,14 @@ export default function EnhancedTiptapEditor({
           <button
             type="button"
             onClick={addWarningBox}
-            className="p-2 rounded hover:bg-slate-200 transition-colors"
+            className="p-2 rounded hover:bg-at-border transition-colors"
             title="주의사항 박스"
           >
             <ExclamationTriangleIcon className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="w-px h-8 bg-slate-300" />
+        <div className="w-px h-8 bg-at-border" />
 
         {/* 실행취소/다시실행 */}
         <div className="flex gap-1">
@@ -1110,7 +1110,7 @@ export default function EnhancedTiptapEditor({
             type="button"
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
-            className="p-2 rounded hover:bg-slate-200 disabled:opacity-50 transition-colors"
+            className="p-2 rounded hover:bg-at-border disabled:opacity-50 transition-colors"
             title="실행취소"
           >
             <ArrowUturnLeftIcon className="h-4 w-4" />
@@ -1119,7 +1119,7 @@ export default function EnhancedTiptapEditor({
             type="button"
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
-            className="p-2 rounded hover:bg-slate-200 disabled:opacity-50 transition-colors"
+            className="p-2 rounded hover:bg-at-border disabled:opacity-50 transition-colors"
             title="다시실행"
           >
             <ArrowUturnRightIcon className="h-4 w-4" />
@@ -1129,7 +1129,7 @@ export default function EnhancedTiptapEditor({
 
       {/* 에디터 본문 */}
       <div
-        className={`relative ${isDragActive ? 'bg-blue-50' : ''}`}
+        className={`relative ${isDragActive ? 'bg-at-accent-light' : ''}`}
         onContextMenu={(e) => {
           if (enableTable && editor.isActive('table')) {
             e.preventDefault()
@@ -1139,10 +1139,10 @@ export default function EnhancedTiptapEditor({
       >
         <EditorContent editor={editor} />
         {isDragActive && (
-          <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-50 pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center bg-at-tag bg-opacity-50 pointer-events-none">
             <div className="bg-white p-4 rounded-lg shadow-lg">
-              <PhotoIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-blue-600 font-medium">{enableVideoUpload ? '이미지/동영상을 여기에 드롭하세요' : '이미지를 여기에 드롭하세요'}</p>
+              <PhotoIcon className="h-8 w-8 text-at-accent mx-auto mb-2" />
+              <p className="text-at-accent font-medium">{enableVideoUpload ? '이미지/동영상을 여기에 드롭하세요' : '이미지를 여기에 드롭하세요'}</p>
             </div>
           </div>
         )}
@@ -1157,19 +1157,19 @@ export default function EnhancedTiptapEditor({
             onContextMenu={(e) => { e.preventDefault(); setTableContextMenu(null) }}
           />
           <div
-            className="fixed bg-white border border-slate-300 rounded-lg shadow-xl p-1.5 z-50 min-w-[180px]"
+            className="fixed bg-white border border-at-border rounded-lg shadow-xl p-1.5 z-50 min-w-[180px]"
             style={{ left: tableContextMenu.x, top: tableContextMenu.y }}
           >
-            <div className="text-xs text-slate-400 px-3 py-1 font-medium">행</div>
+            <div className="text-xs text-at-text-weak px-3 py-1 font-medium">행</div>
             <button
               type="button"
               onClick={() => {
                 editor.chain().focus().addRowBefore().run()
                 setTableContextMenu(null)
               }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-at-surface-alt rounded transition-colors"
             >
-              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              <PlusIcon className="h-3.5 w-3.5 text-at-text-weak" />
               위에 행 추가
             </button>
             <button
@@ -1178,9 +1178,9 @@ export default function EnhancedTiptapEditor({
                 editor.chain().focus().addRowAfter().run()
                 setTableContextMenu(null)
               }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-at-surface-alt rounded transition-colors"
             >
-              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              <PlusIcon className="h-3.5 w-3.5 text-at-text-weak" />
               아래에 행 추가
             </button>
             <button
@@ -1189,24 +1189,24 @@ export default function EnhancedTiptapEditor({
                 editor.chain().focus().deleteRow().run()
                 setTableContextMenu(null)
               }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-at-error-bg text-at-error rounded transition-colors"
             >
               <MinusIcon className="h-3.5 w-3.5" />
               행 삭제
             </button>
 
-            <div className="border-t border-slate-200 my-1" />
+            <div className="border-t border-at-border my-1" />
 
-            <div className="text-xs text-slate-400 px-3 py-1 font-medium">열</div>
+            <div className="text-xs text-at-text-weak px-3 py-1 font-medium">열</div>
             <button
               type="button"
               onClick={() => {
                 editor.chain().focus().addColumnBefore().run()
                 setTableContextMenu(null)
               }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-at-surface-alt rounded transition-colors"
             >
-              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              <PlusIcon className="h-3.5 w-3.5 text-at-text-weak" />
               왼쪽에 열 추가
             </button>
             <button
@@ -1215,9 +1215,9 @@ export default function EnhancedTiptapEditor({
                 editor.chain().focus().addColumnAfter().run()
                 setTableContextMenu(null)
               }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-slate-100 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-at-surface-alt rounded transition-colors"
             >
-              <PlusIcon className="h-3.5 w-3.5 text-slate-500" />
+              <PlusIcon className="h-3.5 w-3.5 text-at-text-weak" />
               오른쪽에 열 추가
             </button>
             <button
@@ -1226,13 +1226,13 @@ export default function EnhancedTiptapEditor({
                 editor.chain().focus().deleteColumn().run()
                 setTableContextMenu(null)
               }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-at-error-bg text-at-error rounded transition-colors"
             >
               <MinusIcon className="h-3.5 w-3.5" />
               열 삭제
             </button>
 
-            <div className="border-t border-slate-200 my-1" />
+            <div className="border-t border-at-border my-1" />
 
             <button
               type="button"
@@ -1240,7 +1240,7 @@ export default function EnhancedTiptapEditor({
                 editor.chain().focus().deleteTable().run()
                 setTableContextMenu(null)
               }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-red-50 text-red-600 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left hover:bg-at-error-bg text-at-error rounded transition-colors"
             >
               <TrashIcon className="h-3.5 w-3.5" />
               표 삭제

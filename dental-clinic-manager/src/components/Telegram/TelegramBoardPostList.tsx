@@ -404,8 +404,8 @@ export default function TelegramBoardPostList({
                 onClick={() => handleCategoryChange('all')}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                   activeCategory === 'all'
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    ? 'bg-at-text text-white'
+                    : 'bg-at-surface-alt text-at-text-weak hover:bg-at-surface-hover'
                 }`}
               >
                 전체
@@ -420,7 +420,7 @@ export default function TelegramBoardPostList({
                     className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                       isActive
                         ? `${colorClasses.bg} ${colorClasses.text} ring-1 ring-current`
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        : 'bg-at-surface-alt text-at-text-weak hover:bg-at-surface-hover'
                     }`}
                   >
                     {cat.name}
@@ -436,14 +436,14 @@ export default function TelegramBoardPostList({
                 <button
                   onClick={handleClassifyAll}
                   disabled={classifyingAll}
-                  className="p-1.5 text-gray-400 hover:text-purple-600 transition-colors"
+                  className="p-1.5 text-at-text-weak hover:text-purple-600 transition-colors"
                   title="미분류 글 AI 자동 분류"
                 >
                   {classifyingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={() => setShowCategoryManager(true)}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="p-1.5 text-at-text-weak hover:text-at-text-secondary transition-colors"
                   title="카테고리 관리"
                 >
                   <Settings2 className="w-4 h-4" />
@@ -465,8 +465,8 @@ export default function TelegramBoardPostList({
                   onClick={() => handleFilterChange(activeFilter === f.key ? 'all' : f.key)}
                   className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors inline-flex items-center gap-0.5 ${
                     activeFilter === f.key
-                      ? 'bg-sky-100 text-sky-700'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      ? 'bg-at-tag text-at-accent'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                   }`}
                 >
                   {Icon && <Icon className="w-3 h-3" />}
@@ -476,13 +476,13 @@ export default function TelegramBoardPostList({
             })}
             {currentUserId && (
               <>
-                <span className="w-px h-4 bg-gray-200 mx-0.5" />
+                <span className="w-px h-4 bg-at-border mx-0.5" />
                 <button
                   onClick={() => handleFilterChange(activeFilter === 'my_likes' ? 'all' : 'my_likes')}
                   className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors inline-flex items-center gap-0.5 ${
                     activeFilter === 'my_likes'
-                      ? 'bg-red-100 text-red-700'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      ? 'bg-at-error-bg text-at-error'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                   }`}
                 >
                   <Heart className="w-3 h-3" />좋아요
@@ -492,7 +492,7 @@ export default function TelegramBoardPostList({
                   className={`px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-colors inline-flex items-center gap-0.5 ${
                     activeFilter === 'my_scraps'
                       ? 'bg-yellow-100 text-yellow-700'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                   }`}
                 >
                   <Bookmark className="w-3 h-3" />스크랩
@@ -506,7 +506,7 @@ export default function TelegramBoardPostList({
                 variant="outline"
                 size="sm"
                 onClick={handleToggleSelectMode}
-                className="text-gray-500"
+                className="text-at-text-secondary"
               >
                 <CheckSquare className="w-4 h-4 sm:mr-1" />
                 <span className="hidden sm:inline">선택 삭제</span>
@@ -525,12 +525,12 @@ export default function TelegramBoardPostList({
                 {writeMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setWriteMenuOpen(false)} />
-                    <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
+                    <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-at-border rounded-xl shadow-at-card z-20 overflow-hidden">
                       <button
                         onClick={() => { handleOpenCreate(); setWriteMenuOpen(false) }}
-                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full px-3 py-2.5 text-left text-sm hover:bg-at-surface-hover flex items-center gap-2"
                       >
-                        <PenLine className="w-4 h-4 text-gray-500" />일반 글쓰기
+                        <PenLine className="w-4 h-4 text-at-text-secondary" />일반 글쓰기
                       </button>
                       <button
                         onClick={() => { setVoteFormMode(true); setWriteMenuOpen(false) }}
@@ -548,15 +548,15 @@ export default function TelegramBoardPostList({
 
         {/* 액션 바: canBulkManage는 선택 항목 있을 때, 일반 사용자는 selectMode일 때 */}
         {showActionBar && (
-          <div className="flex items-center justify-between bg-sky-50 border border-sky-200 rounded-lg px-4 py-2">
+          <div className="flex items-center justify-between bg-at-tag border border-at-border rounded-xl px-4 py-2">
             <div className="flex items-center gap-3">
               <button
                 onClick={handleSelectAll}
-                className="text-xs font-medium text-sky-700 hover:text-sky-900"
+                className="text-xs font-medium text-at-accent hover:text-at-accent"
               >
                 {allSelected ? '전체 해제' : '전체 선택'}
               </button>
-              <span className="text-xs text-sky-600">
+              <span className="text-xs text-at-text-secondary">
                 {selectedIds.size}개 선택됨
               </span>
             </div>
@@ -582,16 +582,16 @@ export default function TelegramBoardPostList({
                   {moveMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setMoveMenuOpen(false)} />
-                      <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
+                      <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-at-border rounded-xl shadow-at-card z-20 overflow-hidden">
                         {MOVE_TARGET_OPTIONS.map(opt => {
                           const Icon = opt.icon
                           return (
                             <button
                               key={opt.key}
                               onClick={() => handleBulkMove(opt.key)}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-at-surface-hover flex items-center gap-2"
                             >
-                              {Icon && <Icon className="w-3.5 h-3.5 text-gray-500" />}
+                              {Icon && <Icon className="w-3.5 h-3.5 text-at-text-secondary" />}
                               {opt.label}
                             </button>
                           )
@@ -619,7 +619,7 @@ export default function TelegramBoardPostList({
                   size="sm"
                   variant="ghost"
                   onClick={handleToggleSelectMode}
-                  className="text-xs text-gray-500"
+                  className="text-xs text-at-text-secondary"
                 >
                   <X className="w-3.5 h-3.5 mr-0.5" />취소
                 </Button>
@@ -630,7 +630,7 @@ export default function TelegramBoardPostList({
                   size="sm"
                   variant="ghost"
                   onClick={() => setSelectedIds(new Set())}
-                  className="text-xs text-gray-500"
+                  className="text-xs text-at-text-secondary"
                 >
                   <X className="w-3.5 h-3.5 mr-0.5" />선택 해제
                 </Button>
@@ -641,7 +641,7 @@ export default function TelegramBoardPostList({
 
         {/* 검색바 */}
         <form onSubmit={handleSearch} className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
           <Input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -654,26 +654,26 @@ export default function TelegramBoardPostList({
       {/* 게시글 목록 */}
       {!loading && (
         <div className="flex items-center justify-between mb-2 px-1">
-          <span className="text-xs text-gray-400">총 {total}건</span>
+          <span className="text-xs text-at-text-weak">총 {total}건</span>
         </div>
       )}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden shadow-at-card">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-at-accent" />
           </div>
         ) : posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-            <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mb-4">
-              <Inbox className="w-8 h-8 text-sky-300" />
+          <div className="flex flex-col items-center justify-center py-16 text-at-text-weak">
+            <div className="w-16 h-16 bg-at-surface-alt rounded-full flex items-center justify-center mb-4">
+              <Inbox className="w-8 h-8 text-at-text-weak" />
             </div>
-            <p className="font-medium text-gray-600 mb-1">게시글이 없습니다</p>
-            <p className="text-sm text-gray-400">새로운 글이 작성되면 여기에 표시됩니다.</p>
+            <p className="font-medium text-at-text-secondary mb-1">게시글이 없습니다</p>
+            <p className="text-sm text-at-text-weak">새로운 글이 작성되면 여기에 표시됩니다.</p>
           </div>
         ) : (
           <>
             {/* 테이블 헤더 */}
-            <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+            <div className="flex items-center px-4 py-2 border-b border-at-border bg-at-surface-alt text-xs font-medium text-at-text-weak">
               <div className="w-5 flex-shrink-0" />
               <div className="hidden sm:block w-20 flex-shrink-0 text-center">카테고리</div>
               <div className="flex-1 min-w-0 text-center">제목</div>
@@ -703,7 +703,7 @@ export default function TelegramBoardPostList({
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+            className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-hover"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
@@ -718,15 +718,15 @@ export default function TelegramBoardPostList({
             }, [])
             .map((p, i) =>
               typeof p === 'string' ? (
-                <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                <span key={`dots-${i}`} className="px-2 text-at-text-weak text-sm">...</span>
               ) : (
                 <button
                   key={p}
                   onClick={() => setPage(p as number)}
-                  className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  className={`min-w-[28px] px-2 py-1 text-xs rounded-xl border transition-colors ${
                     page === p
-                      ? 'bg-sky-500 text-white border-sky-500'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'bg-at-accent text-white border-at-accent'
+                      : 'border-at-border text-at-text-secondary hover:bg-at-surface-hover'
                   }`}
                 >
                   {(p as number) + 1}
@@ -736,7 +736,7 @@ export default function TelegramBoardPostList({
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1}
-            className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+            className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-hover"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </button>

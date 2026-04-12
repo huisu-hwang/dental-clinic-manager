@@ -220,7 +220,7 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
       <Card>
         <CardContent className="p-6">
           <div className="flex justify-center items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
           </div>
         </CardContent>
       </Card>
@@ -248,7 +248,7 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
       </CardHeader>
       <CardContent>
         {branches.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
+          <div className="text-center py-12 text-at-text-weak">
             <BuildingStorefrontIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>등록된 지점이 없습니다.</p>
             {canManage && (
@@ -284,7 +284,7 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
                     {branch.is_active ? (
                       <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">활성</Badge>
                     ) : (
-                      <Badge className="border border-slate-300 bg-slate-100 text-slate-600">비활성</Badge>
+                      <Badge className="border border-at-border bg-at-surface-alt text-at-text-secondary">비활성</Badge>
                     )}
                   </TableCell>
                   {canManage && (
@@ -333,7 +333,7 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
 
           <div className="space-y-4 py-4">
             {submitError && (
-              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
+              <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl">
                 {submitError}
               </div>
             )}
@@ -448,11 +448,11 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
               <Switch
                 checked={formData.is_active}
                 onCheckedChange={(checked) => handleInputChange('is_active', checked)}
-                className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300"
+                className="data-[state=checked]:bg-at-success data-[state=unchecked]:bg-at-surface-alt"
               />
               <span
                 className={`text-sm font-semibold ${
-                  formData.is_active ? 'text-emerald-600' : 'text-slate-500'
+                  formData.is_active ? 'text-at-success' : 'text-at-text-weak'
                 }`}
               >
                 {formData.is_active ? '활성' : '비활성'}
@@ -479,7 +479,7 @@ export default function BranchManagement({ currentUser }: BranchManagementProps)
             <DialogDescription>
               &quot;{deletingBranch?.branch_name}&quot; 지점을 비활성화하시겠습니까?
               <br />
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-at-text-weak">
                 (비활성화된 지점은 목록에서 숨겨지지만 데이터는 보존됩니다)
               </span>
             </DialogDescription>

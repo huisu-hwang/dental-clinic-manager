@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { X, Send, MessageSquare, Users, AlertCircle, CheckCircle } from 'lucide-react'
 import type { RecallPatient, RecallSmsTemplate } from '@/types/recall'
 import { recallSmsTemplateService } from '@/lib/recallService'
-import { displayPhoneNumber } from '@/lib/phoneCallService'
 
 interface SmsSendModalProps {
   isOpen: boolean
@@ -39,7 +38,6 @@ export default function SmsSendModal({
   const [result, setResult] = useState<SendResult | null>(null)
   const [loadingTemplates, setLoadingTemplates] = useState(true)
 
-  // 템플릿 로드
   useEffect(() => {
     if (isOpen) {
       loadTemplates()
@@ -51,7 +49,6 @@ export default function SmsSendModal({
     const response = await recallSmsTemplateService.getTemplates()
     if (response.success && response.data) {
       setTemplates(response.data)
-      // 기본 템플릿 선택
       const defaultTemplate = response.data.find(t => t.is_default)
       if (defaultTemplate) {
         setSelectedTemplateId(defaultTemplate.id)
@@ -61,7 +58,6 @@ export default function SmsSendModal({
     setLoadingTemplates(false)
   }
 
-  // 변수 치환
   const applyVariables = (content: string, patientName?: string): string => {
     return content
       .replace(/\{환자명\}/g, patientName || '{환자명}')
@@ -69,7 +65,6 @@ export default function SmsSendModal({
       .replace(/\{전화번호\}/g, clinicPhone)
   }
 
-  // 템플릿 선택
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplateId(templateId)
     const template = templates.find(t => t.id === templateId)
@@ -78,7 +73,6 @@ export default function SmsSendModal({
     }
   }
 
-  // 문자 발송
   const handleSend = async () => {
     if (!message.trim()) return
 
@@ -86,15 +80,12 @@ export default function SmsSendModal({
     setResult(null)
 
     try {
-      // 각 환자에게 개인화된 메시지 발송
       const receivers = patients.map(p => p.phone_number)
       const personalizedMessages = patients.map(p => applyVariables(message, p.patient_name))
 
-      // 모든 환자에게 같은 메시지인 경우
       const isUniformMessage = new Set(personalizedMessages).size === 1
 
       if (isUniformMessage) {
-        // 일괄 발송
         const response = await fetch('/api/recall/sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -124,7 +115,6 @@ export default function SmsSendModal({
           })
         }
       } else {
-        // 개별 발송 (환자명이 다른 경우)
         let successCount = 0
         let errorCount = 0
 
@@ -169,7 +159,6 @@ export default function SmsSendModal({
     }
   }
 
-  // 메시지 바이트 수 계산
   const getByteLength = (str: string): number => {
     return new Blob([str]).size
   }
@@ -181,21 +170,21 @@ export default function SmsSendModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-at-card w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-at-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-full bg-at-tag flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 text-at-accent" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">문자 발송</h3>
-              <p className="text-sm text-gray-500">{patients.length}명에게 발송</p>
+              <h3 className="font-semibold text-at-text">문자 발송</h3>
+              <p className="text-sm text-at-text-weak">{patients.length}명에게 발송</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-at-text-weak hover:text-at-text-secondary"
           >
             <X className="w-6 h-6" />
           </button>
@@ -205,11 +194,11 @@ export default function SmsSendModal({
         <div className="p-4 space-y-4">
           {/* 수신자 목록 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">
               <Users className="w-4 h-4 inline mr-1" />
               수신자 ({patients.length}명)
             </label>
-            <div className="max-h-24 overflow-y-auto bg-gray-50 rounded-lg p-2 text-sm">
+            <div className="max-h-24 overflow-y-auto bg-at-surface-alt rounded-lg p-2 text-sm">
               {patients.slice(0, 10).map((patient, index) => (
                 <span key={patient.id} className="inline-block mr-2 mb-1">
                   {patient.patient_name}
@@ -217,23 +206,23 @@ export default function SmsSendModal({
                 </span>
               ))}
               {patients.length > 10 && (
-                <span className="text-gray-500">외 {patients.length - 10}명</span>
+                <span className="text-at-text-weak">외 {patients.length - 10}명</span>
               )}
             </div>
           </div>
 
           {/* 템플릿 선택 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">
               템플릿 선택
             </label>
             {loadingTemplates ? (
-              <div className="text-sm text-gray-500">로딩 중...</div>
+              <div className="text-sm text-at-text-weak">로딩 중...</div>
             ) : templates.length > 0 ? (
               <select
                 value={selectedTemplateId}
                 onChange={(e) => handleTemplateChange(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg"
+                className="w-full p-2 border border-at-border rounded-xl"
               >
                 <option value="">직접 입력</option>
                 {templates.map(template => (
@@ -243,17 +232,17 @@ export default function SmsSendModal({
                 ))}
               </select>
             ) : (
-              <p className="text-sm text-gray-500">저장된 템플릿이 없습니다.</p>
+              <p className="text-sm text-at-text-weak">저장된 템플릿이 없습니다.</p>
             )}
           </div>
 
           {/* 메시지 입력 */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-at-text-secondary">
                 메시지 내용
               </label>
-              <span className={`text-xs ${messageByteLength > 90 ? 'text-orange-600' : 'text-gray-500'}`}>
+              <span className={`text-xs ${messageByteLength > 90 ? 'text-at-warning' : 'text-at-text-weak'}`}>
                 {messageByteLength}byte ({messageType})
               </span>
             </div>
@@ -262,13 +251,13 @@ export default function SmsSendModal({
               onChange={(e) => setMessage(e.target.value)}
               rows={6}
               placeholder="메시지를 입력하세요...&#10;&#10;사용 가능한 변수:&#10;{환자명} - 환자 이름&#10;{병원명} - 병원 이름&#10;{전화번호} - 병원 전화번호"
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+              className="w-full p-3 border border-at-border rounded-xl resize-none"
             />
           </div>
 
           {/* 변수 안내 */}
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-sm text-blue-700">
+          <div className="bg-at-accent-light rounded-xl p-3">
+            <p className="text-sm text-at-accent">
               <strong>사용 가능한 변수:</strong>
             </p>
             <div className="flex flex-wrap gap-2 mt-2">
@@ -276,7 +265,7 @@ export default function SmsSendModal({
                 <button
                   key={variable}
                   onClick={() => setMessage(prev => prev + variable)}
-                  className="px-2 py-1 bg-white text-blue-600 text-xs rounded border border-blue-200 hover:bg-blue-100"
+                  className="px-2 py-1 bg-white text-at-accent text-xs rounded-lg border border-at-border hover:bg-at-tag"
                 >
                   {variable}
                 </button>
@@ -286,8 +275,8 @@ export default function SmsSendModal({
 
           {/* 결과 메시지 */}
           {result && (
-            <div className={`flex items-center gap-2 p-3 rounded-lg ${
-              result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            <div className={`flex items-center gap-2 p-3 rounded-xl ${
+              result.success ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
             }`}>
               {result.success ? (
                 <CheckCircle className="w-5 h-5 flex-shrink-0" />
@@ -308,10 +297,10 @@ export default function SmsSendModal({
         </div>
 
         {/* 푸터 */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 p-4 border-t border-at-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-at-text-secondary border border-at-border rounded-xl hover:bg-at-surface-hover"
           >
             {result ? '닫기' : '취소'}
           </button>
@@ -319,7 +308,7 @@ export default function SmsSendModal({
             <button
               onClick={handleSend}
               disabled={isSending || !message.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSending ? (
                 <>

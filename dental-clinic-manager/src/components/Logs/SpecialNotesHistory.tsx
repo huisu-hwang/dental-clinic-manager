@@ -137,7 +137,7 @@ export default function SpecialNotesHistory() {
   const renderSearchResults = () => {
     if (searchResults.length === 0) {
       return (
-        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">
+        <div className="text-center py-6 sm:py-8 text-at-text-weak text-sm">
           &quot;{searchQuery}&quot;에 대한 검색 결과가 없습니다.
         </div>
       )
@@ -145,29 +145,29 @@ export default function SpecialNotesHistory() {
 
     return (
       <div className="space-y-2 sm:space-y-3">
-        <div className="text-xs sm:text-sm text-gray-500 mb-2">
+        <div className="text-xs sm:text-sm text-at-text-weak mb-2">
           검색 결과: {searchResults.length}건
         </div>
         {searchResults.map((note) => (
           <div
             key={note.id}
-            className="p-3 sm:p-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+            className="p-3 sm:p-4 border border-at-border rounded-xl bg-white hover:bg-at-surface-hover"
           >
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0 mb-2">
-              <span className="font-medium text-blue-600 text-sm sm:text-base">{formatDate(note.report_date)}</span>
+              <span className="font-medium text-at-accent text-sm sm:text-base">{formatDate(note.report_date)}</span>
               <div className="flex items-center gap-2">
                 {note.is_past_date_edit && (
-                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-orange-100 text-orange-700 rounded">
+                  <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-at-warning-bg text-at-warning rounded">
                     과거 날짜 수정
                   </span>
                 )}
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-at-text-weak">
                   작성: {formatAuthorName(note.author_name)}
                 </span>
               </div>
             </div>
-            <p className="text-gray-700 whitespace-pre-wrap text-sm">{note.content}</p>
-            <div className="mt-2 text-xs text-gray-400">
+            <p className="text-at-text whitespace-pre-wrap text-sm">{note.content}</p>
+            <div className="mt-2 text-xs text-at-text-weak">
               수정 시점: {formatDateTime(note.edited_at)}
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function SpecialNotesHistory() {
   const renderNotesList = () => {
     if (notes.length === 0) {
       return (
-        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm">
+        <div className="text-center py-6 sm:py-8 text-at-text-weak text-sm">
           기록된 특이사항이 없습니다.
         </div>
       )
@@ -200,20 +200,20 @@ export default function SpecialNotesHistory() {
     return (
       <div className="space-y-2 sm:space-y-3">
         {notes.map(({ date, latestNote, editCount }) => (
-          <div key={date} className="border border-slate-200 rounded-lg bg-white overflow-hidden">
+          <div key={date} className="border border-at-border rounded-xl bg-white overflow-hidden">
             {/* 메인 카드 */}
             <div
-              className={`p-3 sm:p-4 cursor-pointer hover:bg-slate-50 transition-colors ${
-                expandedDate === date ? 'bg-slate-50' : ''
+              className={`p-3 sm:p-4 cursor-pointer hover:bg-at-surface-alt transition-colors ${
+                expandedDate === date ? 'bg-at-surface-alt' : ''
               }`}
               onClick={() => editCount > 1 && handleExpandDate(date)}
             >
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0 mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-blue-600 text-sm sm:text-base">{formatDate(date)}</span>
+                  <span className="font-medium text-at-accent text-sm sm:text-base">{formatDate(date)}</span>
                   {editCount > 1 && (
                     <button
-                      className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                      className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-at-surface-alt text-at-text-secondary rounded-lg hover:bg-at-surface-hover transition-colors"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleExpandDate(date)
@@ -225,27 +225,27 @@ export default function SpecialNotesHistory() {
                 </div>
                 <div className="flex items-center gap-2">
                   {latestNote.is_past_date_edit && (
-                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-orange-100 text-orange-700 rounded">
+                    <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs bg-at-warning-bg text-at-warning rounded">
                       과거 날짜 수정
                     </span>
                   )}
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-at-text-weak">
                     작성자: {formatAuthorName(latestNote.author_name)}
                   </span>
                 </div>
               </div>
-              <p className="text-gray-700 whitespace-pre-wrap text-sm">{latestNote.content}</p>
-              <div className="mt-2 text-xs text-gray-400">
+              <p className="text-at-text whitespace-pre-wrap text-sm">{latestNote.content}</p>
+              <div className="mt-2 text-xs text-at-text-weak">
                 {editCount > 1 ? '최종 수정' : '작성'}: {formatDateTime(latestNote.edited_at)}
               </div>
             </div>
 
             {/* 수정 이력 확장 패널 */}
             {expandedDate === date && (
-              <div className="border-t border-slate-200 bg-slate-50 p-3 sm:p-4">
-                <h4 className="text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">수정 이력</h4>
+              <div className="border-t border-at-border bg-at-surface-alt p-3 sm:p-4">
+                <h4 className="text-xs sm:text-sm font-medium text-at-text mb-2 sm:mb-3">수정 이력</h4>
                 {loadingHistory ? (
-                  <div className="text-center py-4 text-gray-500 text-sm">
+                  <div className="text-center py-4 text-at-text-weak text-sm">
                     이력 로딩 중...
                   </div>
                 ) : (
@@ -255,28 +255,28 @@ export default function SpecialNotesHistory() {
                         key={history.id}
                         className={`p-2 sm:p-3 rounded-lg ${
                           index === 0
-                            ? 'bg-blue-50 border border-blue-200'
-                            : 'bg-white border border-slate-200'
+                            ? 'bg-at-accent-light border border-at-border'
+                            : 'bg-white border border-at-border'
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0 mb-2">
                           <div className="flex items-center gap-2">
                             {index === 0 && (
-                              <span className="px-1.5 sm:px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                              <span className="px-1.5 sm:px-2 py-0.5 text-xs bg-at-tag text-at-accent rounded-lg">
                                 현재
                               </span>
                             )}
                             {history.is_past_date_edit && (
-                              <span className="px-1.5 sm:px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded">
+                              <span className="px-1.5 sm:px-2 py-0.5 text-xs bg-at-warning-bg text-at-warning rounded">
                                 과거 수정
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-at-text-weak">
                             {formatAuthorName(history.author_name)} | {formatDateTime(history.edited_at)}
                           </span>
                         </div>
-                        <p className="text-xs sm:text-sm text-gray-600 whitespace-pre-wrap">
+                        <p className="text-xs sm:text-sm text-at-text-secondary whitespace-pre-wrap">
                           {history.content}
                         </p>
                       </div>
@@ -292,9 +292,9 @@ export default function SpecialNotesHistory() {
   }
 
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
+    <div className="border border-at-border rounded-xl overflow-hidden">
       {/* 검색 및 새로고침 영역 */}
-      <div className="bg-slate-50 p-2 sm:p-3 border-b border-slate-200">
+      <div className="bg-at-surface-alt p-2 sm:p-3 border-b border-at-border">
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <input
@@ -303,12 +303,12 @@ export default function SpecialNotesHistory() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="특이사항 내용 검색..."
-              className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
             />
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-at-text-weak hover:text-at-text-secondary"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -320,14 +320,14 @@ export default function SpecialNotesHistory() {
             <button
               onClick={handleSearch}
               disabled={isSearching || !searchQuery.trim()}
-              className="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSearching ? '검색 중...' : '검색'}
             </button>
             <button
               onClick={loadNotes}
               disabled={loading}
-              className="flex-1 sm:flex-none text-xs sm:text-sm px-3 py-1.5 sm:py-2 text-gray-600 hover:text-gray-800 bg-white border border-slate-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="flex-1 sm:flex-none text-xs sm:text-sm px-3 py-1.5 sm:py-2 text-at-text-secondary hover:text-at-text bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors"
             >
               {loading ? '로딩 중...' : '새로고침'}
             </button>
@@ -338,7 +338,7 @@ export default function SpecialNotesHistory() {
       {/* 결과 표시 영역 */}
       <div className="max-h-96 overflow-y-auto p-2 sm:p-3">
         {loading ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-at-text-weak">
             데이터 로딩 중...
           </div>
         ) : searchQuery && searchResults.length > 0 ? (

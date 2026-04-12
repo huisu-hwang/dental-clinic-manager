@@ -159,11 +159,11 @@ export default function DocumentForm({
       case 'pdf':
         return <FileText className="w-5 h-5 text-red-500" />
       case 'excel':
-        return <FileSpreadsheet className="w-5 h-5 text-green-600" />
+        return <FileSpreadsheet className="w-5 h-5 text-at-success" />
       case 'word':
-        return <FileType className="w-5 h-5 text-blue-600" />
+        return <FileType className="w-5 h-5 text-at-accent" />
       default:
-        return <FileText className="w-5 h-5 text-gray-500" />
+        return <FileText className="w-5 h-5 text-at-text-weak" />
     }
   }
 
@@ -178,28 +178,28 @@ export default function DocumentForm({
           <ArrowLeft className="w-4 h-4" />
           취소
         </Button>
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-at-text">
           {isEditing ? '문서 수정' : '새 문서 등록'}
         </h2>
       </div>
 
       {/* 폼 */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-at-border p-6 space-y-6">
         {error && (
-          <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm">
+          <div className="p-4 bg-at-error-bg text-at-error rounded-xl text-sm">
             {error}
           </div>
         )}
 
         {/* 카테고리 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             카테고리 <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value as DocumentCategory })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-at-accent"
           >
             {Object.entries(DOCUMENT_CATEGORY_LABELS).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
@@ -209,7 +209,7 @@ export default function DocumentForm({
 
         {/* 제목 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             제목 <span className="text-red-500">*</span>
           </label>
           <Input
@@ -222,7 +222,7 @@ export default function DocumentForm({
 
         {/* 설명 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             설명
           </label>
           <Input
@@ -235,18 +235,18 @@ export default function DocumentForm({
 
         {/* 파일 업로드 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             첨부파일
           </label>
           {formData.file_name ? (
             <div className="space-y-3">
               {/* 파일 정보 */}
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-at-surface-alt rounded-xl">
                 {getFileIcon(formData.file_name)}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{formData.file_name}</p>
+                  <p className="text-sm font-medium text-at-text truncate">{formData.file_name}</p>
                   {formData.file_size && (
-                    <p className="text-xs text-gray-500">{formatFileSize(formData.file_size)}</p>
+                    <p className="text-xs text-at-text-weak">{formatFileSize(formData.file_size)}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -255,7 +255,7 @@ export default function DocumentForm({
                       href={formData.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors"
+                      className="p-1.5 text-at-text-weak hover:text-at-accent transition-colors"
                       title="다운로드"
                     >
                       <Download className="w-4 h-4" />
@@ -266,7 +266,7 @@ export default function DocumentForm({
                     variant="ghost"
                     size="sm"
                     onClick={handleRemoveFile}
-                    className="text-gray-400 hover:text-red-500"
+                    className="text-at-text-weak hover:text-red-500"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -275,9 +275,9 @@ export default function DocumentForm({
 
               {/* 이미지 미리보기 */}
               {formData.file_url && isImageFile(formData.file_name) && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <div className="p-2 bg-gray-100 border-b border-gray-200">
-                    <p className="text-xs text-gray-500 font-medium">미리보기</p>
+                <div className="border border-at-border rounded-xl overflow-hidden bg-at-surface-alt">
+                  <div className="p-2 bg-at-surface-alt border-b border-at-border">
+                    <p className="text-xs text-at-text-weak font-medium">미리보기</p>
                   </div>
                   <div className="p-4 flex justify-center">
                     <img
@@ -291,9 +291,9 @@ export default function DocumentForm({
 
               {/* PDF 미리보기 안내 */}
               {formData.file_url && getFileType(formData.file_name) === 'pdf' && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <div className="p-2 bg-gray-100 border-b border-gray-200">
-                    <p className="text-xs text-gray-500 font-medium">미리보기</p>
+                <div className="border border-at-border rounded-xl overflow-hidden bg-at-surface-alt">
+                  <div className="p-2 bg-at-surface-alt border-b border-at-border">
+                    <p className="text-xs text-at-text-weak font-medium">미리보기</p>
                   </div>
                   <div className="p-4">
                     <iframe
@@ -308,20 +308,20 @@ export default function DocumentForm({
           ) : (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
+              className="border-2 border-dashed border-at-border rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
             >
               {uploading ? (
-                <div className="flex items-center justify-center gap-2 text-gray-500">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <div className="flex items-center justify-center gap-2 text-at-text-weak">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-at-accent"></div>
                   <span>업로드 중...</span>
                 </div>
               ) : (
                 <>
-                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">
+                  <Upload className="w-8 h-8 mx-auto text-at-text-weak mb-2" />
+                  <p className="text-sm text-at-text-secondary">
                     클릭하여 파일을 선택하거나 드래그하세요
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-at-text-weak mt-1">
                     최대 10MB (이미지, PDF, 문서 파일)
                   </p>
                 </>
@@ -339,7 +339,7 @@ export default function DocumentForm({
 
         {/* 내용 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-at-text-secondary mb-2">
             내용
           </label>
           <EnhancedTiptapEditor
@@ -351,7 +351,7 @@ export default function DocumentForm({
         </div>
 
         {/* 버튼 */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 pt-4 border-t border-at-border">
           <Button type="button" variant="outline" onClick={onCancel}>
             취소
           </Button>

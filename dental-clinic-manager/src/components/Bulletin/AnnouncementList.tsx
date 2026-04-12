@@ -111,11 +111,11 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
   const getCategoryBadgeColor = (category: AnnouncementCategory) => {
     switch (category) {
       case 'schedule':
-        return 'bg-blue-100 text-blue-700'
+        return 'bg-at-tag text-at-accent'
       case 'holiday':
-        return 'bg-red-100 text-red-700'
+        return 'bg-at-error-bg text-at-error'
       default:
-        return 'bg-gray-100 text-gray-700'
+        return 'bg-at-surface-alt text-at-text-secondary'
     }
   }
 
@@ -157,10 +157,10 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
       {/* 헤더 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Megaphone className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900">공지사항</h2>
+          <Megaphone className="w-5 h-5 text-at-accent" />
+          <h2 className="text-lg font-semibold text-at-text">공지사항</h2>
           {!loading && (
-            <span className="text-xs text-gray-400 font-normal ml-1">총 {total}건</span>
+            <span className="text-xs text-at-text-weak font-normal ml-1">총 {total}건</span>
           )}
         </div>
         {canCreate && (
@@ -174,11 +174,11 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
       {/* 필터 및 검색 */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
+          <Filter className="w-4 h-4 text-at-text-weak" />
           <select
             value={selectedCategory}
             onChange={(e) => handleCategoryChange(e.target.value as AnnouncementCategory | '')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
           >
             <option value="">전체 카테고리</option>
             {Object.entries(ANNOUNCEMENT_CATEGORY_LABELS).map(([key, label]) => (
@@ -188,7 +188,7 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
         </div>
         <form onSubmit={handleSearch} className="flex-1 flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
             <Input
               type="text"
               placeholder="제목 또는 내용 검색..."
@@ -203,7 +203,7 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
 
       {/* 에러 표시 */}
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg">
+        <div className="flex items-center gap-2 p-4 bg-at-error-bg text-at-error rounded-xl">
           <AlertCircle className="w-5 h-5" />
           <span>{error}</span>
         </div>
@@ -215,19 +215,19 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
         </div>
       ) : announcements.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
+        <div className="text-center py-16 text-at-text-weak">
           <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <Megaphone className="w-8 h-8 text-sky-300" />
           </div>
-          <p className="font-medium text-gray-600 mb-1">등록된 공지사항이 없습니다</p>
-          <p className="text-sm text-gray-400">새로운 공지사항이 등록되면 여기에 표시됩니다.</p>
+          <p className="font-medium text-at-text-secondary mb-1">등록된 공지사항이 없습니다</p>
+          <p className="text-sm text-at-text-weak">새로운 공지사항이 등록되면 여기에 표시됩니다.</p>
         </div>
       ) : (
         <>
           {/* 공지사항 목록 */}
-          <div className="bg-white rounded-xl border border-gray-200">
+          <div className="bg-white rounded-2xl border border-at-border">
             {/* 테이블 헤더 */}
-            <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+            <div className="flex items-center px-4 py-2 border-b border-at-border bg-at-surface-alt text-xs font-medium text-at-text-weak">
               <div className="w-5 flex-shrink-0" />
               <div className="hidden sm:block w-16 flex-shrink-0 text-center">분류</div>
               <div className="hidden sm:block w-10 flex-shrink-0 text-center">중요</div>
@@ -237,13 +237,13 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
               <div className="hidden sm:block w-12 text-center flex-shrink-0">조회</div>
             </div>
             {/* 목록 */}
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-at-border">
               {announcements.map((announcement) => (
                 <div
                   key={announcement.id}
                   onClick={() => handleAnnouncementClick(announcement)}
-                  className={`flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-l-2 ${
-                    announcement.is_pinned ? 'border-l-red-400 bg-red-50/30' : 'border-l-transparent'
+                  className={`flex items-center px-4 py-3 hover:bg-at-surface-alt cursor-pointer transition-colors border-l-2 ${
+                    announcement.is_pinned ? 'border-l-red-400 bg-at-error-bg/30' : 'border-l-transparent'
                   }`}
                 >
                   {/* 고정 아이콘 */}
@@ -261,7 +261,7 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
                   {/* 중요 */}
                   <div className="hidden sm:block w-10 flex-shrink-0 text-center">
                     {announcement.is_important && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-at-error-bg text-at-error">
                         중요
                       </span>
                     )}
@@ -273,11 +273,11 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
                       {ANNOUNCEMENT_CATEGORY_LABELS[announcement.category]}
                     </span>
                     {announcement.is_important && (
-                      <span className="sm:hidden text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">
+                      <span className="sm:hidden text-xs px-1.5 py-0.5 rounded bg-at-error-bg text-at-error flex-shrink-0">
                         중요
                       </span>
                     )}
-                    <span className="text-sm text-gray-900 truncate">{announcement.title}</span>
+                    <span className="text-sm text-at-text truncate">{announcement.title}</span>
                     {(() => {
                       const created = new Date(announcement.created_at)
                       const now = new Date()
@@ -286,15 +286,15 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
                     })()}
                   </div>
                   {/* 작성자 */}
-                  <div className="hidden sm:block w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                  <div className="hidden sm:block w-20 text-center text-sm text-at-text-weak flex-shrink-0">
                     {announcement.author_name}
                   </div>
                   {/* 작성일 */}
-                  <div className="w-20 text-center text-sm text-gray-500 flex-shrink-0">
+                  <div className="w-20 text-center text-sm text-at-text-weak flex-shrink-0">
                     {formatDate(announcement.created_at)}
                   </div>
                   {/* 조회수 */}
-                  <div className="hidden sm:block w-12 text-center text-sm text-gray-500 flex-shrink-0">
+                  <div className="hidden sm:block w-12 text-center text-sm text-at-text-weak flex-shrink-0">
                     {announcement.view_count}
                   </div>
                 </div>
@@ -308,7 +308,7 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-alt"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
@@ -323,15 +323,15 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
                 }, [])
                 .map((p, i) =>
                   typeof p === 'string' ? (
-                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                    <span key={`dots-${i}`} className="px-2 text-at-text-weak text-sm">...</span>
                   ) : (
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
-                      className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                      className={`min-w-[28px] px-2 py-1 text-xs rounded-xl border transition-colors ${
                         page === p
                           ? 'bg-sky-500 text-white border-sky-500'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-at-border text-at-text-secondary hover:bg-at-surface-alt'
                       }`}
                     >
                       {p}
@@ -341,7 +341,7 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-alt"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>

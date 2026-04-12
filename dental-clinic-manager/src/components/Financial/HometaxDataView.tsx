@@ -116,7 +116,7 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
               className={`p-4 rounded-2xl border transition-all text-left ${
                 expandedType === key
                   ? 'border-indigo-300 bg-indigo-50/50 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                  : 'border-at-border bg-white hover:border-at-border hover:shadow-sm'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -124,19 +124,19 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
                   <Icon className={`w-4 h-4 ${config.color}`} />
                 </div>
                 {isSales ? (
-                  <TrendingUp className="w-4 h-4 text-slate-200" />
+                  <TrendingUp className="w-4 h-4 text-at-text" />
                 ) : (
-                  <TrendingDown className="w-4 h-4 text-slate-200" />
+                  <TrendingDown className="w-4 h-4 text-at-text" />
                 )}
               </div>
-              <p className="text-xs font-medium text-slate-500">{config.label}</p>
-              <p className={`text-lg font-bold mt-0.5 ${totalAmount > 0 ? config.color : 'text-slate-300'}`}>
+              <p className="text-xs font-medium text-at-text">{config.label}</p>
+              <p className={`text-lg font-bold mt-0.5 ${totalAmount > 0 ? config.color : 'text-at-text'}`}>
                 {totalAmount > 0 ? formatCurrency(totalAmount) : '0원'}
               </p>
               {expandedType === key ? (
                 <ChevronUp className="w-3 h-3 text-indigo-400 mt-1" />
               ) : totalAmount > 0 ? (
-                <ChevronDown className="w-3 h-3 text-slate-300 mt-1" />
+                <ChevronDown className="w-3 h-3 text-at-text mt-1" />
               ) : null}
             </button>
           )
@@ -145,16 +145,16 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
 
       {/* 마지막 동기화 시간 */}
       {summary?.lastSyncedAt && (
-        <p className="text-xs text-center text-slate-400">
+        <p className="text-xs text-center text-at-text">
           마지막 동기화: {new Date(summary.lastSyncedAt).toLocaleString('ko-KR')}
         </p>
       )}
 
       {/* 상세 데이터 테이블 */}
       {expandedType && detailData.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-          <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-            <h4 className="text-sm font-bold text-slate-800">
+        <div className="bg-white rounded-2xl border border-at-border overflow-hidden animate-in slide-in-from-top-2 duration-200">
+          <div className="p-4 border-b border-at-border bg-at-surface-alt/50">
+            <h4 className="text-sm font-bold text-at-text">
               {DATA_TYPE_CONFIG[expandedType]?.label} 상세
             </h4>
           </div>
@@ -163,7 +163,7 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
               const records = rawData.raw_data || []
               if (records.length === 0) {
                 return (
-                  <div key={idx} className="p-6 text-center text-slate-400 text-sm">
+                  <div key={idx} className="p-6 text-center text-at-text text-sm">
                     데이터가 없습니다
                   </div>
                 )
@@ -175,17 +175,17 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
               return (
                 <table key={idx} className="w-full text-xs">
                   <thead>
-                    <tr className="bg-slate-50">
+                    <tr className="bg-at-surface-alt">
                       {columns.map(col => (
-                        <th key={col} className="px-3 py-2 text-left text-slate-500 font-medium whitespace-nowrap">
+                        <th key={col} className="px-3 py-2 text-left text-at-text font-medium whitespace-nowrap">
                           {col}
                         </th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-at-border">
                     {records.slice(0, 50).map((record, rIdx) => (
-                      <tr key={rIdx} className="hover:bg-slate-50">
+                      <tr key={rIdx} className="hover:bg-at-surface-alt">
                         {columns.map(col => {
                           const val = record[col]
                           const isAmount = typeof val === 'number' && (
@@ -205,7 +205,7 @@ export default function HometaxDataView({ clinicId, year, month }: HometaxDataVi
             })}
           </div>
           {detailData.some(d => (d.raw_data?.length || 0) > 50) && (
-            <div className="p-3 text-center text-xs text-slate-400 border-t border-slate-100">
+            <div className="p-3 text-center text-xs text-at-text border-t border-at-border">
               최대 50건까지 표시됩니다
             </div>
           )}

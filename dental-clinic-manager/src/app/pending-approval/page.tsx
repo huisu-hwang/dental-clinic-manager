@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -129,7 +130,7 @@ export default function PendingApprovalPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
@@ -144,31 +145,29 @@ export default function PendingApprovalPage() {
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">🦷</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
+            <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
+            <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
+        <div className="bg-white p-8 rounded-xl shadow-at-card border border-at-border">
           {user.status === 'rejected' ? (
             <>
               <div className="flex justify-center mb-6">
                 <XCircleIcon className="h-16 w-16 text-red-500" />
               </div>
-              <h2 className="text-2xl font-bold text-center text-slate-800 mb-4">
+              <h2 className="text-2xl font-bold text-center text-at-text mb-4">
                 ❌ 승인이 거절되었습니다
               </h2>
-              <p className="text-center text-slate-600 mb-6">
+              <p className="text-center text-at-text-secondary mb-6">
                 내부 규정으로 인해 승인이 거절되었습니다.<br />
                 자세한 내용을 알고 싶으신 경우는<br />
-                <a href="mailto:hiclinic.inc@gmail.com" className="text-blue-600 hover:text-blue-700 font-medium">
+                <a href="mailto:hiclinic.inc@gmail.com" className="text-at-accent hover:text-at-accent font-medium">
                   hiclinic.inc@gmail.com
                 </a>로 문의 바랍니다.
               </p>
               {user.review_note && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+                <div className="bg-at-error-bg border border-red-200 rounded-md p-4 mb-6">
                   <p className="text-sm text-red-800">
                     <strong>거절 사유:</strong> {user.review_note}
                   </p>
@@ -178,19 +177,19 @@ export default function PendingApprovalPage() {
           ) : (
             <>
               <div className="flex justify-center mb-6">
-                <ClockIcon className="h-16 w-16 text-blue-500" />
+                <ClockIcon className="h-16 w-16 text-at-accent" />
               </div>
-              <h2 className="text-2xl font-bold text-center text-slate-800 mb-4">
+              <h2 className="text-2xl font-bold text-center text-at-text mb-4">
                 🕐 승인 대기 중
               </h2>
-              <p className="text-center text-slate-600 mb-6">
+              <p className="text-center text-at-text-secondary mb-6">
                 관리자의 승인을 기다리고 있습니다.<br />
                 조금만 더 기다려주세요!
               </p>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-                <h3 className="font-semibold text-blue-900 mb-2">신청 정보</h3>
-                <div className="space-y-1 text-sm text-blue-800">
+              <div className="bg-at-accent-light border border-at-border rounded-md p-4 mb-6">
+                <h3 className="font-semibold text-at-accent mb-2">신청 정보</h3>
+                <div className="space-y-1 text-sm text-at-accent">
                   <p><strong>이름:</strong> {user.name}</p>
                   <p><strong>이메일:</strong> {user.email}</p>
                   <p><strong>신청 병원:</strong> {user.clinic?.name || clinicInfo?.name || '정보 없음'}</p>
@@ -204,13 +203,13 @@ export default function PendingApprovalPage() {
                 </div>
               </div>
 
-              <div className="bg-gray-50 border border-gray-200 rounded-md p-4 mb-6">
-                <p className="text-sm text-gray-700">
-                  <CheckCircleIcon className="h-4 w-4 inline mr-1 text-green-600" />
+              <div className="bg-at-surface-alt border border-at-border rounded-md p-4 mb-6">
+                <p className="text-sm text-at-text-secondary">
+                  <CheckCircleIcon className="h-4 w-4 inline mr-1 text-at-success" />
                   승인이 완료되면 이메일로 알림을 받으실 수 있습니다.
                 </p>
-                <p className="text-sm text-gray-700 mt-2">
-                  <CheckCircleIcon className="h-4 w-4 inline mr-1 text-green-600" />
+                <p className="text-sm text-at-text-secondary mt-2">
+                  <CheckCircleIcon className="h-4 w-4 inline mr-1 text-at-success" />
                   승인 후 모든 기능을 사용하실 수 있습니다.
                 </p>
               </div>
@@ -218,7 +217,7 @@ export default function PendingApprovalPage() {
               <button
                 onClick={handleCheckStatus}
                 disabled={checkingStatus}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors mb-3"
+                className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors mb-3"
               >
                 {checkingStatus ? '확인 중...' : '승인 상태 확인'}
               </button>
@@ -234,18 +233,18 @@ export default function PendingApprovalPage() {
 
           <button
             onClick={handleLogout}
-            className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-md transition-colors"
+            className="w-full bg-at-border hover:bg-at-border text-at-text font-bold py-3 px-4 rounded-md transition-colors"
           >
             메인화면으로 이동
           </button>
         </div>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-at-text-secondary">
             문의사항이 있으신가요?
           </p>
-          <p className="text-sm text-slate-600">
-            <a href="mailto:hiclinic.inc@gmail.com" className="text-blue-600 hover:text-blue-700">
+          <p className="text-sm text-at-text-secondary">
+            <a href="mailto:hiclinic.inc@gmail.com" className="text-at-accent hover:text-at-accent">
               hiclinic.inc@gmail.com
             </a>로 문의해 주세요.
           </p>

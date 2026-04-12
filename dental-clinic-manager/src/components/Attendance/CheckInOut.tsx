@@ -10,12 +10,12 @@ import { ATTENDANCE_STATUS_NAMES, ATTENDANCE_STATUS_COLORS } from '@/types/atten
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+    <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-at-accent-light text-at-accent">
       <Icon className="w-4 h-4" />
     </div>
-    <h3 className="text-base font-semibold text-slate-800">
-      <span className="text-blue-600 mr-1">{number}.</span>
+    <h3 className="text-base font-semibold text-at-text">
+      <span className="text-at-accent mr-1">{number}.</span>
       {title}
     </h3>
   </div>
@@ -248,7 +248,7 @@ export default function CheckInOut() {
       {/* 섹션 1: 현재 시간 */}
       <div>
         <SectionHeader number={1} title="현재 시간" icon={Clock} />
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-lg p-6 text-center">
+        <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl p-6 text-center">
           <div className="text-sm opacity-90 mb-2">
             {currentTime.toLocaleDateString('ko-KR', {
               year: 'numeric',
@@ -269,60 +269,60 @@ export default function CheckInOut() {
       {/* 섹션 2: 오늘의 출퇴근 현황 */}
       <div>
         <SectionHeader number={2} title="오늘의 출퇴근 현황" icon={Clock} />
-        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+        <div className="overflow-x-auto border border-at-border rounded-xl">
           {todayRecord ? (
             <table className="w-full text-sm">
-              <tbody className="divide-y divide-slate-200">
-                <tr className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-600 w-1/3">상태</td>
+              <tbody className="divide-y divide-at-border">
+                <tr className="hover:bg-at-surface-alt">
+                  <td className="px-4 py-3 font-medium text-at-text-secondary w-1/3">상태</td>
                   <td className="px-4 py-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${ATTENDANCE_STATUS_COLORS[todayRecord.status]}`}>
                       {ATTENDANCE_STATUS_NAMES[todayRecord.status]}
                     </span>
                   </td>
                 </tr>
-                <tr className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-600">출근 시간</td>
-                  <td className="px-4 py-3 font-semibold text-slate-800">
+                <tr className="hover:bg-at-surface-alt">
+                  <td className="px-4 py-3 font-medium text-at-text-secondary">출근 시간</td>
+                  <td className="px-4 py-3 font-semibold text-at-text">
                     {formatTime(todayRecord.check_in_time)}
                     {todayRecord.scheduled_start && (
-                      <span className="ml-2 text-xs text-slate-400">(예정: {todayRecord.scheduled_start.substring(0, 5)})</span>
+                      <span className="ml-2 text-xs text-at-text-weak">(예정: {todayRecord.scheduled_start.substring(0, 5)})</span>
                     )}
                   </td>
                 </tr>
-                <tr className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-600">퇴근 시간</td>
-                  <td className="px-4 py-3 font-semibold text-slate-800">
+                <tr className="hover:bg-at-surface-alt">
+                  <td className="px-4 py-3 font-medium text-at-text-secondary">퇴근 시간</td>
+                  <td className="px-4 py-3 font-semibold text-at-text">
                     {formatTime(todayRecord.check_out_time)}
                     {todayRecord.scheduled_end && (
-                      <span className="ml-2 text-xs text-slate-400">(예정: {todayRecord.scheduled_end.substring(0, 5)})</span>
+                      <span className="ml-2 text-xs text-at-text-weak">(예정: {todayRecord.scheduled_end.substring(0, 5)})</span>
                     )}
                   </td>
                 </tr>
                 {isCheckedIn && (
-                  <tr className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-600">현재 근무 시간</td>
-                    <td className="px-4 py-3 font-semibold text-blue-600">{formatMinutes(workingMinutes)}</td>
+                  <tr className="hover:bg-at-surface-alt">
+                    <td className="px-4 py-3 font-medium text-at-text-secondary">현재 근무 시간</td>
+                    <td className="px-4 py-3 font-semibold text-at-accent">{formatMinutes(workingMinutes)}</td>
                   </tr>
                 )}
                 {isCheckedOut && todayRecord.total_work_minutes && (
-                  <tr className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-600">총 근무 시간</td>
-                    <td className="px-4 py-3 font-semibold text-blue-600">{formatMinutes(todayRecord.total_work_minutes)}</td>
+                  <tr className="hover:bg-at-surface-alt">
+                    <td className="px-4 py-3 font-medium text-at-text-secondary">총 근무 시간</td>
+                    <td className="px-4 py-3 font-semibold text-at-accent">{formatMinutes(todayRecord.total_work_minutes)}</td>
                   </tr>
                 )}
                 {(todayRecord.late_minutes > 0 || todayRecord.early_leave_minutes > 0 || todayRecord.overtime_minutes > 0) && (
-                  <tr className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-600">비고</td>
+                  <tr className="hover:bg-at-surface-alt">
+                    <td className="px-4 py-3 font-medium text-at-text-secondary">비고</td>
                     <td className="px-4 py-3 space-x-2">
                       {todayRecord.late_minutes > 0 && (
-                        <span className="text-yellow-600 font-medium">지각 {todayRecord.late_minutes}분</span>
+                        <span className="text-at-warning font-medium">지각 {todayRecord.late_minutes}분</span>
                       )}
                       {todayRecord.early_leave_minutes > 0 && (
                         <span className="text-orange-600 font-medium">조퇴 {todayRecord.early_leave_minutes}분</span>
                       )}
                       {todayRecord.overtime_minutes > 0 && (
-                        <span className="text-green-600 font-medium">초과근무 {todayRecord.overtime_minutes}분</span>
+                        <span className="text-at-success font-medium">초과근무 {todayRecord.overtime_minutes}분</span>
                       )}
                     </td>
                   </tr>
@@ -330,7 +330,7 @@ export default function CheckInOut() {
               </tbody>
             </table>
           ) : (
-            <div className="text-center text-slate-500 py-8">
+            <div className="text-center text-at-text-weak py-8">
               아직 출근하지 않았습니다.
             </div>
           )}
@@ -341,13 +341,13 @@ export default function CheckInOut() {
       <div>
         <SectionHeader number={3} title="위치 정보" icon={MapPin} />
         {locationError && (
-          <div className="flex items-center space-x-2 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+          <div className="flex items-center space-x-2 bg-at-warning-bg border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{locationError}</span>
           </div>
         )}
         {location && (
-          <div className="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
+          <div className="flex items-center space-x-2 bg-at-success-bg border border-green-200 rounded-xl p-4 text-sm text-green-800">
             <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
             <span>위치 정보가 활성화되었습니다.</span>
           </div>
@@ -361,10 +361,10 @@ export default function CheckInOut() {
         {/* 메시지 표시 */}
         {message && (
           <div
-            className={`mb-4 p-4 rounded-lg flex items-center space-x-2 ${
+            className={`mb-4 p-4 rounded-xl flex items-center space-x-2 ${
               message.type === 'success'
-                ? 'bg-green-50 text-green-800 border border-green-200'
-                : 'bg-red-50 text-red-800 border border-red-200'
+                ? 'bg-at-success-bg text-green-800 border border-green-200'
+                : 'bg-at-error-bg text-red-800 border border-red-200'
             }`}
           >
             {message.type === 'success' ? (
@@ -381,10 +381,10 @@ export default function CheckInOut() {
           <button
             onClick={openScannerForCheckIn}
             disabled={loading || isCheckedIn || isCheckedOut}
-            className={`py-6 rounded-lg font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
+            className={`py-6 rounded-xl font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
               loading || isCheckedIn || isCheckedOut
-                ? 'bg-slate-300 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 shadow-md hover:shadow-lg'
+                ? 'bg-at-border cursor-not-allowed'
+                : 'bg-at-accent hover:bg-at-accent active:bg-blue-700 shadow-at-card hover:shadow-lg'
             }`}
           >
             <Camera className="w-10 h-10" />
@@ -394,10 +394,10 @@ export default function CheckInOut() {
           <button
             onClick={openScannerForCheckOut}
             disabled={loading || !isCheckedIn || isCheckedOut}
-            className={`py-6 rounded-lg font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
+            className={`py-6 rounded-xl font-semibold text-white transition-all flex flex-col items-center justify-center space-y-2 ${
               loading || !isCheckedIn || isCheckedOut
-                ? 'bg-slate-300 cursor-not-allowed'
-                : 'bg-green-500 hover:bg-green-600 active:bg-green-700 shadow-md hover:shadow-lg'
+                ? 'bg-at-border cursor-not-allowed'
+                : 'bg-green-500 hover:bg-green-600 active:bg-green-700 shadow-at-card hover:shadow-lg'
             }`}
           >
             <Camera className="w-10 h-10" />
@@ -406,9 +406,9 @@ export default function CheckInOut() {
         </div>
 
         {/* 안내 메시지 */}
-        <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-          <p className="text-xs font-medium text-slate-600 mb-2">안내사항</p>
-          <ul className="text-xs text-slate-500 space-y-1 list-disc list-inside">
+        <div className="mt-4 p-4 bg-at-surface-alt rounded-xl border border-at-border">
+          <p className="text-xs font-medium text-at-text-secondary mb-2">안내사항</p>
+          <ul className="text-xs text-at-text-weak space-y-1 list-disc list-inside">
             <li>출근/퇴근 버튼을 클릭하면 QR 코드 스캐너가 실행됩니다.</li>
             <li>QR 코드를 카메라에 비추면 자동으로 출퇴근 처리됩니다.</li>
             <li>출근 시간은 근무 스케줄에 따라 자동으로 지각 여부가 판단됩니다.</li>
@@ -420,14 +420,14 @@ export default function CheckInOut() {
       {/* QR 스캐너 모달 */}
       {scannerMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold">
                 {scannerMode === 'check-in' ? '출근 QR 스캔' : '퇴근 QR 스캔'}
               </h3>
               <button
                 onClick={() => setScannerMode(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-at-text-weak hover:text-at-text-secondary"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -443,7 +443,7 @@ export default function CheckInOut() {
               }}
             />
 
-            <div className="mt-4 text-center text-sm text-gray-600">
+            <div className="mt-4 text-center text-sm text-at-text-secondary">
               QR 코드를 카메라에 비춰주세요
             </div>
           </div>
@@ -462,24 +462,24 @@ export default function CheckInOut() {
             </div>
 
             {/* 제목 */}
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">퇴근 하시겠습니까?</h3>
-            <p className="text-gray-600 mb-6">퇴근 처리 전 확인해주세요.</p>
+            <h3 className="text-2xl font-bold text-at-text mb-2">퇴근 하시겠습니까?</h3>
+            <p className="text-at-text-secondary mb-6">퇴근 처리 전 확인해주세요.</p>
 
             {/* 근무 정보 */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-gray-600">출근 시간</span>
-                <span className="font-semibold text-gray-800">{formatTime(todayRecord?.check_in_time)}</span>
+            <div className="bg-at-surface-alt rounded-xl p-4 mb-6 text-left">
+              <div className="flex justify-between py-2 border-b border-at-border">
+                <span className="text-at-text-secondary">출근 시간</span>
+                <span className="font-semibold text-at-text">{formatTime(todayRecord?.check_in_time)}</span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-200">
-                <span className="text-gray-600">현재 시간</span>
-                <span className="font-semibold text-gray-800">
+              <div className="flex justify-between py-2 border-b border-at-border">
+                <span className="text-at-text-secondary">현재 시간</span>
+                <span className="font-semibold text-at-text">
                   {currentTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-gray-600">근무 시간</span>
-                <span className="font-semibold text-blue-600">{formatMinutes(workingMinutes)}</span>
+                <span className="text-at-text-secondary">근무 시간</span>
+                <span className="font-semibold text-at-accent">{formatMinutes(workingMinutes)}</span>
               </div>
             </div>
 
@@ -488,14 +488,14 @@ export default function CheckInOut() {
               <button
                 onClick={handleConfirmCheckout}
                 disabled={loading}
-                className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-semibold rounded-lg transition-colors text-lg"
+                className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-at-border text-white font-semibold rounded-xl transition-colors text-lg"
               >
                 {loading ? '처리 중...' : '퇴근하기'}
               </button>
               <button
                 onClick={handleCancelCheckout}
                 disabled={loading}
-                className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors"
+                className="w-full py-3 bg-at-border hover:bg-at-border text-at-text-secondary font-semibold rounded-xl transition-colors"
               >
                 취소
               </button>

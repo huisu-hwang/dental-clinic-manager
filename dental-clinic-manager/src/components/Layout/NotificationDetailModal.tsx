@@ -33,7 +33,7 @@ const CategoryIcons: Record<NotificationCategory, React.ComponentType<{ classNam
 
 // 카테고리별 색상 클래스
 const CategoryColors: Record<NotificationCategory, { icon: string; bg: string; text: string; border: string }> = {
-  general: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  general: { icon: 'text-at-accent', bg: 'bg-at-accent-light', text: 'text-at-accent', border: 'border-at-border' },
   insurance: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
   event: { icon: 'text-purple-500', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
   birthday: { icon: 'text-pink-500', bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },
@@ -104,7 +104,7 @@ export default function NotificationDetailModal({
                         </span>
                         <Dialog.Title
                           as="h3"
-                          className="text-lg font-semibold leading-6 text-gray-900 mt-1"
+                          className="text-lg font-semibold leading-6 text-at-text mt-1"
                         >
                           {notification.title}
                         </Dialog.Title>
@@ -112,7 +112,7 @@ export default function NotificationDetailModal({
                     </div>
                     <button
                       type="button"
-                      className="rounded-full p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white/50 transition-colors"
+                      className="rounded-full p-1.5 text-at-text-weak hover:text-at-text-secondary hover:bg-white/50 transition-colors"
                       onClick={onClose}
                     >
                       <XMarkIcon className="h-5 w-5" />
@@ -123,27 +123,27 @@ export default function NotificationDetailModal({
                 {/* 내용 */}
                 <div className="px-6 py-5">
                   {notification.content ? (
-                    <div className="text-gray-600 whitespace-pre-wrap leading-relaxed">
+                    <div className="text-at-text-secondary whitespace-pre-wrap leading-relaxed">
                       {notification.content}
                     </div>
                   ) : (
-                    <p className="text-gray-400 italic">상세 내용이 없습니다.</p>
+                    <p className="text-at-text-weak italic">상세 내용이 없습니다.</p>
                   )}
                 </div>
 
                 {/* 액션 버튼 - 우측 하단 배치 */}
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <div className="px-6 py-4 bg-at-surface-alt border-t border-at-border">
                   <div className="flex gap-3 justify-end">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-at-text-secondary bg-at-surface border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors"
                       onClick={onClose}
                     >
                       닫기
                     </button>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-at-text-secondary bg-at-surface border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleDismiss}
                       disabled={isDismissing}
                     >

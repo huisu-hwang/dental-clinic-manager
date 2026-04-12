@@ -300,7 +300,7 @@ export default function HometaxSyncPanel({
     <div className="space-y-4">
       {/* 메시지 */}
       {error && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-start gap-2 p-3 bg-at-error-bg border border-red-200 rounded-xl text-sm text-at-error">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{error}</span>
           <button onClick={() => { setLocalError(null); clearMessages() }} className="ml-auto"><X className="w-4 h-4" /></button>
@@ -315,15 +315,15 @@ export default function HometaxSyncPanel({
       )}
 
       {/* 인증정보 섹션 */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
+        <div className="p-4 border-b border-at-border flex items-center justify-between bg-at-surface-alt/50">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-indigo-500" />
-            <h3 className="font-bold text-slate-800 text-sm">홈택스 인증정보</h3>
+            <h3 className="font-bold text-at-text text-sm">홈택스 인증정보</h3>
           </div>
           {credentials && (
             <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${credentials.last_login_success ? 'bg-emerald-100 text-emerald-700' : credentials.last_login_success === false ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${credentials.last_login_success ? 'bg-at-success-bg text-at-success' : credentials.last_login_success === false ? 'bg-at-error-bg text-at-error' : 'bg-at-surface-alt text-at-text-secondary'}`}>
                 {credentials.last_login_success ? '연동 정상' : credentials.last_login_success === false ? '로그인 실패' : '미확인'}
               </span>
             </div>
@@ -334,25 +334,25 @@ export default function HometaxSyncPanel({
           {credentials && !showCredForm ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">사업자등록번호</span>
-                <span className="font-medium text-slate-800">
+                <span className="text-at-text-weak">사업자등록번호</span>
+                <span className="font-medium text-at-text">
                   {credentials.business_number.replace(/(\d{3})(\d{2})(\d{5})/, '$1-$2-$3')}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">로그인 방식</span>
-                <span className="font-medium text-slate-800">ID/PW</span>
+                <span className="text-at-text-weak">로그인 방식</span>
+                <span className="font-medium text-at-text">ID/PW</span>
               </div>
               {credentials.last_login_attempt && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">마지막 로그인</span>
-                  <span className="text-slate-600 text-xs">
+                  <span className="text-at-text-weak">마지막 로그인</span>
+                  <span className="text-at-text-secondary text-xs">
                     {new Date(credentials.last_login_attempt).toLocaleString('ko-KR')}
                   </span>
                 </div>
               )}
               {credentials.last_login_error && (
-                <div className="p-2 bg-red-50 rounded-lg text-xs text-red-600">
+                <div className="p-2 bg-at-error-bg rounded-lg text-xs text-at-error">
                   {credentials.last_login_error}
                 </div>
               )}
@@ -371,7 +371,7 @@ export default function HometaxSyncPanel({
                 </button>
                 <button
                   onClick={handleDeleteCredentials}
-                  className="py-2 px-4 text-sm font-medium text-red-600 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+                  className="py-2 px-4 text-sm font-medium text-at-error bg-at-error-bg rounded-xl hover:bg-at-error-bg transition-colors"
                 >
                   삭제
                 </button>
@@ -380,30 +380,30 @@ export default function HometaxSyncPanel({
           ) : (
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">사업자등록번호</label>
+                <label className="text-xs font-medium text-at-text-secondary mb-1 block">사업자등록번호</label>
                 <input
                   type="text"
                   value={bizNo}
                   onChange={(e) => setBizNo(e.target.value)}
                   placeholder="000-00-00000"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">홈택스 아이디</label>
+                <label className="text-xs font-medium text-at-text-secondary mb-1 block">홈택스 아이디</label>
                 <input
                   type="text"
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
                   placeholder="홈택스 로그인 아이디"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                <label className="text-xs font-medium text-at-text-secondary mb-1 flex items-center gap-1.5">
                   홈택스 비밀번호
                   {credentials && !loginPw && (
-                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                    <span className="flex items-center gap-0.5 text-at-success font-medium">
                       <Check className="w-3 h-3" />저장됨
                     </span>
                   )}
@@ -414,22 +414,22 @@ export default function HometaxSyncPanel({
                     value={loginPw}
                     onChange={(e) => setLoginPw(e.target.value)}
                     placeholder={credentials ? '변경하려면 입력 (비워두면 기존값 유지)' : '홈택스 로그인 비밀번호'}
-                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 pr-10 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-at-text-weak hover:text-at-text"
                   >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 flex items-center gap-1.5">
+                <label className="text-xs font-medium text-at-text-secondary mb-1 flex items-center gap-1.5">
                   주민등록번호 (생년월일 + 뒷자리 1자리)
                   {credentials?.has_resident_number && !residentNumber && (
-                    <span className="flex items-center gap-0.5 text-emerald-600 font-medium">
+                    <span className="flex items-center gap-0.5 text-at-success font-medium">
                       <Check className="w-3 h-3" />저장됨
                     </span>
                   )}
@@ -446,23 +446,23 @@ export default function HometaxSyncPanel({
                     }}
                     placeholder={credentials?.has_resident_number ? '변경하려면 입력 (비워두면 기존값 유지)' : '000000-0'}
                     maxLength={8}
-                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 pr-10 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw(!showPw)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-at-text-weak hover:text-at-text"
                   >
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">홈택스 ID/PW 로그인 시 본인확인에 필요합니다</p>
+                <p className="text-[10px] text-at-text-weak mt-1">홈택스 ID/PW 로그인 시 본인확인에 필요합니다</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={handleSaveCredentials}
                   disabled={saving}
-                  className="flex-1 py-2 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-1"
+                  className="flex-1 py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-1"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   저장
@@ -470,7 +470,7 @@ export default function HometaxSyncPanel({
                 {credentials && (
                   <button
                     onClick={() => setShowCredForm(false)}
-                    className="py-2 px-4 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                    className="py-2 px-4 text-sm font-medium text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-at-surface-hover transition-colors"
                   >
                     취소
                   </button>
@@ -483,12 +483,12 @@ export default function HometaxSyncPanel({
 
       {/* 동기화 섹션 */}
       {credentials && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+        <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
+          <div className="p-4 border-b border-at-border bg-at-surface-alt/50">
+            <h3 className="font-bold text-at-text text-sm flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-indigo-500" />
               데이터 동기화
-              <span className="text-xs font-normal text-slate-500">{year}년 {month}월</span>
+              <span className="text-xs font-normal text-at-text-weak">{year}년 {month}월</span>
             </h3>
           </div>
 
@@ -497,9 +497,9 @@ export default function HometaxSyncPanel({
             {isActiveJob ? (
               <div className="space-y-3">
                 {/* 진행 상태 카드 */}
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
+                <div className="p-3 bg-at-accent-light border border-at-border rounded-xl space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <div className="flex items-center gap-2 text-sm text-at-accent">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="font-medium">
                         {currentJob?.status === 'pending'
@@ -507,7 +507,7 @@ export default function HometaxSyncPanel({
                           : currentJob?.progress_message || '스크래핑 진행 중...'}
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-blue-700">
+                    <span className="text-xs font-bold text-at-accent">
                       {progress.completed}/{progress.total} 완료
                     </span>
                   </div>
@@ -516,7 +516,7 @@ export default function HometaxSyncPanel({
                   <div className="w-full bg-blue-200 rounded-full h-2">
                     {progress.total > 0 ? (
                       <div
-                        className="h-2 bg-blue-600 rounded-full transition-all duration-500"
+                        className="h-2 bg-at-accent rounded-full transition-all duration-500"
                         style={{ width: `${Math.max(5, progress.percent)}%` }}
                       />
                     ) : (
@@ -533,8 +533,8 @@ export default function HometaxSyncPanel({
                           key={dt}
                           className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg ${
                             isDone
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-blue-100 text-blue-600'
+                              ? 'bg-at-success-bg text-at-success'
+                              : 'bg-at-tag text-at-accent'
                           }`}
                         >
                           {isDone
@@ -552,7 +552,7 @@ export default function HometaxSyncPanel({
                 <button
                   onClick={handleCancelSync}
                   disabled={cancelling}
-                  className="w-full py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 text-sm font-bold text-at-error bg-at-error-bg border border-red-200 rounded-xl hover:bg-at-error-bg disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 >
                   {cancelling
                     ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -566,7 +566,7 @@ export default function HometaxSyncPanel({
                 {/* 데이터 유형 선택 */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-slate-600">수집 데이터</span>
+                    <span className="text-xs font-medium text-at-text-secondary">수집 데이터</span>
                     <button onClick={toggleAll} className="text-xs text-indigo-600 hover:text-indigo-800">
                       {selectedDataTypes.length === Object.keys(DATA_TYPE_LABELS).length ? '전체 해제' : '전체 선택'}
                     </button>
@@ -579,7 +579,7 @@ export default function HometaxSyncPanel({
                         className={`py-1.5 px-2.5 text-xs rounded-lg border transition-colors ${
                           selectedDataTypes.includes(key)
                             ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-medium'
-                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                            : 'bg-white border-at-border text-at-text-weak hover:bg-at-surface-alt'
                         }`}
                       >
                         {label}
@@ -592,7 +592,7 @@ export default function HometaxSyncPanel({
                 <button
                   onClick={handleSync}
                   disabled={selectedDataTypes.length === 0}
-                  className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 text-sm font-bold text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:bg-indigo-300 transition-colors flex items-center justify-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" />
                   수동 동기화
@@ -605,43 +605,43 @@ export default function HometaxSyncPanel({
 
       {/* 동기화 이력 */}
       {syncLogs.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
           <button
             onClick={() => setShowLogs(!showLogs)}
-            className="w-full p-4 flex items-center justify-between text-sm font-bold text-slate-800 hover:bg-slate-50 transition-colors"
+            className="w-full p-4 flex items-center justify-between text-sm font-bold text-at-text hover:bg-at-surface-alt transition-colors"
           >
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-slate-400" />
+              <Clock className="w-4 h-4 text-at-text-weak" />
               동기화 이력
-              <span className="text-xs font-normal text-slate-400">{syncLogs.length}건</span>
+              <span className="text-xs font-normal text-at-text-weak">{syncLogs.length}건</span>
             </div>
-            {showLogs ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            {showLogs ? <ChevronUp className="w-4 h-4 text-at-text-weak" /> : <ChevronDown className="w-4 h-4 text-at-text-weak" />}
           </button>
 
           {showLogs && (
-            <div className="border-t border-slate-100">
+            <div className="border-t border-at-border">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500">
+                  <tr className="bg-at-surface-alt text-at-text-weak">
                     <th className="px-4 py-2 text-left">데이터</th>
                     <th className="px-4 py-2 text-center">상태</th>
                     <th className="px-4 py-2 text-right">건수</th>
                     <th className="px-4 py-2 text-right">시간</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-at-border">
                   {syncLogs.map(log => (
-                    <tr key={log.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 text-slate-700">{DATA_TYPE_LABELS[log.data_type] || log.data_type}</td>
+                    <tr key={log.id} className="hover:bg-at-surface-alt">
+                      <td className="px-4 py-2 text-at-text-secondary">{DATA_TYPE_LABELS[log.data_type] || log.data_type}</td>
                       <td className="px-4 py-2 text-center">
                         {log.status === 'success' ? (
                           <span className="text-emerald-600">성공</span>
                         ) : (
-                          <span className="text-red-600" title={log.error_message || ''}>실패</span>
+                          <span className="text-at-error" title={log.error_message || ''}>실패</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-right text-slate-600">{log.record_count}</td>
-                      <td className="px-4 py-2 text-right text-slate-400">
+                      <td className="px-4 py-2 text-right text-at-text-secondary">{log.record_count}</td>
+                      <td className="px-4 py-2 text-right text-at-text-weak">
                         {new Date(log.synced_at).toLocaleString('ko-KR', {
                           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
