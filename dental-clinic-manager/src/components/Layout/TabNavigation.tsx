@@ -868,33 +868,33 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
 
   return (
     <nav className="flex flex-col h-full w-full">
-      {/* 편집 모드 토글 버튼 */}
-      {!isCollapsed && (
-        <div className="flex items-center justify-end px-1 pb-2">
+      {/* 상단 아이콘 버튼: 메뉴 편집 + 접기/펼치기 */}
+      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-end'} px-1 pb-2 gap-1`}>
+        {!isCollapsed && (
           <button
             onClick={toggleEditMode}
+            title={isEditMode ? '편집 완료' : '메뉴 편집'}
             className={`
-              flex items-center space-x-1.5 py-1 px-2.5 rounded-lg text-xs font-medium transition-all duration-200
+              p-1.5 rounded-lg transition-all duration-200
               ${isEditMode
                 ? 'bg-at-accent text-white hover:bg-at-accent-hover'
                 : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover'
               }
             `}
           >
-            {isEditMode ? (
-              <>
-                <Check className="w-3.5 h-3.5" />
-                <span>완료</span>
-              </>
-            ) : (
-              <>
-                <Pencil className="w-3.5 h-3.5" />
-                <span>메뉴 편집</span>
-              </>
-            )}
+            {isEditMode ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
           </button>
-        </div>
-      )}
+        )}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            title={isCollapsed ? '메뉴 펼치기' : '메뉴 접기'}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200"
+          >
+            {isCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+          </button>
+        )}
+      </div>
 
       {/* 상단 영역 */}
       <div className="flex-1 space-y-1">
@@ -1374,23 +1374,6 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             </button>
           )
         })}
-        {/* 사이드바 접기/펼치기 */}
-        {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            title={isCollapsed ? '메뉴 펼치기' : '메뉴 접기'}
-            className={`
-              group flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} py-2.5 ${isCollapsed ? '' : 'px-3'} rounded-xl text-sm font-medium transition-all duration-200 w-full
-              text-slate-400 hover:bg-slate-100 hover:text-slate-600
-            `}
-          >
-            {isCollapsed
-              ? <ChevronsRight className="w-5 h-5 flex-shrink-0" />
-              : <ChevronsLeft className="w-5 h-5 flex-shrink-0" />
-            }
-            {!isCollapsed && <span className="truncate">메뉴 접기</span>}
-          </button>
-        )}
       </div>
 
       {/* Mac 워커 설치 모달 */}
