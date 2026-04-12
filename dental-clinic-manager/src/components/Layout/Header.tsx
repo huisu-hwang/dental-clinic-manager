@@ -1,6 +1,6 @@
 'use client'
 
-import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX } from 'lucide-react'
+import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX, ArrowUpCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
@@ -61,6 +61,52 @@ export default function Header({
     setIsAutoLoginEnabled(newState)
   }
 
+  // 워커 업데이트 상태 체크
+  const [workerInstalled, setWorkerInstalled] = useState<boolean | null>(null)
+  const [workerUpdateAvailable, setWorkerUpdateAvailable] = useState(false)
+  const [workerUpdateStatus, setWorkerUpdateStatus] = useState<string | null>(null)
+  const [workerVersions, setWorkerVersions] = useState<{ current: string | null; latest: string | null }>({ current: null, latest: null })
+  const [workerUpdating, setWorkerUpdating] = useState(false)
+
+  useEffect(() => {
+    const checkWorker = async () => {
+      try {
+        const res = await fetch('/api/workers/status?type=marketing', { signal: AbortSignal.timeout(10000) })
+        if (res.ok) {
+          const data = await res.json()
+          setWorkerInstalled(data.marketing?.installed ?? false)
+          setWorkerUpdateAvailable(data.marketing?.updateAvailable ?? false)
+          setWorkerUpdateStatus(data.marketing?.updateStatus ?? null)
+          setWorkerVersions({
+            current: data.marketing?.currentVersion ?? null,
+            latest: data.marketing?.latestVersion ?? null,
+          })
+        }
+      } catch {
+        // 에러 무시
+      }
+    }
+    checkWorker()
+    const interval = setInterval(checkWorker, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleWorkerUpdate = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setWorkerUpdating(true)
+    try {
+      await fetch('/api/master/worker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update' }),
+      })
+    } catch {
+      // 에러 무시
+    } finally {
+      setTimeout(() => setWorkerUpdating(false), 5000)
+    }
+  }
+
   const getStatusColor = () => {
     switch (dbStatus) {
       case 'connected': return 'bg-green-500'
@@ -116,7 +162,36 @@ export default function Header({
       </div>
 
       {/* 중앙: 알림 배너 (데스크탑에서만 표시) */}
-      <div className="hidden md:flex flex-1 justify-center min-w-0">
+      <div className="hidden md:flex flex-1 justify-center min-w-0 items-center gap-2">
+        {workerInstalled && workerUpdateAvailable && (
+          <div className={`
+            flex items-center gap-2 px-3 py-1.5 rounded-full border
+            ${workerUpdateStatus === 'downloaded' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}
+            transition-all duration-200 shadow-sm whitespace-nowrap flex-shrink-0
+          `}>
+            <ArrowUpCircle className={`w-4 h-4 flex-shrink-0 ${workerUpdateStatus === 'downloaded' ? 'text-green-600' : 'text-amber-600'}`} />
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <span className="font-medium">
+                {workerUpdateStatus === 'downloaded' ? '업데이트 완료' : workerUpdateStatus === 'downloading' ? '업데이트 다운로드 중...' : '워커 업데이트 가능'}
+              </span>
+              <span className={`${workerUpdateStatus === 'downloaded' ? 'text-green-600' : 'text-amber-600'} hidden lg:inline text-xs`}>
+                (v{workerVersions.current} → v{workerVersions.latest})
+              </span>
+            </div>
+            {workerUpdateStatus !== 'downloaded' && workerUpdateStatus !== 'downloading' && (
+              <button
+                onClick={handleWorkerUpdate}
+                disabled={workerUpdating}
+                className="inline-flex items-center px-2 py-0.5 ml-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-[10px] sm:text-xs font-medium rounded-md transition-colors"
+              >
+                {workerUpdating ? '요청 중' : '업데이트'}
+              </button>
+            )}
+            {workerUpdateStatus === 'downloaded' && (
+              <span className="text-[10px] sm:text-xs text-green-600 ml-1 hidden lg:inline">앱 재시작 필요</span>
+            )}
+          </div>
+        )}
         <HeaderNotificationBanner
           notifications={notifications}
           onDismissNotification={onDismissNotification}
