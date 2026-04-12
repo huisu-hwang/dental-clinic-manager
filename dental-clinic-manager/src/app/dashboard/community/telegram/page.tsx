@@ -62,7 +62,7 @@ export default function TelegramBoardListPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
       </div>
     )

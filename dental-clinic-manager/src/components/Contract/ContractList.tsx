@@ -271,7 +271,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
@@ -279,14 +279,16 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
   if (error) {
     return (
-      <div className="p-4 bg-at-error-bg border border-red-200 rounded-xl">
-        <p className="text-red-800">{error}</p>
-        <button
-          onClick={loadContracts}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          다시 시도
-        </button>
+      <div className="p-4 sm:p-6 bg-white min-h-screen">
+        <div className="p-4 bg-at-error-bg border border-red-200 rounded-xl">
+          <p className="text-red-800">{error}</p>
+          <button
+            onClick={loadContracts}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            다시 시도
+          </button>
+        </div>
       </div>
     )
   }

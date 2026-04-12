@@ -44,14 +44,14 @@ export default function TelegramBoardPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-sky-500" />

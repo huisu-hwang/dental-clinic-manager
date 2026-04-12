@@ -104,7 +104,7 @@ export default function NewContractPage() {
   // Check permission after user and permissions are loaded
   if (!hasPermission('contract_create')) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="p-4 sm:p-6 bg-white min-h-screen">
         <div className="bg-at-error-bg border border-red-200 rounded-lg p-6 text-center">
           <h2 className="text-xl font-bold text-red-800 mb-2">접근 권한이 없습니다</h2>
           <p className="text-at-error mb-4">근로계약서를 작성할 권한이 없습니다.</p>
@@ -129,10 +129,8 @@ export default function NewContractPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
-        </div>
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }

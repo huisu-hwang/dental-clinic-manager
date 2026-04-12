@@ -29,7 +29,7 @@ export default function CommunityAdminPage() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-at-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-at-text-secondary">로딩 중...</p>
@@ -43,85 +43,75 @@ export default function CommunityAdminPage() {
   }
 
   return (
-    <>
+    <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
       {/* 헤더 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-red-600 to-red-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">커뮤니티 관리</h2>
-              <p className="text-red-100 text-xs sm:text-sm hidden sm:block">Community Moderation</p>
-            </div>
+      <div className="flex items-center justify-between pb-4 border-b border-at-border">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <Shield className="w-4 h-4 text-at-accent" />
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/dashboard/community')}
-            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />커뮤니티
-          </Button>
+          <h2 className="text-lg font-bold text-at-text">커뮤니티 관리</h2>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/dashboard/community')}
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" />커뮤니티
+        </Button>
       </div>
 
       {/* 탭 */}
-      <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt overflow-x-auto scrollbar-hide">
-        <nav className="flex flex-nowrap space-x-1 p-1.5 sm:p-2 min-w-max">
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'reports'
-              ? 'bg-white text-at-error shadow-sm'
-              : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
-              }`}
-          >
-            <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            신고 관리
-          </button>
-          <button
-            onClick={() => setActiveTab('penalties')}
-            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'penalties'
-              ? 'bg-white text-at-error shadow-sm'
-              : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
-              }`}
-          >
-            <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            제재 이력
-          </button>
-          <button
-            onClick={() => setActiveTab('categories')}
-            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'categories'
-              ? 'bg-white text-at-error shadow-sm'
-              : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
-              }`}
-          >
-            <Tags className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            주제 관리
-          </button>
-          <button
-            onClick={() => setActiveTab('telegram')}
-            className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center flex-shrink-0 whitespace-nowrap rounded-lg font-medium text-xs sm:text-sm transition-all ${activeTab === 'telegram'
-              ? 'bg-white text-at-error shadow-sm'
-              : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
-              }`}
-          >
-            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-            텔레그램 연동
-          </button>
-        </nav>
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'reports'
+            ? 'bg-at-accent-light text-at-accent'
+            : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+            }`}
+        >
+          <Flag className="w-4 h-4 mr-2" />
+          신고 관리
+        </button>
+        <button
+          onClick={() => setActiveTab('penalties')}
+          className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'penalties'
+            ? 'bg-at-accent-light text-at-accent'
+            : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+            }`}
+        >
+          <ShieldAlert className="w-4 h-4 mr-2" />
+          제재 이력
+        </button>
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'categories'
+            ? 'bg-at-accent-light text-at-accent'
+            : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+            }`}
+        >
+          <Tags className="w-4 h-4 mr-2" />
+          주제 관리
+        </button>
+        <button
+          onClick={() => setActiveTab('telegram')}
+          className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'telegram'
+            ? 'bg-at-accent-light text-at-accent'
+            : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+            }`}
+        >
+          <Send className="w-4 h-4 mr-2" />
+          텔레그램 연동
+        </button>
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
-        <div key={activeTab} className="tab-content">
-          {activeTab === 'reports' && <AdminReportList />}
-          {activeTab === 'penalties' && <AdminPenaltyHistory />}
-          {activeTab === 'categories' && <AdminCategoryManager />}
-          {activeTab === 'telegram' && <AdminTelegramManager />}
-        </div>
+      <div key={activeTab}>
+        {activeTab === 'reports' && <AdminReportList />}
+        {activeTab === 'penalties' && <AdminPenaltyHistory />}
+        {activeTab === 'categories' && <AdminCategoryManager />}
+        {activeTab === 'telegram' && <AdminTelegramManager />}
       </div>
-    </>
+    </div>
   )
 }

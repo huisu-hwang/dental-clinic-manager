@@ -360,7 +360,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex justify-center items-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent mx-auto mb-4"></div>
           <p>데이터를 불러오는 중...</p>

@@ -15,7 +15,7 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
       </div>
     )
@@ -25,7 +25,7 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
     const featureLabel = PREMIUM_FEATURE_LABELS[featureId] || featureId
 
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-at-surface-alt flex items-center justify-center">
             <Lock className="w-8 h-8 text-at-text-weak" />

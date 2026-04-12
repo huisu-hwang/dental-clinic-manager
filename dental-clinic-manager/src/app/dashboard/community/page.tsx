@@ -97,7 +97,7 @@ export default function CommunityPage() {
 
   if (authLoading || profileLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-at-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-at-text-secondary">로딩 중...</p>

@@ -213,7 +213,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg">
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       <h2 className="text-2xl font-bold mb-6">근로계약서 작성</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
