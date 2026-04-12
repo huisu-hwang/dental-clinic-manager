@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import ClinicSelectionForm from './ClinicSelectionForm'
 import { authService } from '@/lib/authService'
@@ -174,9 +175,7 @@ export default function EnhancedSignupForm({
             ← 돌아가기
           </button>
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-at-accent rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">🦷</span>
-            </div>
+            <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
             <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
           <h2 className="text-3xl font-bold text-at-text mb-2">새 병원 등록</h2>

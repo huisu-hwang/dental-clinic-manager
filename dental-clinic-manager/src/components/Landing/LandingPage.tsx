@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import {
   ChevronDownIcon,
   CheckCircleIcon,
@@ -189,9 +190,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center shadow-at-card">
-                <span className="text-xl">🦷</span>
-              </div>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl shadow-at-card" />
               <span className="text-xl font-bold text-at-text">클리닉 매니저</span>
             </div>
             <div className="flex items-center gap-3">
@@ -627,9 +626,7 @@ export default function LandingPage({ onShowSignup, onShowLogin }: LandingPagePr
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center shadow-at-card">
-                <span className="text-xl">🦷</span>
-              </div>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl shadow-at-card" />
               <span className="text-xl font-bold text-white">클리닉 매니저</span>
             </div>
             <div className="flex items-center gap-4 text-at-text-weak text-sm">

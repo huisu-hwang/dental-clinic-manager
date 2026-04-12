@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { UserMinusIcon, BuildingOffice2Icon, ArrowRightCircleIcon, PlusCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
 import { getSupabase } from '@/lib/supabase'
@@ -269,9 +270,7 @@ export default function ResignedPage() {
               ← 뒤로가기
             </button>
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-at-accent rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold">🦷</span>
-              </div>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
               <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
             </div>
           </div>
@@ -382,9 +381,7 @@ export default function ResignedPage() {
               ← 뒤로가기
             </button>
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-at-accent rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold">🦷</span>
-              </div>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
               <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
             </div>
           </div>
@@ -536,9 +533,7 @@ export default function ResignedPage() {
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-at-accent rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">🦷</span>
-            </div>
+            <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
             <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
         </div>

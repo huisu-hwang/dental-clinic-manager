@@ -1,6 +1,7 @@
 'use client'
 
-import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX } from 'lucide-react'
+import { LogOut, User, Cog, Crown, Menu, X, UserX } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
@@ -100,9 +101,13 @@ export default function Header({
 
         <Link href="/dashboard" className="group min-w-0">
           <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer transition-transform duration-200 hover:scale-[1.02]">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-at-accent rounded-lg sm:rounded-xl flex items-center justify-center shadow-at-soft flex-shrink-0">
-              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+            <Image
+              src="/icons/icon-192x192.png"
+              alt="클리닉 매니저 로고"
+              width={40}
+              height={40}
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl shadow-at-soft flex-shrink-0"
+            />
             <div className="min-w-0">
               <h1 className="text-base sm:text-xl font-bold text-at-text group-hover:text-at-accent transition-colors truncate">클리닉 매니저</h1>
               {user && (

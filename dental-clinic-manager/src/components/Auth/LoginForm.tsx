@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { dataService } from '@/lib/dataService'
@@ -283,9 +284,13 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
             ← 돌아가기
           </button>
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-at-accent rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">🦷</span>
-            </div>
+            <Image
+              src="/icons/icon-192x192.png"
+              alt="클리닉 매니저 로고"
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-xl"
+            />
             <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
           <h2 className="text-3xl font-bold text-at-text mb-2">로그인</h2>
