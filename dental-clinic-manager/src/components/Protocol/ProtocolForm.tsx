@@ -195,14 +195,14 @@ export default function ProtocolForm({
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
         <form onSubmit={handleSubmit}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-slate-200">
-            <h2 className="text-2xl font-bold text-slate-800">
+          <div className="flex items-center justify-between p-6 border-b border-at-border">
+            <h2 className="text-2xl font-bold text-at-text">
               {mode === 'create' ? '새 프로토콜 작성' : '프로토콜 수정'}
             </h2>
             <button
               type="button"
               onClick={onCancel}
-              className="text-slate-400 hover:text-slate-600"
+              className="text-at-text-weak hover:text-at-text-secondary"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -211,21 +211,21 @@ export default function ProtocolForm({
           {/* Body */}
           <div className="p-6 space-y-6 max-h-[calc(100vh-250px)] overflow-y-auto">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm">
                 {error}
               </div>
             )}
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
                 프로토콜 제목 *
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                 placeholder="예: 임플란트 식립 프로토콜"
                 required
               />
@@ -234,13 +234,13 @@ export default function ProtocolForm({
             {/* Category and Status */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-at-text-secondary mb-2">
                   카테고리
                 </label>
                 <select
                   value={formData.category_id}
                   onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="">카테고리 없음</option>
                   {categories.map((category) => (
@@ -252,13 +252,13 @@ export default function ProtocolForm({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-at-text-secondary mb-2">
                   상태
                 </label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="draft">작성중</option>
                   <option value="active">활성</option>
@@ -276,15 +276,15 @@ export default function ProtocolForm({
             </div>
 
             {formData.steps && formData.steps.length > 0 && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <h4 className="mb-3 text-sm font-semibold text-slate-700">미리보기</h4>
+              <div className="rounded-lg border border-at-border bg-at-surface-alt p-4">
+                <h4 className="mb-3 text-sm font-semibold text-at-text-secondary">미리보기</h4>
                 <ProtocolStepViewer steps={formData.steps} />
               </div>
             )}
 
             {/* Smart Tag Input */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
                 태그
               </label>
               <SmartTagInput
@@ -301,30 +301,30 @@ export default function ProtocolForm({
             {mode === 'edit' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-2">
                     변경 유형 *
                   </label>
                   <select
                     value={formData.change_type}
                     onChange={(e) => setFormData({ ...formData, change_type: e.target.value as any })}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                   >
                     <option value="minor">소규모 수정 (Minor)</option>
                     <option value="major">대규모 수정 (Major)</option>
                   </select>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-at-text-weak mt-1">
                     Major: 주요 내용 변경 시 버전 증가 (예: 1.0 → 2.0), Minor: 소규모 수정 시 (예: 1.0 → 1.1)
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-2">
                     변경 사항 요약 *
                   </label>
                   <textarea
                     value={formData.change_summary}
                     onChange={(e) => setFormData({ ...formData, change_summary: e.target.value })}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                     rows={3}
                     placeholder="이번 수정에서 변경된 내용을 간단히 설명하세요."
                     required
@@ -335,18 +335,18 @@ export default function ProtocolForm({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-at-border">
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+              className="px-4 py-2 text-at-text-secondary bg-white border border-at-border rounded-md hover:bg-at-surface-alt"
               disabled={loading || reviewLoading}
             >
               취소
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
+              className="px-4 py-2 bg-at-accent text-white rounded-md hover:bg-at-accent-hover disabled:bg-blue-400"
               disabled={loading || reviewLoading}
             >
               {loading ? '저장 중...' : mode === 'create' ? '프로토콜 생성' : '변경 사항 저장'}

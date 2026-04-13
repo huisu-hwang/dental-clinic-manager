@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Heart, Bookmark, Flag, Share2 } from 'lucide-react'
+import { Heart, Bookmark, Flag } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface PostActionsProps {
@@ -34,13 +34,13 @@ export default function PostActions({
   }
 
   return (
-    <div className="flex items-center gap-2 py-3 border-t border-b border-gray-100">
+    <div className="flex items-center gap-2 py-3 border-t border-b border-at-border">
       <Button
         variant="outline"
         size="sm"
         onClick={handleLike}
         disabled={liking}
-        className={isLiked ? 'text-red-500 border-red-200 bg-red-50' : ''}
+        className={isLiked ? 'text-red-500 border-at-border bg-at-error-bg' : ''}
       >
         <Heart className={`w-4 h-4 mr-1.5 ${isLiked ? 'fill-red-500' : ''}`} />
         좋아요 {likeCount > 0 && likeCount}
@@ -50,13 +50,13 @@ export default function PostActions({
         size="sm"
         onClick={handleBookmark}
         disabled={bookmarking}
-        className={isBookmarked ? 'text-yellow-600 border-yellow-200 bg-yellow-50' : ''}
+        className={isBookmarked ? 'text-at-warning border-at-border bg-at-warning-bg' : ''}
       >
         <Bookmark className={`w-4 h-4 mr-1.5 ${isBookmarked ? 'fill-yellow-500' : ''}`} />
         스크랩 {bookmarkCount > 0 && bookmarkCount}
       </Button>
       <div className="flex-1" />
-      <Button variant="outline" size="sm" onClick={onReport} className="text-gray-400">
+      <Button variant="outline" size="sm" onClick={onReport} className="text-at-text-weak">
         <Flag className="w-4 h-4 mr-1.5" />신고
       </Button>
     </div>

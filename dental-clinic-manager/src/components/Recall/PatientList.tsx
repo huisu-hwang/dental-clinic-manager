@@ -168,11 +168,11 @@ export default function PatientList({
 
   // 경과 기간 색상 클래스
   const getElapsedColorClass = (dateStr?: string): string => {
-    if (!dateStr) return 'text-gray-400'
+    if (!dateStr) return 'text-at-text-weak'
     const months = getElapsedMonths(dateStr)
-    if (months < 6) return 'text-green-600'
-    if (months < 12) return 'text-amber-600'
-    return 'text-red-600'
+    if (months < 6) return 'text-at-success'
+    if (months < 12) return 'text-at-warning'
+    return 'text-at-error'
   }
 
   // 전체 선택 상태
@@ -214,19 +214,19 @@ export default function PatientList({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-white rounded-2xl shadow-at-card border border-at-border">
       {/* 헤더 및 필터 */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-at-border">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           {/* 검색 */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-at-text-weak" />
             <input
               type="text"
               placeholder="환자명, 전화번호, 차트번호 검색..."
               value={filters.search || ''}
               onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
             />
           </div>
 
@@ -234,7 +234,7 @@ export default function PatientList({
           <select
             value={filters.status || 'all'}
             onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as PatientRecallStatus | 'all' })}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent"
           >
             {statusOptions.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -250,7 +250,7 @@ export default function PatientList({
             className={`px-4 py-2 border rounded-lg flex items-center gap-2 text-sm transition-colors ${
               filters.showExcluded
                 ? 'border-rose-400 bg-rose-50 text-rose-700'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                : 'border-at-border text-at-text-secondary hover:bg-at-surface-hover'
             }`}
             title={filters.showExcluded ? '일반 환자 보기' : '제외 환자 보기'}
           >
@@ -262,7 +262,7 @@ export default function PatientList({
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-4 py-2 border rounded-lg flex items-center gap-2 ${
-              showFilters ? 'border-blue-500 text-blue-600' : 'border-gray-300 text-gray-700'
+              showFilters ? 'border-at-accent text-at-accent' : 'border-at-border text-at-text-secondary'
             }`}
           >
             <Filter className="w-4 h-4" />
@@ -272,9 +272,9 @@ export default function PatientList({
         </div>
 
         {/* 최종 내원일 기간 필터 칩 */}
-        <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="mt-3 pt-3 border-t border-at-border">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-gray-600 whitespace-nowrap">최종 내원일:</span>
+            <span className="text-sm font-medium text-at-text-secondary whitespace-nowrap">최종 내원일:</span>
             {lastVisitOptions.map(opt => (
               <button
                 key={opt.value}
@@ -294,7 +294,7 @@ export default function PatientList({
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   (filters.lastVisitPeriod || 'all') === opt.value
                     ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
                 }`}
               >
                 {opt.label}
@@ -324,29 +324,29 @@ export default function PatientList({
           {/* 사용자 정의 날짜 범위 */}
           {filters.lastVisitPeriod === 'custom' && (
             <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <label className="text-xs text-gray-500">내원일 시작:</label>
+              <label className="text-xs text-at-text-weak">내원일 시작:</label>
               <input
                 type="date"
                 value={filters.lastVisitFrom || ''}
                 onChange={(e) => onFiltersChange({ ...filters, lastVisitFrom: e.target.value })}
-                className="px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                className="px-2 py-1 text-sm border border-at-border rounded-xl"
               />
-              <span className="text-xs text-gray-400">~</span>
-              <label className="text-xs text-gray-500">종료:</label>
+              <span className="text-xs text-at-text-weak">~</span>
+              <label className="text-xs text-at-text-weak">종료:</label>
               <input
                 type="date"
                 value={filters.lastVisitTo || ''}
                 onChange={(e) => onFiltersChange({ ...filters, lastVisitTo: e.target.value })}
-                className="px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                className="px-2 py-1 text-sm border border-at-border rounded-xl"
               />
             </div>
           )}
         </div>
 
         {/* 마지막 연락 기간 필터 칩 */}
-        <div className="mt-2 pt-2 border-t border-gray-100">
+        <div className="mt-2 pt-2 border-t border-at-border">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-gray-600 whitespace-nowrap">마지막 연락:</span>
+            <span className="text-sm font-medium text-at-text-secondary whitespace-nowrap">마지막 연락:</span>
             {lastContactOptions.map(opt => (
               <button
                 key={opt.value}
@@ -364,7 +364,7 @@ export default function PatientList({
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   (filters.lastContactPeriod || 'all') === opt.value
                     ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
                 }`}
               >
                 {opt.label}
@@ -394,32 +394,32 @@ export default function PatientList({
 
         {/* 확장 필터 */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-4 pt-4 border-t border-at-border grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">등록일 (시작)</label>
+              <label className="block text-sm text-at-text-secondary mb-1">등록일 (시작)</label>
               <input
                 type="date"
                 value={filters.dateFrom || ''}
                 onChange={(e) => onFiltersChange({ ...filters, dateFrom: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">등록일 (종료)</label>
+              <label className="block text-sm text-at-text-secondary mb-1">등록일 (종료)</label>
               <input
                 type="date"
                 value={filters.dateTo || ''}
                 onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
               />
             </div>
             {filters.showExcluded && (
               <div>
-                <label className="block text-sm text-gray-600 mb-1">제외 사유</label>
+                <label className="block text-sm text-at-text-secondary mb-1">제외 사유</label>
                 <select
                   value={filters.excludeReason || 'all'}
                   onChange={(e) => onFiltersChange({ ...filters, excludeReason: e.target.value as RecallExcludeReason | 'all' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl"
                 >
                   <option value="all">전체</option>
                   <option value="family">지인</option>
@@ -446,14 +446,14 @@ export default function PatientList({
 
       {/* 선택 정보 및 액션 */}
       {selectedPatients.length > 0 && (
-        <div className="p-4 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
-          <span className="text-blue-700">
+        <div className="p-4 bg-at-accent-light border-b border-at-accent/20 flex items-center justify-between">
+          <span className="text-at-accent">
             {selectedPatients.length}명 선택됨
           </span>
           <div className="flex gap-2">
             <button
               onClick={() => onSelectAll(false)}
-              className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800"
+              className="px-3 py-1 text-sm text-at-accent hover:text-at-accent-hover"
             >
               선택 해제
             </button>
@@ -465,7 +465,7 @@ export default function PatientList({
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
+            <tr className="bg-at-surface-alt border-b border-at-border">
               <th className="px-4 py-3 text-left">
                 <input
                   type="checkbox"
@@ -474,13 +474,13 @@ export default function PatientList({
                     if (el) el.indeterminate = isPartiallySelected
                   }}
                   onChange={(e) => onSelectAll(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-at-border text-at-accent focus:ring-at-accent"
                 />
               </th>
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('patient_name')}
-                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="flex items-center gap-1 text-sm font-medium text-at-text-secondary hover:text-at-text"
                 >
                   환자 정보
                   {sortField === 'patient_name' && (
@@ -491,7 +491,7 @@ export default function PatientList({
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('last_visit_date')}
-                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="flex items-center gap-1 text-sm font-medium text-at-text-secondary hover:text-at-text"
                 >
                   최종 내원일
                   {sortField === 'last_visit_date' && (
@@ -502,7 +502,7 @@ export default function PatientList({
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('status')}
-                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="flex items-center gap-1 text-sm font-medium text-at-text-secondary hover:text-at-text"
                 >
                   상태
                   {sortField === 'status' && (
@@ -513,7 +513,7 @@ export default function PatientList({
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('last_contact_date')}
-                  className="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="flex items-center gap-1 text-sm font-medium text-at-text-secondary hover:text-at-text"
                 >
                   마지막 연락
                   {sortField === 'last_contact_date' && (
@@ -521,24 +521,24 @@ export default function PatientList({
                   )}
                 </button>
               </th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">액션</th>
+              <th className="px-4 py-3 text-center text-sm font-medium text-at-text-secondary">액션</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-at-text-weak">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
                     <span>로딩 중...</span>
                   </div>
                 </td>
               </tr>
             ) : sortedPatients.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-at-text-weak">
                   <div className="flex flex-col items-center gap-2">
-                    <User className="w-12 h-12 text-gray-300" />
+                    <User className="w-12 h-12 text-at-text-weak" />
                     <span>환자 목록이 없습니다.</span>
                   </div>
                 </td>
@@ -547,8 +547,8 @@ export default function PatientList({
               sortedPatients.map((patient) => (
                 <tr
                   key={patient.id}
-                  className={`border-b border-gray-100 hover:bg-gray-50 ${
-                    selectedPatients.includes(patient.id) ? 'bg-blue-50' : ''
+                  className={`border-b border-at-border hover:bg-at-surface-hover ${
+                    selectedPatients.includes(patient.id) ? 'bg-at-accent-light' : ''
                   }`}
                 >
                   {/* 체크박스 */}
@@ -557,21 +557,21 @@ export default function PatientList({
                       type="checkbox"
                       checked={selectedPatients.includes(patient.id)}
                       onChange={() => onSelectPatient(patient.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-at-border text-at-accent focus:ring-at-accent"
                     />
                   </td>
 
                   {/* 환자 정보 */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                        <User className="w-5 h-5 text-gray-500" />
+                      <div className="w-10 h-10 rounded-full bg-at-surface-alt flex items-center justify-center">
+                        <User className="w-5 h-5 text-at-text-weak" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-900">{patient.patient_name}</p>
+                          <p className="font-medium text-at-text">{patient.patient_name}</p>
                           {formatAgeGender(patient) && (
-                            <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                            <span className="text-xs text-at-text-weak bg-at-surface-alt px-1.5 py-0.5 rounded">
                               {formatAgeGender(patient)}
                             </span>
                           )}
@@ -582,9 +582,9 @@ export default function PatientList({
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">{displayPhoneNumber(patient.phone_number)}</p>
+                        <p className="text-sm text-at-text-weak">{displayPhoneNumber(patient.phone_number)}</p>
                         {patient.chart_number && (
-                          <p className="text-xs text-gray-400">차트: {patient.chart_number}</p>
+                          <p className="text-xs text-at-text-weak">차트: {patient.chart_number}</p>
                         )}
                       </div>
                     </div>
@@ -594,7 +594,7 @@ export default function PatientList({
                   <td className="px-4 py-3">
                     {patient.last_visit_date ? (
                       <div>
-                        <p className="text-sm text-gray-900">
+                        <p className="text-sm text-at-text">
                           {patient.last_visit_date}
                         </p>
                         <p className={`text-xs font-medium ${getElapsedColorClass(patient.last_visit_date)}`}>
@@ -602,7 +602,7 @@ export default function PatientList({
                         </p>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">-</span>
+                      <span className="text-sm text-at-text-weak">-</span>
                     )}
                   </td>
 
@@ -616,7 +616,7 @@ export default function PatientList({
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
                             patient.status === status
                               ? `${RECALL_STATUS_COLORS[status]} ring-2 ring-offset-1 ring-current`
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              : 'bg-at-surface-alt text-at-text-weak hover:bg-at-surface-hover'
                           }`}
                         >
                           {STATUS_ICONS[status]}
@@ -632,7 +632,7 @@ export default function PatientList({
                       )}
                     </div>
                     {patient.contact_count > 0 && (
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-at-text-weak mt-0.5">
                         연락 {patient.contact_count}회
                       </p>
                     )}
@@ -642,15 +642,15 @@ export default function PatientList({
                   <td className="px-4 py-3">
                     {patient.last_contact_date ? (
                       <div>
-                        <p className="text-sm text-gray-900">
+                        <p className="text-sm text-at-text">
                           {new Date(patient.last_contact_date).toLocaleDateString('ko-KR')}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-at-text-weak">
                           {patient.last_contact_type === 'sms' ? '문자' : '전화'}
                         </p>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">-</span>
+                      <span className="text-sm text-at-text-weak">-</span>
                     )}
                   </td>
 
@@ -663,21 +663,21 @@ export default function PatientList({
                           <button
                             onClick={() => onCallPatient(patient)}
                             title="전화 걸기"
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="p-2 text-at-success hover:bg-at-success-bg rounded-lg transition-colors"
                           >
                             <Phone className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => onSmsPatient(patient)}
                             title="문자 보내기"
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-at-accent hover:bg-at-accent-light rounded-lg transition-colors"
                           >
                             <MessageSquare className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => onViewHistory(patient)}
                             title="연락 이력"
-                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-at-text-weak hover:bg-at-surface-alt rounded-lg transition-colors"
                           >
                             <History className="w-5 h-5" />
                           </button>
@@ -695,21 +695,21 @@ export default function PatientList({
                           <button
                             onClick={() => onCallPatient(patient)}
                             title="전화 걸기"
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            className="p-2 text-at-success hover:bg-at-success-bg rounded-lg transition-colors"
                           >
                             <Phone className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => onSmsPatient(patient)}
                             title="문자 보내기"
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-at-accent hover:bg-at-accent-light rounded-lg transition-colors"
                           >
                             <MessageSquare className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => onViewHistory(patient)}
                             title="연락 이력"
-                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-at-text-weak hover:bg-at-surface-alt rounded-lg transition-colors"
                           >
                             <History className="w-5 h-5" />
                           </button>
@@ -718,7 +718,7 @@ export default function PatientList({
                             <button
                               title="리콜 제외"
                               onClick={() => setExcludeDropdownId(excludeDropdownId === patient.id ? null : patient.id)}
-                              className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              className="p-2 text-at-text-weak hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                             >
                               <UserX className="w-5 h-5" />
                             </button>
@@ -726,17 +726,17 @@ export default function PatientList({
                               <>
                                 <div className="fixed inset-0 z-20" onClick={() => setExcludeDropdownId(null)} />
                                 <div className="absolute right-0 top-full mt-1 z-30">
-                                  <div className="w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                                  <div className="w-40 bg-white rounded-xl shadow-xl border border-at-border py-1">
                                     <button
                                       onClick={() => { onExcludePatient(patient, 'family'); setExcludeDropdownId(null) }}
-                                      className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2 text-gray-700"
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-at-warning-bg flex items-center gap-2 text-at-text-secondary"
                                     >
                                       <Heart className="w-4 h-4 text-amber-500" />
                                       지인
                                     </button>
                                     <button
                                       onClick={() => { onExcludePatient(patient, 'unfavorable'); setExcludeDropdownId(null) }}
-                                      className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-gray-700"
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 flex items-center gap-2 text-at-text-secondary"
                                     >
                                       <ShieldOff className="w-4 h-4 text-rose-500" />
                                       비우호적
@@ -758,8 +758,8 @@ export default function PatientList({
       </div>
 
       {/* 페이지네이션 */}
-      <div className="p-4 border-t border-gray-200 flex items-center justify-between">
-        <span className="text-sm text-gray-600">
+      <div className="p-4 border-t border-at-border flex items-center justify-between">
+        <span className="text-sm text-at-text-secondary">
           총 {totalPatients}명 중 {patients.length}명 표시
         </span>
 
@@ -768,7 +768,7 @@ export default function PatientList({
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage <= 1}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg border border-at-border hover:bg-at-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -789,14 +789,14 @@ export default function PatientList({
                   return (
                     <span key={page} className="flex items-center">
                       {showEllipsis && (
-                        <span className="px-2 text-gray-400">...</span>
+                        <span className="px-2 text-at-text-weak">...</span>
                       )}
                       <button
                         onClick={() => onPageChange(page)}
                         className={`min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
                           page === currentPage
                             ? 'bg-indigo-600 text-white'
-                            : 'border border-gray-300 hover:bg-gray-50'
+                            : 'border border-at-border hover:bg-at-surface-hover'
                         }`}
                       >
                         {page}
@@ -809,7 +809,7 @@ export default function PatientList({
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= totalPages}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg border border-at-border hover:bg-at-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

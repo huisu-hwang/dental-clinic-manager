@@ -73,7 +73,7 @@ export default function TestPage() {
         {data && (
           <div className="mt-4">
             <h2 className="font-bold">데이터 ({data.length}개):</h2>
-            <pre className="bg-gray-100 p-2 rounded mt-2">
+            <pre className="bg-at-surface-alt p-2 rounded mt-2">
               {JSON.stringify(data, null, 2)}
             </pre>
           </div>

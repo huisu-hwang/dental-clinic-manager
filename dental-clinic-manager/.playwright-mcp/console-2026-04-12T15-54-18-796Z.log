@@ -1,0 +1,413 @@
+[     909ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[    1032ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[    1033ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[    1035ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[    1035ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[    1036ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[    1158ms] [LOG] [Supabase] Auth event: SIGNED_IN @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    1158ms] [LOG] [Supabase] User signed in @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:97
+[    1160ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    1161ms] [LOG] [AuthContext] Session check complete: session found @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[    1161ms] [LOG] AuthContext: Supabase 세션 발견 eb46c51d-95a1-4be9-9b30-edcdbd9eb8be @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:114
+[    1161ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    1163ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    1275ms] [LOG] AuthContext: 사용자 프로필 로드 성공 {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:119
+[    1275ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[    1304ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    1637ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2223ms] [LOG] [Fast Refresh] done in 585ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2472ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2594ms] [LOG] [Fast Refresh] done in 123ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3495ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4037ms] [LOG] [Fast Refresh] done in 542ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4288ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4827ms] [LOG] [Fast Refresh] done in 539ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5080ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5147ms] [LOG] [Fast Refresh] done in 67ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6039ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6115ms] [LOG] [Fast Refresh] done in 76ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6906ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    6906ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    6907ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    6907ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    6915ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    6916ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    6917ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    6923ms] [LOG] [Supabase] Environment check: {NODE_ENV: development, hasUrl: true, hasKey: true, urlValue: https://beahjntkmkfhpcbhfnrr.s..., keyValue: eyJhbGciOiJIUzI1NiIs...} @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:34
+[    6924ms] [LOG] [Supabase] Creating client... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:63
+[    6925ms] [LOG] [Supabase] Custom storage adapter initialized @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:67
+[    6925ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[    6926ms] [LOG] [Supabase] Client created successfully with custom storage @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:89
+[    6934ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    6936ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    6936ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    6938ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[    6985ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    6986ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    6986ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    6987ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    6992ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    6993ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    7030ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    7030ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    7043ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7044ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7044ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7047ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    7048ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[    7049ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[    7051ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    7052ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[    7052ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[    7054ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    7055ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    7057ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7059ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7060ms] [LOG] [Supabase] Auth state change: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    7061ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7062ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7176ms] [LOG] [useSupabaseData] gift_inventory 완료 (126ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7186ms] [LOG] [useSupabaseData] gift_logs 완료 (136ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7193ms] [LOG] [useSupabaseData] inventory_logs 완료 (143ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7195ms] [LOG] [useSupabaseData] daily_reports 완료 (147ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7199ms] [LOG] [useSupabaseData] cash_register_logs 완료 (150ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7235ms] [LOG] [useSupabaseData] gift_categories 완료 (185ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7260ms] [LOG] [useSupabaseData] consult_logs 완료 (211ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7260ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (212ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[    7260ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[    7265ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[    7265ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7266ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7266ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7266ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7289ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    7290ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    7294ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[    7295ms] [LOG] 🔍 데이터베이스 검사 시작... @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:20
+[    7296ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    7297ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    7302ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7302ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7303ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7303ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7320ms] [LOG] [useSupabaseData] gift_inventory 완료 (268ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7326ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[    7326ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[    7332ms] [LOG] [useSupabaseData] gift_logs 완료 (279ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7333ms] [LOG] [useSupabaseData] cash_register_logs 완료 (280ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7334ms] [LOG] [useSupabaseData] inventory_logs 완료 (281ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7334ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[    7334ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[    7335ms] [LOG] [useSupabaseData] daily_reports 완료 (283ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7369ms] [LOG] [useSupabaseData] gift_categories 완료 (316ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7369ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7469ms] [LOG] [useSupabaseData] consult_logs 완료 (416ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7469ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (417ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[    7469ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[    7474ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[    7475ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7476ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7476ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7476ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7509ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7515ms] [LOG] [useSupabaseData] cash_register_logs 완료 (188ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7517ms] [LOG] [useSupabaseData] daily_reports 완료 (191ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7520ms] [LOG] [useSupabaseData] gift_inventory 완료 (194ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7522ms] [LOG] [useSupabaseData] gift_logs 완료 (196ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7523ms] [LOG] [useSupabaseData] inventory_logs 완료 (196ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7552ms] [LOG] [useSupabaseData] gift_categories 완료 (225ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7646ms] [LOG] ✅ Table daily_reports: 190개 레코드, 구조: [id, created_at, date, naver_review_count, consult_proceed, consult_hold, recall_count, recall_booking_count, special_notes, clinic_id, recall_booking_names] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    7646ms] [LOG] 📄 daily_reports 샘플: {id: 870, created_at: 2025-12-26T09:51:24.471145+00:00, date: 2025-12-26, naver_review_count: 0, consult_proceed: 3} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    7647ms] [LOG] [useSupabaseData] gift_logs 완료 (313ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7648ms] [LOG] [useSupabaseData] cash_register_logs 완료 (313ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7648ms] [LOG] [useSupabaseData] gift_inventory 완료 (313ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7648ms] [LOG] [useSupabaseData] inventory_logs 완료 (314ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7649ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7650ms] [LOG] [useSupabaseData] daily_reports 완료 (315ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7663ms] [LOG] [useSupabaseData] gift_categories 완료 (329ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7670ms] [LOG] [useSupabaseData] consult_logs 완료 (345ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7670ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (345ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[    7671ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[    7675ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[    7779ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7874ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7881ms] [LOG] ✅ Table consult_logs: 434개 레코드, 구조: [id, created_at, date, patient_name, consult_content, consult_status, remarks, clinic_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    7881ms] [LOG] 📄 consult_logs 샘플: {id: 2580, created_at: 2025-12-12T14:34:54.315427+00:00, date: 2025-12-12, patient_name: 박정애(7247), consult_content: zir} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    7882ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7897ms] [LOG] [useSupabaseData] consult_logs 완료 (562ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    7897ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (563ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[    7897ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[    7901ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[    8017ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    8124ms] [LOG] ✅ Table gift_logs: 252개 레코드, 구조: [id, created_at, date, patient_name, gift_type, naver_review, notes, clinic_id, quantity] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    8124ms] [LOG] 📄 gift_logs 샘플: {id: 177, created_at: 2025-10-16T04:43:55.307552+00:00, date: 2025-10-10, patient_name: 이창원, gift_type: 칫솔세트} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    8125ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    8237ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    8292ms] [LOG] [Fast Refresh] done in 1249ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8302ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8407ms] [LOG] ✅ Table gift_inventory: 4개 레코드, 구조: [id, created_at, name, stock, clinic_id, category_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    8407ms] [LOG] 📄 gift_inventory 샘플: {id: 1, created_at: 2025-09-15T17:24:52.536478+00:00, name: 치실, stock: 20, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    8408ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    8537ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    8656ms] [LOG] ✅ Table inventory_logs: 489개 레코드, 구조: [id, timestamp, name, reason, change, old_stock, new_stock, clinic_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    8656ms] [LOG] 📄 inventory_logs 샘플: {id: 252, timestamp: 2025-10-14T15:29:32.234+00:00, name: 칫솔세트, reason: 데이터 삭제로 인한 재고 복원: 김수미, change: 1} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    8656ms] [LOG] 📊 총 레코드 수: 1369개 @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:64
+[    9533ms] [LOG] [Fast Refresh] done in 1232ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9539ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10249ms] [LOG] [Fast Refresh] done in 711ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10385ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10385ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10385ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10385ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10467ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10521ms] [LOG] [Fast Refresh] done in 55ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11470ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   11470ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   11471ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   11471ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   11738ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11785ms] [LOG] [Fast Refresh] done in 48ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12581ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   12582ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   12582ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   12582ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   12697ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12768ms] [LOG] [Fast Refresh] done in 72ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13460ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   13461ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   13461ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   13461ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   13722ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   13839ms] [LOG] [Fast Refresh] done in 118ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   14574ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   14626ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   14626ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   14627ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   14627ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   14716ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   14764ms] [LOG] [Fast Refresh] done in 48ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   15498ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   15499ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   15500ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   15501ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   15619ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   15717ms] [LOG] [Fast Refresh] done in 97ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   16465ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   16466ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   16466ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   16466ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   16566ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   16630ms] [LOG] [Fast Refresh] done in 65ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   17403ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   17403ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   17404ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   17404ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   17537ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   17597ms] [LOG] [Fast Refresh] done in 59ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   18295ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   18295ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   18296ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   18296ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   18382ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   18427ms] [LOG] [Fast Refresh] done in 45ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   19107ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   19108ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   19108ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   19108ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   19212ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   19252ms] [LOG] [Fast Refresh] done in 40ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   20087ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   20087ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   20088ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   20088ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   20830ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   20896ms] [LOG] [Fast Refresh] done in 65ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   22015ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   22063ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   22064ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   22064ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   22064ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   22133ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   22133ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   22134ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   22134ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   22373ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   23028ms] [LOG] [Fast Refresh] done in 655ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   23342ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   23454ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   23454ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   23454ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   23455ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   23710ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   23751ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   24439ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   24440ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   24440ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   24440ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   24522ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   24564ms] [LOG] [Fast Refresh] done in 41ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   25224ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   25224ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   25225ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   25225ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   25307ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   25364ms] [LOG] [Fast Refresh] done in 58ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   26162ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   26163ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   26163ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   26163ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   26400ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   26466ms] [LOG] [Fast Refresh] done in 66ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   27115ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27115ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27116ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27116ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27188ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   27223ms] [LOG] [Fast Refresh] done in 36ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   27835ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27835ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27835ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   27836ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   27902ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   27946ms] [LOG] [Fast Refresh] done in 43ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   28575ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   28576ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   28576ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   28576ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   28714ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   28768ms] [LOG] [Fast Refresh] done in 54ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   29433ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   29490ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   29490ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   29491ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   29491ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   29570ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   29613ms] [LOG] [Fast Refresh] done in 43ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   30288ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   30288ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   30289ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   30289ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   30440ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   30496ms] [LOG] [Fast Refresh] done in 56ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   31149ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   31150ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   31150ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   31150ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   31226ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   31268ms] [LOG] [Fast Refresh] done in 43ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   31918ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   31918ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   31919ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   31919ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   32000ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   32044ms] [LOG] [Fast Refresh] done in 44ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   32723ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   32723ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   32724ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   32724ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   32760ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   32868ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   32945ms] [LOG] [Fast Refresh] done in 77ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   33707ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   33708ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   33708ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   33708ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   33790ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   33832ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   34699ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   34700ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   34700ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   34700ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   34903ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   34942ms] [LOG] [Fast Refresh] done in 39ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   35599ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   35599ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   35599ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   35600ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   35698ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   36312ms] [LOG] [Fast Refresh] done in 614ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   37045ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   37836ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   37837ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   37837ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   37837ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   37918ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   37919ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   37919ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   37919ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   37998ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   38066ms] [LOG] [Fast Refresh] done in 67ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   38709ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   38709ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   38710ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   38710ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   38855ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   38941ms] [LOG] [Fast Refresh] done in 87ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   39606ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   39607ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   39607ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   39607ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   39703ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   39756ms] [LOG] [Fast Refresh] done in 54ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   40475ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   40476ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   40477ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   40478ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   40577ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   40637ms] [LOG] [Fast Refresh] done in 60ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   41381ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   41381ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   41382ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   41382ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   41462ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   41507ms] [LOG] [Fast Refresh] done in 44ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   42265ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   42265ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   42266ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   42266ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   42384ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   42528ms] [LOG] [Fast Refresh] done in 144ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   43374ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   43374ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   43375ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   43375ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   43455ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   43500ms] [LOG] [Fast Refresh] done in 45ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   44168ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   44169ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   44169ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   44169ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   44258ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   44306ms] [LOG] [Fast Refresh] done in 47ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   45000ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   45000ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   45001ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   45001ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   45173ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   45229ms] [LOG] [Fast Refresh] done in 56ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   46139ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   46139ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   46139ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   46140ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   47010ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   47677ms] [LOG] [Fast Refresh] done in 668ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   48162ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   48227ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   48228ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   48228ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   48229ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   48402ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   48447ms] [LOG] [Fast Refresh] done in 45ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   49264ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   49265ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   49265ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   49265ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   49707ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   49788ms] [LOG] [Fast Refresh] done in 81ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   50394ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   50530ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   50531ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   50531ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   50531ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   50633ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   50685ms] [LOG] [Fast Refresh] done in 51ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13

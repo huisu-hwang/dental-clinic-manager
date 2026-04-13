@@ -44,20 +44,20 @@ export default function TelegramBoardPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
         </div>
       ) : !group ? (
-        <div className="text-center py-20 text-gray-400">
+        <div className="text-center py-20 text-at-text-weak">
           <p className="text-sm">게시판을 찾을 수 없습니다</p>
           <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/community/telegram')} className="mt-4">
             목록으로 돌아가기
@@ -69,8 +69,8 @@ export default function TelegramBoardPage() {
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="w-8 h-8 text-amber-500" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">접근 권한이 없습니다</h2>
-          <p className="text-sm text-gray-500 mb-6">이 게시판은 모임 멤버만 열람할 수 있습니다.<br />초대 링크를 통해 가입해 주세요.</p>
+          <h2 className="text-lg font-semibold text-at-text mb-2">접근 권한이 없습니다</h2>
+          <p className="text-sm text-at-text-weak mb-6">이 게시판은 모임 멤버만 열람할 수 있습니다.<br />초대 링크를 통해 가입해 주세요.</p>
           <Button variant="outline" onClick={() => router.push('/dashboard/community/telegram')}>
             게시판 목록으로
           </Button>
@@ -78,14 +78,14 @@ export default function TelegramBoardPage() {
       ) : isMember === false && group.visibility === 'public_list' ? (
         /* 목록만 공개 - 게시글 열람 불가 */
         <div className="text-center py-20">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Globe className="w-8 h-8 text-blue-500" />
+          <div className="w-16 h-16 bg-at-tag rounded-full flex items-center justify-center mx-auto mb-4">
+            <Globe className="w-8 h-8 text-at-accent" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">{group.board_title}</h2>
+          <h2 className="text-lg font-semibold text-at-text mb-2">{group.board_title}</h2>
           {group.board_description && (
-            <p className="text-sm text-gray-500 mb-2">{group.board_description}</p>
+            <p className="text-sm text-at-text-weak mb-2">{group.board_description}</p>
           )}
-          <p className="text-sm text-gray-400 mb-6">게시글을 열람하려면 모임에 가입해야 합니다.</p>
+          <p className="text-sm text-at-text-weak mb-6">게시글을 열람하려면 모임에 가입해야 합니다.</p>
           <Button variant="outline" onClick={() => router.push('/dashboard/community/telegram')}>
             게시판 목록으로
           </Button>
@@ -132,7 +132,7 @@ export default function TelegramBoardPage() {
 
           {/* 비멤버 안내 배너 */}
           {isMember === false && (
-            <div className="bg-amber-50 border-x border-amber-200 px-4 py-3 flex items-center justify-between">
+            <div className="bg-at-warning-bg border-x border-amber-200 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-amber-700">
                 <Globe className="w-4 h-4 flex-shrink-0" />
                 <span>
@@ -143,7 +143,7 @@ export default function TelegramBoardPage() {
           )}
 
           {/* 게시글 목록 */}
-          <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-4 sm:p-6">
+          <div className="bg-white border-x border-b border-at-border rounded-b-xl p-4 sm:p-6">
             <TelegramBoardPostList
               groupId={group.id}
               currentUserId={user?.id ?? null}

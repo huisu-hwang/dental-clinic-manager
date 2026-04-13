@@ -1,0 +1,179 @@
+[    1954ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[    2161ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[    2161ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[    2166ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[    2166ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[    2166ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[    2297ms] [LOG] [Supabase] Auth event: SIGNED_IN @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    2297ms] [LOG] [Supabase] User signed in @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:97
+[    2301ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    2302ms] [LOG] [AuthContext] Session check complete: session found @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[    2302ms] [LOG] AuthContext: Supabase 세션 발견 eb46c51d-95a1-4be9-9b30-edcdbd9eb8be @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:114
+[    2303ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    2305ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    2408ms] [LOG] AuthContext: 사용자 프로필 로드 성공 {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:119
+[    2409ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[    2447ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    2960ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3543ms] [LOG] [Fast Refresh] done in 584ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3547ms] [LOG] [AuthContext] Access log saved successfully @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:146
+[    4026ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4621ms] [LOG] [Fast Refresh] done in 595ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4996ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5111ms] [LOG] [Fast Refresh] done in 115ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6133ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6242ms] [LOG] [Fast Refresh] done in 108ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7452ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7527ms] [LOG] [Fast Refresh] done in 75ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8375ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8455ms] [LOG] [Fast Refresh] done in 79ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9588ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    9589ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    9589ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    9589ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    9598ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    9600ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    9602ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    9608ms] [LOG] [Supabase] Environment check: {NODE_ENV: development, hasUrl: true, hasKey: true, urlValue: https://beahjntkmkfhpcbhfnrr.s..., keyValue: eyJhbGciOiJIUzI1NiIs...} @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:34
+[    9609ms] [LOG] [Supabase] Creating client... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:63
+[    9610ms] [LOG] [Supabase] Custom storage adapter initialized @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:67
+[    9611ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[    9612ms] [LOG] [Supabase] Client created successfully with custom storage @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:89
+[    9620ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    9621ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    9621ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    9623ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[    9671ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    9671ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    9672ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    9672ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    9674ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    9675ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    9707ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    9707ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    9715ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9716ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9716ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9720ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    9721ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[    9721ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[    9724ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    9725ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[    9725ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[    9727ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    9728ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    9728ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9732ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9732ms] [LOG] [Supabase] Auth state change: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    9733ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9734ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9925ms] [LOG] [useSupabaseData] gift_inventory 완료 (203ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    9960ms] [LOG] [useSupabaseData] gift_categories 완료 (238ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    9961ms] [LOG] [useSupabaseData] gift_logs 완료 (239ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    9966ms] [LOG] [useSupabaseData] cash_register_logs 완료 (245ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    9973ms] [LOG] [useSupabaseData] daily_reports 완료 (252ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[    9981ms] [LOG] [useSupabaseData] inventory_logs 완료 (260ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10027ms] [LOG] [useSupabaseData] gift_inventory 완료 (302ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10081ms] [LOG] [useSupabaseData] gift_logs 완료 (356ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10087ms] [LOG] [useSupabaseData] gift_categories 완료 (362ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10093ms] [LOG] [useSupabaseData] daily_reports 완료 (368ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10098ms] [LOG] [useSupabaseData] cash_register_logs 완료 (372ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10107ms] [LOG] [useSupabaseData] inventory_logs 완료 (382ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10139ms] [LOG] [useSupabaseData] consult_logs 완료 (417ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10139ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (417ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[   10139ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[   10162ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[   10164ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10164ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10165ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10165ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10205ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[   10205ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[   10210ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[   10211ms] [LOG] 🔍 데이터베이스 검사 시작... @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:20
+[   10213ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[   10213ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[   10216ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10217ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10217ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10217ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10262ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[   10262ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[   10263ms] [LOG] [useSupabaseData] 유효한 세션 확인됨 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:126
+[   10263ms] [LOG] [useSupabaseData] 데이터 가져오기 시작... de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:128
+[   10264ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   10344ms] [LOG] [Fast Refresh] done in 629ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10360ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10461ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10462ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10462ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10462ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10492ms] [LOG] [useSupabaseData] gift_logs 완료 (230ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10492ms] [LOG] [useSupabaseData] gift_inventory 완료 (231ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10494ms] [LOG] [useSupabaseData] consult_logs 완료 (769ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10494ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (769ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[   10494ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[   10499ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[   10499ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10500ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10500ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10500ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10552ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10552ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10553ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10553ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10586ms] [LOG] [useSupabaseData] gift_categories 완료 (324ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10592ms] [LOG] [useSupabaseData] daily_reports 완료 (330ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10594ms] [LOG] [useSupabaseData] inventory_logs 완료 (333ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10595ms] [LOG] [useSupabaseData] cash_register_logs 완료 (332ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10762ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   10770ms] [LOG] [useSupabaseData] gift_inventory 완료 (506ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10773ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   10842ms] [LOG] [useSupabaseData] gift_categories 완료 (579ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10857ms] [LOG] [useSupabaseData] gift_logs 완료 (593ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10870ms] [LOG] [useSupabaseData] cash_register_logs 완료 (607ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10880ms] [LOG] [useSupabaseData] inventory_logs 완료 (616ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10885ms] [LOG] [useSupabaseData] daily_reports 완료 (622ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10892ms] [LOG] [useSupabaseData] consult_logs 완료 (630ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   10892ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (630ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[   10892ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[   10896ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[   10965ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10965ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   10966ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[   10966ms] [LOG] Year options: [2026, 2025, 2024] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[   11622ms] [LOG] ✅ Table daily_reports: 190개 레코드, 구조: [id, created_at, date, naver_review_count, consult_proceed, consult_hold, recall_count, recall_booking_count, special_notes, clinic_id, recall_booking_names] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[   11622ms] [LOG] 📄 daily_reports 샘플: {id: 870, created_at: 2025-12-26T09:51:24.471145+00:00, date: 2025-12-26, naver_review_count: 0, consult_proceed: 3} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[   11624ms] [LOG] [useSupabaseData] consult_logs 완료 (1360ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:149
+[   11624ms] [LOG] [useSupabaseData] 전체 데이터 로딩 완료 (1361ms) @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:174
+[   11624ms] [LOG] [useSupabaseData] 쿼리 결과: {daily: fulfilled, consult: fulfilled, gift: fulfilled, inventory: fulfilled, invLog: fulfilled} @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:175
+[   11629ms] [LOG] [useSupabaseData] 데이터 로딩 완료 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:351
+[   11629ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   11772ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   11917ms] [LOG] ✅ Table consult_logs: 434개 레코드, 구조: [id, created_at, date, patient_name, consult_content, consult_status, remarks, clinic_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[   11917ms] [LOG] 📄 consult_logs 샘플: {id: 2580, created_at: 2025-12-12T14:34:54.315427+00:00, date: 2025-12-12, patient_name: 박정애(7247), consult_content: zir} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[   11918ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   12055ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   12187ms] [LOG] ✅ Table gift_logs: 252개 레코드, 구조: [id, created_at, date, patient_name, gift_type, naver_review, notes, clinic_id, quantity] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[   12187ms] [LOG] 📄 gift_logs 샘플: {id: 177, created_at: 2025-10-16T04:43:55.307552+00:00, date: 2025-10-10, patient_name: 이창원, gift_type: 칫솔세트} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[   12188ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   12310ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   12432ms] [LOG] ✅ Table gift_inventory: 4개 레코드, 구조: [id, created_at, name, stock, clinic_id, category_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[   12432ms] [LOG] 📄 gift_inventory 샘플: {id: 1, created_at: 2025-09-15T17:24:52.536478+00:00, name: 치실, stock: 20, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[   12433ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   12561ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   12689ms] [LOG] ✅ Table inventory_logs: 489개 레코드, 구조: [id, timestamp, name, reason, change, old_stock, new_stock, clinic_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[   12690ms] [LOG] 📄 inventory_logs 샘플: {id: 252, timestamp: 2025-10-14T15:29:32.234+00:00, name: 칫솔세트, reason: 데이터 삭제로 인한 재고 복원: 김수미, change: 1} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[   12690ms] [LOG] 📊 총 레코드 수: 1369개 @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:64
+[   12699ms] [LOG] [Fast Refresh] done in 2339ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   12712ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   12960ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776009227350 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   12960ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776009225595 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   12960ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776009226560 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   12960ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776009222021 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   12960ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776009223080 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   12960ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776009224249 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[   16217ms] [LOG] [Fast Refresh] done in 3505ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   16272ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   17363ms] [LOG] [Fast Refresh] done in 1090ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   18140ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196

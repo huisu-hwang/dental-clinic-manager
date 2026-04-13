@@ -313,21 +313,39 @@
   },
   "hotPaths": [
     {
+      "path": "src/components/Layout/TabNavigation.tsx",
+      "accessCount": 20,
+      "lastAccessed": 1775976150426,
+      "type": "file"
+    },
+    {
       "path": "src/app/master/page.tsx",
       "accessCount": 13,
       "lastAccessed": 1775875692428,
       "type": "file"
     },
     {
+      "path": "src/components/marketing/NewPostForm.tsx",
+      "accessCount": 13,
+      "lastAccessed": 1775886952310,
+      "type": "directory"
+    },
+    {
       "path": "",
-      "accessCount": 6,
-      "lastAccessed": 1775875328660,
+      "accessCount": 8,
+      "lastAccessed": 1775886537840,
       "type": "directory"
     },
     {
       "path": "src/app/api/admin/users/route.ts",
       "accessCount": 6,
       "lastAccessed": 1775875672047,
+      "type": "file"
+    },
+    {
+      "path": "src/app/dashboard/layout.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1775886220532,
       "type": "file"
     },
     {
@@ -358,6 +376,24 @@
       "path": "supabase/migrations/20251204_create_user_activity_logs.sql",
       "accessCount": 2,
       "lastAccessed": 1775875332701,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 2,
+      "lastAccessed": 1775876341914,
+      "type": "directory"
+    },
+    {
+      "path": "src/app/dashboard/marketing/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775885432949,
+      "type": "file"
+    },
+    {
+      "path": "src/components/marketing/clinical/ClinicalForm.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1775886507057,
       "type": "file"
     },
     {
@@ -406,6 +442,72 @@
       "path": "src/components/Auth/LoginForm.tsx",
       "accessCount": 1,
       "lastAccessed": 1775875223828,
+      "type": "file"
+    },
+    {
+      "path": "src/components/marketing/clinical/ClinicalPhotoEditor.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775876389088,
+      "type": "file"
+    },
+    {
+      "path": "vercel.json",
+      "accessCount": 1,
+      "lastAccessed": 1775884971448,
+      "type": "file"
+    },
+    {
+      "path": "src/components/marketing/ContentEditor.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775885618444,
+      "type": "file"
+    },
+    {
+      "path": "src/config/menuConfig.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775885631431,
+      "type": "file"
+    },
+    {
+      "path": "src/types/menuSettings.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775885631971,
+      "type": "file"
+    },
+    {
+      "path": "src/app/layout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775885632003,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/menuSettingsService.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775885638232,
+      "type": "file"
+    },
+    {
+      "path": "src/hooks/useMenuSettings.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775885643459,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Layout/Header.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775885643843,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Layout/ManagementTabNavigation.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775885646472,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Layout/WorkerStatusMenuItem.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775885646719,
       "type": "file"
     }
   ],

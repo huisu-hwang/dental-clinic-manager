@@ -134,7 +134,7 @@ export default function DentwebSyncSettings() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
-        <span className="ml-2 text-gray-500">로딩 중...</span>
+        <span className="ml-2 text-at-text-weak">로딩 중...</span>
       </div>
     )
   }
@@ -144,7 +144,7 @@ export default function DentwebSyncSettings() {
       {/* 메시지 알림 */}
       {message && (
         <div className={`flex items-center gap-2 p-3 rounded-lg ${
-          message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          message.type === 'success' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
         }`}>
           {message.type === 'success' ? (
             <CheckCircle className="w-5 h-5" />
@@ -167,29 +167,29 @@ export default function DentwebSyncSettings() {
       </div>
 
       {/* 원클릭 설치 섹션 */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5 space-y-4">
+      <div className="bg-at-tag border border-at-accent/20 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="font-medium text-blue-900 flex items-center gap-2">
+          <h4 className="font-medium text-at-text flex items-center gap-2">
             <Monitor className="w-5 h-5" />
             브릿지 에이전트 원클릭 설치
           </h4>
           {status?.agentVersion && (
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+            <span className="text-xs bg-at-tag text-at-accent px-2 py-1 rounded-full">
               v{status.agentVersion}
             </span>
           )}
         </div>
 
-        <p className="text-sm text-blue-700">
+        <p className="text-sm text-at-text-secondary">
           설치 파일과 설정 파일이 한번에 다운로드됩니다.
-          압축을 풀고 <code className="px-1 py-0.5 bg-blue-100 rounded text-xs font-mono">setup.bat</code>을 실행하면 자동으로 설치됩니다.
+          압축을 풀고 <code className="px-1 py-0.5 bg-at-tag rounded text-xs font-mono">setup.bat</code>을 실행하면 자동으로 설치됩니다.
         </p>
 
         <div className="flex flex-wrap gap-3">
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors text-sm font-medium shadow-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:opacity-50 transition-colors text-sm font-medium shadow-sm"
           >
             {isDownloading ? (
               <>
@@ -205,7 +205,7 @@ export default function DentwebSyncSettings() {
           </button>
           <button
             onClick={() => setShowInstallGuide(!showInstallGuide)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-at-border text-at-text-secondary rounded-xl hover:bg-at-surface-hover transition-colors text-sm"
           >
             {showInstallGuide ? (
               <>
@@ -223,48 +223,48 @@ export default function DentwebSyncSettings() {
 
         {/* 설치 가이드 (토글) */}
         {showInstallGuide && (
-          <div className="bg-white rounded-lg p-4 border border-blue-100 space-y-4">
-            <h5 className="font-medium text-gray-900 text-sm">설치 방법 (원내 덴트웹 서버 PC에서 진행)</h5>
+          <div className="bg-white rounded-xl p-4 border border-at-border space-y-4">
+            <h5 className="font-medium text-at-text text-sm">설치 방법 (원내 덴트웹 서버 PC에서 진행)</h5>
 
             <div className="space-y-3">
               <div className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                <div className="flex-shrink-0 w-6 h-6 bg-at-accent text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">&ldquo;원클릭 설치 다운로드&rdquo; 클릭</p>
-                  <p className="text-xs text-gray-500 mt-0.5">설치 파일과 설정 파일(.env)이 포함된 ZIP이 다운로드됩니다. API 키가 자동으로 생성됩니다.</p>
+                  <p className="text-sm font-medium text-at-text">&ldquo;원클릭 설치 다운로드&rdquo; 클릭</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">설치 파일과 설정 파일(.env)이 포함된 ZIP이 다운로드됩니다. API 키가 자동으로 생성됩니다.</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                <div className="flex-shrink-0 w-6 h-6 bg-at-accent text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">원내 서버 PC에서 ZIP 압축 해제</p>
-                  <p className="text-xs text-gray-500 mt-0.5">다운로드된 파일을 원내 덴트웹 서버 PC로 옮기고 압축을 해제합니다.</p>
+                  <p className="text-sm font-medium text-at-text">원내 서버 PC에서 ZIP 압축 해제</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">다운로드된 파일을 원내 덴트웹 서버 PC로 옮기고 압축을 해제합니다.</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                <div className="flex-shrink-0 w-6 h-6 bg-at-accent text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">
-                    <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">setup.bat</code> 관리자 권한으로 실행
+                  <p className="text-sm font-medium text-at-text">
+                    <code className="px-1.5 py-0.5 bg-at-surface-alt rounded text-xs font-mono">setup.bat</code> 관리자 권한으로 실행
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">Node.js 자동 설치, 빌드, DB 자동 감지, 서비스 등록이 한번에 진행됩니다.</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">Node.js 자동 설치, 빌드, DB 자동 감지, 서비스 등록이 한번에 진행됩니다.</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                <div className="flex-shrink-0 w-6 h-6 bg-at-success text-white rounded-full flex items-center justify-center text-xs font-bold">
                   <CheckCircle className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">설치 완료! 자동 실행됩니다</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Windows 서비스로 등록되어 PC 부팅 시 자동으로 동기화가 시작됩니다.</p>
+                  <p className="text-sm font-medium text-at-text">설치 완료! 자동 실행됩니다</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">Windows 서비스로 등록되어 PC 부팅 시 자동으로 동기화가 시작됩니다.</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-amber-50 rounded p-3 text-xs text-amber-700">
+            <div className="bg-at-warning-bg rounded p-3 text-xs text-amber-700">
               <strong>필요 사항:</strong> 덴트웹이 설치된 원내 서버 PC에서 실행해야 합니다.
             </div>
           </div>
@@ -273,73 +273,73 @@ export default function DentwebSyncSettings() {
 
       {/* 동기화 상태 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-at-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Activity className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600">연동 상태</span>
+            <Activity className="w-4 h-4 text-at-text-weak" />
+            <span className="text-sm font-medium text-at-text-secondary">연동 상태</span>
           </div>
           <div className="flex items-center gap-2">
             {status?.isActive ? (
               <>
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-green-700 font-medium">활성</span>
+                <span className="text-at-success font-medium">활성</span>
               </>
             ) : (
               <>
-                <div className="w-3 h-3 bg-gray-300 rounded-full" />
-                <span className="text-gray-500 font-medium">비활성</span>
+                <div className="w-3 h-3 bg-at-surface-alt rounded-full" />
+                <span className="text-at-text-weak font-medium">비활성</span>
               </>
             )}
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-at-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600">마지막 동기화</span>
+            <Clock className="w-4 h-4 text-at-text-weak" />
+            <span className="text-sm font-medium text-at-text-secondary">마지막 동기화</span>
           </div>
           <div>
             {status?.lastSyncAt ? (
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-at-text">
                   {formatDateTime(status.lastSyncAt)}
                 </p>
                 <p className={`text-xs ${
-                  status.lastSyncStatus === 'success' ? 'text-green-600' : 'text-red-600'
+                  status.lastSyncStatus === 'success' ? 'text-at-success' : 'text-at-error'
                 }`}>
                   {status.lastSyncStatus === 'success' ? '성공' : '오류'}
                   {status.lastSyncPatientCount > 0 && ` (${status.lastSyncPatientCount}명)`}
                 </p>
               </div>
             ) : (
-              <span className="text-sm text-gray-400">아직 동기화되지 않음</span>
+              <span className="text-sm text-at-text-weak">아직 동기화되지 않음</span>
             )}
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-at-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-600">동기화된 환자</span>
+            <Users className="w-4 h-4 text-at-text-weak" />
+            <span className="text-sm font-medium text-at-text-secondary">동기화된 환자</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{status?.totalPatients || 0}<span className="text-sm font-normal text-gray-500 ml-1">명</span></p>
+          <p className="text-2xl font-bold text-at-text">{status?.totalPatients || 0}<span className="text-sm font-normal text-at-text-weak ml-1">명</span></p>
         </div>
       </div>
 
       {/* 설정 */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-5">
-        <h4 className="font-medium text-gray-900">동기화 설정</h4>
+      <div className="bg-white border border-at-border rounded-xl p-5 space-y-5">
+        <h4 className="font-medium text-at-text">동기화 설정</h4>
 
         {/* 활성화 토글 */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium text-gray-700">동기화 활성화</p>
-            <p className="text-sm text-gray-500">브릿지 에이전트의 데이터 수신을 허용합니다</p>
+            <p className="font-medium text-at-text-secondary">동기화 활성화</p>
+            <p className="text-sm text-at-text-weak">브릿지 에이전트의 데이터 수신을 허용합니다</p>
           </div>
           <button
             onClick={() => setIsActive(!isActive)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              isActive ? 'bg-teal-600' : 'bg-gray-300'
+              isActive ? 'bg-teal-600' : 'bg-at-surface-alt'
             }`}
           >
             <span
@@ -352,11 +352,11 @@ export default function DentwebSyncSettings() {
 
         {/* 동기화 주기 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">동기화 주기</label>
+          <label className="block text-sm font-medium text-at-text-secondary mb-1">동기화 주기</label>
           <select
             value={syncInterval}
             onChange={(e) => setSyncInterval(parseInt(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-full max-w-xs"
+            className="px-3 py-2 border border-at-border rounded-xl text-sm w-full max-w-xs"
           >
             <option value={60}>1분</option>
             <option value={180}>3분</option>
@@ -370,7 +370,7 @@ export default function DentwebSyncSettings() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-300 text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:opacity-50 text-sm"
         >
           {isSaving ? (
             <>
@@ -388,49 +388,49 @@ export default function DentwebSyncSettings() {
 
       {/* 최근 동기화 이력 */}
       {recentLogs.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
-          <h4 className="font-medium text-gray-900">최근 동기화 이력</h4>
+        <div className="bg-white border border-at-border rounded-xl p-5 space-y-4">
+          <h4 className="font-medium text-at-text">최근 동기화 이력</h4>
           <div className="space-y-2">
             {recentLogs.map(log => (
               <div
                 key={log.id}
                 className={`flex items-center justify-between p-3 rounded-lg text-sm ${
                   log.status === 'success'
-                    ? 'bg-green-50'
+                    ? 'bg-at-success-bg'
                     : log.status === 'error'
-                    ? 'bg-red-50'
-                    : 'bg-gray-50'
+                    ? 'bg-at-error-bg'
+                    : 'bg-at-surface-alt'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   {log.status === 'success' ? (
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <CheckCircle className="w-4 h-4 text-at-success" />
                   ) : log.status === 'error' ? (
-                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <AlertCircle className="w-4 h-4 text-at-error" />
                   ) : (
-                    <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                    <Loader2 className="w-4 h-4 text-at-text-weak animate-spin" />
                   )}
                   <div>
-                    <span className="text-gray-700">{formatDateTime(log.started_at)}</span>
-                    <span className="ml-2 text-gray-500">
+                    <span className="text-at-text-secondary">{formatDateTime(log.started_at)}</span>
+                    <span className="ml-2 text-at-text-weak">
                       ({log.sync_type === 'full' ? '전체' : '증분'})
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
                   {log.status === 'success' ? (
-                    <span className="text-green-700">
+                    <span className="text-at-success">
                       {log.total_records}건 (신규 {log.new_records}, 수정 {log.updated_records})
                     </span>
                   ) : log.status === 'error' ? (
-                    <span className="text-red-600 max-w-[200px] truncate block">
+                    <span className="text-at-error max-w-[200px] truncate block">
                       {log.error_message || '오류'}
                     </span>
                   ) : (
-                    <span className="text-gray-500">진행 중...</span>
+                    <span className="text-at-text-weak">진행 중...</span>
                   )}
                   {log.duration_ms && (
-                    <span className="ml-2 text-gray-400 text-xs">
+                    <span className="ml-2 text-at-text-weak text-xs">
                       {log.duration_ms < 1000 ? `${log.duration_ms}ms` : `${(log.duration_ms / 1000).toFixed(1)}s`}
                     </span>
                   )}

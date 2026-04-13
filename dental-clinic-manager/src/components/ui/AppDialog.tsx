@@ -247,9 +247,9 @@ export function AppDialogRoot() {
             else if (type === 'alert') close(undefined)
             else close(null)
           }}
-          className="absolute top-3 right-3 p-1 rounded-lg hover:bg-gray-100 transition-colors z-10"
+          className="absolute top-3 right-3 p-1 rounded-lg hover:bg-at-surface-hover transition-colors z-10"
         >
-          <X className="w-4 h-4 text-gray-400" />
+          <X className="w-4 h-4 text-at-text-weak" />
         </button>
 
         {/* 내용 */}
@@ -261,13 +261,13 @@ export function AppDialogRoot() {
 
           {/* 제목 */}
           {(options as any).title && (
-            <h3 className="text-base font-semibold text-gray-900 text-center mb-1.5">
+            <h3 className="text-base font-semibold text-at-text text-center mb-1.5">
               {(options as any).title}
             </h3>
           )}
 
           {/* 설명 */}
-          <p className="text-sm text-gray-600 text-center whitespace-pre-line leading-relaxed">
+          <p className="text-sm text-at-text-secondary text-center whitespace-pre-line leading-relaxed">
             {options.description}
           </p>
 
@@ -282,9 +282,9 @@ export function AppDialogRoot() {
                 if (e.key === 'Enter') close(promptValue || null)
               }}
               placeholder={(options as PromptOptions).placeholder || ''}
-              className="mt-4 w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm
+              className="mt-4 w-full px-3 py-2.5 border border-at-border rounded-lg text-sm
                 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500
-                placeholder:text-gray-400"
+                placeholder:text-at-text-weak"
             />
           )}
         </div>
@@ -303,7 +303,7 @@ export function AppDialogRoot() {
               <Button
                 variant="outline"
                 onClick={() => close(type === 'confirm' ? false : null)}
-                className="flex-1 h-10 rounded-lg text-sm font-medium border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="flex-1 h-10 rounded-lg text-sm font-medium border-at-border text-at-text-secondary hover:bg-at-surface-hover"
               >
                 {(options as ConfirmOptions).cancelText || '취소'}
               </Button>

@@ -298,30 +298,30 @@ export default function QRCodeDisplay() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* 헤더 */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">QR 코드 관리</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-2xl font-bold text-at-text">QR 코드 관리</h1>
+        <p className="mt-1 text-sm text-at-text-secondary">
           직원들이 출퇴근 시 스캔할 QR 코드를 생성하고 관리합니다.
         </p>
       </div>
 
       {/* 현재 QR 코드 */}
       {qrCode && (
-        <div className="bg-white rounded-lg shadow-md p-6 print:shadow-none">
+        <div className="bg-white rounded-2xl shadow-at-card p-6 print:shadow-none">
           <div className="flex justify-between items-center mb-4 print:mb-6">
             <h2 className="text-xl font-semibold">오늘의 QR 코드</h2>
             <div className="flex gap-2 print:hidden">
               <button
                 onClick={copyToClipboard}
-                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-3 py-1 text-sm bg-at-surface-alt hover:bg-at-border rounded-xl transition-colors"
               >
                 복사
               </button>
               <button
                 onClick={printQRCode}
-                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-3 py-1 text-sm bg-at-surface-alt hover:bg-at-border rounded-xl transition-colors"
               >
                 인쇄
               </button>
@@ -329,51 +329,51 @@ export default function QRCodeDisplay() {
           </div>
 
           {/* QR 코드 표시 영역 */}
-          <div className="text-center space-y-4">
-            <div className="inline-block p-8 bg-white border-4 border-gray-200 rounded-lg">
+          <div className="flex flex-col sm:flex-row gap-6 items-start">
+            <div className="p-6 bg-white border-4 border-at-border rounded-xl flex-shrink-0">
               <canvas
                 ref={canvasRef}
-                className="mx-auto"
                 style={{ imageRendering: 'pixelated' }}
               />
             </div>
-
-            <div className="text-lg font-semibold text-gray-900 print:text-2xl">
-              출퇴근 인증
-            </div>
-            <div className="text-sm text-gray-600">
-              {qrCode.valid_until && qrCode.valid_until !== qrCode.valid_date ? (
-                <>유효 기간: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')} ~ {new Date(qrCode.valid_until).toLocaleDateString('ko-KR')}</>
-              ) : (
-                <>유효 날짜: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')}</>
-              )}
-            </div>
-            <div className="text-xs text-gray-500">
-              인증 반경: {qrCode.radius_meters}m 이내
+            <div className="space-y-2">
+              <div className="text-lg font-semibold text-at-text print:text-2xl">
+                출퇴근 인증
+              </div>
+              <div className="text-sm text-at-text-secondary">
+                {qrCode.valid_until && qrCode.valid_until !== qrCode.valid_date ? (
+                  <>유효 기간: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')} ~ {new Date(qrCode.valid_until).toLocaleDateString('ko-KR')}</>
+                ) : (
+                  <>유효 날짜: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')}</>
+                )}
+              </div>
+              <div className="text-xs text-at-text-weak">
+                인증 반경: {qrCode.radius_meters}m 이내
+              </div>
             </div>
           </div>
 
           {/* QR 코드 정보 */}
-          <div className="mt-6 pt-6 border-t border-gray-200 space-y-3 print:hidden">
+          <div className="mt-6 pt-6 border-t border-at-border space-y-3 print:hidden">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">QR 코드 ID:</span>
-              <span className="font-mono text-gray-900">{qrCode.id.substring(0, 8)}...</span>
+              <span className="text-at-text-secondary">QR 코드 ID:</span>
+              <span className="font-mono text-at-text">{qrCode.id.substring(0, 8)}...</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">생성 시간:</span>
-              <span className="text-gray-900">
+              <span className="text-at-text-secondary">생성 시간:</span>
+              <span className="text-at-text">
                 {new Date(qrCode.created_at).toLocaleString('ko-KR')}
               </span>
             </div>
             {qrCode.latitude && qrCode.longitude && (
               <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">위도:</span>
-                  <span className="text-gray-900">{qrCode.latitude}</span>
+                  <span className="text-at-text-secondary">위도:</span>
+                  <span className="text-at-text">{qrCode.latitude}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">경도:</span>
-                  <span className="text-gray-900">{qrCode.longitude}</span>
+                  <span className="text-at-text-secondary">경도:</span>
+                  <span className="text-at-text">{qrCode.longitude}</span>
                 </div>
               </>
             )}
@@ -382,15 +382,15 @@ export default function QRCodeDisplay() {
       )}
 
       {/* QR 코드 생성 폼 */}
-      <div className="bg-white rounded-lg shadow-md p-6 print:hidden">
+      <div className="bg-white rounded-2xl shadow-at-card p-6 print:hidden">
         <h2 className="text-xl font-semibold mb-4">새 QR 코드 생성</h2>
 
         {message && (
           <div
-            className={`mb-4 p-4 rounded-lg ${
+            className={`mb-4 p-4 rounded-xl ${
               message.type === 'success'
-                ? 'bg-green-50 text-green-800 border border-green-200'
-                : 'bg-red-50 text-red-800 border border-red-200'
+                ? 'bg-at-success-bg text-green-800 border border-green-200'
+                : 'bg-at-error-bg text-red-800 border border-red-200'
             }`}
           >
             {message.text}
@@ -400,7 +400,7 @@ export default function QRCodeDisplay() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
                 위도 (Latitude)
               </label>
               <input
@@ -409,11 +409,11 @@ export default function QRCodeDisplay() {
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
                 placeholder="37.123456"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
                 경도 (Longitude)
               </label>
               <input
@@ -422,17 +422,17 @@ export default function QRCodeDisplay() {
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
                 placeholder="127.123456"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
               />
             </div>
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-at-text-weak">
             ※ 위도와 경도는 선택 사항입니다. 입력하지 않으면 위치 검증 없이 QR 코드가 생성됩니다.
           </p>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">
               인증 반경 (미터)
             </label>
             <input
@@ -440,23 +440,23 @@ export default function QRCodeDisplay() {
               value={radiusMeters}
               onChange={(e) => setRadiusMeters(e.target.value)}
               placeholder="100"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
             />
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-at-text-weak">
               이 반경 내에서만 출퇴근 인증이 가능합니다.
             </p>
           </div>
 
           {/* QR 코드 유효 기간 설정 */}
-          <div className="border-t border-gray-200 pt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="border-t border-at-border pt-4">
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">
               QR 코드 유효 기간
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <select
                 value={validityType}
                 onChange={(e) => setValidityType(e.target.value as QRCodeValidityType)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
               >
                 {QR_CODE_VALIDITY_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -473,13 +473,13 @@ export default function QRCodeDisplay() {
                     value={customValidityDays}
                     onChange={(e) => setCustomValidityDays(e.target.value)}
                     placeholder="7"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
                   />
-                  <span className="text-sm text-gray-600">일</span>
+                  <span className="text-sm text-at-text-secondary">일</span>
                 </div>
               )}
             </div>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-at-text-weak">
               {validityType === 'daily' && '매일 자정에 새 QR 코드가 필요합니다.'}
               {validityType === 'weekly' && '7일 동안 동일한 QR 코드를 사용할 수 있습니다.'}
               {validityType === 'monthly' && '30일 동안 동일한 QR 코드를 사용할 수 있습니다.'}
@@ -493,9 +493,9 @@ export default function QRCodeDisplay() {
               id="autoRefresh"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent"
             />
-            <label htmlFor="autoRefresh" className="ml-2 text-sm text-gray-700">
+            <label htmlFor="autoRefresh" className="ml-2 text-sm text-at-text-secondary">
               유효 기간 만료 시 자동으로 새 QR 코드 로드
             </label>
           </div>
@@ -503,7 +503,7 @@ export default function QRCodeDisplay() {
           <button
             onClick={generateNewQRCode}
             disabled={loading}
-            className="w-full py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-3 bg-at-accent text-white rounded-xl font-semibold hover:bg-at-accent disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'QR 코드 생성 중...' : qrCode ? '새 QR 코드 재생성' : 'QR 코드 생성'}
           </button>
@@ -511,7 +511,7 @@ export default function QRCodeDisplay() {
       </div>
 
       {/* 사용 안내 */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800 print:hidden">
+      <div className="bg-at-warning-bg border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800 print:hidden">
         <h3 className="font-semibold mb-2">📋 사용 안내</h3>
         <ul className="space-y-1">
           <li>• QR 코드 유효 기간을 설정하여 매일/매주/매월 또는 원하는 기간 동안 사용할 수 있습니다.</li>

@@ -8,7 +8,7 @@ export default function TelegramJoinPage() {
   const code = params.code as string
 
   return (
-    <div className="flex items-center justify-center py-10">
+    <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
       <TelegramInviteJoin inviteCode={code} />
     </div>
   )

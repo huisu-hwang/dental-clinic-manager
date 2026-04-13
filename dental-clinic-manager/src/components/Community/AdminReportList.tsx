@@ -46,10 +46,10 @@ export default function AdminReportList() {
 
   const getStatusColor = (status: ReportStatus) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-700'
-      case 'reviewed': return 'bg-blue-100 text-blue-700'
-      case 'action_taken': return 'bg-red-100 text-red-700'
-      case 'dismissed': return 'bg-gray-100 text-gray-700'
+      case 'pending': return 'bg-at-warning-bg text-at-warning'
+      case 'reviewed': return 'bg-at-tag text-at-accent'
+      case 'action_taken': return 'bg-at-error-bg text-at-error'
+      case 'dismissed': return 'bg-at-surface-alt text-at-text-secondary'
     }
   }
 
@@ -66,16 +66,16 @@ export default function AdminReportList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Flag className="w-5 h-5 text-red-500" />
-          <h2 className="text-lg font-semibold text-gray-900">신고 관리</h2>
-          <span className="text-sm text-gray-500">({total}건)</span>
+          <Flag className="w-5 h-5 text-at-error" />
+          <h2 className="text-lg font-semibold text-at-text">신고 관리</h2>
+          <span className="text-sm text-at-text-secondary">({total}건)</span>
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400" />
+          <Filter className="w-4 h-4 text-at-text-weak" />
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value as ReportStatus | ''); setPage(1) }}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+            className="border border-at-border rounded-xl px-3 py-1.5 text-sm"
           >
             <option value="">전체</option>
             <option value="pending">대기중</option>
@@ -86,41 +86,41 @@ export default function AdminReportList() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg">
+        <div className="flex items-center gap-2 p-4 bg-at-error-bg text-at-error rounded-xl">
           <AlertCircle className="w-5 h-5" /><span>{error}</span>
         </div>
       )}
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
         </div>
       ) : reports.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <Flag className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+        <div className="text-center py-12 text-at-text-secondary">
+          <Flag className="w-12 h-12 mx-auto mb-4 text-at-text-weak" />
           <p>신고 내역이 없습니다.</p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+          <div className="bg-white rounded-2xl border border-at-border divide-y divide-at-border shadow-at-card">
             {reports.map((report) => (
               <div
                 key={report.id}
                 onClick={() => setSelectedReport(report)}
-                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                className="p-4 hover:bg-at-surface-hover cursor-pointer transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(report.status)}`}>
                       {REPORT_STATUS_LABELS[report.status]}
                     </span>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-at-text-secondary">
                       {REPORT_REASON_LABELS[report.reason]}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-400">{formatDate(report.created_at)}</span>
+                  <span className="text-xs text-at-text-weak">{formatDate(report.created_at)}</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1 truncate">
+                <p className="text-sm text-at-text-secondary mt-1 truncate">
                   {report.post ? `게시글: ${report.post.title}` : `댓글: ${report.comment?.content?.substring(0, 50)}...`}
                 </p>
               </div>
@@ -132,7 +132,7 @@ export default function AdminReportList() {
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+              <span className="text-sm text-at-text-secondary">{page} / {totalPages}</span>
               <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                 <ChevronRight className="w-4 h-4" />
               </Button>

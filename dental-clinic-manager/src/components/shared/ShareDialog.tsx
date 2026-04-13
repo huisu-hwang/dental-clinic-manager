@@ -91,12 +91,12 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
       {/* 모달 */}
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Link className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center justify-between p-4 border-b border-at-border">
+          <h2 className="text-lg font-bold text-at-text flex items-center gap-2">
+            <Link className="w-5 h-5 text-at-accent" />
             링크 공유
           </h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+          <button onClick={onClose} className="p-1 text-at-text-weak hover:text-at-text-secondary rounded-xl hover:bg-at-surface-alt">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -104,7 +104,7 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
         <div className="p-4 space-y-4">
           {/* 에러 표시 */}
           {error && (
-            <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg">
+            <div className="p-3 bg-at-error-bg text-at-error text-sm rounded-xl">
               {error}
             </div>
           )}
@@ -112,16 +112,16 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
           {/* 기존 활성 링크 */}
           {existingLinks.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">활성 공유 링크</p>
+              <p className="text-sm font-medium text-at-text-secondary">활성 공유 링크</p>
               {existingLinks.map(link => (
-                <div key={link.id} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                <div key={link.id} className="p-3 bg-at-surface-alt rounded-xl space-y-2">
                   <div className="flex items-center gap-2">
                     {link.access_level === 'public' ? (
-                      <Globe className="w-4 h-4 text-green-600" />
+                      <Globe className="w-4 h-4 text-at-success" />
                     ) : (
                       <Lock className="w-4 h-4 text-orange-500" />
                     )}
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-at-text-secondary">
                       {ACCESS_LEVEL_LABELS[link.access_level as AccessLevel]}
                     </span>
                   </div>
@@ -130,14 +130,14 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
                       type="text"
                       readOnly
                       value={sharedLinkService.getShareUrl(link.token)}
-                      className="flex-1 text-xs bg-white border border-gray-200 rounded px-2 py-1.5 text-gray-600 truncate"
+                      className="flex-1 text-xs bg-white border border-at-border rounded px-2 py-1.5 text-at-text-secondary truncate"
                     />
                     <button
                       onClick={() => handleCopy(link.token)}
-                      className={`p-1.5 rounded-lg transition-colors ${
+                      className={`p-1.5 rounded-xl transition-colors ${
                         copied === link.token
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                          ? 'bg-at-success-bg text-at-success'
+                          : 'bg-at-tag text-at-accent hover:bg-blue-200'
                       }`}
                       title="링크 복사"
                     >
@@ -145,7 +145,7 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
                     </button>
                     <button
                       onClick={() => handleDeactivate(link)}
-                      className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                      className="p-1.5 rounded-xl bg-at-error-bg text-red-500 hover:bg-at-error-bg transition-colors"
                       title="공유 해제"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -158,15 +158,15 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
 
           {/* 새 링크 생성 */}
           <div className="space-y-3">
-            <p className="text-sm font-medium text-gray-700">새 공유 링크 만들기</p>
+            <p className="text-sm font-medium text-at-text-secondary">새 공유 링크 만들기</p>
 
             {/* 접근 옵션 */}
             <div className="space-y-2">
               <label
-                className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
                   accessLevel === 'public'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-at-accent bg-at-accent-light'
+                    : 'border-at-border hover:border-at-border'
                 }`}
                 onClick={() => setAccessLevel('public')}
               >
@@ -177,20 +177,20 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
                   onChange={() => setAccessLevel('public')}
                   className="sr-only"
                 />
-                <Globe className={`w-5 h-5 ${accessLevel === 'public' ? 'text-blue-600' : 'text-gray-400'}`} />
+                <Globe className={`w-5 h-5 ${accessLevel === 'public' ? 'text-at-accent' : 'text-at-text-weak'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${accessLevel === 'public' ? 'text-blue-900' : 'text-gray-700'}`}>
+                  <p className={`text-sm font-medium ${accessLevel === 'public' ? 'text-at-accent' : 'text-at-text-secondary'}`}>
                     링크를 가진 모든 사람
                   </p>
-                  <p className="text-xs text-gray-500">로그인 없이 누구나 볼 수 있습니다</p>
+                  <p className="text-xs text-at-text-weak">로그인 없이 누구나 볼 수 있습니다</p>
                 </div>
               </label>
 
               <label
-                className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
                   accessLevel === 'authenticated'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-at-accent bg-at-accent-light'
+                    : 'border-at-border hover:border-at-border'
                 }`}
                 onClick={() => setAccessLevel('authenticated')}
               >
@@ -201,12 +201,12 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
                   onChange={() => setAccessLevel('authenticated')}
                   className="sr-only"
                 />
-                <Lock className={`w-5 h-5 ${accessLevel === 'authenticated' ? 'text-blue-600' : 'text-gray-400'}`} />
+                <Lock className={`w-5 h-5 ${accessLevel === 'authenticated' ? 'text-at-accent' : 'text-at-text-weak'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${accessLevel === 'authenticated' ? 'text-blue-900' : 'text-gray-700'}`}>
+                  <p className={`text-sm font-medium ${accessLevel === 'authenticated' ? 'text-at-accent' : 'text-at-text-secondary'}`}>
                     서비스 가입자만
                   </p>
-                  <p className="text-xs text-gray-500">로그인한 사용자만 볼 수 있습니다</p>
+                  <p className="text-xs text-at-text-weak">로그인한 사용자만 볼 수 있습니다</p>
                 </div>
               </label>
             </div>
@@ -215,7 +215,7 @@ export default function ShareDialog({ isOpen, onClose, sourceType, sourceId }: S
             <button
               onClick={handleCreate}
               disabled={creating || loading}
-              className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-at-accent text-white font-medium rounded-xl hover:bg-at-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {creating ? (
                 <>

@@ -133,13 +133,13 @@ export default function SmartTagInput({
         {value.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+            className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-at-tag text-at-accent"
           >
             {tag}
             <button
               type="button"
               onClick={() => removeTag(tag)}
-              className="ml-2 hover:text-blue-600"
+              className="ml-2 hover:text-at-accent-hover"
               disabled={disabled}
             >
               <XMarkIcon className="h-4 w-4" />
@@ -158,14 +158,14 @@ export default function SmartTagInput({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowSuggestions(true)}
-            className="flex-1 px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="flex-1 px-3 py-2 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
             placeholder="태그 입력 (선택사항)"
             disabled={disabled}
           />
           <button
             type="button"
             onClick={() => inputValue && addTag(inputValue)}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md flex items-center"
+            className="px-3 py-2 bg-at-surface-alt hover:bg-at-surface-hover text-at-text-secondary rounded-xl flex items-center"
             disabled={disabled || !inputValue}
           >
             <PlusIcon className="h-4 w-4" />
@@ -174,14 +174,14 @@ export default function SmartTagInput({
 
         {/* 자동완성 드롭다운 */}
         {autocompleteSuggestions.length > 0 && inputValue && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg">
+          <div className="absolute z-10 w-full mt-1 bg-white border border-at-border rounded-xl shadow-at-card">
             {autocompleteSuggestions.map((suggestion, index) => (
               <button
                 key={suggestion}
                 type="button"
                 onClick={() => addTag(suggestion)}
-                className={`w-full px-3 py-2 text-left hover:bg-slate-50 ${
-                  index === selectedIndex ? 'bg-blue-50' : ''
+                className={`w-full px-3 py-2 text-left hover:bg-at-surface-hover ${
+                  index === selectedIndex ? 'bg-at-accent-light' : ''
                 }`}
               >
                 {suggestion}
@@ -193,14 +193,14 @@ export default function SmartTagInput({
 
       {/* 추천 태그 섹션 */}
       {showSuggestions && filteredAllSuggestions.length > 0 && (
-        <div className="p-3 bg-slate-50 rounded-lg">
+        <div className="p-3 bg-at-surface-alt rounded-xl">
           <div className="flex items-center gap-2 mb-2">
             <SparklesIcon className="h-4 w-4 text-amber-500" />
-            <span className="text-sm font-medium text-slate-700">추천 태그</span>
+            <span className="text-sm font-medium text-at-text-secondary">추천 태그</span>
             <button
               type="button"
               onClick={() => setShowSuggestions(false)}
-              className="ml-auto text-slate-400 hover:text-slate-600"
+              className="ml-auto text-at-text-weak hover:text-at-text-secondary"
             >
               <XMarkIcon className="h-4 w-4" />
             </button>
@@ -210,14 +210,14 @@ export default function SmartTagInput({
             {/* 키워드 기반 추천 */}
             {suggestions.keywords.length > 0 && (
               <div>
-                <p className="text-xs text-slate-500 mb-1">제목에서 추출</p>
+                <p className="text-xs text-at-text-weak mb-1">제목에서 추출</p>
                 <div className="flex flex-wrap gap-1">
                   {getFilteredSuggestions(suggestions.keywords).map((tag) => (
                     <button
                       key={`keyword-${tag}`}
                       type="button"
                       onClick={() => addTag(tag)}
-                      className="px-2 py-1 text-xs bg-white border border-slate-200 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                      className="px-2 py-1 text-xs bg-white border border-at-border rounded-lg hover:bg-at-accent-light hover:border-at-accent transition-colors"
                       disabled={disabled}
                     >
                       + {tag}
@@ -230,14 +230,14 @@ export default function SmartTagInput({
             {/* 카테고리 기반 추천 */}
             {suggestions.category.length > 0 && (
               <div>
-                <p className="text-xs text-slate-500 mb-1">카테고리 관련</p>
+                <p className="text-xs text-at-text-weak mb-1">카테고리 관련</p>
                 <div className="flex flex-wrap gap-1">
                   {getFilteredSuggestions(suggestions.category).slice(0, 5).map((tag) => (
                     <button
                       key={`category-${tag}`}
                       type="button"
                       onClick={() => addTag(tag)}
-                      className="px-2 py-1 text-xs bg-white border border-slate-200 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                      className="px-2 py-1 text-xs bg-white border border-at-border rounded-lg hover:bg-at-accent-light hover:border-at-accent transition-colors"
                       disabled={disabled}
                     >
                       + {tag}
@@ -250,7 +250,7 @@ export default function SmartTagInput({
             {/* 자주 사용하는 태그 */}
             {suggestions.frequent.length > 0 && (
               <div>
-                <p className="text-xs text-slate-500 mb-1">자주 사용</p>
+                <p className="text-xs text-at-text-weak mb-1">자주 사용</p>
                 <div className="flex flex-wrap gap-1">
                   {suggestions.frequent
                     .filter(t => !value.includes(t.tag_name))
@@ -260,11 +260,11 @@ export default function SmartTagInput({
                         key={`frequent-${tag.id}`}
                         type="button"
                         onClick={() => addTag(tag.tag_name)}
-                        className="px-2 py-1 text-xs bg-white border border-slate-200 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                        className="px-2 py-1 text-xs bg-white border border-at-border rounded-lg hover:bg-at-accent-light hover:border-at-accent transition-colors"
                         disabled={disabled}
                       >
                         + {tag.tag_name}
-                        <span className="ml-1 text-slate-400">({tag.usage_count})</span>
+                        <span className="ml-1 text-at-text-weak">({tag.usage_count})</span>
                       </button>
                     ))}
                 </div>
@@ -275,7 +275,7 @@ export default function SmartTagInput({
       )}
 
       {/* 태그 설명 */}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-at-text-weak">
         태그는 선택사항입니다. 프로토콜을 쉽게 찾을 수 있도록 관련 키워드를 추가하세요.
       </p>
     </div>

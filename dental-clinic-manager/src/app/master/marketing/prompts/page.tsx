@@ -186,17 +186,17 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
   if (!user) return null
 
   return (
-    <div className={embedded ? '' : 'min-h-screen bg-slate-50'}>
+    <div className={embedded ? '' : 'min-h-screen bg-at-surface-alt'}>
       {/* 헤더 */}
       {!embedded && (
-        <div className="bg-white border-b border-slate-200">
+        <div className="bg-white border-b border-at-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center h-16 gap-4">
-              <button onClick={() => router.back()} className="p-2 text-slate-400 hover:text-slate-600">
+              <button onClick={() => router.back()} className="p-2 text-at-text-weak hover:text-at-text-secondary">
                 <ArrowLeftIcon className="h-5 w-5" />
               </button>
               <SparklesIcon className="h-5 w-5 text-purple-600" />
-              <h1 className="text-xl font-bold text-slate-800">프롬프트 관리</h1>
+              <h1 className="text-xl font-bold text-at-text">프롬프트 관리</h1>
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">마스터 전용</span>
             </div>
           </div>
@@ -204,7 +204,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
       )}
 
       {/* 카테고리 탭 */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-at-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex gap-1">
             {(Object.entries(CATEGORY_LABELS) as [PromptCategory, string][]).map(([key, label]) => (
@@ -214,7 +214,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeCategory === key
                     ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                    : 'border-transparent text-at-text-weak hover:text-at-text-secondary'
                 }`}
               >
                 {label}
@@ -229,7 +229,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
           {/* 좌측: 프롬프트 목록 */}
           <div className="col-span-4 space-y-2">
             {prompts.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 text-center text-slate-400 text-sm">
+              <div className="bg-white rounded-xl border border-at-border p-6 text-center text-at-text-weak text-sm">
                 프롬프트가 없습니다. 초기 시드 데이터를 삽입해주세요.
               </div>
             ) : (
@@ -240,11 +240,11 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                   className={`w-full text-left p-4 rounded-xl border transition-colors ${
                     selectedPrompt?.id === prompt.id
                       ? 'bg-purple-50 border-purple-300'
-                      : 'bg-white border-slate-200 hover:border-slate-300'
+                      : 'bg-white border-at-border hover:border-at-border'
                   }`}
                 >
-                  <div className="font-medium text-sm text-slate-800">{prompt.name}</div>
-                  <div className="text-xs text-slate-400 mt-1">
+                  <div className="font-medium text-sm text-at-text">{prompt.name}</div>
+                  <div className="text-xs text-at-text-weak mt-1">
                     {prompt.prompt_key} | v{prompt.version}
                   </div>
                 </button>
@@ -257,18 +257,18 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
             {selectedPrompt ? (
               <div className="space-y-4">
                 {/* 프롬프트 정보 */}
-                <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="bg-white rounded-xl border border-at-border p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold text-slate-800">{selectedPrompt.name}</h3>
-                      <div className="text-xs text-slate-400 mt-0.5">
+                      <h3 className="font-semibold text-at-text">{selectedPrompt.name}</h3>
+                      <div className="text-xs text-at-text-weak mt-0.5">
                         {selectedPrompt.prompt_key} | 버전 {selectedPrompt.version} | 변수: {selectedPrompt.variables.join(', ')}
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setShowTest(!showTest); setTestResult(null); setTestError(null) }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-at-border rounded-xl text-at-text-secondary hover:bg-at-surface-alt"
                       >
                         <BeakerIcon className="h-3.5 w-3.5" />
                         테스트
@@ -276,7 +276,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                       <button
                         onClick={handleSave}
                         disabled={isSaving || editedContent === selectedPrompt.system_prompt}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-at-border disabled:cursor-not-allowed"
                       >
                         {isSaving ? '저장중...' : '저장'}
                       </button>
@@ -290,14 +290,14 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                       value={changeNote}
                       onChange={(e) => setChangeNote(e.target.value)}
                       placeholder="변경 사유 (선택)"
-                      className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-lg mb-3"
+                      className="w-full px-3 py-1.5 text-xs border border-at-border rounded-xl mb-3"
                     />
                   )}
 
                   {/* 저장 메시지 */}
                   {saveMessage && (
-                    <div className={`flex items-center gap-2 text-xs p-2 rounded-lg mb-3 ${
-                      saveMessage.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                    <div className={`flex items-center gap-2 text-xs p-2 rounded-xl mb-3 ${
+                      saveMessage.type === 'success' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
                     }`}>
                       {saveMessage.type === 'success' ? <CheckCircleIcon className="h-4 w-4" /> : <ExclamationTriangleIcon className="h-4 w-4" />}
                       {saveMessage.text}
@@ -309,18 +309,18 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                     value={editedContent}
                     onChange={(e) => setEditedContent(e.target.value)}
                     rows={20}
-                    className="w-full px-4 py-3 text-sm font-mono border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-y"
+                    className="w-full px-4 py-3 text-sm font-mono border border-at-border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-y"
                     spellCheck={false}
                   />
                 </div>
 
                 {/* 테스트 샌드박스 */}
                 {showTest && (
-                  <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  <div className="bg-white rounded-xl border border-at-border p-4 space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-at-text">
                       <BeakerIcon className="h-4 w-4 text-amber-500" />
                       프롬프트 테스트
-                      <span className="text-xs font-normal text-slate-400 ml-1">
+                      <span className="text-xs font-normal text-at-text-weak ml-1">
                         {editedContent !== selectedPrompt.system_prompt
                           ? '(편집 중인 미저장 버전으로 테스트)'
                           : '(저장된 버전으로 테스트)'}
@@ -334,7 +334,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                         value={testImagePrompt}
                         onChange={(e) => setTestImagePrompt(e.target.value)}
                         placeholder="이미지 설명 (예: 임플란트 시술 과정을 보여주는 3D 일러스트)"
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                        className="w-full px-3 py-2 text-sm border border-at-border rounded-xl"
                       />
                     ) : (
                       <div className="grid grid-cols-3 gap-3">
@@ -343,19 +343,19 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                           value={testTopic}
                           onChange={(e) => setTestTopic(e.target.value)}
                           placeholder="주제 (예: 임플란트 관리법)"
-                          className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                          className="px-3 py-2 text-sm border border-at-border rounded-xl"
                         />
                         <input
                           type="text"
                           value={testKeyword}
                           onChange={(e) => setTestKeyword(e.target.value)}
                           placeholder="키워드 (예: 임플란트)"
-                          className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                          className="px-3 py-2 text-sm border border-at-border rounded-xl"
                         />
                         <select
                           value={testTone}
                           onChange={(e) => setTestTone(e.target.value)}
-                          className="px-3 py-2 text-sm border border-slate-200 rounded-lg"
+                          className="px-3 py-2 text-sm border border-at-border rounded-xl"
                         >
                           <option value="friendly">친근체</option>
                           <option value="polite">정중체</option>
@@ -372,7 +372,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                         isTesting ||
                         (activeCategory === 'image' ? !testImagePrompt : (!testTopic || !testKeyword))
                       }
-                      className="w-full py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 disabled:bg-at-border disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {isTesting ? (
                         <>
@@ -384,7 +384,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
 
                     {/* 에러 */}
                     {testError && (
-                      <div className="flex items-center gap-2 text-xs p-3 rounded-lg bg-red-50 text-red-600">
+                      <div className="flex items-center gap-2 text-xs p-3 rounded-xl bg-at-error-bg text-at-error">
                         <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
                         {testError}
                       </div>
@@ -398,7 +398,7 @@ function PromptManagementContent({ embedded }: { embedded?: boolean } = {}) {
                 )}
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
+              <div className="bg-white rounded-xl border border-at-border p-12 text-center text-at-text-weak">
                 <SparklesIcon className="h-10 w-10 mx-auto mb-3" />
                 <p className="text-sm">왼쪽에서 프롬프트를 선택하세요</p>
               </div>
@@ -421,10 +421,10 @@ function TestResultView({ result }: { result: TestResult }) {
 
   if (result.category === 'image') {
     return (
-      <div className="border border-slate-200 rounded-lg p-4 space-y-3">
-        <div className="text-xs font-medium text-slate-500">이미지 생성 결과</div>
+      <div className="border border-at-border rounded-xl p-4 space-y-3">
+        <div className="text-xs font-medium text-at-text-weak">이미지 생성 결과</div>
         {images.length === 0 ? (
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-at-text-weak">
             <PhotoIcon className="h-4 w-4" />
             이미지 생성에 실패했습니다.
           </div>
@@ -443,30 +443,30 @@ function TestResultView({ result }: { result: TestResult }) {
   const imageMarkerCount = (result.body?.match(/\[IMAGE:/g) || []).length
 
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
+    <div className="border border-at-border rounded-xl overflow-hidden">
       {/* 통계 바 */}
-      <div className="flex gap-4 px-4 py-2 bg-slate-50 border-b border-slate-200 text-xs text-slate-500">
-        <span>글자수: <strong className="text-slate-700">{result.wordCount?.toLocaleString()}자</strong></span>
-        <span>키워드: <strong className="text-slate-700">{result.keywordCount}회</strong></span>
+      <div className="flex gap-4 px-4 py-2 bg-at-surface-alt border-b border-at-border text-xs text-at-text-weak">
+        <span>글자수: <strong className="text-at-text-secondary">{result.wordCount?.toLocaleString()}자</strong></span>
+        <span>키워드: <strong className="text-at-text-secondary">{result.keywordCount}회</strong></span>
         {imageMarkerCount > 0 && (
-          <span>이미지 위치: <strong className="text-slate-700">{imageMarkerCount}곳</strong></span>
+          <span>이미지 위치: <strong className="text-at-text-secondary">{imageMarkerCount}곳</strong></span>
         )}
         {(result.hashtags?.length ?? 0) > 0 && (
-          <span>해시태그: <strong className="text-slate-700">{result.hashtags!.length}개</strong></span>
+          <span>해시태그: <strong className="text-at-text-secondary">{result.hashtags!.length}개</strong></span>
         )}
       </div>
 
       {/* 제목 */}
       {result.title && (
-        <div className="px-4 py-3 border-b border-slate-200">
-          <div className="text-xs text-slate-400 mb-1">제목</div>
-          <div className="text-sm font-bold text-slate-800">{result.title}</div>
+        <div className="px-4 py-3 border-b border-at-border">
+          <div className="text-xs text-at-text-weak mb-1">제목</div>
+          <div className="text-sm font-bold text-at-text">{result.title}</div>
         </div>
       )}
 
       {/* 본문 ([IMAGE:] 마커는 위치 표시만) */}
       <div className="px-4 py-3 max-h-[600px] overflow-y-auto">
-        <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+        <div className="text-xs text-at-text-secondary whitespace-pre-wrap leading-relaxed">
           {result.body?.replace(/\[IMAGE:\s*(.+?)\]/g, (_, desc) =>
             `📷 [이미지 위치: ${desc.trim()}]`
           )}
@@ -475,9 +475,9 @@ function TestResultView({ result }: { result: TestResult }) {
 
       {/* 해시태그 */}
       {(result.hashtags?.length ?? 0) > 0 && (
-        <div className="px-4 py-3 border-t border-slate-200 flex flex-wrap gap-1.5">
+        <div className="px-4 py-3 border-t border-at-border flex flex-wrap gap-1.5">
           {result.hashtags!.map((tag, i) => (
-            <span key={i} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+            <span key={i} className="text-xs bg-at-accent-light text-at-accent px-2 py-0.5 rounded-full">
               #{tag}
             </span>
           ))}
@@ -489,8 +489,8 @@ function TestResultView({ result }: { result: TestResult }) {
 
 function ImageCard({ img, compact }: { img: GeneratedImage; compact?: boolean }) {
   return (
-    <div className={`rounded-lg overflow-hidden border border-slate-200 ${compact ? '' : ''}`}>
-      <div className="relative bg-slate-100" style={{ paddingBottom: compact ? '56.25%' : '66.67%' }}>
+    <div className={`rounded-xl overflow-hidden border border-at-border ${compact ? '' : ''}`}>
+      <div className="relative bg-at-surface-alt" style={{ paddingBottom: compact ? '56.25%' : '66.67%' }}>
         <Image
           src={img.path}
           alt={img.prompt}
@@ -500,8 +500,8 @@ function ImageCard({ img, compact }: { img: GeneratedImage; compact?: boolean })
         />
       </div>
       <div className="px-2 py-1.5 bg-white">
-        <div className="text-xs text-slate-400 truncate">{img.fileName}</div>
-        <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{img.prompt}</div>
+        <div className="text-xs text-at-text-weak truncate">{img.fileName}</div>
+        <div className="text-xs text-at-text-weak mt-0.5 line-clamp-2">{img.prompt}</div>
       </div>
     </div>
   )

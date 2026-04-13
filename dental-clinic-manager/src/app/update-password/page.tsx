@@ -162,24 +162,24 @@ export default function UpdatePasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">{title}</h2>
-          <p className="text-slate-600">{subtitle}</p>
+          <h2 className="text-3xl font-bold text-at-text mb-2">{title}</h2>
+          <p className="text-at-text-secondary">{subtitle}</p>
         </div>
 
-        <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
+        <div className="bg-white p-8 rounded-xl shadow-at-card border border-at-border">
           {pageMode === 'loading' ? (
             <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-slate-600">확인 중...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent mx-auto mb-4"></div>
+              <p className="text-at-text-secondary">확인 중...</p>
             </div>
           ) : pageMode === 'invalid' ? (
             <div className="text-center space-y-4">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-md text-left">
+              <div className="p-4 bg-at-error-bg border border-red-200 rounded-md text-left">
                 <p className="text-sm text-red-800 font-medium mb-2">유효한 재설정 토큰이 없습니다</p>
-                <p className="text-sm text-red-700 mb-2">
+                <p className="text-sm text-at-error mb-2">
                   이 페이지는 <strong>비밀번호 재설정 이메일의 링크를 통해서만</strong> 접근할 수 있습니다.
                 </p>
-                <ul className="text-sm text-red-700 mt-2 ml-4 list-disc space-y-1">
+                <ul className="text-sm text-at-error mt-2 ml-4 list-disc space-y-1">
                   <li>받은 편지함에서 비밀번호 재설정 이메일을 확인하세요</li>
                   <li>이메일의 <strong>&quot;비밀번호 재설정&quot;</strong> 버튼을 클릭하세요</li>
                   <li>링크가 만료되었을 수 있습니다 (24시간 유효)</li>
@@ -197,7 +197,7 @@ export default function UpdatePasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {pageMode === 'change' && (
                 <div>
-                  <label htmlFor="currentPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-at-text-secondary mb-1">
                     현재 비밀번호
                   </label>
                   <input
@@ -205,7 +205,7 @@ export default function UpdatePasswordPage() {
                     id="currentPassword"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                     placeholder="현재 비밀번호를 입력하세요"
                     required
                     disabled={loading || !!message}
@@ -214,7 +214,7 @@ export default function UpdatePasswordPage() {
               )}
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-at-text-secondary mb-1">
                   새 비밀번호
                 </label>
                 <input
@@ -222,7 +222,7 @@ export default function UpdatePasswordPage() {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                   placeholder="6자 이상 입력하세요"
                   required
                   disabled={loading || !!message}
@@ -230,7 +230,7 @@ export default function UpdatePasswordPage() {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-at-text-secondary mb-1">
                   비밀번호 확인
                 </label>
                 <input
@@ -238,7 +238,7 @@ export default function UpdatePasswordPage() {
                   id="confirmPassword"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                   placeholder="비밀번호를 다시 입력하세요"
                   required
                   disabled={loading || !!message}
@@ -246,13 +246,13 @@ export default function UpdatePasswordPage() {
               </div>
 
               {message && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
+                <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-md text-sm">
                   {message}
                 </div>
               )}
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm">
                   {error}
                 </div>
               )}
@@ -260,7 +260,7 @@ export default function UpdatePasswordPage() {
               <button
                 type="submit"
                 disabled={loading || !!message}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
               >
                 {loading ? '변경 중...' : '비밀번호 변경'}
               </button>
@@ -269,7 +269,7 @@ export default function UpdatePasswordPage() {
                 <button
                   type="button"
                   onClick={() => window.close()}
-                  className="w-full text-slate-600 hover:text-slate-800 font-medium py-2 px-4 transition-colors text-sm"
+                  className="w-full text-at-text-secondary hover:text-at-text font-medium py-2 px-4 transition-colors text-sm"
                 >
                   취소
                 </button>

@@ -14,12 +14,12 @@ import { appPrompt } from '@/components/ui/AppDialog'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
+  <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+    <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-at-tag text-at-accent">
       <Icon className="w-4 h-4" />
     </div>
-    <h3 className="text-base font-semibold text-slate-800">
-      <span className="text-blue-600 mr-1">{number}.</span>
+    <h3 className="text-base font-semibold text-at-text">
+      <span className="text-at-accent mr-1">{number}.</span>
       {title}
     </h3>
   </div>
@@ -413,10 +413,10 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      active: 'bg-green-100 text-green-800',
+      active: 'bg-at-success-bg text-at-success',
       pending: 'bg-yellow-100 text-yellow-800',
-      suspended: 'bg-red-100 text-red-800',
-      resigned: 'bg-slate-100 text-slate-800'
+      suspended: 'bg-at-error-bg text-at-error',
+      resigned: 'bg-at-surface-alt text-at-text-secondary'
     }
     const labels = {
       active: '활성',
@@ -425,7 +425,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       resigned: '퇴사'
     }
     return (
-      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800'}`}>
+      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${badges[status as keyof typeof badges] || 'bg-at-surface-alt text-at-text-secondary'}`}>
         {labels[status as keyof typeof labels] || status}
       </span>
     )
@@ -436,7 +436,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   return (
     <div className="space-y-6">
       {/* 내부 탭 네비게이션 */}
-      <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-200">
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
         {[
           { id: 'staff', label: '직원 목록', icon: Users },
           { id: 'resigned', label: `퇴사한 직원 (${resignedStaff.length})`, icon: UserX },
@@ -446,16 +446,16 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
+            className={`py-2 px-4 inline-flex items-center rounded-xl font-medium text-sm transition-all ${
               activeTab === tab.id
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-weak hover:text-at-text hover:bg-at-surface-hover'
             }`}
           >
             <tab.icon className="w-4 h-4 mr-2" />
             {tab.label}
             {tab.badge && (
-              <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-600">
+              <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-at-error-bg text-at-error">
                 {pendingRequests.length}
               </span>
             )}
@@ -464,13 +464,13 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+        <div className="mb-4 bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+        <div className="mb-4 bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-xl text-sm">
           {success}
         </div>
       )}
@@ -479,35 +479,35 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       {activeTab === 'staff' && (
         <div>
           <SectionHeader number={1} title="직원 목록" icon={Users} />
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+          <div className="overflow-x-auto border border-at-border rounded-xl">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">직원</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">연락처</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">직급</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">상태</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">관리</th>
+                <tr className="bg-at-surface-alt border-b border-at-border">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">직원</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">연락처</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">직급</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">상태</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-at-text-secondary uppercase tracking-wider">관리</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-at-border">
                 {staff.map((member) => (
-                  <tr key={member.id} className="hover:bg-slate-50">
+                  <tr key={member.id} className="hover:bg-at-surface-hover">
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 font-semibold text-sm">
+                        <div className="w-9 h-9 bg-at-tag rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-at-accent font-semibold text-sm">
                             {(member.name || ' ').charAt(0)}
                           </span>
                         </div>
                         <div>
-                          <p className="font-medium text-slate-800">{member.name || '이름 없음'}</p>
-                          <p className="text-xs text-slate-500">{member.email}</p>
+                          <p className="font-medium text-at-text">{member.name || '이름 없음'}</p>
+                          <p className="text-xs text-at-text-weak">{member.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-slate-600 space-y-0.5">
+                      <div className="text-at-text-secondary space-y-0.5">
                         {member.phone && (
                           <div className="flex items-center text-xs">
                             <Phone className="w-3 h-3 mr-1" />
@@ -523,7 +523,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-at-tag text-at-accent">
                         {getRoleLabel(member.role || '')}
                       </span>
                     </td>
@@ -545,28 +545,28 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                                 hire_date: member.hire_date || ''
                               })
                             }}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-1.5 text-at-text-weak hover:text-at-accent hover:bg-at-accent-light rounded-lg transition-colors"
                             title="정보 수정"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setEditingStaffPermissions(member)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-1.5 text-at-text-weak hover:text-at-accent hover:bg-at-accent-light rounded-lg transition-colors"
                             title="권한 수정"
                           >
                             <Settings className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleSuspendUser(member.id)}
-                            className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            className="p-1.5 text-at-text-weak hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                             title="사용자 정지"
                           >
                             <X className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setResigningStaff(member)}
-                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-lg transition-colors"
                             title="퇴사 처리"
                           >
                             <UserX className="w-4 h-4" />
@@ -578,7 +578,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 ))}
                 {staff.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-at-text-weak">
                       등록된 직원이 없습니다.
                     </td>
                   </tr>
@@ -593,37 +593,37 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       {activeTab === 'resigned' && (
         <div>
           <SectionHeader number={1} title="퇴사한 직원 목록" icon={UserX} />
-          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+          <div className="overflow-x-auto border border-at-border rounded-xl">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">직원</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">연락처</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">직급</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">상태</th>
+                <tr className="bg-at-surface-alt border-b border-at-border">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">직원</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">연락처</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">직급</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-at-text-secondary uppercase tracking-wider">상태</th>
                   {currentUser.role === 'owner' && (
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">관리</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-at-text-secondary uppercase tracking-wider">관리</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-at-border">
                 {resignedStaff.map((member) => (
-                  <tr key={member.id} className="hover:bg-slate-50 bg-slate-50/50">
+                  <tr key={member.id} className="hover:bg-at-surface-hover bg-at-surface-alt/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-slate-500 font-semibold text-sm">
+                        <div className="w-9 h-9 bg-at-surface-alt rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-at-text-weak font-semibold text-sm">
                             {(member.name || ' ').charAt(0)}
                           </span>
                         </div>
                         <div>
-                          <p className="font-medium text-slate-600">{member.name || '이름 없음'}</p>
-                          <p className="text-xs text-slate-400">{member.email}</p>
+                          <p className="font-medium text-at-text-secondary">{member.name || '이름 없음'}</p>
+                          <p className="text-xs text-at-text-weak">{member.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-slate-500 space-y-0.5">
+                      <div className="text-at-text-weak space-y-0.5">
                         {member.phone && (
                           <div className="flex items-center text-xs">
                             <Phone className="w-3 h-3 mr-1" />
@@ -633,7 +633,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-at-surface-alt text-at-text-secondary">
                         {getRoleLabel(member.role || '')}
                       </span>
                     </td>
@@ -644,7 +644,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => setRehiringStaff(member)}
-                          className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          className="p-1.5 text-at-text-weak hover:text-at-success hover:bg-at-success-bg rounded-lg transition-colors"
                           title="재입사 처리"
                         >
                           <UserCheck className="w-4 h-4" />
@@ -655,7 +655,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                 ))}
                 {resignedStaff.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={4} className="px-4 py-8 text-center text-at-text-weak">
                       퇴사한 직원이 없습니다.
                     </td>
                   </tr>
@@ -672,23 +672,23 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           <SectionHeader number={1} title="가입 요청 목록" icon={Clock} />
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-slate-600">요청을 불러오는 중...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto mb-4"></div>
+              <p className="text-at-text-secondary">요청을 불러오는 중...</p>
             </div>
           ) : joinRequests.length === 0 ? (
-            <div className="text-center py-8 border border-slate-200 rounded-lg">
-              <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">가입 요청이 없습니다.</p>
+            <div className="text-center py-8 border border-at-border rounded-xl">
+              <Clock className="w-12 h-12 text-at-text-weak mx-auto mb-4" />
+              <p className="text-at-text-weak">가입 요청이 없습니다.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {joinRequests.map((request) => (
-                <div key={request.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                <div key={request.id} className="border border-at-border rounded-xl p-4 hover:bg-at-surface-hover transition-colors">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center flex-wrap gap-2 mb-2">
-                        <h3 className="font-semibold text-slate-800">{request.name}</h3>
-                        <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        <h3 className="font-semibold text-at-text">{request.name}</h3>
+                        <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-at-tag text-at-accent">
                           {getRoleLabel(request.role)}
                         </span>
                         {request.status === 'pending' ? (
@@ -696,16 +696,16 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                             검토 대기
                           </span>
                         ) : request.status === 'approved' ? (
-                          <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-at-success-bg text-at-success">
                             승인됨
                           </span>
                         ) : (
-                          <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                          <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-at-error-bg text-at-error">
                             거부됨
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-at-text-weak mb-2">
                         <span className="flex items-center">
                           <Mail className="w-3 h-3 mr-1" />
                           {request.email}
@@ -722,7 +722,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                         </span>
                       </div>
                       {request.message && (
-                        <div className="bg-slate-100 p-2 rounded text-xs text-slate-600">
+                        <div className="bg-at-surface-alt p-2 rounded-lg text-xs text-at-text-secondary">
                           {request.message}
                         </div>
                       )}
@@ -766,20 +766,20 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           <div className="max-w-md">
             <form onSubmit={handleInviteUser} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1.5">
                   이메일 주소 *
                 </label>
                 <input
                   type="email"
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
                   placeholder="colleague@example.com"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1.5">
                   직급 *
                 </label>
                 <select
@@ -788,7 +788,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                     ...inviteForm,
                     role: e.target.value as 'vice_director' | 'manager' | 'team_leader' | 'staff'
                   })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
                   required
                 >
                   <option value="staff">직원</option>
@@ -799,15 +799,15 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
               </div>
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center"
+                className="w-full bg-at-accent hover:bg-at-accent-hover text-white font-medium py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center"
               >
                 <Mail className="w-4 h-4 mr-2" />
                 초대 링크 발송
               </button>
             </form>
-            <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <h4 className="text-xs font-medium text-slate-600 mb-2">초대 방법</h4>
-              <ul className="text-xs text-slate-500 space-y-1 list-disc list-inside">
+            <div className="mt-6 p-4 bg-at-surface-alt rounded-xl border border-at-border">
+              <h4 className="text-xs font-medium text-at-text-secondary mb-2">초대 방법</h4>
+              <ul className="text-xs text-at-text-weak space-y-1 list-disc list-inside">
                 <li>이메일로 초대 링크가 발송됩니다</li>
                 <li>링크는 7일간 유효합니다</li>
                 <li>초대받은 사람이 계정을 생성하면 즉시 활성화됩니다</li>
@@ -861,68 +861,68 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       {/* Edit Staff Info Modal */}
       {editingStaffInfo && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-slate-800 mb-4">직원 정보 수정</h3>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-at-card">
+            <h3 className="text-xl font-bold text-at-text mb-4">직원 정보 수정</h3>
             <form onSubmit={handleUpdateStaffInfo} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   이름 *
                 </label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   placeholder="홍길동"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   전화번호
                 </label>
                 <input
                   type="tel"
                   value={editForm.phone}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   placeholder="010-1234-5678"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   주소
                 </label>
                 <input
                   type="text"
                   value={editForm.address}
                   onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   placeholder="서울시 강남구..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   주민등록번호
                 </label>
                 <input
                   type="text"
                   value={editForm.resident_registration_number}
                   onChange={(e) => setEditForm({ ...editForm, resident_registration_number: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   placeholder="900101-1234567"
                   maxLength={14}
                 />
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-at-text-weak">
                   13자리 숫자로 입력 (하이픈 포함 가능)
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   <Calendar className="w-4 h-4 inline-block mr-1" />
                   입사일
                 </label>
@@ -930,9 +930,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   type="date"
                   value={editForm.hire_date}
                   onChange={(e) => setEditForm({ ...editForm, hire_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-at-text-weak">
                   연차 계산의 기준일로 사용됩니다
                 </p>
               </div>
@@ -944,13 +944,13 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                     setEditingStaffInfo(null)
                     setEditForm({ name: '', phone: '', address: '', resident_registration_number: '', hire_date: '' })
                   }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                  className="px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover"
                 >
                   저장
                 </button>
@@ -971,21 +971,21 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           }}
         >
           <div
-            className="bg-white rounded-lg p-6 max-w-sm w-full relative"
+            className="bg-white rounded-2xl p-6 max-w-sm w-full relative shadow-at-card"
             style={{ zIndex: 100000 }}
             onClick={(e) => {
               console.log('[퇴사모달] 내부 콘텐츠 클릭됨')
               e.stopPropagation()
             }}
           >
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-              <UserX className="w-6 h-6 text-red-600" />
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-at-error-bg mx-auto mb-4">
+              <UserX className="w-6 h-6 text-at-error" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 text-center mb-2">퇴사 처리 확인</h3>
-            <p className="text-sm text-slate-600 text-center mb-6">
-              <span className="font-semibold text-slate-800">{resigningStaff.name}</span>님을 퇴사 처리하시겠습니까?
+            <h3 className="text-lg font-bold text-at-text text-center mb-2">퇴사 처리 확인</h3>
+            <p className="text-sm text-at-text-secondary text-center mb-6">
+              <span className="font-semibold text-at-text">{resigningStaff.name}</span>님을 퇴사 처리하시겠습니까?
               <br />
-              <span className="text-xs text-slate-500 mt-1 block">
+              <span className="text-xs text-at-text-weak mt-1 block">
                 퇴사 처리된 직원은 이 병원의 시스템에 접근할 수 없습니다.
               </span>
             </p>
@@ -998,7 +998,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   e.stopPropagation()
                   setResigningStaff(null)
                 }}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors cursor-pointer"
                 style={{ pointerEvents: 'auto' }}
               >
                 취소
@@ -1033,21 +1033,21 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
           }}
         >
           <div
-            className="bg-white rounded-lg p-6 max-w-sm w-full relative"
+            className="bg-white rounded-2xl p-6 max-w-sm w-full relative shadow-at-card"
             style={{ zIndex: 100000 }}
             onClick={(e) => {
               console.log('[재입사모달] 내부 콘텐츠 클릭됨')
               e.stopPropagation()
             }}
           >
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
-              <UserCheck className="w-6 h-6 text-green-600" />
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-at-success-bg mx-auto mb-4">
+              <UserCheck className="w-6 h-6 text-at-success" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 text-center mb-2">재입사 처리 확인</h3>
-            <p className="text-sm text-slate-600 text-center mb-6">
-              <span className="font-semibold text-slate-800">{rehiringStaff.name}</span>님을 재입사 처리하시겠습니까?
+            <h3 className="text-lg font-bold text-at-text text-center mb-2">재입사 처리 확인</h3>
+            <p className="text-sm text-at-text-secondary text-center mb-6">
+              <span className="font-semibold text-at-text">{rehiringStaff.name}</span>님을 재입사 처리하시겠습니까?
               <br />
-              <span className="text-xs text-slate-500 mt-1 block">
+              <span className="text-xs text-at-text-weak mt-1 block">
                 재입사 처리된 직원은 이 병원의 시스템에 다시 접근할 수 있습니다.
               </span>
             </p>
@@ -1060,7 +1060,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   e.stopPropagation()
                   setRehiringStaff(null)
                 }}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2 text-sm font-medium text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover transition-colors cursor-pointer"
                 style={{ pointerEvents: 'auto' }}
               >
                 취소
@@ -1073,7 +1073,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
                   e.stopPropagation()
                   handleRehireUser()
                 }}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-at-success rounded-xl hover:bg-at-success transition-colors cursor-pointer"
                 style={{ pointerEvents: 'auto' }}
               >
                 재입사 처리

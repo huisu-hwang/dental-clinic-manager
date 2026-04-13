@@ -8,8 +8,8 @@ import { loadPeriodConfig } from '@/types/taskChecklist'
 import { CheckCircle2, Circle, ChevronLeft, ChevronRight, StickyNote } from 'lucide-react'
 
 const FALLBACK_COLORS = [
-  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
-  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
+  { bg: 'bg-at-warning-bg', border: 'border-amber-200', text: 'text-amber-700' },
+  { bg: 'bg-at-accent-light', border: 'border-at-border', text: 'text-at-accent' },
   { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700' },
   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
   { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
@@ -104,7 +104,7 @@ export default function DailyChecklist() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
       </div>
     )
   }
@@ -112,32 +112,32 @@ export default function DailyChecklist() {
   return (
     <div className="space-y-6">
       {/* 헤더: 날짜 선택 + 진행률 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-slate-800">나의 업무 체크리스트</h2>
+          <h2 className="text-lg font-bold text-at-text">나의 업무 체크리스트</h2>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => changeDate(-1)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-at-surface-hover transition-colors"
             >
-              <ChevronLeft className="w-5 h-5 text-slate-500" />
+              <ChevronLeft className="w-5 h-5 text-at-text-weak" />
             </button>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-1.5 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             />
             <button
               onClick={() => changeDate(1)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-at-surface-hover transition-colors"
             >
-              <ChevronRight className="w-5 h-5 text-slate-500" />
+              <ChevronRight className="w-5 h-5 text-at-text-weak" />
             </button>
             {!isToday && (
               <button
                 onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-                className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-at-accent bg-at-accent-light rounded-xl hover:bg-at-tag transition-colors"
               >
                 오늘
               </button>
@@ -149,13 +149,13 @@ export default function DailyChecklist() {
         {totalTasks > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">오늘의 진행률</span>
-              <span className="font-semibold text-slate-800">{completedTasks}/{totalTasks} ({progressPercent}%)</span>
+              <span className="text-at-text-secondary">오늘의 진행률</span>
+              <span className="font-semibold text-at-text">{completedTasks}/{totalTasks} ({progressPercent}%)</span>
             </div>
-            <div className="w-full bg-slate-200 rounded-full h-3">
+            <div className="w-full bg-at-surface-alt rounded-full h-3">
               <div
                 className={`h-3 rounded-full transition-all duration-500 ${
-                  progressPercent === 100 ? 'bg-green-500' : 'bg-blue-500'
+                  progressPercent === 100 ? 'bg-green-500' : 'bg-at-accent'
                 }`}
                 style={{ width: `${progressPercent}%` }}
               />
@@ -166,12 +166,12 @@ export default function DailyChecklist() {
 
       {/* 업무 없는 경우 */}
       {totalTasks === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-8 h-8 text-slate-400" />
+        <div className="bg-white rounded-2xl shadow-at-card border border-at-border p-8 text-center">
+          <div className="w-16 h-16 bg-at-surface-alt rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-8 h-8 text-at-text-weak" />
           </div>
-          <p className="text-slate-500 text-sm">배정된 업무가 없습니다.</p>
-          <p className="text-slate-400 text-xs mt-1">실장에게 업무 배정을 요청하세요.</p>
+          <p className="text-at-text-weak text-sm">배정된 업무가 없습니다.</p>
+          <p className="text-at-text-weak text-xs mt-1">실장에게 업무 배정을 요청하세요.</p>
         </div>
       )}
 
@@ -185,7 +185,7 @@ export default function DailyChecklist() {
         const periodCompleted = periodTemplates.filter(t => isChecked(t.id)).length
 
         return (
-          <div key={period} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div key={period} className="bg-white rounded-2xl shadow-at-card border border-at-border overflow-hidden">
             {/* 시간대 헤더 */}
             <div className={`px-4 sm:px-6 py-3 ${periodColor.bg} ${periodColor.border} border-b flex items-center justify-between`}>
               <h3 className={`font-semibold ${periodColor.text}`}>{periodLabel}</h3>
@@ -195,7 +195,7 @@ export default function DailyChecklist() {
             </div>
 
             {/* 업무 항목 */}
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-at-border">
               {periodTemplates.map(template => {
                 const checked = isChecked(template.id)
                 const checkRecord = getCheckRecord(template.id)
@@ -205,7 +205,7 @@ export default function DailyChecklist() {
                   <div
                     key={template.id}
                     className={`px-4 sm:px-6 py-3 flex items-start space-x-3 transition-colors ${
-                      checked ? 'bg-slate-50' : 'hover:bg-slate-50'
+                      checked ? 'bg-at-surface-alt' : 'hover:bg-at-surface-alt'
                     }`}
                   >
                     {/* 체크 버튼 */}
@@ -219,17 +219,17 @@ export default function DailyChecklist() {
                       {checked ? (
                         <CheckCircle2 className="w-6 h-6 text-green-500" />
                       ) : (
-                        <Circle className="w-6 h-6 text-slate-300 hover:text-blue-400" />
+                        <Circle className="w-6 h-6 text-at-text-weak hover:text-at-accent" />
                       )}
                     </button>
 
                     {/* 업무 내용 */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${checked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                      <p className={`text-sm font-medium text-at-text-weak line-through' : 'text-at-text'}`}>
                         {template.title}
                       </p>
                       {template.description && (
-                        <p className={`text-xs mt-0.5 ${checked ? 'text-slate-300' : 'text-slate-500'}`}>
+                        <p className={`text-xs mt-0.5 ${checked ? 'text-at-text-weak' : 'text-at-text-weak'}`}>
                           {template.description}
                         </p>
                       )}
@@ -239,7 +239,7 @@ export default function DailyChecklist() {
                         </p>
                       )}
                       {checkRecord?.notes && (
-                        <p className="text-xs text-slate-400 mt-0.5 italic">
+                        <p className="text-xs text-at-text-weak mt-0.5 italic">
                           {checkRecord.notes}
                         </p>
                       )}
@@ -252,11 +252,11 @@ export default function DailyChecklist() {
                             value={noteInput[template.id] || ''}
                             onChange={(e) => setNoteInput(prev => ({ ...prev, [template.id]: e.target.value }))}
                             placeholder="메모 입력..."
-                            className="flex-1 px-2 py-1 text-xs border border-slate-200 rounded-md focus:ring-1 focus:ring-blue-500"
+                            className="flex-1 px-2 py-1 text-xs border border-at-border rounded-lg focus:ring-1 focus:ring-at-accent"
                           />
                           <button
                             onClick={() => setShowNoteFor(null)}
-                            className="text-xs text-slate-400 hover:text-slate-600"
+                            className="text-xs text-at-text-weak hover:text-at-text"
                           >
                             닫기
                           </button>
@@ -267,10 +267,10 @@ export default function DailyChecklist() {
                     {/* 메모 버튼 */}
                     <button
                       onClick={() => setShowNoteFor(showNoteFor === template.id ? null : template.id)}
-                      className="flex-shrink-0 p-1 rounded hover:bg-slate-100 transition-colors"
+                      className="flex-shrink-0 p-1 rounded hover:bg-at-surface-hover transition-colors"
                       title="메모"
                     >
-                      <StickyNote className="w-4 h-4 text-slate-400" />
+                      <StickyNote className="w-4 h-4 text-at-text-weak" />
                     </button>
                   </div>
                 )

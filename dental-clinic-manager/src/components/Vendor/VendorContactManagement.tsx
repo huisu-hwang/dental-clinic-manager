@@ -100,8 +100,8 @@ function DroppableColumn({ id, categoryId, children }: { id: string; categoryId:
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[280px] max-w-[320px] flex-shrink-0 rounded-lg transition-all ${
-        isOver ? 'ring-2 ring-blue-400 bg-blue-50/50' : ''
+      className={`min-w-[280px] max-w-[320px] flex-shrink-0 rounded-xl transition-all ${
+        isOver ? 'ring-2 ring-at-accent bg-at-accent-light/50' : ''
       }`}
     >
       {children}
@@ -1076,9 +1076,9 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
     return (
       <div
         key={contact.id}
-        className={`relative bg-white rounded-lg border transition-all ${
-          isExpanded ? 'border-slate-300 shadow-md' : 'border-slate-200 hover:border-slate-300 shadow-sm'
-        } ${isDialing ? 'bg-blue-50/40' : ''} ${selectedContacts.has(contact.id) ? 'ring-2 ring-blue-200' : ''}`}
+        className={`relative bg-white rounded-xl border transition-all ${
+          isExpanded ? 'border-at-border shadow-at-card' : 'border-at-border hover:border-at-border shadow-at-card'
+        } ${isDialing ? 'bg-at-accent-light/40' : ''} ${selectedContacts.has(contact.id) ? 'ring-2 ring-blue-200' : ''}`}
       >
         {/* 접힌 상태: 1줄 요약 */}
         <div
@@ -1099,7 +1099,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 checked={selectedContacts.has(contact.id)}
                 onChange={() => toggleSelectContact(contact.id)}
                 onClick={(e) => e.stopPropagation()}
-                className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                className="w-3.5 h-3.5 text-at-accent rounded focus:ring-at-accent cursor-pointer flex-shrink-0"
               />
             )}
 
@@ -1113,7 +1113,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             </button>
 
             {/* 업체명 */}
-            <span className="font-semibold text-sm text-slate-800 truncate">{contact.company_name}</span>
+            <span className="font-semibold text-sm text-at-text truncate">{contact.company_name}</span>
 
             {/* 카테고리 뱃지 (필터뷰에서만) */}
             {showCategoryBadge && contact.category && (
@@ -1128,14 +1128,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             {/* 오른쪽: 메모 미리보기 + 화살표 */}
             <div className="flex items-center gap-2 ml-auto flex-shrink-0">
               {!isExpanded && contact.notes && (
-                <span className="text-xs text-slate-400 truncate max-w-[150px] hidden sm:inline">
+                <span className="text-xs text-at-text-weak truncate max-w-[150px] hidden sm:inline">
                   {contact.notes}
                 </span>
               )}
               {isExpanded ? (
-                <ChevronUp className="w-4 h-4 text-slate-400" />
+                <ChevronUp className="w-4 h-4 text-at-text-weak" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
+                <ChevronDown className="w-4 h-4 text-at-text-weak" />
               )}
             </div>
           </div>
@@ -1143,19 +1143,19 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
         {/* 펼친 상태: 아코디언 */}
         {isExpanded && (
-          <div className="border-t border-slate-100">
+          <div className="border-t border-at-border">
             {/* 상세 정보 */}
             <div className="px-4 py-3 space-y-2">
               {/* 전화번호 1 */}
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                  <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <div className="flex items-center gap-2 text-sm text-at-text-secondary min-w-0">
+                  <Phone className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                   <span className="truncate">{formatPhone(contact.phone)}</span>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone) }}
                   disabled={dialingPhone === contact.phone}
-                  className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1 flex-shrink-0"
+                  className="px-3 py-1 bg-at-accent-light text-at-accent text-xs font-medium rounded-xl hover:bg-at-tag transition-colors flex items-center gap-1 flex-shrink-0"
                 >
                   {dialingPhone === contact.phone ? (
                     <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
@@ -1169,14 +1169,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {/* 전화번호 2 */}
               {contact.phone2 && (
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-                    <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <div className="flex items-center gap-2 text-sm text-at-text-secondary min-w-0">
+                    <Phone className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                     <span className="truncate">{formatPhone(contact.phone2)}</span>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); makePhoneCall(contact.phone2!) }}
                     disabled={dialingPhone === contact.phone2}
-                    className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1 flex-shrink-0"
+                    className="px-3 py-1 bg-at-accent-light text-at-accent text-xs font-medium rounded-xl hover:bg-at-tag transition-colors flex items-center gap-1 flex-shrink-0"
                   >
                     {dialingPhone === contact.phone2 ? (
                       <div className="w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
@@ -1190,45 +1190,45 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
               {/* 담당자 */}
               {contact.contact_person && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <div className="flex items-center gap-2 text-sm text-at-text-secondary">
+                  <User className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                   <span>{contact.contact_person}</span>
                 </div>
               )}
 
               {/* 이메일 */}
               {contact.email && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <div className="flex items-center gap-2 text-sm text-at-text-secondary">
+                  <Mail className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                   <span className="truncate">{contact.email}</span>
                 </div>
               )}
 
               {/* 주소 */}
               {contact.address && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <div className="flex items-center gap-2 text-sm text-at-text-secondary">
+                  <MapPin className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                   <span className="truncate">{contact.address}</span>
                 </div>
               )}
 
               {/* 메모 */}
               {contact.notes && (
-                <div className="flex items-start gap-2 text-sm text-slate-600">
-                  <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 text-sm text-at-text-secondary">
+                  <FileText className="w-4 h-4 text-at-text-weak flex-shrink-0 mt-0.5" />
                   <span className="whitespace-pre-wrap break-words">{contact.notes}</span>
                 </div>
               )}
             </div>
 
             {/* 액션 버튼 */}
-            <div className="border-t border-slate-100 px-4 py-2.5 flex items-center gap-2">
+            <div className="border-t border-at-border px-4 py-2.5 flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleFavorite(contact) }}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5 ${
                   contact.is_favorite
-                    ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                    ? 'bg-at-warning-bg text-at-warning hover:bg-at-warning-bg'
+                    : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-alt'
                 }`}
               >
                 <Star className={`w-3.5 h-3.5 ${contact.is_favorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
@@ -1238,7 +1238,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {canEdit && (
                 <button
                   onClick={(e) => { e.stopPropagation(); openEditContact(contact) }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-medium rounded-xl bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-alt transition-colors flex items-center gap-1.5"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   수정
@@ -1248,7 +1248,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {canDelete && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(contact.id) }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-1.5 ml-auto"
+                  className="px-3 py-1.5 text-xs font-medium rounded-xl bg-at-error-bg text-at-error hover:bg-at-error-bg transition-colors flex items-center gap-1.5 ml-auto"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   삭제
@@ -1263,7 +1263,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
   if (!canView) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center text-gray-500">
+      <div className="bg-white rounded-xl shadow-at-card border border-at-border p-8 text-center text-at-text-weak">
         업체 연락처를 조회할 권한이 없습니다.
       </div>
     )
@@ -1275,86 +1275,81 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
   ]
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
       {/* 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white">업체 연락처</h2>
-              <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Vendor Contacts</p>
-            </div>
+      <div className="flex items-center justify-between pb-4 border-b border-at-border mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+            <Building2 className="w-4 h-4 text-at-accent" />
           </div>
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
-            {loading && (
-              <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
-                로딩 중...
-              </span>
-            )}
-            <span className="px-2 sm:px-3 py-1 bg-white/20 rounded-full text-white text-xs">
-              {contacts.length}개
+          <h2 className="text-lg font-bold text-at-text">업체 연락처</h2>
+        </div>
+        <div className="flex items-center space-x-1.5 sm:space-x-2">
+          {loading && (
+            <span className="px-2 sm:px-3 py-1 bg-at-surface-alt rounded-full text-at-text-weak text-xs">
+              로딩 중...
             </span>
-            {canCreate && (
-              <>
+          )}
+          <span className="px-2 sm:px-3 py-1 bg-at-surface-alt rounded-full text-at-text-weak text-xs">
+            {contacts.length}개
+          </span>
+          {canCreate && (
+            <>
+              <button
+                onClick={() => { resetContactForm(); setShowContactModal(true) }}
+                className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+                title="새 업체 등록"
+              >
+                <Plus className="w-4 h-4 text-at-text-secondary" />
+              </button>
+              <button
+                onClick={() => setShowCategoryModal(true)}
+                className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+                title="카테고리 관리"
+              >
+                <Settings className="w-4 h-4 text-at-text-secondary" />
+              </button>
+              {canImport && (
                 <button
-                  onClick={() => { resetContactForm(); setShowContactModal(true) }}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                  title="새 업체 등록"
+                  onClick={() => { resetImportModal(); setShowImportModal(true) }}
+                  className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+                  title="파일로 일괄 등록"
                 >
-                  <Plus className="w-4 h-4 text-white" />
+                  <Upload className="w-4 h-4 text-at-text-secondary" />
                 </button>
-                <button
-                  onClick={() => setShowCategoryModal(true)}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                  title="카테고리 관리"
-                >
-                  <Settings className="w-4 h-4 text-white" />
-                </button>
-                {canImport && (
-                  <button
-                    onClick={() => { resetImportModal(); setShowImportModal(true) }}
-                    className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                    title="파일로 일괄 등록"
-                  >
-                    <Upload className="w-4 h-4 text-white" />
-                  </button>
-                )}
-              </>
-            )}
-            <button
-              onClick={() => setShowPhoneSettings(true)}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-              title="전화 다이얼 설정"
-            >
-              <PhoneCall className="w-4 h-4 text-white" />
-            </button>
-          </div>
+              )}
+            </>
+          )}
+          <button
+            onClick={() => setShowPhoneSettings(true)}
+            className="p-2 bg-at-surface-alt hover:bg-at-accent-light rounded-xl transition-colors"
+            title="전화 다이얼 설정"
+          >
+            <PhoneCall className="w-4 h-4 text-at-text-secondary" />
+          </button>
         </div>
       </div>
 
       {/* 본문 */}
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="space-y-4">
         {/* 검색 바 + 즐겨찾기 토글 */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
             <input
               type="text"
               placeholder="업체명, 담당자, 전화번호 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full pl-10 pr-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
             />
           </div>
           <button
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg border transition-colors text-sm ${
+            className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl border transition-colors text-sm ${
               showFavoritesOnly
-                ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
-                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                ? 'bg-at-warning-bg border-yellow-300 text-at-warning'
+                : 'bg-white border-at-border text-at-text-secondary hover:bg-at-surface-alt'
             }`}
           >
             <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-400' : ''}`} />
@@ -1369,7 +1364,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                 selectedCategory === ''
                   ? 'bg-slate-800 text-white border-slate-800'
-                  : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                  : 'bg-white text-at-text-secondary border-at-border hover:bg-at-surface-alt'
               }`}
             >
               전체
@@ -1381,7 +1376,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                   selectedCategory === cat.id
                     ? 'text-white border-transparent'
-                    : 'bg-white border-slate-300 hover:border-slate-400 text-slate-600'
+                    : 'bg-white border-at-border hover:border-at-border text-at-text-secondary'
                 }`}
                 style={selectedCategory === cat.id ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
               >
@@ -1399,19 +1394,19 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
         {/* 선택 툴바 */}
           {canDelete && filteredContacts.length > 0 && (
-            <div className="flex items-center justify-between mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between mb-3 p-3 bg-at-surface-alt rounded-xl border border-at-border">
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedContacts.size === filteredContacts.length && filteredContacts.length > 0}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-at-accent rounded focus:ring-at-accent"
                   />
-                  <span className="text-sm text-slate-600">전체 선택</span>
+                  <span className="text-sm text-at-text-secondary">전체 선택</span>
                 </label>
                 {selectedContacts.size > 0 && (
-                  <span className="text-sm text-blue-600 font-medium">
+                  <span className="text-sm text-at-accent font-medium">
                     {selectedContacts.size}개 선택됨
                   </span>
                 )}
@@ -1420,14 +1415,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { setBulkMoveTargetCategory(''); setShowBulkMoveModal(true) }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-at-accent hover:bg-at-accent text-white rounded-xl text-sm font-medium transition-colors"
                   >
                     <FolderInput className="w-4 h-4" />
                     카테고리 이동 ({selectedContacts.size})
                   </button>
                   <button
                     onClick={() => setShowBulkDeleteConfirm(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                     선택 삭제 ({selectedContacts.size})
@@ -1439,13 +1434,13 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-3 text-slate-500 text-sm">데이터를 불러오는 중...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto"></div>
+              <p className="mt-3 text-at-text-weak text-sm">데이터를 불러오는 중...</p>
             </div>
           ) : filteredContacts.length === 0 ? (
-            <div className="py-12 text-center bg-slate-50 rounded-lg border border-dashed border-slate-300">
-              <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">
+            <div className="py-12 text-center bg-at-surface-alt rounded-xl border border-dashed border-at-border">
+              <Building2 className="w-12 h-12 text-at-text-weak mx-auto mb-3" />
+              <p className="text-at-text-weak">
                 {searchQuery || selectedCategory || showFavoritesOnly
                   ? '검색 결과가 없습니다.'
                   : '등록된 업체가 없습니다.'}
@@ -1456,7 +1451,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     resetContactForm()
                     setShowContactModal(true)
                   }}
-                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="mt-4 px-4 py-2 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl text-sm font-medium transition-colors"
                 >
                   첫 번째 업체 등록하기
                 </button>
@@ -1477,7 +1472,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   return (
                     <DroppableColumn key={groupId} id={`drop-column-${groupId}`} categoryId={categoryId}>
                       <div
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors mb-2"
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors mb-2"
                         style={{ backgroundColor: `${group.category?.color || '#94a3b8'}15`, borderLeft: `3px solid ${group.category?.color || '#94a3b8'}` }}
                       >
                         <button
@@ -1485,9 +1480,9 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                           className="flex items-center gap-2 flex-1 min-w-0"
                         >
                           {isCollapsed ? (
-                            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <ChevronRight className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <ChevronDown className="w-4 h-4 text-at-text-weak flex-shrink-0" />
                           )}
                           <span
                             className="font-semibold text-sm truncate"
@@ -1495,7 +1490,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                           >
                             {group.category?.name || '미분류'}
                           </span>
-                          <span className="text-xs text-slate-400 flex-shrink-0">
+                          <span className="text-xs text-at-text-weak flex-shrink-0">
                             ({group.contacts.length})
                           </span>
                         </button>
@@ -1534,11 +1529,11 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               </div>
               <DragOverlay dropAnimation={null}>
                 {activeDragContact && (
-                  <div className="bg-white border-2 border-blue-400 rounded-lg shadow-xl p-3 w-[280px]">
+                  <div className="bg-white border-2 border-blue-400 rounded-xl shadow-xl p-3 w-[280px]">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-slate-800 truncate">{activeDragContact.company_name}</span>
+                      <span className="font-semibold text-sm text-at-text truncate">{activeDragContact.company_name}</span>
                       {dragItemCount > 1 && (
-                        <span className="px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full flex-shrink-0">
+                        <span className="px-2 py-0.5 bg-at-accent text-white text-xs font-medium rounded-full flex-shrink-0">
                           {dragItemCount}개 이동 중
                         </span>
                       )}
@@ -1567,7 +1562,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   setShowContactModal(false)
                   resetContactForm()
                 }}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
               >
                 <X className="w-5 h-5 text-white" />
               </button>
@@ -1576,27 +1571,27 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             <div className="p-6 space-y-4">
               {/* 업체명 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   업체명 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={contactForm.company_name}
                   onChange={(e) => setContactForm({ ...contactForm, company_name: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                   placeholder="업체명을 입력하세요"
                 />
               </div>
 
               {/* 카테고리 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   카테고리
                 </label>
                 <select
                   value={contactForm.category_id}
                   onChange={(e) => setContactForm({ ...contactForm, category_id: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                 >
                   <option value="">카테고리 선택</option>
                   {categories.map(cat => (
@@ -1607,14 +1602,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
               {/* 담당자 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   담당자
                 </label>
                 <input
                   type="text"
                   value={contactForm.contact_person}
                   onChange={(e) => setContactForm({ ...contactForm, contact_person: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                   placeholder="담당자명"
                 />
               </div>
@@ -1622,26 +1617,26 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {/* 전화번호 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     전화번호
                   </label>
                   <input
                     type="tel"
                     value={contactForm.phone}
                     onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="010-0000-0000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     전화번호 2
                   </label>
                   <input
                     type="tel"
                     value={contactForm.phone2}
                     onChange={(e) => setContactForm({ ...contactForm, phone2: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="추가 연락처"
                   />
                 </div>
@@ -1649,41 +1644,41 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
               {/* 이메일 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   이메일
                 </label>
                 <input
                   type="email"
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                   placeholder="email@example.com"
                 />
               </div>
 
               {/* 주소 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   주소
                 </label>
                 <input
                   type="text"
                   value={contactForm.address}
                   onChange={(e) => setContactForm({ ...contactForm, address: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                   placeholder="주소를 입력하세요"
                 />
               </div>
 
               {/* 메모 */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   메모
                 </label>
                 <textarea
                   value={contactForm.notes}
                   onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                   rows={3}
                   placeholder="추가 메모"
                 />
@@ -1695,26 +1690,26 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   type="checkbox"
                   checked={contactForm.is_favorite}
                   onChange={(e) => setContactForm({ ...contactForm, is_favorite: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  className="w-4 h-4 text-at-accent rounded focus:ring-at-accent"
                 />
                 <Star className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm text-slate-700">즐겨찾기에 추가</span>
+                <span className="text-sm text-at-text-secondary">즐겨찾기에 추가</span>
               </label>
             </div>
 
-            <div className="sticky bottom-0 bg-slate-50 border-t px-6 py-4 flex justify-end gap-3 rounded-b-xl">
+            <div className="sticky bottom-0 bg-at-surface-alt border-t px-6 py-4 flex justify-end gap-3 rounded-b-xl">
               <button
                 onClick={() => {
                   setShowContactModal(false)
                   resetContactForm()
                 }}
-                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2.5 text-at-text-secondary hover:bg-at-surface-alt rounded-xl transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={handleSaveContact}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2.5 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl transition-colors text-sm font-medium"
               >
                 {editingContact ? '수정' : '등록'}
               </button>
@@ -1734,7 +1729,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   setShowCategoryModal(false)
                   resetCategoryForm()
                 }}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
               >
                 <X className="w-5 h-5 text-white" />
               </button>
@@ -1743,9 +1738,9 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
             <div className="p-6 space-y-6">
               {/* 기존 카테고리 목록 */}
               <div>
-                <h4 className="text-sm font-medium text-slate-700 mb-3">기존 카테고리</h4>
+                <h4 className="text-sm font-medium text-at-text-secondary mb-3">기존 카테고리</h4>
                 {categories.length === 0 ? (
-                  <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-lg text-center">
+                  <p className="text-sm text-at-text-weak bg-at-surface-alt p-4 rounded-xl text-center">
                     등록된 카테고리가 없습니다.
                   </p>
                 ) : (
@@ -1753,7 +1748,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     {categories.map(cat => (
                       <div
                         key={cat.id}
-                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-at-surface-alt rounded-xl"
                       >
                         <div className="flex items-center gap-2">
                           <div
@@ -1767,7 +1762,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                             onClick={() => openEditCategory(cat)}
                             className="p-1.5 hover:bg-white rounded transition-colors"
                           >
-                            <Edit2 className="w-4 h-4 text-slate-400" />
+                            <Edit2 className="w-4 h-4 text-at-text-weak" />
                           </button>
                           <button
                             onClick={() => handleDeleteCategory(cat.id)}
@@ -1783,11 +1778,11 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               </div>
 
               {/* 구분선 */}
-              <hr className="border-slate-200" />
+              <hr className="border-at-border" />
 
               {/* 카테고리 추가/수정 폼 */}
               <div>
-                <h4 className="text-sm font-medium text-slate-700 mb-3">
+                <h4 className="text-sm font-medium text-at-text-secondary mb-3">
                   {editingCategory ? '카테고리 수정' : '새 카테고리 추가'}
                 </h4>
                 <div className="space-y-3">
@@ -1795,18 +1790,18 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     type="text"
                     value={categoryForm.name}
                     onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="카테고리명"
                   />
                   <input
                     type="text"
                     value={categoryForm.description}
                     onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full px-4 py-2.5 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                     placeholder="설명 (선택)"
                   />
                   <div>
-                    <label className="block text-sm text-slate-600 mb-2">색상 선택</label>
+                    <label className="block text-sm text-at-text-secondary mb-2">색상 선택</label>
                     <div className="flex flex-wrap gap-2">
                       {colorOptions.map(color => (
                         <button
@@ -1824,14 +1819,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     {editingCategory && (
                       <button
                         onClick={resetCategoryForm}
-                        className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm font-medium transition-colors"
+                        className="flex-1 px-4 py-2.5 border border-at-border text-at-text-secondary rounded-xl hover:bg-at-surface-alt text-sm font-medium transition-colors"
                       >
                         취소
                       </button>
                     )}
                     <button
                       onClick={handleSaveCategory}
-                      className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      className="flex-1 px-4 py-2.5 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl text-sm font-medium transition-colors"
                     >
                       {editingCategory ? '수정' : '추가'}
                     </button>
@@ -1857,7 +1852,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   setShowImportModal(false)
                   resetImportModal()
                 }}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/20 rounded-xl transition-colors"
               >
                 <X className="w-5 h-5 text-white" />
               </button>
@@ -1874,8 +1869,8 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     onDrop={handleDrop}
                     className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
                       isDragging
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-slate-300 hover:border-slate-400'
+                        ? 'border-at-accent bg-at-accent-light'
+                        : 'border-at-border hover:border-at-border'
                     }`}
                   >
                     <input
@@ -1885,50 +1880,50 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                       onChange={handleFileInputChange}
                       className="hidden"
                     />
-                    <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`} />
-                    <p className="text-slate-700 font-medium mb-2">
+                    <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-at-accent' : 'text-at-text-weak'}`} />
+                    <p className="text-at-text-secondary font-medium mb-2">
                       파일을 드래그하여 놓거나 클릭하여 선택하세요
                     </p>
-                    <p className="text-sm text-slate-500 mb-4">
+                    <p className="text-sm text-at-text-weak mb-4">
                       Excel(.xlsx, .xls), CSV, TXT 파일 지원
                     </p>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      className="px-6 py-2.5 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl text-sm font-medium transition-colors"
                     >
                       파일 선택
                     </button>
                   </div>
 
                   {/* 파일 형식 안내 */}
-                  <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                    <h4 className="font-medium text-slate-800 mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-slate-600" />
+                  <div className="bg-at-surface-alt rounded-xl p-5 border border-at-border">
+                    <h4 className="font-medium text-at-text mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-at-text-secondary" />
                       파일 형식 안내
                     </h4>
-                    <p className="text-sm text-slate-600 mb-3">
+                    <p className="text-sm text-at-text-secondary mb-3">
                       엑셀 파일(.xlsx, .xls)을 직접 업로드하거나 CSV 파일을 사용하세요.
                     </p>
-                    <div className="bg-white rounded-lg p-3 border border-slate-200 text-sm text-slate-600 space-y-2">
+                    <div className="bg-white rounded-xl p-3 border border-at-border text-sm text-at-text-secondary space-y-2">
                       <div className="flex items-start gap-2">
-                        <span className="text-blue-500 font-bold">✓</span>
+                        <span className="text-at-accent font-bold">✓</span>
                         <span><strong>자동 컬럼 인식:</strong> 헤더명을 기반으로 컬럼을 자동 매핑합니다</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="text-blue-500 font-bold">✓</span>
+                        <span className="text-at-accent font-bold">✓</span>
                         <span><strong>전화번호 자동 감지:</strong> 전화번호가 어느 열에 있든 자동으로 찾습니다</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="text-blue-500 font-bold">✓</span>
+                        <span className="text-at-accent font-bold">✓</span>
                         <span><strong>유연한 형식:</strong> 열 순서가 달라도 자동 처리됩니다</span>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500 mt-3">
+                    <p className="text-xs text-at-text-weak mt-3">
                       * 업체명은 필수입니다. 전화번호가 없어도 등록은 가능합니다.
                     </p>
                     <button
                       onClick={downloadSampleFile}
-                      className="mt-4 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      className="mt-4 flex items-center gap-2 text-sm text-at-accent hover:text-at-accent font-medium"
                     >
                       <Download className="w-4 h-4" />
                       샘플 파일 다운로드
@@ -1941,19 +1936,19 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {importStep === 'mapping' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-slate-800">
+                    <h4 className="font-medium text-at-text">
                       컬럼 매핑 설정 (총 {rawFileData.length}개 데이터)
                     </h4>
                     <button
                       onClick={() => setImportStep('upload')}
-                      className="text-sm text-slate-600 hover:text-slate-800"
+                      className="text-sm text-at-text-secondary hover:text-at-text"
                     >
                       다시 선택
                     </button>
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-700">
+                  <div className="bg-at-accent-light border border-at-border rounded-xl p-3">
+                    <p className="text-sm text-at-accent">
                       <strong>컬럼 매핑:</strong> 파일의 각 컬럼이 어떤 필드에 해당하는지 확인하고 필요시 수정하세요.
                       자동으로 감지된 매핑을 확인하거나, 드롭다운에서 직접 선택할 수 있습니다.
                     </p>
@@ -1963,13 +1958,13 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* 업체명 (필수) */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-at-text-secondary">
                         업체명 <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={columnMapping.company_name ?? ''}
                         onChange={(e) => updateColumnMapping('company_name', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택하세요</option>
                         {fileHeaders.map((header, idx) => (
@@ -1977,7 +1972,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.company_name !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.company_name] || '-'}
                         </p>
                       )}
@@ -1985,16 +1980,16 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                     {/* 카테고리 */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-at-text-secondary">
                         카테고리 / 분류
                         {columnMapping.category_name !== null && (
-                          <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">자동 감지됨</span>
+                          <span className="ml-2 text-xs text-at-success bg-at-success-bg px-2 py-0.5 rounded">자동 감지됨</span>
                         )}
                       </label>
                       <select
                         value={columnMapping.category_name ?? ''}
                         onChange={(e) => updateColumnMapping('category_name', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택 안함</option>
                         {fileHeaders.map((header, idx) => (
@@ -2002,7 +1997,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.category_name !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.category_name] || '-'}
                         </p>
                       )}
@@ -2010,11 +2005,11 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                     {/* 담당자 */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">담당자</label>
+                      <label className="block text-sm font-medium text-at-text-secondary">담당자</label>
                       <select
                         value={columnMapping.contact_person ?? ''}
                         onChange={(e) => updateColumnMapping('contact_person', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택 안함</option>
                         {fileHeaders.map((header, idx) => (
@@ -2022,7 +2017,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.contact_person !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.contact_person] || '-'}
                         </p>
                       )}
@@ -2030,16 +2025,16 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                     {/* 전화번호 1 */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-at-text-secondary">
                         전화번호 1
                         {columnMapping.phone !== null && (
-                          <span className="ml-2 text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">자동 감지됨</span>
+                          <span className="ml-2 text-xs text-at-success bg-at-success-bg px-2 py-0.5 rounded">자동 감지됨</span>
                         )}
                       </label>
                       <select
                         value={columnMapping.phone ?? ''}
                         onChange={(e) => updateColumnMapping('phone', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택 안함 (자동 탐색)</option>
                         {fileHeaders.map((header, idx) => (
@@ -2047,7 +2042,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.phone !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.phone] || '-'}
                         </p>
                       )}
@@ -2055,11 +2050,11 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                     {/* 전화번호 2 */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">전화번호 2</label>
+                      <label className="block text-sm font-medium text-at-text-secondary">전화번호 2</label>
                       <select
                         value={columnMapping.phone2 ?? ''}
                         onChange={(e) => updateColumnMapping('phone2', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택 안함</option>
                         {fileHeaders.map((header, idx) => (
@@ -2067,7 +2062,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.phone2 !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.phone2] || '-'}
                         </p>
                       )}
@@ -2075,11 +2070,11 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                     {/* 이메일 */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">이메일</label>
+                      <label className="block text-sm font-medium text-at-text-secondary">이메일</label>
                       <select
                         value={columnMapping.email ?? ''}
                         onChange={(e) => updateColumnMapping('email', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택 안함</option>
                         {fileHeaders.map((header, idx) => (
@@ -2087,7 +2082,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.email !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.email] || '-'}
                         </p>
                       )}
@@ -2095,11 +2090,11 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                     {/* 주소 */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">주소</label>
+                      <label className="block text-sm font-medium text-at-text-secondary">주소</label>
                       <select
                         value={columnMapping.address ?? ''}
                         onChange={(e) => updateColumnMapping('address', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택 안함</option>
                         {fileHeaders.map((header, idx) => (
@@ -2107,7 +2102,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.address !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.address] || '-'}
                         </p>
                       )}
@@ -2115,11 +2110,11 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                     {/* 메모 */}
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">메모 / 비고</label>
+                      <label className="block text-sm font-medium text-at-text-secondary">메모 / 비고</label>
                       <select
                         value={columnMapping.notes ?? ''}
                         onChange={(e) => updateColumnMapping('notes', e.target.value === '' ? null : parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm"
                       >
                         <option value="">선택 안함</option>
                         {fileHeaders.map((header, idx) => (
@@ -2127,7 +2122,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         ))}
                       </select>
                       {columnMapping.notes !== null && rawFileData[0] && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-at-text-weak">
                           예시: {rawFileData[0][columnMapping.notes] || '-'}
                         </p>
                       )}
@@ -2136,7 +2131,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                   {/* 파일 헤더 미리보기 */}
                   <div className="mt-4">
-                    <h5 className="text-sm font-medium text-slate-700 mb-2">파일 컬럼 목록</h5>
+                    <h5 className="text-sm font-medium text-at-text-secondary mb-2">파일 컬럼 목록</h5>
                     <div className="flex flex-wrap gap-2">
                       {fileHeaders.map((header, idx) => {
                         const isUsed = Object.values(columnMapping).includes(idx)
@@ -2145,8 +2140,8 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                             key={idx}
                             className={`px-2 py-1 rounded text-xs ${
                               isUsed
-                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                ? 'bg-at-tag text-at-accent border border-blue-300'
+                                : 'bg-at-surface-alt text-at-text-secondary border border-at-border'
                             }`}
                           >
                             {header}
@@ -2154,31 +2149,31 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                         )
                       })}
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-at-text-weak mt-2">
                       * 매핑되지 않은 컬럼은 메모에 추가정보로 저장됩니다.
                     </p>
                   </div>
 
                   {/* 데이터 샘플 미리보기 */}
                   <div className="mt-4">
-                    <h5 className="text-sm font-medium text-slate-700 mb-2">데이터 샘플 (처음 3개)</h5>
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <h5 className="text-sm font-medium text-at-text-secondary mb-2">데이터 샘플 (처음 3개)</h5>
+                    <div className="border border-at-border rounded-xl overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-slate-50">
+                          <thead className="bg-at-surface-alt">
                             <tr>
                               {fileHeaders.map((header, idx) => (
-                                <th key={idx} className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">
+                                <th key={idx} className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">
                                   {header}
                                 </th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100">
+                          <tbody className="divide-y divide-at-border">
                             {rawFileData.slice(0, 3).map((row, rowIdx) => (
-                              <tr key={rowIdx} className="hover:bg-slate-50">
+                              <tr key={rowIdx} className="hover:bg-at-surface-alt">
                                 {fileHeaders.map((_, colIdx) => (
-                                  <td key={colIdx} className="px-3 py-2 text-slate-700 whitespace-nowrap">
+                                  <td key={colIdx} className="px-3 py-2 text-at-text-secondary whitespace-nowrap">
                                     {row[colIdx] || '-'}
                                   </td>
                                 ))}
@@ -2196,12 +2191,12 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {importStep === 'preview' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-slate-800">
+                    <h4 className="font-medium text-at-text">
                       등록할 업체 목록 ({importPreview.length}개)
                     </h4>
                     <button
                       onClick={() => setImportStep('mapping')}
-                      className="text-sm text-slate-600 hover:text-slate-800"
+                      className="text-sm text-at-text-secondary hover:text-at-text"
                     >
                       컬럼 매핑 수정
                     </button>
@@ -2209,37 +2204,37 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
 
                   {/* 카테고리 자동 생성 안내 */}
                   {importPreview.some(item => item.category_name) && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-sm text-green-700">
+                    <div className="bg-at-success-bg border border-green-200 rounded-xl p-3">
+                      <p className="text-sm text-at-success">
                         <strong>카테고리 자동 생성:</strong> 파일에 포함된 카테고리가 자동으로 생성됩니다.
                       </p>
                     </div>
                   )}
 
-                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="border border-at-border rounded-xl overflow-hidden">
                     <div className="max-h-96 overflow-x-auto overflow-y-auto">
                       <table className="w-full text-sm min-w-[800px]">
-                        <thead className="bg-slate-50 sticky top-0">
+                        <thead className="bg-at-surface-alt sticky top-0">
                           <tr>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">업체명</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">전화번호</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">카테고리</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">담당자</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">이메일</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">주소</th>
-                            <th className="px-3 py-2 text-left font-medium text-slate-600 whitespace-nowrap">추가정보</th>
+                            <th className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">업체명</th>
+                            <th className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">전화번호</th>
+                            <th className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">카테고리</th>
+                            <th className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">담당자</th>
+                            <th className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">이메일</th>
+                            <th className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">주소</th>
+                            <th className="px-3 py-2 text-left font-medium text-at-text-secondary whitespace-nowrap">추가정보</th>
                             <th className="px-3 py-2 w-10"></th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-at-border">
                           {importPreview.map((item, index) => (
-                            <tr key={index} className="hover:bg-slate-50">
+                            <tr key={index} className="hover:bg-at-surface-alt">
                               <td className="px-3 py-2">
                                 <input
                                   type="text"
                                   value={item.company_name}
                                   onChange={(e) => updatePreviewItem(index, 'company_name', e.target.value)}
-                                  className="w-full min-w-[120px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[120px] px-2 py-1 border border-transparent hover:border-at-border focus:border-at-accent rounded text-sm"
                                 />
                               </td>
                               <td className="px-3 py-2">
@@ -2247,7 +2242,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.phone || ''}
                                   onChange={(e) => updatePreviewItem(index, 'phone', e.target.value)}
-                                  className="w-full min-w-[100px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[100px] px-2 py-1 border border-transparent hover:border-at-border focus:border-at-accent rounded text-sm"
                                   placeholder="-"
                                 />
                               </td>
@@ -2256,7 +2251,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.category_name || ''}
                                   onChange={(e) => updatePreviewItem(index, 'category_name', e.target.value)}
-                                  className="w-full min-w-[80px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[80px] px-2 py-1 border border-transparent hover:border-at-border focus:border-at-accent rounded text-sm"
                                   placeholder="-"
                                 />
                               </td>
@@ -2265,7 +2260,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.contact_person || ''}
                                   onChange={(e) => updatePreviewItem(index, 'contact_person', e.target.value)}
-                                  className="w-full min-w-[80px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[80px] px-2 py-1 border border-transparent hover:border-at-border focus:border-at-accent rounded text-sm"
                                   placeholder="-"
                                 />
                               </td>
@@ -2274,7 +2269,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.email || ''}
                                   onChange={(e) => updatePreviewItem(index, 'email', e.target.value)}
-                                  className="w-full min-w-[120px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[120px] px-2 py-1 border border-transparent hover:border-at-border focus:border-at-accent rounded text-sm"
                                   placeholder="-"
                                 />
                               </td>
@@ -2283,25 +2278,25 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                                   type="text"
                                   value={item.address || ''}
                                   onChange={(e) => updatePreviewItem(index, 'address', e.target.value)}
-                                  className="w-full min-w-[150px] px-2 py-1 border border-transparent hover:border-slate-300 focus:border-blue-500 rounded text-sm"
+                                  className="w-full min-w-[150px] px-2 py-1 border border-transparent hover:border-at-border focus:border-at-accent rounded text-sm"
                                   placeholder="-"
                                 />
                               </td>
                               <td className="px-3 py-2">
                                 {item.extra_data && Object.keys(item.extra_data).length > 0 ? (
-                                  <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded" title={
+                                  <span className="text-xs text-at-text-weak bg-at-surface-alt px-2 py-1 rounded" title={
                                     Object.entries(item.extra_data).map(([k, v]) => `${k}: ${v}`).join('\n')
                                   }>
                                     +{Object.keys(item.extra_data).length}개
                                   </span>
                                 ) : (
-                                  <span className="text-slate-300">-</span>
+                                  <span className="text-at-text-weak">-</span>
                                 )}
                               </td>
                               <td className="px-3 py-2">
                                 <button
                                   onClick={() => removePreviewItem(index)}
-                                  className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600"
+                                  className="p-1 hover:bg-at-error-bg rounded text-red-400 hover:text-at-error"
                                 >
                                   <X className="w-4 h-4" />
                                 </button>
@@ -2313,12 +2308,12 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-                    <p className="text-sm text-blue-700">
+                  <div className="bg-at-accent-light border border-at-border rounded-xl p-4 space-y-2">
+                    <p className="text-sm text-at-accent">
                       <strong>팁:</strong> 표에서 직접 값을 수정할 수 있습니다. 등록하지 않을 항목은 X 버튼으로 제거하세요.
                     </p>
                     {importPreview.some(item => item.extra_data) && (
-                      <p className="text-sm text-blue-600">
+                      <p className="text-sm text-at-accent">
                         <strong>추가정보:</strong> 매핑되지 않은 컬럼 데이터는 메모에 자동 저장됩니다.
                       </p>
                     )}
@@ -2330,31 +2325,31 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               {importStep === 'result' && importResult && (
                 <div className="space-y-4">
                   <div className={`p-6 rounded-xl text-center ${
-                    importResult.success > 0 ? 'bg-green-50' : 'bg-red-50'
+                    importResult.success > 0 ? 'bg-at-success-bg' : 'bg-at-error-bg'
                   }`}>
                     {importResult.success > 0 ? (
                       <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
                     ) : (
                       <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
                     )}
-                    <h4 className="text-lg font-semibold text-slate-800 mb-2">
+                    <h4 className="text-lg font-semibold text-at-text mb-2">
                       {importResult.success > 0 ? '등록 완료' : '등록 실패'}
                     </h4>
-                    <p className="text-slate-600">
+                    <p className="text-at-text-secondary">
                       {importResult.success}개 성공
                       {importResult.failed > 0 && `, ${importResult.failed}개 실패`}
                     </p>
                   </div>
 
                   {importResult.errors.length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="bg-at-error-bg border border-red-200 rounded-xl p-4">
                       <h5 className="font-medium text-red-800 mb-2">오류 내역</h5>
-                      <ul className="text-sm text-red-700 space-y-1">
+                      <ul className="text-sm text-at-error space-y-1">
                         {importResult.errors.slice(0, 5).map((error, i) => (
                           <li key={i}>• {error}</li>
                         ))}
                         {importResult.errors.length > 5 && (
-                          <li className="text-red-600">
+                          <li className="text-at-error">
                             외 {importResult.errors.length - 5}개 오류
                           </li>
                         )}
@@ -2365,13 +2360,13 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               )}
             </div>
 
-            <div className="sticky bottom-0 bg-slate-50 border-t px-6 py-4 flex justify-end gap-3 rounded-b-xl">
+            <div className="sticky bottom-0 bg-at-surface-alt border-t px-6 py-4 flex justify-end gap-3 rounded-b-xl">
               <button
                 onClick={() => {
                   setShowImportModal(false)
                   resetImportModal()
                 }}
-                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2.5 text-at-text-secondary hover:bg-at-surface-alt rounded-xl transition-colors text-sm font-medium"
               >
                 {importStep === 'result' ? '닫기' : '취소'}
               </button>
@@ -2379,7 +2374,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 <button
                   onClick={handleMappingConfirm}
                   disabled={columnMapping.company_name === null}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                  className="px-4 py-2.5 bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white rounded-xl transition-colors text-sm font-medium flex items-center gap-2"
                 >
                   다음: 미리보기
                 </button>
@@ -2388,7 +2383,7 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
                 <button
                   onClick={handleImport}
                   disabled={isImporting || importPreview.length === 0}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                  className="px-4 py-2.5 bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white rounded-xl transition-colors text-sm font-medium flex items-center gap-2"
                 >
                   {isImporting ? (
                     <>
@@ -2413,26 +2408,26 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 bg-at-error-bg rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-at-error" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800">업체 삭제</h3>
+              <h3 className="text-lg font-semibold text-at-text">업체 삭제</h3>
             </div>
-            <p className="text-slate-600 mb-6">
+            <p className="text-at-text-secondary mb-6">
               이 업체를 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
                 disabled={isDeleting}
-                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2.5 text-at-text-secondary hover:bg-at-surface-alt disabled:opacity-50 rounded-xl transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={() => handleDeleteContact(showDeleteConfirm)}
                 disabled={isDeleting}
-                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors text-sm font-medium flex items-center gap-2"
               >
                 {isDeleting ? (
                   <>
@@ -2453,29 +2448,29 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 bg-at-error-bg rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-at-error" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800">일괄 삭제</h3>
+              <h3 className="text-lg font-semibold text-at-text">일괄 삭제</h3>
             </div>
-            <p className="text-slate-600 mb-2">
-              선택한 <strong className="text-red-600">{selectedContacts.size}개</strong> 업체를 정말 삭제하시겠습니까?
+            <p className="text-at-text-secondary mb-2">
+              선택한 <strong className="text-at-error">{selectedContacts.size}개</strong> 업체를 정말 삭제하시겠습니까?
             </p>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-at-text-weak mb-6">
               이 작업은 되돌릴 수 없습니다.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowBulkDeleteConfirm(false)}
                 disabled={isBulkDeleting}
-                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2.5 text-at-text-secondary hover:bg-at-surface-alt disabled:opacity-50 rounded-xl transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={handleBulkDelete}
                 disabled={isBulkDeleting}
-                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-xl transition-colors text-sm font-medium flex items-center gap-2"
               >
                 {isBulkDeleting ? (
                   <>
@@ -2496,44 +2491,44 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <FolderInput className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 bg-at-tag rounded-full flex items-center justify-center">
+                <FolderInput className="w-5 h-5 text-at-accent" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800">카테고리 이동</h3>
+              <h3 className="text-lg font-semibold text-at-text">카테고리 이동</h3>
             </div>
-            <p className="text-slate-600 mb-4">
-              선택한 <strong className="text-blue-600">{selectedContacts.size}개</strong> 업체를 이동할 카테고리를 선택하세요.
+            <p className="text-at-text-secondary mb-4">
+              선택한 <strong className="text-at-accent">{selectedContacts.size}개</strong> 업체를 이동할 카테고리를 선택하세요.
             </p>
             <div className="max-h-60 overflow-y-auto space-y-1 mb-6">
               {/* 미분류 옵션 */}
-              <label className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+              <label className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-at-surface-alt transition-colors">
                 <input
                   type="radio"
                   name="bulkMoveCategory"
                   value="__uncategorized__"
                   checked={bulkMoveTargetCategory === '__uncategorized__'}
                   onChange={(e) => setBulkMoveTargetCategory(e.target.value)}
-                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  className="w-4 h-4 text-at-accent focus:ring-at-accent"
                 />
                 <span className="w-3 h-3 rounded-full bg-slate-400 flex-shrink-0" />
-                <span className="text-sm text-slate-700">미분류</span>
+                <span className="text-sm text-at-text-secondary">미분류</span>
               </label>
               {/* 카테고리 목록 */}
               {categories.map(cat => (
-                <label key={cat.id} className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                <label key={cat.id} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-at-surface-alt transition-colors">
                   <input
                     type="radio"
                     name="bulkMoveCategory"
                     value={cat.id}
                     checked={bulkMoveTargetCategory === cat.id}
                     onChange={(e) => setBulkMoveTargetCategory(e.target.value)}
-                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 text-at-accent focus:ring-at-accent"
                   />
                   <span
                     className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: cat.color }}
                   />
-                  <span className="text-sm text-slate-700">{cat.name}</span>
+                  <span className="text-sm text-at-text-secondary">{cat.name}</span>
                 </label>
               ))}
             </div>
@@ -2541,14 +2536,14 @@ XYZ기공소,031-9876-5432,기공,김철수,,,경기도 성남시,
               <button
                 onClick={() => { setShowBulkMoveModal(false); setBulkMoveTargetCategory('') }}
                 disabled={isBulkMoving}
-                className="px-4 py-2.5 text-slate-700 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2.5 text-at-text-secondary hover:bg-at-surface-alt disabled:opacity-50 rounded-xl transition-colors text-sm font-medium"
               >
                 취소
               </button>
               <button
                 onClick={handleBulkMove}
                 disabled={isBulkMoving || !bulkMoveTargetCategory}
-                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2.5 bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-400 text-white rounded-xl transition-colors text-sm font-medium flex items-center gap-2"
               >
                 {isBulkMoving ? (
                   <>

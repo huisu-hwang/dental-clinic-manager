@@ -45,7 +45,7 @@ function Bar({ point, maxUsd }: BarProps) {
         <div className="absolute bottom-full mb-2 z-10 bg-slate-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg pointer-events-none">
           <div className="font-medium">{point.label}</div>
           <div>{formatUsd(point.usd)}</div>
-          <div className="text-slate-300">{formatKrw(point.krw)}</div>
+          <div className="text-at-text-weak">{formatKrw(point.krw)}</div>
           {/* 말풍선 화살표 */}
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
         </div>
@@ -62,7 +62,7 @@ function Bar({ point, maxUsd }: BarProps) {
       </div>
 
       {/* X축 레이블 */}
-      <div className="text-xs text-slate-400 truncate w-full text-center">{point.label}</div>
+      <div className="text-xs text-at-text-weak truncate w-full text-center">{point.label}</div>
     </div>
   )
 }
@@ -74,14 +74,14 @@ function SkeletonChart() {
         {Array.from({ length: 7 }).map((_, i) => (
           <div
             key={i}
-            className="flex-1 bg-slate-200 rounded-t-md"
+            className="flex-1 bg-at-border rounded-t-md"
             style={{ height: `${20 + Math.random() * 60}%` }}
           />
         ))}
       </div>
       <div className="flex gap-1 mt-2">
         {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="flex-1 h-3 bg-slate-200 rounded" />
+          <div key={i} className="flex-1 h-3 bg-at-border rounded" />
         ))}
       </div>
     </div>
@@ -123,20 +123,20 @@ export default function CostChart() {
   const totalUsd = points.reduce((sum, p) => sum + p.usd, 0)
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
+    <div className="bg-white rounded-xl border border-at-border p-5">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-800">기간별 비용 추이</h2>
+          <h2 className="text-sm font-semibold text-at-text">기간별 비용 추이</h2>
           {!loading && !error && (
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-at-text-weak mt-0.5">
               합계: {formatUsd(totalUsd)}
             </p>
           )}
         </div>
 
         {/* 탭 */}
-        <div className="flex rounded-lg border border-slate-200 overflow-hidden text-xs">
+        <div className="flex rounded-lg border border-at-border overflow-hidden text-xs">
           {(Object.entries(PERIOD_LABELS) as [Period, string][]).map(([key, label]) => (
             <button
               key={key}
@@ -144,7 +144,7 @@ export default function CostChart() {
               className={`px-3 py-1.5 font-medium transition-colors ${
                 period === key
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-white text-slate-500 hover:bg-slate-50'
+                  : 'bg-white text-at-text-weak hover:bg-at-surface-alt'
               }`}
             >
               {label}
@@ -159,7 +159,7 @@ export default function CostChart() {
       ) : error ? (
         <div className="flex items-center justify-center h-40 text-sm text-red-500">{error}</div>
       ) : points.length === 0 ? (
-        <div className="flex items-center justify-center h-40 text-sm text-slate-400">
+        <div className="flex items-center justify-center h-40 text-sm text-at-text-weak">
           데이터가 없습니다.
         </div>
       ) : (

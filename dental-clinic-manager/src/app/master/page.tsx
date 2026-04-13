@@ -518,25 +518,25 @@ export default function MasterAdminPage() {
   // 활동 타입 색상
   const getActivityTypeColor = (type: string) => {
     switch (type) {
-      case 'login': return 'bg-green-100 text-green-800'
-      case 'logout': return 'bg-gray-100 text-gray-800'
+      case 'login': return 'bg-at-success-bg text-green-800'
+      case 'logout': return 'bg-at-surface-alt text-at-text'
       case 'access': return 'bg-teal-100 text-teal-800'
-      case 'page_view': return 'bg-blue-100 text-blue-800'
+      case 'page_view': return 'bg-at-tag text-at-accent'
       case 'action': return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
+      default: return 'bg-at-surface-alt text-at-text'
     }
   }
 
   if (loading || loadingData) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-at-surface-alt">
       {/* Header Component */}
       <div className="max-w-7xl mx-auto px-4 py-4">
         <Header
@@ -556,7 +556,7 @@ export default function MasterAdminPage() {
             </div>
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-white/20 hover:bg-white/30 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-colors text-xs sm:text-sm"
+              className="bg-white/20 hover:bg-white/30 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-colors text-xs sm:text-sm"
             >
               대시보드
             </button>
@@ -589,7 +589,7 @@ export default function MasterAdminPage() {
                     ? tab.key === 'api-costs' ? 'border-emerald-600 text-emerald-600'
                       : tab.key === 'seo-analysis' ? 'border-teal-600 text-teal-600'
                       : 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    : 'border-transparent text-at-text-weak hover:text-at-text-secondary'
                 }`}
               >
                 {tab.icon}
@@ -609,23 +609,23 @@ export default function MasterAdminPage() {
       {/* 컨텐츠 영역 */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {activeTab === 'pending' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-xl shadow">
             <div className="p-4 sm:p-6 border-b">
               <h2 className="text-lg sm:text-xl font-semibold">승인 대기 중인 사용자</h2>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">새로 가입한 사용자를 승인하거나 거절할 수 있습니다.</p>
+              <p className="text-xs sm:text-sm text-at-text-weak mt-1">새로 가입한 사용자를 승인하거나 거절할 수 있습니다.</p>
             </div>
             {dataError ? (
               <div className="p-8">
-                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+                <div className="bg-at-error-bg border-2 border-red-300 rounded-xl p-6">
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
-                      <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-6 w-6 text-at-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                     </div>
                     <div className="ml-3 flex-1">
                       <h3 className="text-lg font-medium text-red-800 mb-2">데이터 로드 실패</h3>
-                      <p className="text-sm text-red-700 whitespace-pre-line">{dataError}</p>
+                      <p className="text-sm text-at-error whitespace-pre-line">{dataError}</p>
                       <div className="mt-4">
                         <button
                           onClick={loadData}
@@ -639,28 +639,28 @@ export default function MasterAdminPage() {
                 </div>
               </div>
             ) : pendingUsers.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-at-text-weak">
                 승인 대기 중인 사용자가 없습니다.
               </div>
             ) : (
               <>
               {/* 모바일: 카드 레이아웃 */}
-              <div className="sm:hidden divide-y divide-gray-200">
+              <div className="sm:hidden divide-y divide-at-border">
                 {pendingUsers.map((pendingUser) => (
                   <div key={pendingUser.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">{pendingUser.name}</span>
+                      <span className="font-medium text-at-text">{pendingUser.name}</span>
                       <span className={`px-2 py-0.5 text-xs rounded-full ${
-                        pendingUser.email_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        pendingUser.email_verified ? 'bg-at-success-bg text-green-800' : 'bg-yellow-100 text-yellow-800'
                       }`}>
                         {pendingUser.email_verified ? 'V 인증' : '미인증'}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 truncate">{pendingUser.email}</p>
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                    <p className="text-xs text-at-text-weak truncate">{pendingUser.email}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-at-text-weak">
                       <span>{pendingUser.clinic?.name || '소속 없음'}</span>
                       <span className={`px-1.5 py-0.5 rounded-full ${
-                        pendingUser.role === 'owner' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                        pendingUser.role === 'owner' ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'
                       }`}>
                         {pendingUser.role === 'owner' ? '대표원장' : pendingUser.role}
                       </span>
@@ -669,13 +669,13 @@ export default function MasterAdminPage() {
                     <div className="flex gap-2 pt-1">
                       <button
                         onClick={() => handleApproveUser(pendingUser.id, pendingUser.clinic_id)}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl text-sm font-medium"
                       >
                         승인
                       </button>
                       <button
                         onClick={() => handleRejectUser(pendingUser.id, pendingUser.clinic_id)}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-medium"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-sm font-medium"
                       >
                         거절
                       </button>
@@ -686,42 +686,42 @@ export default function MasterAdminPage() {
               {/* 데스크톱: 테이블 */}
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-at-surface-alt">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일 인증</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">전화번호</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">소속 병원</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">역할</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">가입일</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이름</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이메일</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이메일 인증</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">전화번호</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">소속 병원</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">역할</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">가입일</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">작업</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-at-border">
                     {pendingUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
+                      <tr key={user.id} className="hover:bg-at-surface-alt">
+                        <td className="px-6 py-4 text-sm font-medium text-at-text">{user.name}</td>
+                        <td className="px-6 py-4 text-sm text-at-text-weak">{user.email}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             user.email_verified
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-at-success-bg text-green-800'
                               : 'bg-yellow-100 text-yellow-800'
                           }`}>
                             {user.email_verified ? '✓ 인증완료' : '⚠️ 미인증'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{user.phone || '-'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{user.clinic?.name || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-at-text-weak">{user.phone || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-at-text-weak">{user.clinic?.name || '-'}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 text-xs rounded-full ${
-                            user.role === 'owner' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                            user.role === 'owner' ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'
                           }`}>
                             {user.role === 'owner' ? '대표원장' : user.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
+                        <td className="px-6 py-4 text-sm text-at-text-weak">
                           {new Date(user.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4">
@@ -752,67 +752,67 @@ export default function MasterAdminPage() {
 
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-gray-500">총 병원 수</h3>
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="text-sm font-medium text-at-text-weak">총 병원 수</h3>
               <p className="text-3xl font-bold text-purple-600 mt-2">{clinics.length}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-gray-500">총 사용자 수</h3>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{users.length}</p>
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="text-sm font-medium text-at-text-weak">총 사용자 수</h3>
+              <p className="text-3xl font-bold text-at-accent mt-2">{users.length}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-gray-500">총 환자 수</h3>
-              <p className="text-3xl font-bold text-green-600 mt-2">{statistics.totalPatients}</p>
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="text-sm font-medium text-at-text-weak">총 환자 수</h3>
+              <p className="text-3xl font-bold text-at-success mt-2">{statistics.totalPatients}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-gray-500">총 예약 수</h3>
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="text-sm font-medium text-at-text-weak">총 예약 수</h3>
               <p className="text-3xl font-bold text-orange-600 mt-2">{statistics.totalAppointments}</p>
             </div>
           </div>
         )}
 
         {activeTab === 'clinics' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-xl shadow">
             <div className="p-4 sm:p-6 border-b">
               <h2 className="text-lg sm:text-xl font-semibold">병원 목록</h2>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">병원 계정을 관리하고 상태를 변경할 수 있습니다.</p>
+              <p className="text-xs sm:text-sm text-at-text-weak mt-1">병원 계정을 관리하고 상태를 변경할 수 있습니다.</p>
             </div>
             {/* 모바일: 카드 레이아웃 */}
-            <div className="sm:hidden divide-y divide-gray-200">
+            <div className="sm:hidden divide-y divide-at-border">
               {clinics.map((clinic) => (
                 <div key={clinic.id} className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900 text-sm">{clinic.name}</span>
+                    <span className="font-medium text-at-text text-sm">{clinic.name}</span>
                     <span className={`px-2 py-0.5 text-xs rounded-full ${
-                      clinic.status === 'suspended' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      clinic.status === 'suspended' ? 'bg-at-error-bg text-red-800' : 'bg-at-success-bg text-green-800'
                     }`}>
                       {clinic.status === 'suspended' ? '중지' : '활성'}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-at-text-weak">
                     <span>{clinic.owner_name}</span>
                     <span>{clinic.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className={`px-1.5 py-0.5 rounded-full ${clinic.is_public ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`px-1.5 py-0.5 rounded-full ${clinic.is_public ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'}`}>
                       {clinic.is_public ? '공개' : '비공개'}
                     </span>
                     <button
                       onClick={() => { setSelectedClinicForPremium(clinic); setShowPremiumModal(true) }}
-                      className="px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"
+                      className="px-1.5 py-0.5 rounded-full bg-at-warning-bg text-at-warning border border-amber-200"
                     >
                       프리미엄
                     </button>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <button onClick={() => handleViewClinicUsers(clinic)} className="flex-1 text-blue-600 border border-blue-200 py-1.5 rounded-lg text-xs font-medium">회원</button>
+                    <button onClick={() => handleViewClinicUsers(clinic)} className="flex-1 text-at-accent border border-at-border py-1.5 rounded-xl text-xs font-medium">회원</button>
                     <button
                       onClick={() => handleToggleClinicStatus(clinic.id, clinic.status || 'active')}
-                      className={`flex-1 border py-1.5 rounded-lg text-xs font-medium ${clinic.status === 'suspended' ? 'text-green-600 border-green-200' : 'text-orange-600 border-orange-200'}`}
+                      className={`flex-1 border py-1.5 rounded-xl text-xs font-medium ${clinic.status === 'suspended' ? 'text-at-success border-green-200' : 'text-orange-600 border-orange-200'}`}
                     >
                       {clinic.status === 'suspended' ? '활성화' : '중지'}
                     </button>
-                    <button onClick={() => handleDeleteClinic(clinic.id)} className="flex-1 text-red-600 border border-red-200 py-1.5 rounded-lg text-xs font-medium">삭제</button>
+                    <button onClick={() => handleDeleteClinic(clinic.id)} className="flex-1 text-at-error border border-red-200 py-1.5 rounded-xl text-xs font-medium">삭제</button>
                   </div>
                 </div>
               ))}
@@ -820,37 +820,37 @@ export default function MasterAdminPage() {
             {/* 데스크톱: 테이블 */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-at-surface-alt">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">병원명</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">대표자</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">전화번호</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">공개 여부</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">프리미엄</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">병원명</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">대표자</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이메일</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">전화번호</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">상태</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">공개 여부</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">프리미엄</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">작업</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-at-border">
                   {clinics.map((clinic) => (
-                    <tr key={clinic.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{clinic.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{clinic.owner_name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{clinic.email}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{clinic.phone}</td>
+                    <tr key={clinic.id} className="hover:bg-at-surface-alt">
+                      <td className="px-6 py-4 text-sm font-medium text-at-text">{clinic.name}</td>
+                      <td className="px-6 py-4 text-sm text-at-text-weak">{clinic.owner_name}</td>
+                      <td className="px-6 py-4 text-sm text-at-text-weak">{clinic.email}</td>
+                      <td className="px-6 py-4 text-sm text-at-text-weak">{clinic.phone}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           clinic.status === 'suspended'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-green-100 text-green-800'
+                            ? 'bg-at-error-bg text-red-800'
+                            : 'bg-at-success-bg text-green-800'
                         }`}>
                           {clinic.status === 'suspended' ? '중지됨' : '활성'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          clinic.is_public ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                          clinic.is_public ? 'bg-at-tag text-at-accent' : 'bg-at-surface-alt text-at-text'
                         }`}>
                           {clinic.is_public ? '공개' : '비공개'}
                         </span>
@@ -858,7 +858,7 @@ export default function MasterAdminPage() {
                       <td className="px-6 py-4">
                         <button
                           onClick={() => { setSelectedClinicForPremium(clinic); setShowPremiumModal(true) }}
-                          className="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                          className="px-2.5 py-1 text-xs font-medium rounded-full bg-at-warning-bg text-at-warning border border-amber-200 hover:bg-amber-100 transition-colors"
                         >
                           관리
                         </button>
@@ -867,7 +867,7 @@ export default function MasterAdminPage() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleViewClinicUsers(clinic)}
-                            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                            className="text-at-accent hover:text-at-accent text-sm font-medium"
                             title="병원 회원 보기"
                           >
                             회원 보기
@@ -876,7 +876,7 @@ export default function MasterAdminPage() {
                             onClick={() => handleToggleClinicStatus(clinic.id, clinic.status || 'active')}
                             className={`text-sm font-medium ${
                               clinic.status === 'suspended'
-                                ? 'text-green-600 hover:text-green-900'
+                                ? 'text-at-success hover:text-green-900'
                                 : 'text-orange-600 hover:text-orange-900'
                             }`}
                             title={clinic.status === 'suspended' ? '활성화' : '중지'}
@@ -885,7 +885,7 @@ export default function MasterAdminPage() {
                           </button>
                           <button
                             onClick={() => handleDeleteClinic(clinic.id)}
-                            className="text-red-600 hover:text-red-900 text-sm font-medium"
+                            className="text-at-error hover:text-red-900 text-sm font-medium"
                             title="병원 삭제"
                           >
                             삭제
@@ -901,33 +901,33 @@ export default function MasterAdminPage() {
         )}
 
         {activeTab === 'users' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-xl shadow">
             <div className="p-4 sm:p-6 border-b">
               <h2 className="text-lg sm:text-xl font-semibold">사용자 목록</h2>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">각 사용자의 최근 로그인 및 활동 기록을 확인할 수 있습니다.</p>
+              <p className="text-xs sm:text-sm text-at-text-weak mt-1">각 사용자의 최근 로그인 및 활동 기록을 확인할 수 있습니다.</p>
             </div>
             {/* 모바일: 카드 레이아웃 */}
-            <div className="sm:hidden divide-y divide-gray-200">
+            <div className="sm:hidden divide-y divide-at-border">
               {users.map((u) => (
                 <div key={u.id} className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900 text-sm">{u.name}</span>
+                    <span className="font-medium text-at-text text-sm">{u.name}</span>
                     <span className={`px-2 py-0.5 text-xs rounded-full ${
-                      u.status === 'active' ? 'bg-green-100 text-green-800' :
+                      u.status === 'active' ? 'bg-at-success-bg text-green-800' :
                       u.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       u.status === 'suspended' ? 'bg-orange-100 text-orange-800' :
-                      u.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
+                      u.status === 'rejected' ? 'bg-at-error-bg text-red-800' :
+                      'bg-at-surface-alt text-at-text'
                     }`}>
                       {getStatusLabel(u.status)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                  <p className="text-xs text-at-text-weak truncate">{u.email}</p>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-at-text-weak">
                     <span className={`px-1.5 py-0.5 rounded-full ${
                       u.role === 'master_admin' ? 'bg-purple-100 text-purple-800' :
-                      u.role === 'owner' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
+                      u.role === 'owner' ? 'bg-at-tag text-at-accent' :
+                      'bg-at-surface-alt text-at-text'
                     }`}>
                       {getRoleLabel(u.role)}
                     </span>
@@ -936,11 +936,11 @@ export default function MasterAdminPage() {
                     <span>접속: {formatRelativeTime(u.last_active_at)}</span>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <button onClick={() => handleViewActivity(u)} className="flex-1 text-blue-600 border border-blue-200 py-1.5 rounded-lg text-xs font-medium">활동</button>
+                    <button onClick={() => handleViewActivity(u)} className="flex-1 text-at-accent border border-at-border py-1.5 rounded-xl text-xs font-medium">활동</button>
                     {u.role !== 'master_admin' && (
                       <>
-                        <button onClick={() => handleEditUser(u)} className="flex-1 text-indigo-600 border border-indigo-200 py-1.5 rounded-lg text-xs font-medium">수정</button>
-                        <button onClick={() => handleDeleteUser(u.id)} className="flex-1 text-red-600 border border-red-200 py-1.5 rounded-lg text-xs font-medium">삭제</button>
+                        <button onClick={() => handleEditUser(u)} className="flex-1 text-indigo-600 border border-indigo-200 py-1.5 rounded-xl text-xs font-medium">수정</button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="flex-1 text-at-error border border-red-200 py-1.5 rounded-xl text-xs font-medium">삭제</button>
                       </>
                     )}
                   </div>
@@ -950,79 +950,79 @@ export default function MasterAdminPage() {
             {/* 데스크톱: 테이블 */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-at-surface-alt">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">역할</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">소속 병원</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최근 로그인</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최근 접속</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">생성일</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이름</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이메일</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">역할</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">상태</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">소속 병원</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">최근 로그인</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">최근 접속</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">생성일</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase">작업</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-at-border">
                   {users.map((user) => (
                     <Fragment key={user.id}>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
+                    <tr className="hover:bg-at-surface-alt">
+                      <td className="px-6 py-4 text-sm font-medium text-at-text">{user.name}</td>
+                      <td className="px-6 py-4 text-sm text-at-text-weak">{user.email}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           user.role === 'master_admin' ? 'bg-purple-100 text-purple-800' :
-                          user.role === 'owner' ? 'bg-blue-100 text-blue-800' :
+                          user.role === 'owner' ? 'bg-at-tag text-at-accent' :
                           user.role === 'vice_director' ? 'bg-indigo-100 text-indigo-800' :
                           user.role === 'manager' ? 'bg-teal-100 text-teal-800' :
                           user.role === 'team_leader' ? 'bg-cyan-100 text-cyan-800' :
-                          'bg-gray-100 text-gray-800'
+                          'bg-at-surface-alt text-at-text'
                         }`}>
                           {getRoleLabel(user.role)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          user.status === 'active' ? 'bg-green-100 text-green-800' :
+                          user.status === 'active' ? 'bg-at-success-bg text-green-800' :
                           user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           user.status === 'suspended' ? 'bg-orange-100 text-orange-800' :
-                          user.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
+                          user.status === 'rejected' ? 'bg-at-error-bg text-red-800' :
+                          'bg-at-surface-alt text-at-text'
                         }`}>
                           {getStatusLabel(user.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{user.clinic?.name || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-at-text-weak">{user.clinic?.name || '-'}</td>
+                      <td className="px-6 py-4 text-sm text-at-text-weak">
                         <button
                           onClick={() => toggleLoginHistory(user.id)}
-                          className="flex items-center hover:text-blue-600 transition-colors cursor-pointer"
+                          className="flex items-center hover:text-at-accent transition-colors cursor-pointer"
                           title="클릭하여 로그인 기록 펼치기"
                         >
-                          <ClockIcon className="w-4 h-4 mr-1 text-gray-400" />
+                          <ClockIcon className="w-4 h-4 mr-1 text-at-text-weak" />
                           <span title={user.last_login_at ? new Date(user.last_login_at).toLocaleString('ko-KR') : '기록 없음'}>
                             {formatRelativeTime(user.last_login_at)}
                           </span>
                           {user.recent_logins?.length > 0 && (
-                            <span className="ml-1.5 text-xs text-blue-500">
+                            <span className="ml-1.5 text-xs text-at-accent">
                               {expandedLoginUsers.has(user.id) ? '▲' : '▼'}
                             </span>
                           )}
                         </button>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-at-text-weak">
                         <span title={user.last_active_at ? new Date(user.last_active_at).toLocaleString('ko-KR') : '기록 없음'}>
                           {formatRelativeTime(user.last_active_at)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-at-text-weak">
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleViewActivity(user)}
-                            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                            className="text-at-accent hover:text-at-accent text-sm font-medium"
                             title="활동 기록 보기"
                           >
                             활동 기록
@@ -1037,7 +1037,7 @@ export default function MasterAdminPage() {
                               </button>
                               <button
                                 onClick={() => handleDeleteUser(user.id)}
-                                className="text-red-600 hover:text-red-900 text-sm font-medium"
+                                className="text-at-error hover:text-red-900 text-sm font-medium"
                               >
                                 삭제
                               </button>
@@ -1048,31 +1048,31 @@ export default function MasterAdminPage() {
                     </tr>
                     {/* 로그인 기록 확장 행 */}
                     {expandedLoginUsers.has(user.id) && (
-                      <tr className="bg-blue-50/50">
+                      <tr className="bg-at-accent-light/50">
                         <td colSpan={8} className="px-6 py-3">
                           <div className="ml-4">
-                            <p className="text-xs font-semibold text-gray-600 mb-2">최근 로그인 기록</p>
+                            <p className="text-xs font-semibold text-at-text-secondary mb-2">최근 로그인 기록</p>
                             {user.recent_logins?.length > 0 ? (
                               <div className="space-y-1.5">
                                 {user.recent_logins.map((log: any) => (
-                                  <div key={log.id} className="flex items-center gap-3 text-xs text-gray-600 bg-white rounded px-3 py-2 border border-gray-100">
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">
+                                  <div key={log.id} className="flex items-center gap-3 text-xs text-at-text-secondary bg-white rounded px-3 py-2 border border-at-border">
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-at-success-bg text-at-success font-medium">
                                       로그인
                                     </span>
-                                    <span className="text-gray-800">
+                                    <span className="text-at-text">
                                       {new Date(log.created_at).toLocaleString('ko-KR')}
                                     </span>
                                     {log.ip_address && log.ip_address !== 'unknown' && (
-                                      <span className="text-gray-400">IP: {log.ip_address}</span>
+                                      <span className="text-at-text-weak">IP: {log.ip_address}</span>
                                     )}
                                     {log.metadata?.clinic_name && (
-                                      <span className="text-gray-400">병원: {log.metadata.clinic_name}</span>
+                                      <span className="text-at-text-weak">병원: {log.metadata.clinic_name}</span>
                                     )}
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-xs text-gray-400 py-1">로그인 기록이 없습니다.</p>
+                              <p className="text-xs text-at-text-weak py-1">로그인 기록이 없습니다.</p>
                             )}
                           </div>
                         </td>
@@ -1088,30 +1088,30 @@ export default function MasterAdminPage() {
 
         {activeTab === 'statistics' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-lg font-semibold mb-4">병원별 통계</h3>
               <div className="space-y-4">
                 {clinics.slice(0, 5).map((clinic) => (
                   <div key={clinic.id} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{clinic.name}</span>
+                    <span className="text-sm text-at-text-secondary">{clinic.name}</span>
                     <span className="text-sm font-medium">{clinic.patients_count || 0} 환자</span>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-lg font-semibold mb-4">사용자 역할 분포</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">마스터 관리자</span>
+                  <span className="text-sm text-at-text-secondary">마스터 관리자</span>
                   <span className="text-sm font-medium">{users.filter(u => u.role === 'master_admin').length}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">대표원장</span>
+                  <span className="text-sm text-at-text-secondary">대표원장</span>
                   <span className="text-sm font-medium">{users.filter(u => u.role === 'owner').length}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">직원</span>
+                  <span className="text-sm text-at-text-secondary">직원</span>
                   <span className="text-sm font-medium">{users.filter(u => u.role === 'staff').length}</span>
                 </div>
               </div>
@@ -1130,20 +1130,20 @@ export default function MasterAdminPage() {
         {activeTab === 'api-costs' && <CostDashboardContent embedded />}
 
         {activeTab === 'community' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-xl shadow">
             <div className="p-6 border-b">
               <h2 className="text-xl font-semibold">커뮤니티 관리</h2>
-              <p className="text-sm text-gray-500 mt-1">게시판 주제 관리 및 텔레그램 연동을 설정할 수 있습니다.</p>
+              <p className="text-sm text-at-text-weak mt-1">게시판 주제 관리 및 텔레그램 연동을 설정할 수 있습니다.</p>
             </div>
             {/* 커뮤니티 서브탭 */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-at-border">
               <nav className="flex space-x-1 px-6 pt-2">
                 <button
                   onClick={() => setCommunitySubTab('categories')}
                   className={`py-2.5 px-4 text-sm font-medium rounded-t-lg transition-colors ${
                     communitySubTab === 'categories'
                       ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-600'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                   }`}
                 >
                   주제 관리
@@ -1153,7 +1153,7 @@ export default function MasterAdminPage() {
                   className={`py-2.5 px-4 text-sm font-medium rounded-t-lg transition-colors ${
                     communitySubTab === 'telegram'
                       ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-600'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                   }`}
                 >
                   텔레그램 연동
@@ -1171,17 +1171,17 @@ export default function MasterAdminPage() {
       {/* 병원 회원 목록 모달 */}
       {showUsersModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">{selectedClinic?.name} - 회원 목록</h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-at-text-weak mt-1">
                   대표자: {selectedClinic?.owner_name} | 총 {clinicUsers.length}명
                 </p>
               </div>
               <button
                 onClick={() => setShowUsersModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                className="text-at-text-weak hover:text-at-text-secondary text-2xl font-bold"
                 title="닫기"
               >
                 ×
@@ -1190,40 +1190,40 @@ export default function MasterAdminPage() {
             <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
               {loadingClinicUsers ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
                 </div>
               ) : clinicUsers.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-at-text-weak">
                   등록된 회원이 없습니다.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-at-surface-alt">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">전화번호</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">역할</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">가입일</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이름</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase">이메일</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase">전화번호</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase">역할</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase">상태</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-at-text-weak uppercase">가입일</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-at-border">
                       {clinicUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{user.name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">{user.email}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">{user.phone || '-'}</td>
+                        <tr key={user.id} className="hover:bg-at-surface-alt">
+                          <td className="px-4 py-3 text-sm font-medium text-at-text">{user.name}</td>
+                          <td className="px-4 py-3 text-sm text-at-text-weak">{user.email}</td>
+                          <td className="px-4 py-3 text-sm text-at-text-weak">{user.phone || '-'}</td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-1 text-xs rounded-full ${
                               user.role === 'owner'
-                                ? 'bg-blue-100 text-blue-800'
+                                ? 'bg-at-tag text-at-accent'
                                 : user.role === 'vice_director'
                                 ? 'bg-purple-100 text-purple-800'
                                 : user.role === 'manager'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
+                                ? 'bg-at-success-bg text-green-800'
+                                : 'bg-at-surface-alt text-at-text'
                             }`}>
                               {user.role === 'owner'
                                 ? '대표원장'
@@ -1237,12 +1237,12 @@ export default function MasterAdminPage() {
                           <td className="px-4 py-3">
                             <span className={`px-2 py-1 text-xs rounded-full ${
                               user.status === 'active'
-                                ? 'bg-green-100 text-green-800'
+                                ? 'bg-at-success-bg text-green-800'
                                 : user.status === 'pending'
                                 ? 'bg-yellow-100 text-yellow-800'
                                 : user.status === 'rejected'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800'
+                                ? 'bg-at-error-bg text-red-800'
+                                : 'bg-at-surface-alt text-at-text'
                             }`}>
                               {user.status === 'active'
                                 ? '활성'
@@ -1253,7 +1253,7 @@ export default function MasterAdminPage() {
                                 : user.status}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
+                          <td className="px-4 py-3 text-sm text-at-text-weak">
                             {new Date(user.created_at).toLocaleDateString()}
                           </td>
                         </tr>
@@ -1263,10 +1263,10 @@ export default function MasterAdminPage() {
                 </div>
               )}
             </div>
-            <div className="p-4 border-t bg-gray-50 flex justify-end">
+            <div className="p-4 border-t bg-at-surface-alt flex justify-end">
               <button
                 onClick={() => setShowUsersModal(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-at-border hover:bg-at-border text-at-text rounded-xl font-medium transition-colors"
               >
                 닫기
               </button>
@@ -1278,15 +1278,15 @@ export default function MasterAdminPage() {
       {/* 사용자 편집 모달 */}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[95vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[95vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">사용자 정보 수정</h2>
-                <p className="text-sm text-gray-500 mt-1">{editingUser.name} ({editingUser.email})</p>
+                <p className="text-sm text-at-text-weak mt-1">{editingUser.name} ({editingUser.email})</p>
               </div>
               <button
                 onClick={() => { setShowEditModal(false); setEditingUser(null) }}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                className="text-at-text-weak hover:text-at-text-secondary text-2xl font-bold"
               >
                 &times;
               </button>
@@ -1294,11 +1294,11 @@ export default function MasterAdminPage() {
             <div className="p-6 space-y-5">
               {/* 역할 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">역할</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">역할</label>
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="owner">대표원장</option>
                   <option value="vice_director">부원장</option>
@@ -1310,11 +1310,11 @@ export default function MasterAdminPage() {
 
               {/* 상태 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">상태</label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="active">활성</option>
                   <option value="pending">승인 대기</option>
@@ -1325,11 +1325,11 @@ export default function MasterAdminPage() {
 
               {/* 소속 병원 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">소속 병원</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">소속 병원</label>
                 <select
                   value={editClinicId}
                   onChange={(e) => setEditClinicId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 >
                   <option value="">소속 없음</option>
                   {clinics.map((clinic) => (
@@ -1340,9 +1340,9 @@ export default function MasterAdminPage() {
 
               {/* 변경 사항 미리보기 */}
               {(editRole !== editingUser.role || editStatus !== editingUser.status || editClinicId !== (editingUser.clinic_id || '')) && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="bg-at-warning-bg border border-amber-200 rounded-xl p-3">
                   <p className="text-sm font-medium text-amber-800 mb-2">변경 사항</p>
-                  <ul className="text-sm text-amber-700 space-y-1">
+                  <ul className="text-sm text-at-warning space-y-1">
                     {editRole !== editingUser.role && (
                       <li>역할: {getRoleLabel(editingUser.role)} → <span className="font-medium">{getRoleLabel(editRole)}</span></li>
                     )}
@@ -1359,14 +1359,14 @@ export default function MasterAdminPage() {
             <div className="p-6 border-t flex justify-end space-x-3">
               <button
                 onClick={() => { setShowEditModal(false); setEditingUser(null) }}
-                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="px-4 py-2 text-sm text-at-text-secondary bg-at-surface-alt rounded-xl hover:bg-at-border"
               >
                 취소
               </button>
               <button
                 onClick={handleSaveEdit}
                 disabled={savingEdit || (editRole === editingUser.role && editStatus === editingUser.status && editClinicId === (editingUser.clinic_id || ''))}
-                className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingEdit ? '저장 중...' : '저장'}
               </button>
@@ -1378,17 +1378,17 @@ export default function MasterAdminPage() {
       {/* 사용자 활동 기록 모달 */}
       {showActivityModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">사용자 활동 기록</h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-at-text-weak mt-1">
                   {selectedUserForActivity?.name} ({selectedUserForActivity?.email}) | 총 {activityTotal}건의 활동 기록
                 </p>
               </div>
               <button
                 onClick={() => setShowActivityModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                className="text-at-text-weak hover:text-at-text-secondary text-2xl font-bold"
                 title="닫기"
               >
                 ×
@@ -1396,10 +1396,10 @@ export default function MasterAdminPage() {
             </div>
 
             {/* 사용자 요약 정보 */}
-            <div className="p-4 bg-gray-50 border-b">
+            <div className="p-4 bg-at-surface-alt border-b">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">역할:</span>{' '}
+                  <span className="text-at-text-weak">역할:</span>{' '}
                   <span className="font-medium">
                     {selectedUserForActivity?.role === 'master_admin' ? '마스터' :
                      selectedUserForActivity?.role === 'owner' ? '대표원장' :
@@ -1407,15 +1407,15 @@ export default function MasterAdminPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">소속 병원:</span>{' '}
+                  <span className="text-at-text-weak">소속 병원:</span>{' '}
                   <span className="font-medium">{selectedUserForActivity?.clinic?.name || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">최근 로그인:</span>{' '}
+                  <span className="text-at-text-weak">최근 로그인:</span>{' '}
                   <span className="font-medium">{formatRelativeTime(selectedUserForActivity?.last_login_at)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">가입일:</span>{' '}
+                  <span className="text-at-text-weak">가입일:</span>{' '}
                   <span className="font-medium">
                     {selectedUserForActivity?.created_at ? new Date(selectedUserForActivity.created_at).toLocaleDateString('ko-KR') : '-'}
                   </span>
@@ -1426,11 +1426,11 @@ export default function MasterAdminPage() {
             <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 280px)' }}>
               {loadingActivity ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
                 </div>
               ) : activityLogs.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <ClockIcon className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                <div className="text-center py-12 text-at-text-weak">
+                  <ClockIcon className="w-12 h-12 mx-auto text-at-text-weak mb-4" />
                   <p>활동 기록이 없습니다.</p>
                   <p className="text-sm mt-2">사용자가 로그인하면 활동 기록이 표시됩니다.</p>
                 </div>
@@ -1439,7 +1439,7 @@ export default function MasterAdminPage() {
                   {activityLogs.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex items-start p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-start p-4 bg-at-surface-alt rounded-xl hover:bg-at-surface-alt transition-colors"
                     >
                       <div className="flex-shrink-0 mr-4">
                         <span className={`px-2 py-1 text-xs rounded-full ${getActivityTypeColor(activity.activity_type)}`}>
@@ -1447,10 +1447,10 @@ export default function MasterAdminPage() {
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-at-text">
                           {activity.activity_description}
                         </p>
-                        <div className="mt-1 flex items-center gap-4 text-xs text-gray-500">
+                        <div className="mt-1 flex items-center gap-4 text-xs text-at-text-weak">
                           <span title={new Date(activity.created_at).toLocaleString('ko-KR')}>
                             {new Date(activity.created_at).toLocaleString('ko-KR')}
                           </span>
@@ -1459,7 +1459,7 @@ export default function MasterAdminPage() {
                           )}
                         </div>
                         {activity.metadata && Object.keys(activity.metadata).length > 0 && (
-                          <div className="mt-2 text-xs text-gray-500">
+                          <div className="mt-2 text-xs text-at-text-weak">
                             {activity.metadata.clinic_name && (
                               <span className="mr-3">병원: {activity.metadata.clinic_name}</span>
                             )}
@@ -1472,10 +1472,10 @@ export default function MasterAdminPage() {
               )}
             </div>
 
-            <div className="p-4 border-t bg-gray-50 flex justify-end">
+            <div className="p-4 border-t bg-at-surface-alt flex justify-end">
               <button
                 onClick={() => setShowActivityModal(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+                className="px-4 py-2 bg-at-border hover:bg-at-border text-at-text rounded-xl font-medium transition-colors"
               >
                 닫기
               </button>
@@ -1610,12 +1610,12 @@ function ScrapingWorkerPanel() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-700'
-      case 'failed': return 'bg-red-100 text-red-700'
-      case 'running': return 'bg-blue-100 text-blue-700'
-      case 'pending': return 'bg-yellow-100 text-yellow-700'
-      case 'cancelled': return 'bg-gray-100 text-gray-700'
-      default: return 'bg-gray-100 text-gray-600'
+      case 'completed': return 'bg-at-success-bg text-at-success'
+      case 'failed': return 'bg-at-error-bg text-at-error'
+      case 'running': return 'bg-at-tag text-at-accent'
+      case 'pending': return 'bg-yellow-100 text-at-warning'
+      case 'cancelled': return 'bg-at-surface-alt text-at-text-secondary'
+      default: return 'bg-at-surface-alt text-at-text-secondary'
     }
   }
 
@@ -1629,13 +1629,13 @@ function ScrapingWorkerPanel() {
   return (
     <div className="space-y-6">
       {/* 상태 카드 */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-semibold">홈택스 스크래핑 워커</h2>
           <button
             onClick={fetchStatus}
             disabled={isLoading}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm text-at-text-weak hover:text-at-text-secondary transition-colors disabled:opacity-50"
           >
             <ClockIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             새로고침
@@ -1643,7 +1643,7 @@ function ScrapingWorkerPanel() {
         </div>
 
         {isLoading && !data ? (
-          <div className="text-center py-8 text-gray-400 text-sm">로딩 중...</div>
+          <div className="text-center py-8 text-at-text-weak text-sm">로딩 중...</div>
         ) : data ? (
           <>
             {/* Watchdog + Worker 상태 인디케이터 */}
@@ -1651,11 +1651,11 @@ function ScrapingWorkerPanel() {
               {/* Watchdog 상태 */}
               <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
                 watchdog?.online
-                  ? 'bg-blue-50 border-blue-200 text-blue-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-500'
+                  ? 'bg-at-accent-light border-at-border text-at-accent'
+                  : 'bg-at-surface-alt border-at-border text-at-text-weak'
               }`}>
                 <div className={`w-2.5 h-2.5 rounded-full ${
-                  watchdog?.online ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'
+                  watchdog?.online ? 'bg-at-accent animate-pulse' : 'bg-at-border'
                 }`} />
                 <span className="font-medium text-sm">
                   {watchdog?.online ? 'Watchdog 실행 중' : 'Watchdog 중지됨'}
@@ -1665,8 +1665,8 @@ function ScrapingWorkerPanel() {
               {/* Worker 상태 */}
               <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
                 isWorkerOnline
-                  ? 'bg-green-50 border-green-200 text-green-700'
-                  : 'bg-red-50 border-red-200 text-red-700'
+                  ? 'bg-at-success-bg border-green-200 text-at-success'
+                  : 'bg-at-error-bg border-red-200 text-at-error'
               }`}>
                 <div className={`w-2.5 h-2.5 rounded-full ${
                   isWorkerOnline ? 'bg-green-500 animate-pulse' : 'bg-red-400'
@@ -1679,23 +1679,23 @@ function ScrapingWorkerPanel() {
 
             {/* Watchdog 미실행 안내 */}
             {!watchdog?.online && (
-              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+              <div className="mb-6 bg-at-warning-bg border border-amber-200 rounded-xl p-4 text-sm">
                 <p className="font-medium text-amber-800 mb-3">
                   Watchdog을 먼저 Mac mini에서 시작해야 워커를 원격으로 제어할 수 있습니다.
                 </p>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-amber-700 text-xs mb-1">일회성 실행:</p>
-                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-mono">
+                    <p className="text-at-warning text-xs mb-1">일회성 실행:</p>
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-mono">
                       cd scraping-worker && npm run watchdog
                     </code>
                   </div>
                   <div>
-                    <p className="text-amber-700 text-xs mb-1">pm2로 상시 실행 (권장):</p>
-                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-mono">
+                    <p className="text-at-warning text-xs mb-1">pm2로 상시 실행 (권장):</p>
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-mono">
                       pm2 start --name scraping-watchdog -- npm run watchdog
                     </code>
-                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-mono mt-1">
+                    <code className="block bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl text-xs font-mono mt-1">
                       pm2 save && pm2 startup
                     </code>
                   </div>
@@ -1705,42 +1705,42 @@ function ScrapingWorkerPanel() {
 
             {/* 통계 */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <div className="text-xs text-amber-600 mb-1">대기/실행 중인 동기화</div>
-                <div className="text-2xl font-bold text-amber-700">{data.pendingJobsCount}건</div>
+              <div className="bg-at-warning-bg border border-amber-200 rounded-xl p-4">
+                <div className="text-xs text-at-warning mb-1">대기/실행 중인 동기화</div>
+                <div className="text-2xl font-bold text-at-warning">{data.pendingJobsCount}건</div>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <div className="text-xs text-blue-600 mb-1">등록된 워커</div>
-                <div className="text-2xl font-bold text-blue-700">{data.workers.length}개</div>
+              <div className="bg-at-accent-light border border-at-border rounded-xl p-4">
+                <div className="text-xs text-at-accent mb-1">등록된 워커</div>
+                <div className="text-2xl font-bold text-at-accent">{data.workers.length}개</div>
               </div>
             </div>
 
             {/* 워커 목록 */}
             {data.workers.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-600 mb-3">워커 상세</h3>
+                <h3 className="text-sm font-medium text-at-text-secondary mb-3">워커 상세</h3>
                 <div className="space-y-2">
                   {data.workers.map((w) => {
                     const online = w.status !== 'offline' &&
                       Date.now() - new Date(w.last_heartbeat).getTime() < 2 * 60 * 1000
                     return (
-                      <div key={w.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg text-sm">
+                      <div key={w.id} className="flex items-center gap-3 p-3 bg-at-surface-alt rounded-xl text-sm">
                         <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                          online ? 'bg-green-500 animate-pulse' : 'bg-gray-300'
+                          online ? 'bg-green-500 animate-pulse' : 'bg-at-border'
                         }`} />
-                        <span className="font-mono text-xs text-gray-500 w-40 truncate">{w.id}</span>
-                        <span className="text-gray-700 font-medium">{w.hostname}</span>
+                        <span className="font-mono text-xs text-at-text-weak w-40 truncate">{w.id}</span>
+                        <span className="text-at-text-secondary font-medium">{w.hostname}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs ${
-                          w.status === 'busy' ? 'bg-blue-100 text-blue-700' :
-                          w.status === 'idle' ? 'bg-green-100 text-green-700' :
-                          'bg-gray-100 text-gray-600'
+                          w.status === 'busy' ? 'bg-at-tag text-at-accent' :
+                          w.status === 'idle' ? 'bg-at-success-bg text-at-success' :
+                          'bg-at-surface-alt text-at-text-secondary'
                         }`}>
                           {w.status === 'busy' ? '처리중' : w.status === 'idle' ? '대기중' : '오프라인'}
                         </span>
                         {w.metadata?.platform && (
-                          <span className="text-gray-400 text-xs">{w.metadata.platform}/{w.metadata.arch}</span>
+                          <span className="text-at-text-weak text-xs">{w.metadata.platform}/{w.metadata.arch}</span>
                         )}
-                        <span className="text-gray-400 text-xs ml-auto">
+                        <span className="text-at-text-weak text-xs ml-auto">
                           heartbeat: {formatDate(w.last_heartbeat)}
                         </span>
                       </div>
@@ -1758,7 +1758,7 @@ function ScrapingWorkerPanel() {
                   <button
                     onClick={handleStart}
                     disabled={isStarting || !watchdog?.online}
-                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     title={!watchdog?.online ? 'Watchdog이 실행 중이어야 합니다' : ''}
                   >
                     {isStarting ? (
@@ -1785,7 +1785,7 @@ function ScrapingWorkerPanel() {
                   <button
                     onClick={handleStop}
                     disabled={isStopping}
-                    className="px-5 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    className="px-5 py-3 bg-at-error-bg text-at-error border border-red-200 rounded-xl font-medium hover:bg-at-error-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                   >
                     {isStopping ? (
                       <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -1803,10 +1803,10 @@ function ScrapingWorkerPanel() {
               </div>
 
               {msg && (
-                <div className={`text-sm px-4 py-3 rounded-lg ${
+                <div className={`text-sm px-4 py-3 rounded-xl ${
                   msg.type === 'success'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
+                    ? 'bg-at-success-bg text-at-success border border-green-200'
+                    : 'bg-at-error-bg text-at-error border border-red-200'
                 }`}>
                   <p>{msg.text}</p>
                   {msg.cmd && (
@@ -1830,18 +1830,18 @@ function ScrapingWorkerPanel() {
 
       {/* 최근 동기화 작업 */}
       {data && data.recentJobs.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow p-6">
           <h3 className="text-lg font-semibold mb-4">최근 동기화 작업</h3>
           <div className="space-y-2">
             {data.recentJobs.map((job) => (
-              <div key={job.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg text-sm">
+              <div key={job.id} className="flex items-center gap-3 p-3 bg-at-surface-alt rounded-xl text-sm">
                 <span className={`px-2 py-0.5 rounded-full text-xs flex-shrink-0 ${getStatusColor(job.status)}`}>
                   {getStatusLabel(job.status)}
                 </span>
-                <span className="text-gray-400 text-xs w-28 flex-shrink-0">{formatDate(job.created_at)}</span>
-                <span className="text-gray-500 text-xs font-mono truncate w-32 flex-shrink-0">{job.clinic_id.slice(0, 8)}...</span>
+                <span className="text-at-text-weak text-xs w-28 flex-shrink-0">{formatDate(job.created_at)}</span>
+                <span className="text-at-text-weak text-xs font-mono truncate w-32 flex-shrink-0">{job.clinic_id.slice(0, 8)}...</span>
                 {job.data_types && (
-                  <span className="text-gray-600 text-xs truncate flex-1">
+                  <span className="text-at-text-secondary text-xs truncate flex-1">
                     {job.data_types.join(', ')}
                   </span>
                 )}
@@ -1925,7 +1925,7 @@ function WorkerInstallGuide() {
         </p>
       </div>
 
-      <div className="bg-white/60 rounded-lg p-4 space-y-2">
+      <div className="bg-white/60 rounded-xl p-4 space-y-2">
         <div className="flex items-center gap-2 text-indigo-800">
           <span className="font-medium">설치 과정 (자동)</span>
           <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">최초 1회</span>
@@ -1965,7 +1965,7 @@ function WorkerInstallGuide() {
         </button>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-700">
+          <div className="flex items-center gap-2 px-4 py-3 bg-at-success-bg border border-green-200 rounded-xl text-at-success">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -2109,13 +2109,13 @@ function WorkerPanel() {
   return (
     <div className="space-y-6">
       {/* 상태 카드 */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-semibold">마케팅 워커 상태</h2>
           <button
             onClick={fetchStatus}
             disabled={isLoading}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-sm text-at-text-weak hover:text-at-text-secondary transition-colors disabled:opacity-50"
           >
             <ClockIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             새로고침
@@ -2123,15 +2123,15 @@ function WorkerPanel() {
         </div>
 
         {isLoading && !status ? (
-          <div className="text-center py-8 text-gray-400 text-sm">로딩 중...</div>
+          <div className="text-center py-8 text-at-text-weak text-sm">로딩 중...</div>
         ) : status ? (
           <>
             {/* 상태 인디케이터 */}
             <div className="flex items-center gap-4 mb-6">
               <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${
                 status.workerOnline
-                  ? 'bg-green-50 border-green-200 text-green-700'
-                  : 'bg-red-50 border-red-200 text-red-700'
+                  ? 'bg-at-success-bg border-green-200 text-at-success'
+                  : 'bg-at-error-bg border-red-200 text-at-error'
               }`}>
                 <div className={`w-2.5 h-2.5 rounded-full ${
                   status.workerOnline ? 'bg-green-500 animate-pulse' : 'bg-red-400'
@@ -2140,14 +2140,14 @@ function WorkerPanel() {
                   {status.workerOnline ? '워커 실행 중' : '워커 중지됨'}
                 </span>
               </div>
-              <span className="text-xs text-gray-400">{status.workerUrl}</span>
+              <span className="text-xs text-at-text-weak">{status.workerUrl}</span>
             </div>
 
             {/* 설정 */}
-            <div className="flex items-center justify-between mb-4 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-4 px-4 py-3 bg-at-surface-alt rounded-xl border border-at-border">
               <div>
-                <span className="text-sm font-medium text-slate-700">발행 시 브라우저 숨기기</span>
-                <p className="text-xs text-slate-400 mt-0.5">켜면 백그라운드에서 발행됩니다</p>
+                <span className="text-sm font-medium text-at-text-secondary">발행 시 브라우저 숨기기</span>
+                <p className="text-xs text-at-text-weak mt-0.5">켜면 백그라운드에서 발행됩니다</p>
               </div>
               <button
                 onClick={async () => {
@@ -2162,7 +2162,7 @@ function WorkerPanel() {
                   } catch { /* ignore */ }
                 }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  status.headless ? 'bg-indigo-600' : 'bg-slate-300'
+                  status.headless ? 'bg-indigo-600' : 'bg-at-border'
                 }`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -2173,13 +2173,13 @@ function WorkerPanel() {
 
             {/* 통계 */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <div className="text-xs text-amber-600 mb-1">발행 대기 중</div>
-                <div className="text-2xl font-bold text-amber-700">{status.pendingCount}건</div>
+              <div className="bg-at-warning-bg border border-amber-200 rounded-xl p-4">
+                <div className="text-xs text-at-warning mb-1">발행 대기 중</div>
+                <div className="text-2xl font-bold text-at-warning">{status.pendingCount}건</div>
               </div>
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <div className="text-xs text-green-600 mb-1">오늘 발행 완료</div>
-                <div className="text-2xl font-bold text-green-700">{status.publishedTodayCount}건</div>
+              <div className="bg-at-success-bg border border-green-200 rounded-xl p-4">
+                <div className="text-xs text-at-success mb-1">오늘 발행 완료</div>
+                <div className="text-2xl font-bold text-at-success">{status.publishedTodayCount}건</div>
               </div>
             </div>
 
@@ -2189,7 +2189,7 @@ function WorkerPanel() {
                 <button
                   onClick={handleTrigger}
                   disabled={isTriggering || isStopping || !status.workerOnline}
-                  className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {isTriggering ? (
                     <>
@@ -2210,7 +2210,7 @@ function WorkerPanel() {
                   <button
                     onClick={handleStop}
                     disabled={isStopping || isTriggering}
-                    className="px-5 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    className="px-5 py-3 bg-at-error-bg text-at-error border border-red-200 rounded-xl font-medium hover:bg-at-error-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                   >
                     {isStopping ? (
                       <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -2228,10 +2228,10 @@ function WorkerPanel() {
               </div>
 
               {triggerMsg && (
-                <div className={`text-sm px-4 py-2.5 rounded-lg ${
+                <div className={`text-sm px-4 py-2.5 rounded-xl ${
                   triggerMsg.type === 'success'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
+                    ? 'bg-at-success-bg text-at-success border border-green-200'
+                    : 'bg-at-error-bg text-at-error border border-red-200'
                 }`}>
                   {triggerMsg.text}
                 </div>
@@ -2242,7 +2242,7 @@ function WorkerPanel() {
                   <button
                     onClick={handleStart}
                     disabled={isStarting}
-                    className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     {isStarting ? (
                       <>
@@ -2265,17 +2265,17 @@ function WorkerPanel() {
                   {/* Supervisor 상태 */}
                   <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm ${
                     status.supervisorOnline
-                      ? 'bg-blue-50 border-blue-200 text-blue-700'
-                      : 'bg-gray-50 border-gray-200 text-gray-500'
+                      ? 'bg-at-accent-light border-at-border text-at-accent'
+                      : 'bg-at-surface-alt border-at-border text-at-text-weak'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${
-                      status.supervisorOnline ? 'bg-blue-500 animate-pulse' : 'bg-gray-400'
+                      status.supervisorOnline ? 'bg-at-accent animate-pulse' : 'bg-at-border'
                     }`} />
                     <span className="font-medium">
                       Supervisor: {status.supervisorOnline ? '온라인' : '오프라인'}
                     </span>
                     {!status.supervisorOnline && (
-                      <span className="text-xs text-gray-400 ml-auto">워커 원격 시작 불가</span>
+                      <span className="text-xs text-at-text-weak ml-auto">워커 원격 시작 불가</span>
                     )}
                   </div>
 
@@ -2291,32 +2291,32 @@ function WorkerPanel() {
 
       {/* 최근 발행 로그 */}
       {status && status.recentLogs.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-xl shadow p-6">
           <h3 className="text-lg font-semibold mb-4">최근 발행 로그</h3>
           <div className="space-y-2">
             {status.recentLogs.map((log) => (
-              <div key={log.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg text-sm">
+              <div key={log.id} className="flex items-center gap-3 p-3 bg-at-surface-alt rounded-xl text-sm">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                   log.status === 'success' ? 'bg-green-500' : 'bg-red-400'
                 }`} />
-                <span className="text-gray-500 text-xs w-24 flex-shrink-0">{formatDate(log.published_at)}</span>
-                <span className="text-gray-600 font-medium w-20 flex-shrink-0">
+                <span className="text-at-text-weak text-xs w-24 flex-shrink-0">{formatDate(log.published_at)}</span>
+                <span className="text-at-text-secondary font-medium w-20 flex-shrink-0">
                   {log.platform === 'naver_blog' ? '네이버 블로그' : log.platform}
                 </span>
                 <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full ${
                   log.status === 'success'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
+                    ? 'bg-at-success-bg text-at-success'
+                    : 'bg-at-error-bg text-at-error'
                 }`}>
                   {log.status === 'success' ? '성공' : '실패'}
                 </span>
-                <span className="text-gray-400 text-xs">{formatDuration(log.duration_seconds)}</span>
+                <span className="text-at-text-weak text-xs">{formatDuration(log.duration_seconds)}</span>
                 {log.published_url && (
                   <a
                     href={log.published_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline text-xs truncate flex-1"
+                    className="text-at-accent hover:underline text-xs truncate flex-1"
                   >
                     {log.published_url}
                   </a>

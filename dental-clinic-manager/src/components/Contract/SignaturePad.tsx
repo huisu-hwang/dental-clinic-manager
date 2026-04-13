@@ -163,7 +163,7 @@ export default function SignaturePad({
     <div className="signature-pad-container">
       <div className="mb-4">
         <h3 className="text-lg font-semibold mb-2">전자 서명</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-at-text-secondary">
           아래 영역에 서명을 작성해주세요. (마우스 또는 터치)
         </p>
       </div>
@@ -171,7 +171,7 @@ export default function SignaturePad({
       {/* Signature Canvas */}
       <div
         ref={containerRef}
-        className="border-2 border-gray-300 rounded-lg overflow-hidden bg-white mb-4"
+        className="border-2 border-at-border rounded-lg overflow-hidden bg-white mb-4"
         style={{ maxWidth: `${width}px`, aspectRatio: `${width}/${height}` }}
       >
         <canvas
@@ -194,7 +194,7 @@ export default function SignaturePad({
           type="button"
           onClick={clearSignature}
           disabled={disabled || isEmpty}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 bg-at-border text-at-text-secondary rounded-lg hover:bg-at-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           지우기
         </button>
@@ -203,7 +203,7 @@ export default function SignaturePad({
           type="button"
           onClick={saveSignature}
           disabled={disabled || isEmpty}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          className="px-6 py-2 bg-at-accent text-white rounded-lg hover:bg-at-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           서명 완료
         </button>
@@ -213,7 +213,7 @@ export default function SignaturePad({
             type="button"
             onClick={onCancel}
             disabled={disabled}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-white border border-at-border text-at-text-secondary rounded-lg hover:bg-at-surface-alt disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             취소
           </button>
@@ -221,8 +221,8 @@ export default function SignaturePad({
       </div>
 
       {/* Security Notice */}
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-xs text-blue-800">
+      <div className="mt-4 p-3 bg-at-accent-light border border-at-border rounded-lg">
+        <p className="text-xs text-at-accent">
           <span className="font-semibold">🔒 보안 안내:</span> 서명 데이터는 암호화되어 안전하게 저장되며,
           IP 주소와 타임스탬프가 함께 기록됩니다.
         </p>

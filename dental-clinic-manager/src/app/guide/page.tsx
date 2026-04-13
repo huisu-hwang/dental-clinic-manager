@@ -5,7 +5,7 @@ const features = [
   {
     title: '사용자 관리',
     description: '역할(원장, 직원 등)에 따라 접근 권한을 제어하고 안전한 인증을 통해 시스템을 보호합니다.',
-    icon: <Shield className="w-12 h-12 text-blue-500" />,
+    icon: <Shield className="w-12 h-12 text-at-accent" />,
   },
   {
     title: '해피콜 관리',
@@ -36,13 +36,13 @@ const features = [
 
 export default function GuidePage() {
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-at-surface-alt min-h-screen">
       <div className="container mx-auto px-4 py-12">
         <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+          <h1 className="text-4xl font-bold text-at-text mb-2">
             치과 관리 시스템 사용 안내
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-at-text-secondary">
             업무 효율성을 높이는 다양한 기능을 만나보세요.
           </p>
         </header>
@@ -52,20 +52,20 @@ export default function GuidePage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col items-center text-center"
+                className="bg-white p-8 rounded-xl shadow-at-card hover:shadow-xl transition-shadow duration-300 flex flex-col items-center text-center"
               >
                 <div className="mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                <h3 className="text-xl font-semibold text-at-text mb-2">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <p className="text-at-text-secondary">{feature.description}</p>
               </div>
             ))}
           </div>
         </main>
 
         <footer className="text-center mt-16">
-           <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md">
+           <div className="bg-at-tag border-l-4 border-at-accent text-at-accent p-4 rounded-md">
              <div className="flex items-center">
                 <BookUser className="w-6 h-6 mr-3" />
                 <div>

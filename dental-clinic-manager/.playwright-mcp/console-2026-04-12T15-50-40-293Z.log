@@ -1,0 +1,331 @@
+[    1046ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[    1242ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[    1243ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[    1247ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[    1247ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[    1247ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[    1374ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    1375ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[    1375ms] [LOG] AuthContext: storage에서 사용자 정보 복원 {id: eb46c51d-95a1-4be9-9b30-edcdbd9eb8be, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9, email: whitedc0902@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:204
+[    1375ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[    1412ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    1876ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2501ms] [LOG] [Fast Refresh] done in 624ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2887ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2983ms] [LOG] [Fast Refresh] done in 96ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3725ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4247ms] [LOG] [Fast Refresh] done in 522ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4480ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5012ms] [LOG] [Fast Refresh] done in 531ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5240ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5303ms] [LOG] [Fast Refresh] done in 63ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6083ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6162ms] [LOG] [Fast Refresh] done in 79ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7375ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7376ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7376ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7377ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7386ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    7387ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    7389ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    7396ms] [LOG] [Supabase] Environment check: {NODE_ENV: development, hasUrl: true, hasKey: true, urlValue: https://beahjntkmkfhpcbhfnrr.s..., keyValue: eyJhbGciOiJIUzI1NiIs...} @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:34
+[    7397ms] [LOG] [Supabase] Creating client... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:63
+[    7398ms] [LOG] [Supabase] Custom storage adapter initialized @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:67
+[    7399ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[    7400ms] [LOG] [Supabase] Client created successfully with custom storage @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:89
+[    7406ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    7407ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: de87b3fd-f936-49d8-a659-7b50b0019fe9 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    7408ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    7409ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[    7468ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7469ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7470ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    7470ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    7472ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    7473ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    7505ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    7505ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    7520ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7520ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7521ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7522ms] [LOG] [ensureConnection] No session found, attempting refresh... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:49
+[    7522ms] [LOG] [ensureConnection] Refresh attempt 1/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    7523ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[    7523ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    7524ms] [LOG] [ensureConnection] No session found, attempting refresh... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:49
+[    7524ms] [LOG] [ensureConnection] Refresh attempt 1/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    7524ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[    7525ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    7525ms] [LOG] [ensureConnection] No session found, attempting refresh... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:49
+[    7525ms] [LOG] [ensureConnection] Refresh attempt 1/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    7525ms] [LOG] [ensureConnection] No session found, attempting refresh... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:49
+[    7525ms] [LOG] [ensureConnection] Refresh attempt 1/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    7525ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7526ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7526ms] [LOG] [Supabase] Auth state change: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    7526ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7527ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7528ms] [WARNING] [ensureConnection] Refresh attempt 1 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    7528ms] [LOG] [ensureConnection] Waiting 1000ms before retry... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:76
+[    7529ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    7529ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[    7539ms] [WARNING] [ensureConnection] Refresh attempt 1 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    7540ms] [LOG] [ensureConnection] Waiting 1000ms before retry... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:76
+[    7541ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    7541ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[    7542ms] [WARNING] [ensureConnection] Refresh attempt 1 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    7542ms] [LOG] [ensureConnection] Waiting 1000ms before retry... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:76
+[    7542ms] [WARNING] [ensureConnection] Refresh attempt 1 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    7543ms] [LOG] [ensureConnection] Waiting 1000ms before retry... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:76
+[    7948ms] [LOG] [Fast Refresh] done in 428ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7962ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8013ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    8013ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    8014ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:156
+[    8014ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:380
+[    8474ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    8528ms] [LOG] [ensureConnection] Refresh attempt 2/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    8529ms] [WARNING] [ensureConnection] Refresh attempt 2 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    8530ms] [ERROR] [ensureConnection] All refresh attempts failed @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    8531ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    8532ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    8532ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[    8532ms] [LOG] Auth state changed: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    8533ms] [LOG] [ensureConnection] Redirecting to login page... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:93
+[    8533ms] [ERROR] [ensureConnection] Error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    8534ms] [ERROR] [usePremiumFeatures] Unexpected error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    8534ms] [LOG] [Supabase] Auth state change: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    8534ms] [LOG] [Supabase] User signed out @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:97
+[    8542ms] [LOG] [ensureConnection] Refresh attempt 2/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    8543ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    8543ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    8544ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    8544ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[    8544ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[    8544ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[    8545ms] [LOG] [ensureConnection] Refresh attempt 2/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    8545ms] [LOG] [ensureConnection] Refresh attempt 2/2 @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:54
+[    8983ms] [LOG] [Fast Refresh] done in 1021ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9005ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9008ms] [WARNING] [ensureConnection] Refresh attempt 2 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    9008ms] [ERROR] [ensureConnection] All refresh attempts failed @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9017ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9017ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9017ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[    9017ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[    9017ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[    9024ms] [WARNING] [ensureConnection] Refresh attempt 2 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    9024ms] [ERROR] [ensureConnection] All refresh attempts failed @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9025ms] [WARNING] [ensureConnection] Refresh attempt 2 failed: AuthSessionMissingError: Auth session missing!
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1257:27)
+    at SupabaseAuthClient._useSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:991:26)
+    at async SupabaseAuthClient._refreshSession (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1247:20)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1242:20) @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:71
+[    9025ms] [ERROR] [ensureConnection] All refresh attempts failed @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9026ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    9026ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[    9026ms] [LOG] Auth state changed: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    9026ms] [LOG] [ensureConnection] Redirecting to login page... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:93
+[    9027ms] [ERROR] [ensureConnection] Error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9027ms] [ERROR] [usePremiumFeatures] Unexpected error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9027ms] [LOG] [Supabase] Auth state change: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    9027ms] [LOG] [Supabase] User signed out @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:97
+[    9030ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    9030ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[    9030ms] [LOG] Auth state changed: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    9030ms] [LOG] [ensureConnection] Redirecting to login page... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:93
+[    9031ms] [ERROR] [ensureConnection] Error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9031ms] [ERROR] [usePremiumFeatures] Unexpected error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9238ms] [LOG] [Supabase] Auth state change: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    9238ms] [LOG] [Supabase] User signed out @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:97
+[    9650ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    9650ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[    9651ms] [LOG] Auth state changed: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    9651ms] [LOG] [ensureConnection] Redirecting to login page... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:93
+[    9651ms] [ERROR] [ensureConnection] Error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9652ms] [ERROR] [usePremiumFeatures] Unexpected error: Error: 세션이 만료되었습니다. 다시 로그인해주세요.
+    at ensureConnection (webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:99:15)
+    at async Object.getClinicPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/lib/dataService.ts:4095:26)
+    at async usePremiumFeatures.useEffect.fetchPremiumFeatures (webpack-internal:///(app-pages-browser)/./src/hooks/usePremiumFeatures.ts:34:49) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    9652ms] [LOG] [Supabase] Auth state change: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    9652ms] [LOG] [Supabase] User signed out @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:97
+[    9857ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9861ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    9862ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[   12200ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   13325ms] [LOG] [Fast Refresh] done in 1125ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13777ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/workers/status?type=marketing:0
+[   13779ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   13852ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3000/dashboard:0
+[   14584ms] [ERROR] Error fetching notifications: TypeError: Failed to fetch
+    at useClinicNotifications.useCallback[fetchNotifications] (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:28:40)
+    at useClinicNotifications.useEffect (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:119:13)
+    at Object.react_stack_bottom_frame (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:23669:20)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at commitHookEffectListMount (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12345:29)
+    at commitHookPassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12466:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14387:13)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14390:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14390:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14390:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14380:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11)
+    at commitPassiveMountOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14514:11)
+    at recursivelyTraversePassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14360:11) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   14585ms] [ERROR] Error fetching notifications: TypeError: Failed to fetch
+    at useClinicNotifications.useCallback[fetchNotifications] (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:28:40)
+    at useClinicNotifications.useEffect (webpack-internal:///(app-pages-browser)/./src/hooks/useClinicNotifications.ts:119:13)
+    at Object.react_stack_bottom_frame (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:23669:20)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at commitHookEffectListMount (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12345:29)
+    at commitHookPassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12466:11)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14563:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14556:11)
+    at recursivelyTraverseReconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14534:9)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14610:11)
+    at doubleInvokeEffectsOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16566:11) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   15762ms] Invalid or unexpected token
+[   17639ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[  137857ms] ChunkLoadError: Loading chunk app/layout failed.
+(timeout: http://localhost:3000/_next/static/chunks/app/layout.js)
+    at __webpack_require__.f.j (http://localhost:3000/_next/static/chunks/webpack.js?v=1776009054282:850:29)
+    at http://localhost:3000/_next/static/chunks/webpack.js?v=1776009054282:145:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1776009054282:144:67)
+    at fn.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1776009054282:381:50)
+    at loadChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:113:34)
+    at preloadModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:82:31)
+    at resolveModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2078:20)
+    at processFullStringRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2769:11)
+    at processFullBinaryRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2764:7)
+    at processBinaryChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2967:15)
+    at progress (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3231:13)
+[  137928ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[  139012ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[  139102ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  139931ms] Invalid or unexpected token
+[  141834ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630

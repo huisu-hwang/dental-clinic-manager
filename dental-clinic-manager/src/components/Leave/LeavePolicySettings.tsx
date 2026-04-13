@@ -155,41 +155,41 @@ export default function LeavePolicySettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600">
+      <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-at-surface-alt text-at-text">
           <Settings className="w-4 h-4" />
         </div>
-        <h3 className="text-base font-semibold text-slate-800">연차 정책 설정</h3>
+        <h3 className="text-base font-semibold text-at-text">연차 정책 설정</h3>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-md text-sm flex items-center">
           <CheckCircle className="w-4 h-4 mr-2" />
           {success}
         </div>
       )}
 
       {/* 안내 메시지 */}
-      <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+      <div className="p-4 bg-at-accent-light rounded-xl border border-at-border">
         <div className="flex items-start space-x-3">
-          <Info className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Info className="w-5 h-5 text-at-accent mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-blue-800">대한민국 근로기준법 기준</p>
-            <p className="text-xs text-blue-600 mt-1">
+            <p className="text-sm font-medium text-at-accent">대한민국 근로기준법 기준</p>
+            <p className="text-xs text-at-accent mt-1">
               기본적으로 근로기준법에 따라 연차가 계산됩니다. 병원 사정에 따라 커스텀 설정이 가능합니다.
             </p>
           </div>
@@ -198,55 +198,55 @@ export default function LeavePolicySettings() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 기본 정보 */}
-        <div className="border border-slate-200 rounded-lg p-4 space-y-4">
-          <h4 className="font-medium text-slate-800">기본 정보</h4>
+        <div className="border border-at-border rounded-xl p-4 space-y-4">
+          <h4 className="font-medium text-at-text">기본 정보</h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text mb-1">
                 정책 이름
               </label>
               <input
                 type="text"
                 value={formData.policy_name}
                 onChange={(e) => setFormData({ ...formData, policy_name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text mb-1">
                 기본 연차 일수
               </label>
               <input
                 type="number"
                 value={formData.base_annual_days}
                 onChange={(e) => setFormData({ ...formData, base_annual_days: Number(e.target.value) })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                className="w-full px-3 py-2 border border-at-border rounded-xl"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               설명
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-at-border rounded-xl"
             />
           </div>
         </div>
 
         {/* 근속연수별 연차 */}
-        <div className="border border-slate-200 rounded-lg p-4 space-y-4">
+        <div className="border border-at-border rounded-xl p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium text-slate-800">근속연수별 연차 일수</h4>
+            <h4 className="font-medium text-at-text">근속연수별 연차 일수</h4>
             <button
               type="button"
               onClick={handleResetToDefault}
-              className="text-xs text-blue-600 hover:text-blue-700"
+              className="text-xs text-at-accent hover:text-at-accent"
             >
               기본값으로 초기화
             </button>
@@ -255,16 +255,16 @@ export default function LeavePolicySettings() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">근속연수</th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">연차 일수</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">설명</th>
+                <tr className="bg-at-surface-alt border-b border-at-border">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-at-text">근속연수</th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-at-text">연차 일수</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-at-text">설명</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-at-border">
                 {formData.days_per_year.map((rule, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
-                    <td className="px-3 py-2 text-slate-700">
+                  <tr key={idx} className="hover:bg-at-surface-alt">
+                    <td className="px-3 py-2 text-at-text">
                       {rule.min_years}년 ~ {rule.max_years === 100 ? '이상' : `${rule.max_years}년`}
                     </td>
                     <td className="px-3 py-2 text-center">
@@ -276,10 +276,10 @@ export default function LeavePolicySettings() {
                           newRules[idx] = { ...rule, days: Number(e.target.value) }
                           setFormData({ ...formData, days_per_year: newRules })
                         }}
-                        className="w-16 px-2 py-1 text-center border border-slate-300 rounded"
+                        className="w-16 px-2 py-1 text-center border border-at-border rounded"
                       />
                     </td>
-                    <td className="px-3 py-2 text-slate-500 text-xs">{rule.description}</td>
+                    <td className="px-3 py-2 text-at-text text-xs">{rule.description}</td>
                   </tr>
                 ))}
               </tbody>
@@ -288,8 +288,8 @@ export default function LeavePolicySettings() {
         </div>
 
         {/* 이월 정책 */}
-        <div className="border border-slate-200 rounded-lg p-4 space-y-4">
-          <h4 className="font-medium text-slate-800">이월 정책</h4>
+        <div className="border border-at-border rounded-xl p-4 space-y-4">
+          <h4 className="font-medium text-at-text">이월 정책</h4>
 
           <div className="flex items-center space-x-3">
             <label className="flex items-center space-x-2 cursor-pointer">
@@ -297,35 +297,35 @@ export default function LeavePolicySettings() {
                 type="checkbox"
                 checked={formData.carryover_enabled}
                 onChange={(e) => setFormData({ ...formData, carryover_enabled: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded"
+                className="w-4 h-4 text-at-accent rounded"
               />
-              <span className="text-sm text-slate-700">연차 이월 허용</span>
+              <span className="text-sm text-at-text">연차 이월 허용</span>
             </label>
           </div>
 
           {formData.carryover_enabled && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text mb-1">
                   최대 이월 일수
                 </label>
                 <input
                   type="number"
                   value={formData.carryover_max_days}
                   onChange={(e) => setFormData({ ...formData, carryover_max_days: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl"
                   placeholder="0 = 무제한"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text mb-1">
                   이월 연차 만료 (개월)
                 </label>
                 <input
                   type="number"
                   value={formData.carryover_expiry_months}
                   onChange={(e) => setFormData({ ...formData, carryover_expiry_months: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-at-border rounded-xl"
                 />
               </div>
             </div>
@@ -333,11 +333,11 @@ export default function LeavePolicySettings() {
         </div>
 
         {/* 출근율 요건 */}
-        <div className="border border-slate-200 rounded-lg p-4 space-y-4">
-          <h4 className="font-medium text-slate-800">출근율 요건</h4>
+        <div className="border border-at-border rounded-xl p-4 space-y-4">
+          <h4 className="font-medium text-at-text">출근율 요건</h4>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               최소 출근율 (%)
             </label>
             <div className="flex items-center space-x-2">
@@ -347,27 +347,27 @@ export default function LeavePolicySettings() {
                 onChange={(e) => setFormData({ ...formData, min_attendance_rate: Number(e.target.value) })}
                 min="0"
                 max="100"
-                className="w-24 px-3 py-2 border border-slate-300 rounded-lg"
+                className="w-24 px-3 py-2 border border-at-border rounded-xl"
               />
-              <span className="text-sm text-slate-500">% 이상 출근 시 연차 발생</span>
+              <span className="text-sm text-at-text">% 이상 출근 시 연차 발생</span>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-at-text mt-1">
               * 근로기준법 기준 80% (연차 발생 조건)
             </p>
           </div>
         </div>
 
         {/* 결재 프로세스 설정 */}
-        <div className="border border-slate-200 rounded-lg p-4 space-y-4">
-          <h4 className="font-medium text-slate-800">결재 프로세스 설정</h4>
+        <div className="border border-at-border rounded-xl p-4 space-y-4">
+          <h4 className="font-medium text-at-text">결재 프로세스 설정</h4>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-at-text">
             직급별로 실장 결재 포함 여부를 설정할 수 있습니다. 체크 시 실장 승인 후 원장 최종 승인, 해제 시 원장 직접 승인으로 진행됩니다.
           </p>
 
           <div className="space-y-3 mt-3">
             {/* 부원장 설정 */}
-            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-at-surface-alt rounded-xl hover:bg-at-surface-alt transition-colors">
               <input
                 type="checkbox"
                 checked={formData.require_manager_approval.vice_director}
@@ -378,25 +378,25 @@ export default function LeavePolicySettings() {
                     vice_director: e.target.checked
                   }
                 })}
-                className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                className="w-4 h-4 mt-0.5 text-at-accent rounded"
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-700">부원장</span>
+                  <span className="text-sm font-medium text-at-text">부원장</span>
                   <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">vice_director</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-at-text mt-1">
                   {formData.require_manager_approval.vice_director ? (
-                    <span>부원장 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 최종 승인</span></span>
+                    <span>부원장 → <span className="text-at-accent font-medium">실장 승인</span> → <span className="text-at-success font-medium">원장 최종 승인</span></span>
                   ) : (
-                    <span>부원장 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                    <span>부원장 → <span className="text-at-success font-medium">원장 직접 승인</span></span>
                   )}
                 </p>
               </div>
             </label>
 
             {/* 팀장 설정 */}
-            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-at-surface-alt rounded-xl hover:bg-at-surface-alt transition-colors">
               <input
                 type="checkbox"
                 checked={formData.require_manager_approval.team_leader}
@@ -407,25 +407,25 @@ export default function LeavePolicySettings() {
                     team_leader: e.target.checked
                   }
                 })}
-                className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                className="w-4 h-4 mt-0.5 text-at-accent rounded"
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-700">팀장</span>
-                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">team_leader</span>
+                  <span className="text-sm font-medium text-at-text">팀장</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-at-tag text-at-accent rounded">team_leader</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-at-text mt-1">
                   {formData.require_manager_approval.team_leader ? (
-                    <span>팀장 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 최종 승인</span></span>
+                    <span>팀장 → <span className="text-at-accent font-medium">실장 승인</span> → <span className="text-at-success font-medium">원장 최종 승인</span></span>
                   ) : (
-                    <span>팀장 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                    <span>팀장 → <span className="text-at-success font-medium">원장 직접 승인</span></span>
                   )}
                 </p>
               </div>
             </label>
 
             {/* 직원 설정 */}
-            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-at-surface-alt rounded-xl hover:bg-at-surface-alt transition-colors">
               <input
                 type="checkbox"
                 checked={formData.require_manager_approval.staff}
@@ -436,70 +436,70 @@ export default function LeavePolicySettings() {
                     staff: e.target.checked
                   }
                 })}
-                className="w-4 h-4 mt-0.5 text-blue-600 rounded"
+                className="w-4 h-4 mt-0.5 text-at-accent rounded"
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-700">직원</span>
-                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded">staff</span>
+                  <span className="text-sm font-medium text-at-text">직원</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-at-surface-alt text-at-text-secondary rounded">staff</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-at-text mt-1">
                   {formData.require_manager_approval.staff ? (
-                    <span>직원 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 최종 승인</span></span>
+                    <span>직원 → <span className="text-at-accent font-medium">실장 승인</span> → <span className="text-at-success font-medium">원장 최종 승인</span></span>
                   ) : (
-                    <span>직원 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                    <span>직원 → <span className="text-at-success font-medium">원장 직접 승인</span></span>
                   )}
                 </p>
               </div>
             </label>
           </div>
 
-          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-xs font-medium text-blue-800 mb-2">전체 결재 흐름 요약</p>
+          <div className="mt-3 p-3 bg-at-accent-light rounded-xl border border-at-border">
+            <p className="text-xs font-medium text-at-accent mb-2">전체 결재 흐름 요약</p>
             <div className="space-y-1.5">
-              <div className="flex items-center text-xs text-slate-600">
-                <span className="w-14 text-slate-500 font-medium">부원장:</span>
+              <div className="flex items-center text-xs text-at-text">
+                <span className="w-14 text-at-text font-medium">부원장:</span>
                 {formData.require_manager_approval.vice_director ? (
-                  <span>신청 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 승인</span></span>
+                  <span>신청 → <span className="text-at-accent font-medium">실장 승인</span> → <span className="text-at-success font-medium">원장 승인</span></span>
                 ) : (
-                  <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                  <span>신청 → <span className="text-at-success font-medium">원장 직접 승인</span></span>
                 )}
               </div>
-              <div className="flex items-center text-xs text-slate-600">
-                <span className="w-14 text-slate-500 font-medium">팀장:</span>
+              <div className="flex items-center text-xs text-at-text">
+                <span className="w-14 text-at-text font-medium">팀장:</span>
                 {formData.require_manager_approval.team_leader ? (
-                  <span>신청 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 승인</span></span>
+                  <span>신청 → <span className="text-at-accent font-medium">실장 승인</span> → <span className="text-at-success font-medium">원장 승인</span></span>
                 ) : (
-                  <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                  <span>신청 → <span className="text-at-success font-medium">원장 직접 승인</span></span>
                 )}
               </div>
-              <div className="flex items-center text-xs text-slate-600">
-                <span className="w-14 text-slate-500 font-medium">직원:</span>
+              <div className="flex items-center text-xs text-at-text">
+                <span className="w-14 text-at-text font-medium">직원:</span>
                 {formData.require_manager_approval.staff ? (
-                  <span>신청 → <span className="text-blue-600 font-medium">실장 승인</span> → <span className="text-green-600 font-medium">원장 승인</span></span>
+                  <span>신청 → <span className="text-at-accent font-medium">실장 승인</span> → <span className="text-at-success font-medium">원장 승인</span></span>
                 ) : (
-                  <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+                  <span>신청 → <span className="text-at-success font-medium">원장 직접 승인</span></span>
                 )}
               </div>
-              <div className="flex items-center text-xs text-slate-600">
-                <span className="w-14 text-slate-500 font-medium">실장:</span>
-                <span>신청 → <span className="text-green-600 font-medium">원장 직접 승인</span></span>
+              <div className="flex items-center text-xs text-at-text">
+                <span className="w-14 text-at-text font-medium">실장:</span>
+                <span>신청 → <span className="text-at-success font-medium">원장 직접 승인</span></span>
               </div>
             </div>
           </div>
         </div>
 
         {/* 저장 버튼 및 결과 메시지 */}
-        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+        <div className="flex items-center justify-between border-t border-at-border pt-4">
           <div className="flex-1">
             {success && (
-              <div className="flex items-center text-green-600 text-sm animate-fade-in">
+              <div className="flex items-center text-at-success text-sm animate-fade-in">
                 <CheckCircle className="w-4 h-4 mr-2" />
                 {success}
               </div>
             )}
             {error && (
-              <div className="flex items-center text-red-600 text-sm">
+              <div className="flex items-center text-at-error text-sm">
                 <AlertCircle className="w-4 h-4 mr-2" />
                 {error}
               </div>
@@ -508,7 +508,7 @@ export default function LeavePolicySettings() {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
+            className="px-6 py-2.5 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:opacity-50 flex items-center"
           >
             <Save className="w-4 h-4 mr-2" />
             {saving ? '저장 중...' : '정책 저장'}

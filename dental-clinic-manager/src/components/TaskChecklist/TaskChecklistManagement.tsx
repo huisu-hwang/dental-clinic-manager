@@ -41,32 +41,28 @@ export default function TaskChecklistManagement() {
   const visibleTabs = tabs.filter(t => t.show)
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
       {/* 서브 탭 네비게이션 */}
       {visibleTabs.length > 1 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-4 sm:px-6">
-            <nav className="flex space-x-6 overflow-x-auto" aria-label="Task checklist tabs">
-              {visibleTabs.map(tab => {
-                const Icon = tab.icon
-                const isActive = activeSubTab === tab.id
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveSubTab(tab.id)}
-                    className={`py-3 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                      isActive
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 mr-2" />
-                    {tab.label}
-                  </button>
-                )
-              })}
-            </nav>
-          </div>
+        <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+          {visibleTabs.map(tab => {
+            const Icon = tab.icon
+            const isActive = activeSubTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
+                  isActive
+                    ? 'bg-at-accent-light text-at-accent'
+                    : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                }`}
+              >
+                <Icon className="w-4 h-4 mr-2" />
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
       )}
 

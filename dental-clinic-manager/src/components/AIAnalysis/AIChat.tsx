@@ -357,13 +357,13 @@ export default function AIChat({ clinicId }: AIChatProps) {
     switch (type) {
       case 'excel':
       case 'csv':
-        return <FileSpreadsheet className="w-4 h-4 text-green-600" />;
+        return <FileSpreadsheet className="w-4 h-4 text-at-success" />;
       case 'pdf':
-        return <File className="w-4 h-4 text-red-600" />;
+        return <File className="w-4 h-4 text-at-error" />;
       case 'text':
-        return <FileText className="w-4 h-4 text-blue-600" />;
+        return <FileText className="w-4 h-4 text-at-accent" />;
       default:
-        return <File className="w-4 h-4 text-gray-600" />;
+        return <File className="w-4 h-4 text-at-text-secondary" />;
     }
   };
 
@@ -398,18 +398,18 @@ export default function AIChat({ clinicId }: AIChatProps) {
   ];
 
   return (
-    <div className="flex h-full bg-gray-50 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {/* 사이드바 - 대화 기록 */}
       <div
         className={cn(
-          'bg-white border-r border-gray-200 flex flex-col transition-all duration-300',
+          'bg-white border-r border-at-border flex flex-col transition-all duration-300',
           isSidebarOpen ? 'w-72' : 'w-0'
         )}
       >
         {isSidebarOpen && (
           <>
             {/* 사이드바 헤더 */}
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-at-border">
               <Button
                 onClick={handleNewChat}
                 className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
@@ -423,12 +423,12 @@ export default function AIChat({ clinicId }: AIChatProps) {
             <div className="flex-1 overflow-y-auto">
               {isLoadingConversations ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  <Loader2 className="w-5 h-5 animate-spin text-at-text-weak" />
                 </div>
               ) : conversations.length === 0 ? (
                 <div className="text-center py-8 px-4">
-                  <MessageSquare className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-                  <p className="text-sm text-gray-500">대화 기록이 없습니다</p>
+                  <MessageSquare className="w-10 h-10 mx-auto text-at-text-weak mb-2" />
+                  <p className="text-sm text-at-text-weak">대화 기록이 없습니다</p>
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
@@ -436,10 +436,10 @@ export default function AIChat({ clinicId }: AIChatProps) {
                     <div
                       key={conv.id}
                       className={cn(
-                        'group relative rounded-lg transition-colors',
+                        'group relative rounded-xl transition-colors',
                         currentConversationId === conv.id
-                          ? 'bg-blue-50 border border-blue-200'
-                          : 'hover:bg-gray-100'
+                          ? 'bg-at-accent-light border border-at-border'
+                          : 'hover:bg-at-surface-alt'
                       )}
                     >
                       {editingTitleId === conv.id ? (
@@ -460,13 +460,13 @@ export default function AIChat({ clinicId }: AIChatProps) {
                           />
                           <button
                             onClick={() => updateConversationTitle(conv.id, editingTitleValue)}
-                            className="p-1 text-green-600 hover:bg-green-100 rounded"
+                            className="p-1 text-at-success hover:bg-at-success-bg rounded"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setEditingTitleId(null)}
-                            className="p-1 text-gray-500 hover:bg-gray-200 rounded"
+                            className="p-1 text-at-text-weak hover:bg-at-border rounded"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -477,12 +477,12 @@ export default function AIChat({ clinicId }: AIChatProps) {
                           className="w-full text-left p-3 pr-8"
                         >
                           <div className="flex items-start gap-2">
-                            <MessageSquare className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                            <MessageSquare className="w-4 h-4 mt-0.5 text-at-text-weak flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
+                              <p className="text-sm font-medium text-at-text truncate">
                                 {conv.title}
                               </p>
-                              <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                              <p className="text-xs text-at-text-weak flex items-center gap-1 mt-0.5">
                                 <Clock className="w-3 h-3" />
                                 {formatDate(conv.updated_at)}
                               </p>
@@ -499,14 +499,14 @@ export default function AIChat({ clinicId }: AIChatProps) {
                               e.stopPropagation();
                               setShowMenu(showMenu === conv.id ? null : conv.id);
                             }}
-                            className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-opacity"
+                            className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-at-border transition-opacity"
                           >
-                            <MoreVertical className="w-4 h-4 text-gray-500" />
+                            <MoreVertical className="w-4 h-4 text-at-text-weak" />
                           </button>
 
                           {/* 드롭다운 메뉴 */}
                           {showMenu === conv.id && (
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[120px]">
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-at-border rounded-xl shadow-lg py-1 z-10 min-w-[120px]">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -514,7 +514,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                                   setEditingTitleValue(conv.title);
                                   setShowMenu(null);
                                 }}
-                                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm text-at-text-secondary hover:bg-at-surface-alt flex items-center gap-2"
                               >
                                 <Edit2 className="w-4 h-4" />
                                 이름 변경
@@ -524,7 +524,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                                   e.stopPropagation();
                                   deleteConversation(conv.id);
                                 }}
-                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm text-at-error hover:bg-at-error-bg flex items-center gap-2"
                               >
                                 <Trash2 className="w-4 h-4" />
                                 삭제
@@ -541,7 +541,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
 
             {/* 저장 상태 표시 */}
             {isSaving && (
-              <div className="px-4 py-2 border-t border-gray-200 text-xs text-gray-500 flex items-center gap-2">
+              <div className="px-4 py-2 border-t border-at-border text-xs text-at-text-weak flex items-center gap-2">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 저장 중...
               </div>
@@ -553,27 +553,27 @@ export default function AIChat({ clinicId }: AIChatProps) {
       {/* 사이드바 토글 버튼 */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-200 rounded-r-lg p-1.5 shadow-sm hover:bg-gray-50 transition-colors"
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white border border-at-border rounded-r-lg p-1.5 shadow-at-card hover:bg-at-surface-alt transition-colors"
         style={{ marginLeft: isSidebarOpen ? '288px' : '0' }}
       >
         {isSidebarOpen ? (
-          <ChevronLeft className="w-4 h-4 text-gray-500" />
+          <ChevronLeft className="w-4 h-4 text-at-text-weak" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-gray-500" />
+          <ChevronRight className="w-4 h-4 text-at-text-weak" />
         )}
       </button>
 
       {/* 메인 채팅 영역 */}
       <div className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-at-border bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">AI 데이터 분석</h2>
-              <p className="text-sm text-gray-500">병원 데이터를 분석하고 인사이트를 제공합니다</p>
+              <h2 className="text-lg font-semibold text-at-text">AI 데이터 분석</h2>
+              <p className="text-sm text-at-text-weak">병원 데이터를 분석하고 인사이트를 제공합니다</p>
             </div>
           </div>
           {messages.length > 0 && (
@@ -581,7 +581,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
               variant="ghost"
               size="sm"
               onClick={handleNewChat}
-              className="text-gray-500 hover:text-blue-600"
+              className="text-at-text-weak hover:text-at-accent"
             >
               <Plus className="w-4 h-4 mr-1" />
               새 대화
@@ -594,12 +594,12 @@ export default function AIChat({ clinicId }: AIChatProps) {
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mb-6">
-                <Bot className="w-12 h-12 text-blue-600" />
+                <Bot className="w-12 h-12 text-at-accent" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-xl font-semibold text-at-text mb-2">
                 무엇을 분석해 드릴까요?
               </h3>
-              <p className="text-gray-500 mb-8 max-w-md">
+              <p className="text-at-text-weak mb-8 max-w-md">
                 Supabase에 저장된 모든 데이터에 접근하여 분석할 수 있습니다.
                 <br />
                 날짜 범위를 지정하거나 특정 기간의 데이터를 요청해 보세요.
@@ -607,7 +607,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
 
               {/* 예시 질문들 */}
               <div className="w-full max-w-2xl">
-                <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <p className="text-sm font-medium text-at-text-secondary mb-3 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   이런 질문을 해보세요
                 </p>
@@ -616,7 +616,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                     <button
                       key={index}
                       onClick={() => setInputValue(question)}
-                      className="text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-sm text-gray-700"
+                      className="text-left p-3 rounded-xl border border-at-border hover:border-blue-300 hover:bg-at-accent-light transition-colors text-sm text-at-text-secondary"
                     >
                       {question}
                     </button>
@@ -634,32 +634,32 @@ export default function AIChat({ clinicId }: AIChatProps) {
 
         {/* 에러 표시 */}
         {error && (
-          <div className="mx-6 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mx-6 mb-2 p-3 bg-at-error-bg border border-red-200 rounded-xl text-at-error text-sm">
             {error}
           </div>
         )}
 
         {/* 입력 영역 */}
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
+        <div className="border-t border-at-border p-4 bg-at-surface-alt">
           {/* 첨부 파일 미리보기 */}
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
               {attachedFiles.map((file) => (
                 <div
                   key={file.id}
-                  className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-at-border rounded-xl text-sm"
                 >
                   {getFileIcon(file.type)}
                   <div className="flex flex-col">
-                    <span className="font-medium text-gray-900 truncate max-w-[150px]" title={file.name}>
+                    <span className="font-medium text-at-text truncate max-w-[150px]" title={file.name}>
                       {file.name}
                     </span>
-                    <span className="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                    <span className="text-xs text-at-text-weak">{formatFileSize(file.size)}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveFile(file.id)}
-                    className="ml-1 text-gray-400 hover:text-red-500 transition-colors"
+                    className="ml-1 text-at-text-weak hover:text-red-500 transition-colors"
                     title="파일 제거"
                   >
                     <X className="w-4 h-4" />
@@ -671,13 +671,13 @@ export default function AIChat({ clinicId }: AIChatProps) {
 
           {/* 파일 에러 메시지 */}
           {fileError && (
-            <div className="flex items-center gap-2 p-2 mb-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <div className="flex items-center gap-2 p-2 mb-3 bg-at-error-bg text-at-error rounded-xl text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{fileError}</span>
               <button
                 type="button"
                 onClick={() => setFileError(null)}
-                className="ml-auto text-red-500 hover:text-red-700"
+                className="ml-auto text-red-500 hover:text-at-error"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -699,7 +699,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                 variant="ghost"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading || isParsingFile}
-                className="h-[44px] px-3 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                className="h-[44px] px-3 text-at-text-weak hover:text-at-accent hover:bg-at-accent-light"
                 title="파일 첨부 (Excel, CSV, PDF, TXT)"
               >
                 {isParsingFile ? (
@@ -719,7 +719,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
                 placeholder={attachedFiles.length > 0
                   ? "첨부한 파일과 함께 분석할 내용을 입력하세요..."
                   : "분석하고 싶은 내용을 입력하세요... (Shift+Enter로 줄바꿈)"}
-                className="w-full min-h-[44px] max-h-[150px] px-4 py-3 pr-12 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 resize-none transition-all text-sm"
+                className="w-full min-h-[44px] max-h-[150px] px-4 py-3 pr-12 rounded-xl border border-at-border focus:border-at-accent focus:ring-2 focus:ring-blue-200 resize-none transition-all text-sm"
                 rows={1}
                 disabled={isLoading}
               />
@@ -736,7 +736,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
               )}
             </Button>
           </form>
-          <p className="text-xs text-gray-400 mt-2 text-center">
+          <p className="text-xs text-at-text-weak mt-2 text-center">
             AI 분석 결과는 참고용이며, 실제 의사결정에는 추가적인 검토가 필요합니다.
             {attachedFiles.length === 0 && ' | 클립 아이콘으로 Excel, CSV, PDF, TXT 파일 첨부 가능'}
           </p>
@@ -786,7 +786,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
         {isUser ? (
           <User className="w-4 h-4 text-white" />
         ) : (
-          <Bot className={cn('w-4 h-4', isError ? 'text-red-500' : 'text-gray-600')} />
+          <Bot className={cn('w-4 h-4', isError ? 'text-red-500' : 'text-at-text-secondary')} />
         )}
       </div>
 
@@ -801,7 +801,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
             {message.attachments!.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                className="flex items-center gap-1 px-2 py-1 bg-at-tag text-at-accent rounded text-xs"
                 title={file.parsedData.summary}
               >
                 {getFileIcon(file.type)}
@@ -817,8 +817,8 @@ function MessageBubble({ message }: { message: AIMessage }) {
             isUser
               ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
               : isError
-                ? 'bg-red-50 border border-red-200 text-red-700'
-                : 'bg-gray-100 text-gray-900'
+                ? 'bg-at-error-bg border border-red-200 text-at-error'
+                : 'bg-at-surface-alt text-at-text'
           )}
         >
           {message.isLoading ? (
@@ -852,7 +852,7 @@ function MessageContent({ content, isUser }: { content: string; isUser: boolean 
         // ## 헤더
         if (line.startsWith('## ')) {
           return (
-            <h3 key={index} className="font-bold text-base mt-3 mb-1 text-gray-900">
+            <h3 key={index} className="font-bold text-base mt-3 mb-1 text-at-text">
               {line.replace('## ', '')}
             </h3>
           );
@@ -860,7 +860,7 @@ function MessageContent({ content, isUser }: { content: string; isUser: boolean 
         // ### 서브헤더
         if (line.startsWith('### ')) {
           return (
-            <h4 key={index} className="font-semibold text-sm mt-2 mb-1 text-gray-800">
+            <h4 key={index} className="font-semibold text-sm mt-2 mb-1 text-at-text">
               {line.replace('### ', '')}
             </h4>
           );
@@ -869,7 +869,7 @@ function MessageContent({ content, isUser }: { content: string; isUser: boolean 
         if (line.startsWith('- ')) {
           return (
             <div key={index} className="flex gap-2 ml-2">
-              <span className="text-blue-500">•</span>
+              <span className="text-at-accent">•</span>
               <span>{formatInlineStyles(line.replace('- ', ''))}</span>
             </div>
           );
@@ -880,7 +880,7 @@ function MessageContent({ content, isUser }: { content: string; isUser: boolean 
           if (match) {
             return (
               <div key={index} className="flex gap-2 ml-2">
-                <span className="font-semibold text-blue-600 min-w-[20px]">{match[1]}.</span>
+                <span className="font-semibold text-at-accent min-w-[20px]">{match[1]}.</span>
                 <span>{formatInlineStyles(match[2])}</span>
               </div>
             );

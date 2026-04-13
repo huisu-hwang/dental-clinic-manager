@@ -10,7 +10,7 @@ import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
-import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3 } from 'lucide-react'
+import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3, BookOpen } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import MenuSettings from '@/components/Management/MenuSettings'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
@@ -360,9 +360,9 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex justify-center items-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent mx-auto mb-4"></div>
           <p>데이터를 불러오는 중...</p>
         </div>
       </div>
@@ -394,112 +394,116 @@ export default function DashboardPage() {
 
           {/* 출근 관리 */}
           {activeTab === 'attendance' && (
-            <div className="space-y-4">
-              {/* 출근 관리 서브 탭 네비게이션 - 스크롤 시 고정 */}
-              <div className="sticky top-14 z-10 bg-white border-b border-gray-200 rounded-t-lg">
-                <div className="px-4 sm:px-6 lg:px-8">
-                  <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
-                    {canCheckIn && (
-                      <button
-                        onClick={() => setAttendanceSubTab('checkin')}
-                        className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                          attendanceSubTab === 'checkin'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        출퇴근 체크
-                      </button>
-                    )}
-
-                    {canViewHistory && (
-                      <button
-                        onClick={() => setAttendanceSubTab('history')}
-                        className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                          attendanceSubTab === 'history'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        출퇴근 기록
-                      </button>
-                    )}
-
-                    {canViewStats && (
-                      <button
-                        onClick={() => setAttendanceSubTab('stats')}
-                        className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                          attendanceSubTab === 'stats'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        근태 통계
-                      </button>
-                    )}
-
-                    {canManageSchedule && (
-                      <button
-                        onClick={() => setAttendanceSubTab('schedule')}
-                        className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                          attendanceSubTab === 'schedule'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        스케줄 관리
-                      </button>
-                    )}
-
-                    {canViewTeam && (
-                      <button
-                        onClick={() => setAttendanceSubTab('team')}
-                        className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                          attendanceSubTab === 'team'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        팀 출근 현황
-                      </button>
-                    )}
-
-                    {canManageQR && (
-                      <button
-                        onClick={() => setAttendanceSubTab('qr')}
-                        className={`py-4 px-1 inline-flex items-center border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                          attendanceSubTab === 'qr'
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                        </svg>
-                        QR 코드 관리
-                      </button>
-                    )}
-                  </nav>
+            <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
+              {/* 출근 관리 헤더 */}
+              <div className="flex items-center gap-3 pb-4 border-b border-at-border">
+                <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-at-accent" />
                 </div>
+                <h2 className="text-lg font-bold text-at-text">출근 관리</h2>
+              </div>
+
+              {/* 출근 관리 서브 탭 네비게이션 */}
+              <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+                {canCheckIn && (
+                  <button
+                    onClick={() => setAttendanceSubTab('checkin')}
+                    className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      attendanceSubTab === 'checkin'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    출퇴근 체크
+                  </button>
+                )}
+
+                {canViewHistory && (
+                  <button
+                    onClick={() => setAttendanceSubTab('history')}
+                    className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      attendanceSubTab === 'history'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    출퇴근 기록
+                  </button>
+                )}
+
+                {canViewStats && (
+                  <button
+                    onClick={() => setAttendanceSubTab('stats')}
+                    className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      attendanceSubTab === 'stats'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    근태 통계
+                  </button>
+                )}
+
+                {canManageSchedule && (
+                  <button
+                    onClick={() => setAttendanceSubTab('schedule')}
+                    className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      attendanceSubTab === 'schedule'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    스케줄 관리
+                  </button>
+                )}
+
+                {canViewTeam && (
+                  <button
+                    onClick={() => setAttendanceSubTab('team')}
+                    className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      attendanceSubTab === 'team'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    팀 출근 현황
+                  </button>
+                )}
+
+                {canManageQR && (
+                  <button
+                    onClick={() => setAttendanceSubTab('qr')}
+                    className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      attendanceSubTab === 'qr'
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                    </svg>
+                    QR 코드 관리
+                  </button>
+                )}
               </div>
 
               {/* 출근 관리 콘텐츠 */}
-              <div className="bg-white rounded-b-lg shadow-sm border border-slate-200 p-6">
+              <div>
                 {attendanceSubTab === 'checkin' && canCheckIn && <CheckInOut />}
                 {attendanceSubTab === 'history' && canViewHistory && <AttendanceHistory />}
                 {attendanceSubTab === 'stats' && canViewStats && <AttendanceStats />}
@@ -512,97 +516,90 @@ export default function DashboardPage() {
 
           {/* 연차 관리 */}
           {activeTab === 'leave' && user && (
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <LeaveManagement currentUser={user} />
-            </div>
+            <LeaveManagement currentUser={user} />
           )}
 
           {/* 통계 */}
           {activeTab === 'stats' && (
-            <div className="space-y-0">
-              {/* 통계 헤더 - 스크롤 시 고정 */}
-              <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-white" />
+            <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
+              {/* 통계 헤더 */}
+              <div className="flex items-center justify-between pb-4 border-b border-at-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 text-at-accent" />
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white">통계</h2>
-                    <p className="text-blue-100 text-sm">Statistics</p>
-                  </div>
+                  <h2 className="text-lg font-bold text-at-text">통계</h2>
                 </div>
               </div>
 
-              {/* 통계 서브 탭 네비게이션 - 스크롤 시 고정 */}
-              <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50">
-                <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
-                  <button
-                    onClick={() => setStatsSubTab('weekly')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
-                      statsSubTab === 'weekly'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                    }`}
-                  >
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    주간 통계
-                  </button>
-                  <button
-                    onClick={() => setStatsSubTab('monthly')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
-                      statsSubTab === 'monthly'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                    }`}
-                  >
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    월간 통계
-                  </button>
-                  <button
-                    onClick={() => setStatsSubTab('annual')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
-                      statsSubTab === 'annual'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                    }`}
-                  >
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                    </svg>
-                    연간 통계
-                  </button>
-                  <button
-                    onClick={() => setStatsSubTab('custom')}
-                    className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-lg font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
-                      statsSubTab === 'custom'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
-                    }`}
-                  >
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    기간 지정
-                  </button>
-                </nav>
+              {/* 통계 서브 탭 네비게이션 */}
+              <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+                <button
+                  onClick={() => setStatsSubTab('weekly')}
+                  className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                    statsSubTab === 'weekly'
+                      ? 'bg-at-accent-light text-at-accent'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                  }`}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  주간 통계
+                </button>
+                <button
+                  onClick={() => setStatsSubTab('monthly')}
+                  className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                    statsSubTab === 'monthly'
+                      ? 'bg-at-accent-light text-at-accent'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                  }`}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  월간 통계
+                </button>
+                <button
+                  onClick={() => setStatsSubTab('annual')}
+                  className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                    statsSubTab === 'annual'
+                      ? 'bg-at-accent-light text-at-accent'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                  }`}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                  </svg>
+                  연간 통계
+                </button>
+                <button
+                  onClick={() => setStatsSubTab('custom')}
+                  className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                    statsSubTab === 'custom'
+                      ? 'bg-at-accent-light text-at-accent'
+                      : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                  }`}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  기간 지정
+                </button>
               </div>
 
               {/* 통계 콘텐츠 */}
-              <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
+              <div>
                 {statsSubTab === 'weekly' && (
                   <>
                     <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="week-selector" className="mr-2 text-sm text-slate-600">주 선택:</label>
+                        <label htmlFor="week-selector" className="mr-2 text-sm text-at-text-secondary">주 선택:</label>
                         <input
                           type="week"
                           id="week-selector"
-                          className="p-2 border border-slate-300 rounded-md text-sm"
+                          className="p-2 border border-at-border rounded-md text-sm"
                           value={weekSelector}
                           onChange={(e) => setWeekSelector(e.target.value)}
                         />
@@ -630,11 +627,11 @@ export default function DashboardPage() {
                   <>
                     <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="month-selector" className="mr-2 text-sm text-slate-600">월 선택:</label>
+                        <label htmlFor="month-selector" className="mr-2 text-sm text-at-text-secondary">월 선택:</label>
                         <input
                           type="month"
                           id="month-selector"
-                          className="p-2 border border-slate-300 rounded-md text-sm"
+                          className="p-2 border border-at-border rounded-md text-sm"
                           value={monthSelector}
                           onChange={(e) => setMonthSelector(e.target.value)}
                         />
@@ -662,10 +659,10 @@ export default function DashboardPage() {
                   <>
                     <div className="flex justify-end mb-4">
                       <div>
-                        <label htmlFor="year-selector" className="mr-2 text-sm text-slate-600">연도 선택:</label>
+                        <label htmlFor="year-selector" className="mr-2 text-sm text-at-text-secondary">연도 선택:</label>
                         <select
                           id="year-selector"
-                          className="p-2 border border-slate-300 rounded-md text-sm"
+                          className="p-2 border border-at-border rounded-md text-sm"
                           value={yearSelector}
                           onChange={(e) => setYearSelector(e.target.value)}
                         >
@@ -695,33 +692,33 @@ export default function DashboardPage() {
 
                 {statsSubTab === 'custom' && (
                   <>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 p-4 bg-at-surface-alt rounded-xl border border-at-border">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                         <div className="flex items-center gap-2">
-                          <label htmlFor="custom-start-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">시작일:</label>
+                          <label htmlFor="custom-start-date" className="text-sm font-medium text-at-text-secondary whitespace-nowrap">시작일:</label>
                           <input
                             type="date"
                             id="custom-start-date"
-                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="p-2 border border-at-border rounded-md text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                             value={customStartDate}
                             onChange={(e) => setCustomStartDate(e.target.value)}
                             max={customEndDate}
                           />
                         </div>
-                        <span className="hidden sm:block text-slate-400">~</span>
+                        <span className="hidden sm:block text-at-text-weak">~</span>
                         <div className="flex items-center gap-2">
-                          <label htmlFor="custom-end-date" className="text-sm font-medium text-slate-600 whitespace-nowrap">종료일:</label>
+                          <label htmlFor="custom-end-date" className="text-sm font-medium text-at-text-secondary whitespace-nowrap">종료일:</label>
                           <input
                             type="date"
                             id="custom-end-date"
-                            className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="p-2 border border-at-border rounded-md text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                             value={customEndDate}
                             onChange={(e) => setCustomEndDate(e.target.value)}
                             min={customStartDate}
                           />
                         </div>
                       </div>
-                      <div className="text-sm text-slate-500">
+                      <div className="text-sm text-at-text-weak">
                         {(() => {
                           const start = new Date(customStartDate)
                           const end = new Date(customEndDate)
@@ -774,7 +771,7 @@ export default function DashboardPage() {
             user ? (
               <ProtocolManagement currentUser={user} />
             ) : (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <div className="rounded-md border border-amber-200 bg-at-warning-bg p-4 text-sm text-amber-800">
                 사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.
               </div>
             )
@@ -808,7 +805,7 @@ export default function DashboardPage() {
           {/* AI 데이터 분석 */}
           {activeTab === 'ai-analysis' && user?.clinic_id && (
             <PremiumGate featureId="ai-analysis">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-180px)]">
+              <div className="h-[calc(100vh-180px)]">
                 <AIChat clinicId={user.clinic_id} />
               </div>
             </PremiumGate>
@@ -834,17 +831,17 @@ export default function DashboardPage() {
           )}
 
           {/* 사용 안내 */}
-          {/* 사용 안내 */}
           {activeTab === 'guide' && (
-            <div className="container mx-auto px-4 py-12">
-              <header className="text-center mb-12">
-                <h1 className="text-4xl font-bold text-gray-800 mb-2">
-                  치과 관리 시스템 사용 안내
-                </h1>
-                <p className="text-lg text-gray-600">
-                  업무 효율성을 높이는 다양한 기능을 만나보세요.
-                </p>
-              </header>
+            <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+              <div className="flex items-center gap-3 pb-4 border-b border-at-border">
+                <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-at-accent" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-at-text">사용 안내</h2>
+                  <p className="text-xs text-at-text-secondary mt-0.5">업무 효율성을 높이는 다양한 기능을 만나보세요.</p>
+                </div>
+              </div>
 
               <main>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -872,25 +869,25 @@ export default function DashboardPage() {
                     {
                       title: '사용자 관리',
                       description: '역할(원장, 직원 등)에 따라 접근 권한을 제어하고 안전한 인증을 통해 시스템을 보호합니다.',
-                      icon: <Shield className="w-12 h-12 text-blue-500" />,
+                      icon: <Shield className="w-12 h-12 text-at-accent" />,
                     },
                   ].map((feature) => (
                     <div
                       key={feature.title}
-                      className="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col items-center text-center"
+                      className="bg-white p-8 rounded-xl shadow-at-card hover:shadow-xl transition-shadow duration-300 flex flex-col items-center text-center"
                     >
                       <div className="mb-4">{feature.icon}</div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                      <h3 className="text-xl font-semibold text-at-text mb-2">
                         {feature.title}
                       </h3>
-                      <p className="text-gray-600">{feature.description}</p>
+                      <p className="text-at-text-secondary">{feature.description}</p>
                     </div>
                   ))}
                 </div>
               </main>
 
               <footer className="text-center mt-16">
-                 <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md">
+                 <div className="bg-at-tag border-l-4 border-at-accent text-at-accent p-4 rounded-md">
                    <div className="flex items-center">
                       <BookUser className="w-6 h-6 mr-3" />
                       <div>

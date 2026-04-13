@@ -318,7 +318,7 @@ export default function ClinicsManagement() {
     switch (status) {
       case 'active':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-at-success-bg text-green-800">
             <CheckCircleIcon className="w-3 h-3 mr-1" />
             활성
           </span>
@@ -332,7 +332,7 @@ export default function ClinicsManagement() {
         )
       case 'cancelled':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-at-error-bg text-red-800">
             <XCircleIcon className="w-3 h-3 mr-1" />
             취소
           </span>
@@ -344,8 +344,8 @@ export default function ClinicsManagement() {
 
   const getTierBadge = (tier: string) => {
     const badges = {
-      basic: 'bg-slate-100 text-slate-800',
-      professional: 'bg-blue-100 text-blue-800',
+      basic: 'bg-at-surface-alt text-at-text',
+      professional: 'bg-at-tag text-at-accent',
       enterprise: 'bg-purple-100 text-purple-800'
     }
     const labels = {
@@ -354,7 +354,7 @@ export default function ClinicsManagement() {
       enterprise: '엔터프라이즈'
     }
     return (
-      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${badges[tier as keyof typeof badges] || 'bg-gray-100 text-gray-800'}`}>
+      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${badges[tier as keyof typeof badges] || 'bg-at-surface-alt text-at-text'}`}>
         {labels[tier as keyof typeof labels] || tier}
       </span>
     )
@@ -364,71 +364,71 @@ export default function ClinicsManagement() {
     <div className="space-y-6">
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div className="bg-white p-4 rounded-xl shadow-at-card border border-at-border">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
+              <BuildingOfficeIcon className="h-8 w-8 text-at-accent" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-slate-600">전체 병원</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.totalClinics}</p>
+              <p className="text-sm font-medium text-at-text-secondary">전체 병원</p>
+              <p className="text-2xl font-bold text-at-text">{stats.totalClinics}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div className="bg-white p-4 rounded-xl shadow-at-card border border-at-border">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-8 w-8 text-green-600" />
+              <CheckCircleIcon className="h-8 w-8 text-at-success" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-slate-600">활성 병원</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.activeClinics}</p>
+              <p className="text-sm font-medium text-at-text-secondary">활성 병원</p>
+              <p className="text-2xl font-bold text-at-text">{stats.activeClinics}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div className="bg-white p-4 rounded-xl shadow-at-card border border-at-border">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <UserGroupIcon className="h-8 w-8 text-indigo-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-slate-600">전체 사용자</p>
-              <p className="text-2xl font-bold text-slate-900">{stats.totalUsers}</p>
+              <p className="text-sm font-medium text-at-text-secondary">전체 사용자</p>
+              <p className="text-2xl font-bold text-at-text">{stats.totalUsers}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div className="bg-white p-4 rounded-xl shadow-at-card border border-at-border">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <CreditCardIcon className="h-8 w-8 text-purple-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-slate-600">월 매출</p>
-              <p className="text-2xl font-bold text-slate-900">₩{stats.monthlyRevenue.toLocaleString()}</p>
+              <p className="text-sm font-medium text-at-text-secondary">월 매출</p>
+              <p className="text-2xl font-bold text-at-text">₩{stats.monthlyRevenue.toLocaleString()}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-        <div className="p-6 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-800">병원 관리</h2>
+      <div className="bg-white rounded-xl shadow-at-card border border-at-border">
+        <div className="p-6 border-b border-at-border">
+          <h2 className="text-xl font-bold text-at-text">병원 관리</h2>
 
           {/* Search and Filters */}
           <div className="mt-4 flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-at-text-weak" />
                 <input
                   type="text"
                   placeholder="병원명, 원장명, 이메일로 검색..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                 />
               </div>
             </div>
@@ -437,7 +437,7 @@ export default function ClinicsManagement() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-2 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
               >
                 <option value="all">모든 상태</option>
                 <option value="active">활성</option>
@@ -448,7 +448,7 @@ export default function ClinicsManagement() {
               <select
                 value={filterTier}
                 onChange={(e) => setFilterTier(e.target.value as any)}
-                className="px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-2 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
               >
                 <option value="all">모든 플랜</option>
                 <option value="basic">기본</option>
@@ -460,84 +460,84 @@ export default function ClinicsManagement() {
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 border-b border-red-200">
-            <p className="text-red-600 text-sm">{error}</p>
+          <div className="p-4 bg-at-error-bg border-b border-red-200">
+            <p className="text-at-error text-sm">{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="p-4 bg-green-50 border-b border-green-200">
-            <p className="text-green-600 text-sm">{success}</p>
+          <div className="p-4 bg-at-success-bg border-b border-green-200">
+            <p className="text-at-success text-sm">{success}</p>
           </div>
         )}
 
         {/* Clinics Table */}
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+          <table className="min-w-full divide-y divide-at-border">
+            <thead className="bg-at-surface-alt">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">
                   병원 정보
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">
                   구독
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">
                   사용자
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">
                   상태
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">
                   등록일
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-at-text-weak uppercase tracking-wider">
                   작업
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white divide-y divide-at-border">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto"></div>
                   </td>
                 </tr>
               ) : filteredClinics.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-at-text-weak">
                     검색 결과가 없습니다.
                   </td>
                 </tr>
               ) : (
                 filteredClinics.map((clinic) => (
-                  <tr key={clinic.id} className="hover:bg-slate-50">
+                  <tr key={clinic.id} className="hover:bg-at-surface-alt">
                     <td className="px-6 py-4">
                       <div>
-                        <div className="text-sm font-medium text-slate-900">{clinic.name}</div>
-                        <div className="text-sm text-slate-500">{clinic.owner_name}</div>
-                        <div className="text-xs text-slate-400">{clinic.email}</div>
+                        <div className="text-sm font-medium text-at-text">{clinic.name}</div>
+                        <div className="text-sm text-at-text-weak">{clinic.owner_name}</div>
+                        <div className="text-xs text-at-text-weak">{clinic.email}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>
                         {getTierBadge(clinic.subscription_tier)}
                         {clinic.subscription_expires_at && (
-                          <div className="text-xs text-slate-500 mt-1">
+                          <div className="text-xs text-at-text-weak mt-1">
                             만료: {new Date(clinic.subscription_expires_at).toLocaleDateString('ko-KR')}
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-slate-900">
+                      <div className="text-sm text-at-text">
                         {clinic.userCount || 0} / {clinic.max_users}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       {getStatusBadge(clinic.status)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-500">
+                    <td className="px-6 py-4 text-sm text-at-text-weak">
                       {new Date(clinic.created_at).toLocaleDateString('ko-KR')}
                     </td>
                     <td className="px-6 py-4">
@@ -546,7 +546,7 @@ export default function ClinicsManagement() {
                           setSelectedClinic(clinic)
                           setShowDetails(true)
                         }}
-                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                        className="text-at-accent hover:text-at-accent text-sm font-medium"
                       >
                         상세보기
                       </button>
@@ -562,51 +562,51 @@ export default function ClinicsManagement() {
       {/* Clinic Details Modal */}
       {showDetails && selectedClinic && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">병원 상세 정보</h3>
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-at-text mb-4">병원 상세 정보</h3>
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">병원명</label>
-                  <p className="mt-1 text-sm text-slate-900">{selectedClinic.name}</p>
+                  <label className="block text-sm font-medium text-at-text-secondary">병원명</label>
+                  <p className="mt-1 text-sm text-at-text">{selectedClinic.name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">원장</label>
-                  <p className="mt-1 text-sm text-slate-900">{selectedClinic.owner_name}</p>
+                  <label className="block text-sm font-medium text-at-text-secondary">원장</label>
+                  <p className="mt-1 text-sm text-at-text">{selectedClinic.owner_name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">이메일</label>
-                  <p className="mt-1 text-sm text-slate-900">{selectedClinic.email}</p>
+                  <label className="block text-sm font-medium text-at-text-secondary">이메일</label>
+                  <p className="mt-1 text-sm text-at-text">{selectedClinic.email}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">전화번호</label>
-                  <p className="mt-1 text-sm text-slate-900">{selectedClinic.phone}</p>
+                  <label className="block text-sm font-medium text-at-text-secondary">전화번호</label>
+                  <p className="mt-1 text-sm text-at-text">{selectedClinic.phone}</p>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-slate-700">주소</label>
-                  <p className="mt-1 text-sm text-slate-900">{selectedClinic.address}</p>
+                  <label className="block text-sm font-medium text-at-text-secondary">주소</label>
+                  <p className="mt-1 text-sm text-at-text">{selectedClinic.address}</p>
                 </div>
                 {selectedClinic.business_number && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">사업자번호</label>
-                    <p className="mt-1 text-sm text-slate-900">{selectedClinic.business_number}</p>
+                    <label className="block text-sm font-medium text-at-text-secondary">사업자번호</label>
+                    <p className="mt-1 text-sm text-at-text">{selectedClinic.business_number}</p>
                   </div>
                 )}
               </div>
 
               <div className="border-t pt-4">
-                <h4 className="font-medium text-slate-800 mb-2">구독 정보</h4>
+                <h4 className="font-medium text-at-text mb-2">구독 정보</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">현재 플랜</label>
+                    <label className="block text-sm font-medium text-at-text-secondary">현재 플랜</label>
                     <select
                       value={selectedClinic.subscription_tier}
                       onChange={(e) => {
                         const newClinic = { ...selectedClinic, subscription_tier: e.target.value as SubscriptionTier }
                         setSelectedClinic(newClinic)
                       }}
-                      className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md"
+                      className="mt-1 w-full px-3 py-2 border border-at-border rounded-md"
                     >
                       <option value="basic">기본</option>
                       <option value="professional">프로페셔널</option>
@@ -614,7 +614,7 @@ export default function ClinicsManagement() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">최대 사용자</label>
+                    <label className="block text-sm font-medium text-at-text-secondary">최대 사용자</label>
                     <input
                       type="number"
                       value={selectedClinic.max_users}
@@ -622,7 +622,7 @@ export default function ClinicsManagement() {
                         const newClinic = { ...selectedClinic, max_users: parseInt(e.target.value) }
                         setSelectedClinic(newClinic)
                       }}
-                      className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md"
+                      className="mt-1 w-full px-3 py-2 border border-at-border rounded-md"
                     />
                   </div>
                 </div>
@@ -632,14 +632,14 @@ export default function ClinicsManagement() {
                     selectedClinic.subscription_tier as SubscriptionTier,
                     selectedClinic.max_users
                   )}
-                  className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                  className="mt-2 bg-at-accent text-white px-4 py-2 rounded-md hover:bg-at-accent-hover"
                 >
                   구독 정보 업데이트
                 </button>
               </div>
 
               <div className="border-t pt-4">
-                <h4 className="font-medium text-slate-800 mb-2">상태 관리</h4>
+                <h4 className="font-medium text-at-text mb-2">상태 관리</h4>
                 <div className="flex gap-2">
                   {selectedClinic.status !== 'active' && (
                     <button
@@ -672,7 +672,7 @@ export default function ClinicsManagement() {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowDetails(false)}
-                className="bg-slate-200 text-slate-800 px-4 py-2 rounded-md hover:bg-slate-300"
+                className="bg-at-border text-at-text px-4 py-2 rounded-md hover:bg-at-border"
               >
                 닫기
               </button>

@@ -332,47 +332,47 @@ export default function NewMarketingPostPage() {
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.push('/dashboard/marketing')}
-          className="p-2 text-slate-400 hover:text-slate-600 transition-colors rounded-lg hover:bg-white"
+          className="p-2 text-at-text-weak hover:text-at-text-secondary transition-colors rounded-lg hover:bg-white"
         >
           <ArrowLeftIcon className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-bold text-slate-800">새 글 작성</h1>
+        <h1 className="text-xl font-bold text-at-text">새 글 작성</h1>
       </div>
 
       <div className="max-w-4xl space-y-6">
             {/* 기본 정보 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-4 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-slate-800">기본 정보</h2>
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-4 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+              <h2 className="text-lg font-semibold text-at-text">기본 정보</h2>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">주제 *</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">주제 *</label>
                 <input
                   type="text"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="예: 스케일링 후 주의사항"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">타겟 키워드 *</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">타겟 키워드 *</label>
                 <input
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="예: 스케일링 주의사항"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">글 유형</label>
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">글 유형</label>
                   <select
                     value={postType}
                     onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
                   >
                     {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
@@ -381,11 +381,11 @@ export default function NewMarketingPostPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">어투</label>
+                  <label className="block text-sm font-medium text-at-text-secondary mb-1">어투</label>
                   <select
                     value={tone}
                     onChange={(e) => setTone(e.target.value as ToneType)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
                   >
                     {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
                       <option key={value} value={value}>{label} - {description}</option>
@@ -396,18 +396,18 @@ export default function NewMarketingPostPage() {
             </fieldset>
 
             {/* 품질 옵션 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-slate-800">품질 옵션</h2>
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+              <h2 className="text-lg font-semibold text-at-text">품질 옵션</h2>
               <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                 <input
                   type="checkbox"
                   checked={useResearch}
                   onChange={(e) => setUseResearch(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
+                  className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">논문 인용</span>
-                  <span className="text-xs text-slate-400 ml-2">관련 학술 논문을 검색하여 인용</span>
+                  <span className="text-sm font-medium text-at-text-secondary">논문 인용</span>
+                  <span className="text-xs text-at-text-weak ml-2">관련 학술 논문을 검색하여 인용</span>
                 </div>
               </label>
               <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
@@ -415,23 +415,23 @@ export default function NewMarketingPostPage() {
                   type="checkbox"
                   checked={factCheck}
                   onChange={(e) => setFactCheck(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
+                  className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">팩트체크</span>
-                  <span className="text-xs text-slate-400 ml-2">생성된 글의 사실 여부를 검증</span>
+                  <span className="text-sm font-medium text-at-text-secondary">팩트체크</span>
+                  <span className="text-xs text-at-text-weak ml-2">생성된 글의 사실 여부를 검증</span>
                 </div>
               </label>
             </fieldset>
 
             {/* 이미지 옵션 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-slate-800">이미지 옵션</h2>
-              <p className="text-xs text-slate-400">이미지 개수와 스타일을 설정하세요</p>
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+              <h2 className="text-lg font-semibold text-at-text">이미지 옵션</h2>
+              <p className="text-xs text-at-text-weak">이미지 개수와 스타일을 설정하세요</p>
 
               {/* 이미지 개수 */}
               <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-slate-700 min-w-[80px]">이미지 개수</label>
+                <label className="text-sm font-medium text-at-text-secondary min-w-[80px]">이미지 개수</label>
                 <div className="flex items-center gap-2">
                   {[0, 1, 2, 3, 4, 5].map((n) => (
                     <button
@@ -441,17 +441,17 @@ export default function NewMarketingPostPage() {
                       className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
                         imageCount === n
                           ? 'bg-indigo-600 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-border'
                       }`}
                     >
                       {n}
                     </button>
                   ))}
                 </div>
-                <span className="text-xs text-slate-400">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
+                <span className="text-xs text-at-text-weak">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
               </div>
 
-              {imageCount > 0 && <hr className="border-slate-100" />}
+              {imageCount > 0 && <hr className="border-at-border" />}
               {imageCount > 0 && (Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
                 ([value, { label, description }]) => (
                   <label key={value} className="flex items-start gap-3 cursor-pointer">
@@ -467,11 +467,11 @@ export default function NewMarketingPostPage() {
                           setReferenceImagePreview('')
                         }
                       }}
-                      className="mt-0.5 w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                      className="mt-0.5 w-4 h-4 text-indigo-600 border-at-border focus:ring-at-accent"
                     />
                     <div>
-                      <span className="text-sm font-medium text-slate-700">{label}</span>
-                      <span className="text-xs text-slate-400 ml-2">{description}</span>
+                      <span className="text-sm font-medium text-at-text-secondary">{label}</span>
+                      <span className="text-xs text-at-text-weak ml-2">{description}</span>
                     </div>
                   </label>
                 )
@@ -480,7 +480,7 @@ export default function NewMarketingPostPage() {
               {/* 참조 이미지 업로드 (본인 이미지 활용 선택 시) */}
               {imageCount > 0 && imageStyle === 'use_own_image' && (
                 <div className="ml-7 mt-2 space-y-2">
-                  <label className="block text-xs font-medium text-slate-600">참조 이미지 업로드</label>
+                  <label className="block text-xs font-medium text-at-text-secondary">참조 이미지 업로드</label>
                   <div className="flex items-center gap-3">
                     <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors text-xs font-medium">
                       <PhotoIcon className="h-4 w-4" />
@@ -513,14 +513,14 @@ export default function NewMarketingPostPage() {
                           setReferenceImageBase64('')
                           setReferenceImagePreview('')
                         }}
-                        className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                        className="text-xs text-red-400 hover:text-at-error transition-colors"
                       >
                         삭제
                       </button>
                     )}
                   </div>
                   {referenceImagePreview && (
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200">
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-at-border">
                       <img
                         src={referenceImagePreview}
                         alt="참조 이미지"
@@ -537,8 +537,8 @@ export default function NewMarketingPostPage() {
               {/* 시각적 스타일 */}
               {imageCount > 0 && (
                 <>
-                  <hr className="border-slate-100" />
-                  <label className="text-sm font-medium text-slate-700">시각적 스타일</label>
+                  <hr className="border-at-border" />
+                  <label className="text-sm font-medium text-at-text-secondary">시각적 스타일</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {(Object.entries(IMAGE_VISUAL_STYLE_LABELS) as [ImageVisualStyle, { label: string; description: string; emoji: string }][]).map(
                       ([value, { label, description, emoji }]) => (
@@ -549,12 +549,12 @@ export default function NewMarketingPostPage() {
                           className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all ${
                             imageVisualStyle === value
                               ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
-                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                              : 'border-at-border hover:border-at-border hover:bg-at-surface-alt'
                           }`}
                         >
                           <span className="text-lg">{emoji}</span>
-                          <span className={`text-sm font-medium ${imageVisualStyle === value ? 'text-indigo-700' : 'text-slate-700'}`}>{label}</span>
-                          <span className="text-[11px] text-slate-400 leading-tight">{description}</span>
+                          <span className={`text-sm font-medium ${imageVisualStyle === value ? 'text-indigo-700' : 'text-at-text-secondary'}`}>{label}</span>
+                          <span className="text-[11px] text-at-text-weak leading-tight">{description}</span>
                         </button>
                       )
                     )}
@@ -564,17 +564,17 @@ export default function NewMarketingPostPage() {
             </fieldset>
 
             {/* 배포 플랫폼 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-slate-200 p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-slate-800">배포 플랫폼</h2>
+            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+              <h2 className="text-lg font-semibold text-at-text">배포 플랫폼</h2>
               {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (
                 <label key={key} className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
                     checked={platforms[key]}
                     onChange={(e) => setPlatforms({ ...platforms, [key]: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 disabled:cursor-not-allowed"
+                    className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
                   />
-                  <span className="text-sm text-slate-700">
+                  <span className="text-sm text-at-text-secondary">
                     {key === 'naverBlog' ? '네이버 블로그' :
                      key === 'instagram' ? '인스타그램' :
                      key === 'facebook' ? '페이스북' : '쓰레드'}
@@ -585,19 +585,19 @@ export default function NewMarketingPostPage() {
 
             {/* 에러 */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600">
+              <div className="bg-at-error-bg border border-red-200 rounded-xl p-4 text-sm text-at-error">
                 {error}
               </div>
             )}
 
             {/* 생성 버튼 / 진행 상태 바 (둘 중 하나만 표시) */}
             {isGenerating ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+              <div className="bg-white rounded-xl border border-at-border p-5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">{generationStep}</span>
+                  <span className="text-sm font-medium text-at-text-secondary">{generationStep}</span>
                   <span className="text-sm font-bold text-indigo-600">{generationProgress}%</span>
                 </div>
-                <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div className="relative h-3 bg-at-surface-alt rounded-full overflow-hidden">
                   <div
                     className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${generationProgress}%` }}
@@ -617,7 +617,7 @@ export default function NewMarketingPostPage() {
                           ? threshold === 100
                             ? 'text-green-500 font-semibold'
                             : 'text-indigo-500 font-semibold'
-                          : 'text-slate-400'
+                          : 'text-at-text-weak'
                       }`}
                     >
                       {generationProgress >= threshold ? '✓ ' : ''}{label}
@@ -629,7 +629,7 @@ export default function NewMarketingPostPage() {
               <button
                 onClick={handleGenerate}
                 disabled={!topic || !keyword}
-                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 <SparklesIcon className="h-5 w-5" />
                 {generatedResult ? '다시 생성' : 'AI 글 생성'}
@@ -638,25 +638,25 @@ export default function NewMarketingPostPage() {
 
             {/* 생성 결과 */}
             {generatedResult && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+              <div className="bg-white rounded-xl border border-at-border p-6 space-y-5">
                 {/* 결과 헤더 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-semibold text-slate-800">생성 결과</h2>
+                    <h2 className="text-lg font-semibold text-at-text">생성 결과</h2>
                     {savedItemId && !hasUnsavedChanges && (
-                      <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      <span className="flex items-center gap-1 text-xs text-at-success bg-at-success-bg px-2 py-0.5 rounded-full">
                         <CheckCircleIcon className="h-3.5 w-3.5" />
                         저장됨
                       </span>
                     )}
                     {hasUnsavedChanges && (
-                      <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                      <span className="flex items-center gap-1 text-xs text-at-warning bg-at-warning-bg px-2 py-0.5 rounded-full">
                         <PencilIcon className="h-3.5 w-3.5" />
                         미저장 변경사항
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-3 text-xs text-slate-400">
+                  <div className="flex gap-3 text-xs text-at-text-weak">
                     <span>글자수: {generatedResult.wordCount}자</span>
                     <span>키워드: {generatedResult.keywordCount}회</span>
                   </div>
@@ -666,8 +666,8 @@ export default function NewMarketingPostPage() {
                 {saveMessage && (
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
                     saveMessage.type === 'success'
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-red-50 text-red-700'
+                      ? 'bg-at-success-bg text-at-success'
+                      : 'bg-at-error-bg text-at-error'
                   }`}>
                     {saveMessage.type === 'success'
                       ? <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
@@ -679,7 +679,7 @@ export default function NewMarketingPostPage() {
 
                 {/* 제목 (편집 가능) */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 mb-1.5">제목</label>
+                  <label className="block text-sm font-medium text-at-text-weak mb-1.5">제목</label>
                   <input
                     type="text"
                     value={editedTitle}
@@ -687,13 +687,13 @@ export default function NewMarketingPostPage() {
                       setEditedTitle(e.target.value)
                       setHasUnsavedChanges(true)
                     }}
-                    className="w-full text-lg font-bold text-slate-800 border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50"
+                    className="w-full text-lg font-bold text-at-text border border-at-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-at-surface-alt/50"
                   />
                 </div>
 
                 {/* 본문 (WYSIWYG 에디터) */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 mb-2">본문</label>
+                  <label className="block text-sm font-medium text-at-text-weak mb-2">본문</label>
                   <ContentEditor
                     body={editedBody}
                     images={generatedResult.generatedImages}
@@ -706,7 +706,7 @@ export default function NewMarketingPostPage() {
 
                 {/* 해시태그 (편집 가능) */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-500 mb-2">해시태그</label>
+                  <label className="block text-sm font-medium text-at-text-weak mb-2">해시태그</label>
                   <div className="flex flex-wrap gap-2 items-center">
                     {editedHashtags.map((tag, i) => (
                       <span
@@ -759,7 +759,7 @@ export default function NewMarketingPostPage() {
                     <button
                       onClick={handleSaveDraft}
                       disabled={isSavingDraft}
-                      className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium disabled:opacity-60 w-full"
+                      className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-300 text-at-accent rounded-lg hover:bg-at-accent-light transition-colors text-sm font-medium disabled:opacity-60 w-full"
                     >
                       {isSavingDraft ? (
                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -777,7 +777,7 @@ export default function NewMarketingPostPage() {
                     <button
                       onClick={handlePublishNow}
                       disabled={isScheduling || !generatedResult}
-                      className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
                     >
                       {isScheduling && !showSchedulePicker ? (
                         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -802,8 +802,8 @@ export default function NewMarketingPostPage() {
                       className={`flex-1 py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
                         showSchedulePicker
                           ? 'bg-blue-700 text-white'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      } disabled:bg-slate-300 disabled:cursor-not-allowed`}
+                          : 'bg-at-accent text-white hover:bg-at-accent-hover'
+                      } disabled:bg-at-border disabled:cursor-not-allowed`}
                     >
                       <CalendarDaysIcon className="h-4 w-4" />
                       예약 발행
@@ -811,36 +811,36 @@ export default function NewMarketingPostPage() {
                   </div>
 
                   {showSchedulePicker && (
-                    <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 space-y-3 animate-in fade-in duration-200">
-                      <div className="flex items-center gap-2 text-sm font-medium text-blue-800">
+                    <div className="bg-at-accent-light rounded-xl border border-at-border p-4 space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2 text-sm font-medium text-at-accent">
                         <ClockIcon className="h-4 w-4" />
                         발행 일시 설정
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-blue-700 mb-1">날짜</label>
+                          <label className="block text-xs font-medium text-at-accent mb-1">날짜</label>
                           <input
                             type="date"
                             value={scheduleDate}
                             min={new Date().toISOString().split('T')[0]}
                             onChange={(e) => setScheduleDate(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-blue-700 mb-1">시간</label>
+                          <label className="block text-xs font-medium text-at-accent mb-1">시간</label>
                           <input
                             type="time"
                             value={scheduleTime}
                             onChange={(e) => setScheduleTime(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
                           />
                         </div>
                       </div>
                       <button
                         onClick={handleScheduleConfirm}
                         disabled={isScheduling || !scheduleDate || !scheduleTime}
-                        className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        className="w-full py-2 bg-at-accent text-white rounded-lg hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
                       >
                         {isScheduling ? (
                           <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -898,7 +898,7 @@ function RenderedBody({
       const text = paragraphBuffer.join('\n').trim()
       if (text) {
         elements.push(
-          <p key={key++} className="text-sm leading-7 text-slate-700 mb-3">
+          <p key={key++} className="text-sm leading-7 text-at-text-secondary mb-3">
             {renderInlineFormatting(text)}
           </p>
         )
@@ -923,17 +923,17 @@ function RenderedBody({
             <img
               src={currentImage.path}
               alt={currentImage.prompt || prompt}
-              className="w-full rounded-xl border border-slate-200 shadow-sm"
+              className="w-full rounded-xl border border-at-border shadow-sm"
             />
-            <p className="text-xs text-slate-400 mt-1.5 text-center">{currentImage.fileName || prompt}</p>
+            <p className="text-xs text-at-text-weak mt-1.5 text-center">{currentImage.fileName || prompt}</p>
           </div>
         )
       } else {
         elements.push(
-          <div key={key++} className="my-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 flex flex-col items-center justify-center gap-2">
-            <PhotoIcon className="h-10 w-10 text-slate-400" />
-            <span className="text-xs text-slate-500 text-center">{prompt}</span>
-            <span className="text-[10px] text-slate-400">이미지 생성에 실패했습니다</span>
+          <div key={key++} className="my-4 rounded-xl border-2 border-dashed border-at-border bg-at-surface-alt p-6 flex flex-col items-center justify-center gap-2">
+            <PhotoIcon className="h-10 w-10 text-at-text-weak" />
+            <span className="text-xs text-at-text-weak text-center">{prompt}</span>
+            <span className="text-[10px] text-at-text-weak">이미지 생성에 실패했습니다</span>
           </div>
         )
       }
@@ -943,7 +943,7 @@ function RenderedBody({
     if (trimmed.startsWith('### ')) {
       flushParagraph()
       elements.push(
-        <h4 key={key++} className="text-base font-semibold text-slate-800 mt-5 mb-2">
+        <h4 key={key++} className="text-base font-semibold text-at-text mt-5 mb-2">
           {trimmed.replace(/^###\s+/, '')}
         </h4>
       )
@@ -953,7 +953,7 @@ function RenderedBody({
     if (trimmed.startsWith('## ')) {
       flushParagraph()
       elements.push(
-        <h3 key={key++} className="text-lg font-bold text-slate-800 mt-6 mb-3 pb-2 border-b border-slate-200">
+        <h3 key={key++} className="text-lg font-bold text-at-text mt-6 mb-3 pb-2 border-b border-at-border">
           {trimmed.replace(/^##\s+/, '')}
         </h3>
       )
@@ -962,7 +962,7 @@ function RenderedBody({
 
     if (/^[-─━]{3,}$/.test(trimmed)) {
       flushParagraph()
-      elements.push(<hr key={key++} className="my-4 border-slate-200" />)
+      elements.push(<hr key={key++} className="my-4 border-at-border" />)
       continue
     }
 
@@ -971,7 +971,7 @@ function RenderedBody({
       elements.push(
         <div key={key++} className="flex gap-2 mb-1.5 ml-1">
           <span className="text-indigo-400 mt-1 text-xs">●</span>
-          <span className="text-sm leading-6 text-slate-700 flex-1">
+          <span className="text-sm leading-6 text-at-text-secondary flex-1">
             {renderInlineFormatting(trimmed.replace(/^[-*]\s+/, ''))}
           </span>
         </div>
@@ -985,7 +985,7 @@ function RenderedBody({
       elements.push(
         <div key={key++} className="flex gap-2 mb-1.5 ml-1">
           <span className="text-indigo-500 font-semibold text-sm min-w-[1.2rem]">{num}.</span>
-          <span className="text-sm leading-6 text-slate-700 flex-1">
+          <span className="text-sm leading-6 text-at-text-secondary flex-1">
             {renderInlineFormatting(trimmed.replace(/^\d+\.\s+/, ''))}
           </span>
         </div>
@@ -1010,7 +1010,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong>
+      return <strong key={i} className="font-semibold text-at-text">{part.slice(2, -2)}</strong>
     }
     return part
   })

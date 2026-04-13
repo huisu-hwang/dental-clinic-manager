@@ -107,14 +107,14 @@ export default function PayrollPreview({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-800">급여명세서 미리보기</h2>
+          <h2 className="text-xl font-bold text-at-text">급여명세서 미리보기</h2>
           <div className="flex space-x-3">
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              className="px-4 py-2 bg-at-accent text-white rounded-md hover:bg-at-accent-hover flex items-center"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -123,7 +123,7 @@ export default function PayrollPreview({
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50"
+              className="px-4 py-2 border border-at-border rounded-md hover:bg-at-surface-alt"
             >
               닫기
             </button>
@@ -157,33 +157,33 @@ export default function PayrollPreview({
           </div>
 
           {/* 세부 내역 테이블 */}
-          <table className="w-full border-collapse border border-slate-400 text-sm">
+          <table className="w-full border-collapse border border-at-border text-sm">
             {/* 헤더 */}
             <thead>
               <tr>
-                <th colSpan={4} className="border border-slate-400 bg-slate-200 py-2 text-center font-bold">
+                <th colSpan={4} className="border border-at-border bg-at-border py-2 text-center font-bold">
                   세부 내역
                 </th>
               </tr>
               <tr>
-                <th colSpan={2} className="border border-slate-400 bg-slate-100 py-1.5 text-center">
+                <th colSpan={2} className="border border-at-border bg-at-surface-alt py-1.5 text-center">
                   지         급
                 </th>
-                <th colSpan={2} className="border border-slate-400 bg-slate-100 py-1.5 text-center">
+                <th colSpan={2} className="border border-at-border bg-at-surface-alt py-1.5 text-center">
                   공         제
                 </th>
               </tr>
               <tr>
-                <th className="border border-slate-400 bg-slate-50 py-1.5 text-center w-1/4">
+                <th className="border border-at-border bg-at-surface-alt py-1.5 text-center w-1/4">
                   임 금 항 목
                 </th>
-                <th className="border border-slate-400 bg-slate-50 py-1.5 text-center w-1/4">
+                <th className="border border-at-border bg-at-surface-alt py-1.5 text-center w-1/4">
                   지 급 금 액
                 </th>
-                <th className="border border-slate-400 bg-slate-50 py-1.5 text-center w-1/4">
+                <th className="border border-at-border bg-at-surface-alt py-1.5 text-center w-1/4">
                   공 제 항 목
                 </th>
-                <th className="border border-slate-400 bg-slate-50 py-1.5 text-center w-1/4">
+                <th className="border border-at-border bg-at-surface-alt py-1.5 text-center w-1/4">
                   공 제 금 액
                 </th>
               </tr>
@@ -197,16 +197,16 @@ export default function PayrollPreview({
 
                 return (
                   <tr key={index}>
-                    <td className="border border-slate-400 py-1.5 px-2">
+                    <td className="border border-at-border py-1.5 px-2">
                       {payment?.label || ''}
                     </td>
-                    <td className="border border-slate-400 py-1.5 px-2 text-right">
+                    <td className="border border-at-border py-1.5 px-2 text-right">
                       {payment && payment.value > 0 ? formatCurrency(payment.value) : ''}
                     </td>
-                    <td className="border border-slate-400 py-1.5 px-2">
+                    <td className="border border-at-border py-1.5 px-2">
                       {deduction?.label || ''}
                     </td>
-                    <td className={`border border-slate-400 py-1.5 px-2 text-right ${deduction && deduction.value < 0 ? 'text-green-700' : ''}`}>
+                    <td className={`border border-at-border py-1.5 px-2 text-right ${deduction && deduction.value < 0 ? 'text-at-success' : ''}`}>
                       {deduction && deduction.value !== 0 ? (deduction.value < 0 ? `△${formatCurrency(Math.abs(deduction.value))}` : formatCurrency(deduction.value)) : ''}
                     </td>
                   </tr>
@@ -214,28 +214,28 @@ export default function PayrollPreview({
               })}
 
               {/* 합계 행 */}
-              <tr className="bg-slate-100 font-bold">
-                <td className="border border-slate-400 py-2 px-2 text-center">
+              <tr className="bg-at-surface-alt font-bold">
+                <td className="border border-at-border py-2 px-2 text-center">
                   지 급 액 계
                 </td>
-                <td className="border border-slate-400 py-2 px-2 text-right">
+                <td className="border border-at-border py-2 px-2 text-right">
                   {formatCurrency(statement.totalPayment)}
                 </td>
-                <td className="border border-slate-400 py-2 px-2 text-center">
+                <td className="border border-at-border py-2 px-2 text-center">
                   공 제 액 계
                 </td>
-                <td className="border border-slate-400 py-2 px-2 text-right">
+                <td className="border border-at-border py-2 px-2 text-right">
                   {formatCurrency(statement.totalDeduction)}
                 </td>
               </tr>
 
               {/* 실수령액 행 */}
-              <tr className="bg-slate-200 font-bold">
-                <td colSpan={2} className="border border-slate-400"></td>
-                <td className="border border-slate-400 py-2 px-2 text-center">
+              <tr className="bg-at-border font-bold">
+                <td colSpan={2} className="border border-at-border"></td>
+                <td className="border border-at-border py-2 px-2 text-center">
                   실 수 령 액
                 </td>
-                <td className="border border-slate-400 py-2 px-2 text-right text-blue-700">
+                <td className="border border-at-border py-2 px-2 text-right text-at-accent">
                   {formatCurrency(statement.netPay)}
                 </td>
               </tr>
@@ -243,21 +243,21 @@ export default function PayrollPreview({
               {/* 기지급 현금 상여 및 차인지급액 */}
               {(statement.payments.cashBonus || 0) > 0 && (
                 <>
-                  <tr className="bg-amber-50">
-                    <td colSpan={2} className="border border-slate-400"></td>
-                    <td className="border border-slate-400 py-1.5 px-2 text-center text-amber-700">
+                  <tr className="bg-at-warning-bg">
+                    <td colSpan={2} className="border border-at-border"></td>
+                    <td className="border border-at-border py-1.5 px-2 text-center text-amber-700">
                       기지급 현금 상여
                     </td>
-                    <td className="border border-slate-400 py-1.5 px-2 text-right text-amber-700">
+                    <td className="border border-at-border py-1.5 px-2 text-right text-amber-700">
                       -{formatCurrency(statement.payments.cashBonus || 0)}
                     </td>
                   </tr>
-                  <tr className="bg-green-100 font-bold">
-                    <td colSpan={2} className="border border-slate-400"></td>
-                    <td className="border border-slate-400 py-2 px-2 text-center text-green-800">
+                  <tr className="bg-at-success-bg font-bold">
+                    <td colSpan={2} className="border border-at-border"></td>
+                    <td className="border border-at-border py-2 px-2 text-center text-green-800">
                       차 인 지 급 액
                     </td>
-                    <td className="border border-slate-400 py-2 px-2 text-right text-green-800">
+                    <td className="border border-at-border py-2 px-2 text-right text-green-800">
                       {formatCurrency(statement.netPay - (statement.payments.cashBonus || 0))}
                     </td>
                   </tr>
@@ -267,7 +267,7 @@ export default function PayrollPreview({
           </table>
 
           {/* 근무 정보 */}
-          <div className="mt-4 text-sm border border-slate-400 p-3">
+          <div className="mt-4 text-sm border border-at-border p-3">
             <div className="grid grid-cols-3 gap-x-4 gap-y-1">
               <div className="flex justify-between">
                 <span>• 근 로 일 수 :</span>
@@ -305,8 +305,8 @@ export default function PayrollPreview({
 
           {/* 근태 정보 (있는 경우만 표시) */}
           {attendanceSummary && (
-            <div className="mt-4 text-sm border border-slate-400">
-              <div className="bg-slate-200 py-1.5 px-3 font-bold text-center border-b border-slate-400">
+            <div className="mt-4 text-sm border border-at-border">
+              <div className="bg-at-border py-1.5 px-3 font-bold text-center border-b border-at-border">
                 근태 현황
               </div>
               <div className="p-3">
@@ -325,31 +325,31 @@ export default function PayrollPreview({
                   </div>
                   <div className="flex justify-between">
                     <span>• 결근일수 :</span>
-                    <span className={attendanceSummary.absentDays > 0 ? 'text-red-600 font-medium' : ''}>
+                    <span className={attendanceSummary.absentDays > 0 ? 'text-at-error font-medium' : ''}>
                       {attendanceSummary.absentDays}일
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 지각횟수 :</span>
-                    <span className={attendanceSummary.lateCount > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.lateCount > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.lateCount}회
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 지각시간 :</span>
-                    <span className={attendanceSummary.totalLateMinutes > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.totalLateMinutes > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.totalLateMinutes}분
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 조퇴횟수 :</span>
-                    <span className={attendanceSummary.earlyLeaveCount > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.earlyLeaveCount > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.earlyLeaveCount}회
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>• 조퇴시간 :</span>
-                    <span className={attendanceSummary.totalEarlyLeaveMinutes > 0 ? 'text-amber-600 font-medium' : ''}>
+                    <span className={attendanceSummary.totalEarlyLeaveMinutes > 0 ? 'text-at-warning font-medium' : ''}>
                       {attendanceSummary.totalEarlyLeaveMinutes}분
                     </span>
                   </div>
@@ -357,21 +357,21 @@ export default function PayrollPreview({
 
                 {/* 차감 내역 (있는 경우) */}
                 {attendanceDeduction && attendanceDeduction.totalDeduction > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-300">
-                    <div className="font-medium text-red-700 mb-2">▶ 근태 관련 급여 차감 내역</div>
+                  <div className="mt-3 pt-3 border-t border-at-border">
+                    <div className="font-medium text-at-error mb-2">▶ 근태 관련 급여 차감 내역</div>
                     <div className="space-y-1 text-xs">
                       {attendanceDeduction.deductionDetails.map((detail, index) => (
                         <div key={index} className="flex justify-between">
                           <span>• {detail.description}</span>
-                          <span className="text-red-600 font-medium">-{formatCurrency(detail.amount)}원</span>
+                          <span className="text-at-error font-medium">-{formatCurrency(detail.amount)}원</span>
                         </div>
                       ))}
-                      <div className="flex justify-between pt-2 border-t border-slate-200 font-medium text-red-700">
+                      <div className="flex justify-between pt-2 border-t border-at-border font-medium text-at-error">
                         <span>총 차감액</span>
                         <span>-{formatCurrency(attendanceDeduction.totalDeduction)}원</span>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-xs text-at-text mt-2">
                       ※ 근로기준법에 따라 무노동 무임금 원칙 적용 (무단결근: 일급+주휴수당 차감, 지각/조퇴: 시급×해당시간 차감)
                     </p>
                   </div>
@@ -382,7 +382,7 @@ export default function PayrollPreview({
 
           {/* 하단 정보 (세후 계약 안내) */}
           {statement.salaryType === 'net' && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+            <div className="mt-4 p-3 bg-at-accent-light border border-at-border rounded text-sm text-at-accent">
               ※ 본 급여명세서는 세후 계약 기준으로 작성되었습니다.
               실수령액 {formatCurrency(statement.netPay)}원을 기준으로 세전 금액이 역산되었습니다.
             </div>

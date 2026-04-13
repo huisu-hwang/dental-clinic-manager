@@ -50,7 +50,7 @@ export default function AIGenerationFloating() {
     return (
       <button
         onClick={() => setIsMinimized(false)}
-        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 bg-white rounded-full shadow-lg border border-slate-200 hover:shadow-xl transition-all"
+        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 bg-white rounded-full shadow-lg border border-at-border hover:shadow-xl transition-all"
       >
         {isGenerating ? (
           <>
@@ -65,24 +65,24 @@ export default function AIGenerationFloating() {
         ) : isCompleted ? (
           <>
             <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            <span className="text-xs font-medium text-green-600">완료</span>
+            <span className="text-xs font-medium text-at-success">완료</span>
           </>
         ) : (
           <>
             <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
-            <span className="text-xs font-medium text-red-600">실패</span>
+            <span className="text-xs font-medium text-at-error">실패</span>
           </>
         )}
-        <ChevronUpIcon className="h-3 w-3 text-slate-400" />
+        <ChevronUpIcon className="h-3 w-3 text-at-text" />
       </button>
     )
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-4 right-4 z-50 w-80 bg-white rounded-xl shadow-2xl border border-at-border overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
       {/* 헤더 */}
       <div className={`flex items-center justify-between px-4 py-2.5 ${
-        isCompleted ? 'bg-green-50' : isError ? 'bg-red-50' : 'bg-gradient-to-r from-indigo-50 to-purple-50'
+        isCompleted ? 'bg-at-success-bg' : isError ? 'bg-at-error-bg' : 'bg-gradient-to-r from-indigo-50 to-purple-50'
       }`}>
         <div className="flex items-center gap-2">
           {isGenerating ? (
@@ -91,12 +91,12 @@ export default function AIGenerationFloating() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           ) : isCompleted ? (
-            <CheckCircleIcon className="h-4 w-4 text-green-600" />
+            <CheckCircleIcon className="h-4 w-4 text-at-success" />
           ) : (
-            <ExclamationCircleIcon className="h-4 w-4 text-red-600" />
+            <ExclamationCircleIcon className="h-4 w-4 text-at-error" />
           )}
           <span className={`text-sm font-semibold ${
-            isCompleted ? 'text-green-700' : isError ? 'text-red-700' : 'text-indigo-700'
+            isCompleted ? 'text-at-success' : isError ? 'text-at-error' : 'text-indigo-700'
           }`}>
             {isGenerating ? 'AI 글 생성 중' : isCompleted ? '생성 완료' : '생성 실패'}
           </span>
@@ -104,7 +104,7 @@ export default function AIGenerationFloating() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsMinimized(true)}
-            className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+            className="p-1 text-at-text hover:text-at-text rounded transition-colors"
             title="최소화"
           >
             <ChevronDownIcon className="h-4 w-4" />
@@ -112,7 +112,7 @@ export default function AIGenerationFloating() {
           {!isGenerating && (
             <button
               onClick={handleDismiss}
-              className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+              className="p-1 text-at-text hover:text-at-text rounded transition-colors"
               title="닫기"
             >
               <XMarkIcon className="h-4 w-4" />
@@ -125,8 +125,8 @@ export default function AIGenerationFloating() {
       <div className="px-4 py-3 space-y-3">
         {/* 주제 표시 */}
         <div className="flex items-center gap-2">
-          <SparklesIcon className="h-4 w-4 text-slate-400 flex-shrink-0" />
-          <span className="text-xs text-slate-600 truncate">{generationTopic}</span>
+          <SparklesIcon className="h-4 w-4 text-at-text flex-shrink-0" />
+          <span className="text-xs text-at-text truncate">{generationTopic}</span>
         </div>
 
         {/* 진행률 바 (생성 중) */}
@@ -134,10 +134,10 @@ export default function AIGenerationFloating() {
           <>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500">{generationStep}</span>
+                <span className="text-xs text-at-text">{generationStep}</span>
                 <span className="text-xs font-bold text-indigo-600">{generationProgress}%</span>
               </div>
-              <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="relative h-2 bg-at-surface-alt rounded-full overflow-hidden">
                 <div
                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${generationProgress}%` }}
@@ -159,7 +159,7 @@ export default function AIGenerationFloating() {
                       ? threshold === 100
                         ? 'text-green-500 font-semibold'
                         : 'text-indigo-500 font-semibold'
-                      : 'text-slate-400'
+                      : 'text-at-text'
                   }`}
                 >
                   {generationProgress >= threshold ? '✓ ' : ''}{label}
@@ -173,7 +173,7 @@ export default function AIGenerationFloating() {
         {isCompleted && (
           <button
             onClick={handleGoToResult}
-            className="w-full py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
           >
             <SparklesIcon className="h-4 w-4" />
             결과 확인하기
@@ -183,10 +183,10 @@ export default function AIGenerationFloating() {
         {/* 에러 시 */}
         {isError && (
           <div className="space-y-2">
-            <p className="text-xs text-red-600 line-clamp-2">{generationError}</p>
+            <p className="text-xs text-at-error line-clamp-2">{generationError}</p>
             <button
               onClick={handleDismiss}
-              className="w-full py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+              className="w-full py-2 bg-at-surface-alt text-at-text text-sm font-medium rounded-xl hover:bg-at-border transition-colors"
             >
               닫기
             </button>

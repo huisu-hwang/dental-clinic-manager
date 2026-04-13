@@ -33,7 +33,7 @@ export default function CommentForm({ onSubmit, placeholder = '댓글을 입력�
         onChange={(e) => setContent(e.target.value)}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="flex-1 border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent focus:border-transparent"
       />
       {onCancel && (
         <Button type="button" variant="outline" size="sm" onClick={onCancel}>취소</Button>

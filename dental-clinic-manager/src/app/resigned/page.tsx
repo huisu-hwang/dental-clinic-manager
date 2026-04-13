@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { UserMinusIcon, BuildingOffice2Icon, ArrowRightCircleIcon, PlusCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/contexts/AuthContext'
 import { getSupabase } from '@/lib/supabase'
@@ -246,7 +247,7 @@ export default function ResignedPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
@@ -264,69 +265,67 @@ export default function ResignedPage() {
           <div className="text-center mb-8">
             <button
               onClick={() => setViewMode('main')}
-              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-4"
+              className="inline-flex items-center text-at-accent hover:text-at-accent font-medium mb-4"
             >
               ← 뒤로가기
             </button>
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">🦷</span>
-              </div>
-              <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
+              <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
-            <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">
+          <div className="bg-white p-8 rounded-xl shadow-at-card border border-at-border">
+            <h2 className="text-2xl font-bold text-center text-at-text mb-2">
               새 병원 등록
             </h2>
-            <p className="text-center text-slate-600 mb-6">
+            <p className="text-center text-at-text-secondary mb-6">
               대표원장으로 새 병원을 등록합니다.
             </p>
 
             <form onSubmit={handleCreateClinic} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   원장 이름
                 </label>
                 <input
                   type="text"
                   value={user.name || ''}
                   disabled
-                  className="w-full p-3 border border-slate-300 rounded-md bg-slate-100 text-slate-600"
+                  className="w-full p-3 border border-at-border rounded-md bg-at-surface-alt text-at-text-secondary"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   병원명 *
                 </label>
                 <input
                   type="text"
                   value={clinicForm.clinicName}
                   onChange={(e) => setClinicForm(prev => ({ ...prev, clinicName: e.target.value }))}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                   placeholder="○○치과"
                   disabled={isSubmitting}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   병원 주소 *
                 </label>
                 <input
                   type="text"
                   value={clinicForm.clinicAddress}
                   onChange={(e) => setClinicForm(prev => ({ ...prev, clinicAddress: e.target.value }))}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                   placeholder="서울시 강남구 테헤란로 123"
                   disabled={isSubmitting}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   병원 전화번호 *
                 </label>
                 <input
@@ -336,7 +335,7 @@ export default function ResignedPage() {
                     const formatted = autoFormatPhoneNumber(e.target.value)
                     setClinicForm(prev => ({ ...prev, clinicPhone: formatted.value }))
                   }}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                   placeholder="02-1234-5678"
                   maxLength={13}
                   disabled={isSubmitting}
@@ -344,13 +343,13 @@ export default function ResignedPage() {
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+                <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-md text-sm">
                   {success}
                 </div>
               )}
@@ -358,7 +357,7 @@ export default function ResignedPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
               >
                 {isSubmitting ? '등록 중...' : '병원 등록하기'}
               </button>
@@ -377,47 +376,45 @@ export default function ResignedPage() {
           <div className="text-center mb-8">
             <button
               onClick={() => setViewMode('main')}
-              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium mb-4"
+              className="inline-flex items-center text-at-accent hover:text-at-accent font-medium mb-4"
             >
               ← 뒤로가기
             </button>
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">🦷</span>
-              </div>
-              <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
+              <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
+              <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
-            <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">
+          <div className="bg-white p-8 rounded-xl shadow-at-card border border-at-border">
+            <h2 className="text-2xl font-bold text-center text-at-text mb-2">
               다른 병원 가입
             </h2>
-            <p className="text-center text-slate-600 mb-6">
+            <p className="text-center text-at-text-secondary mb-6">
               기존 병원에 직원으로 가입 신청합니다.
             </p>
 
             <form onSubmit={handleJoinClinic} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   이름
                 </label>
                 <input
                   type="text"
                   value={user.name || ''}
                   disabled
-                  className="w-full p-3 border border-slate-300 rounded-md bg-slate-100 text-slate-600"
+                  className="w-full p-3 border border-at-border rounded-md bg-at-surface-alt text-at-text-secondary"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   직책 선택 *
                 </label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  className="w-full p-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent bg-white"
                   disabled={isSubmitting}
                 >
                   <option value="vice_director">부원장</option>
@@ -428,11 +425,11 @@ export default function ResignedPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
                   병원 검색 *
                 </label>
                 <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-slate-400 z-10" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-3 h-5 w-5 text-at-text-weak z-10" />
                   <input
                     type="text"
                     placeholder="병원 이름 또는 주소로 검색..."
@@ -443,15 +440,15 @@ export default function ResignedPage() {
                     }}
                     onFocus={() => setShowClinicSearchResults(clinicSearchQuery.length > 0)}
                     onBlur={() => setTimeout(() => setShowClinicSearchResults(false), 200)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-3 border border-at-border rounded-md focus:ring-at-accent focus:border-at-accent"
                     disabled={isSubmitting || isSearchingClinics}
                   />
 
                   {/* 검색 결과 드롭다운 */}
                   {showClinicSearchResults && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-at-border rounded-md shadow-lg max-h-60 overflow-y-auto z-50">
                       {isSearchingClinics ? (
-                        <div className="p-4 text-center text-sm text-slate-500">
+                        <div className="p-4 text-center text-sm text-at-text-weak">
                           병원 목록을 불러오는 중...
                         </div>
                       ) : (
@@ -472,11 +469,11 @@ export default function ResignedPage() {
                                   setClinicSearchQuery(`${clinic.name} - ${clinic.address}`)
                                   setShowClinicSearchResults(false)
                                 }}
-                                className="w-full p-3 hover:bg-blue-50 text-left transition-colors border-b border-slate-100 last:border-b-0"
+                                className="w-full p-3 hover:bg-at-accent-light text-left transition-colors border-b border-at-border last:border-b-0"
                               >
                                 <div>
-                                  <p className="font-medium text-slate-800">{clinic.name}</p>
-                                  <p className="text-sm text-slate-500 mt-1">{clinic.address}</p>
+                                  <p className="font-medium text-at-text">{clinic.name}</p>
+                                  <p className="text-sm text-at-text-weak mt-1">{clinic.address}</p>
                                 </div>
                               </button>
                             ))}
@@ -484,7 +481,7 @@ export default function ResignedPage() {
                             clinic.name.toLowerCase().includes(clinicSearchQuery.toLowerCase()) ||
                             clinic.address.toLowerCase().includes(clinicSearchQuery.toLowerCase())
                           ).length === 0 && (
-                            <div className="p-4 text-center text-sm text-slate-500">
+                            <div className="p-4 text-center text-sm text-at-text-weak">
                               검색 결과가 없습니다
                             </div>
                           )}
@@ -496,8 +493,8 @@ export default function ResignedPage() {
 
                 {/* 선택된 병원 표시 */}
                 {selectedClinicId && (
-                  <div className="mt-2 p-2 bg-blue-50 rounded-md">
-                    <p className="text-sm text-blue-800">
+                  <div className="mt-2 p-2 bg-at-accent-light rounded-md">
+                    <p className="text-sm text-at-accent">
                       선택된 병원: <strong>{selectedClinicName}</strong>
                     </p>
                   </div>
@@ -505,13 +502,13 @@ export default function ResignedPage() {
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm">
+                <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-md text-sm">
                   {success}
                 </div>
               )}
@@ -519,7 +516,7 @@ export default function ResignedPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !selectedClinicId}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
+                className="w-full bg-at-accent hover:bg-at-accent-hover disabled:bg-blue-300 text-white font-bold py-3 px-4 rounded-md transition-colors"
               >
                 {isSubmitting ? '신청 중...' : '가입 신청하기'}
               </button>
@@ -536,36 +533,34 @@ export default function ResignedPage() {
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">🦷</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-800">클리닉 매니저</h1>
+            <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
+            <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-lg shadow-md border border-slate-200">
+        <div className="bg-white p-8 rounded-xl shadow-at-card border border-at-border">
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-              <UserMinusIcon className="h-10 w-10 text-slate-500" />
+            <div className="w-16 h-16 bg-at-surface-alt rounded-full flex items-center justify-center">
+              <UserMinusIcon className="h-10 w-10 text-at-text-weak" />
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-center text-slate-800 mb-4">
+          <h2 className="text-2xl font-bold text-center text-at-text mb-4">
             퇴사 처리된 계정입니다
           </h2>
 
-          <p className="text-center text-slate-600 mb-6">
+          <p className="text-center text-at-text-secondary mb-6">
             해당 병원에서 퇴사 처리되어<br />
             더 이상 병원 기능에 접근할 수 없습니다.
           </p>
 
           {/* 이전 소속 병원 정보 */}
-          <div className="bg-slate-50 border border-slate-200 rounded-md p-4 mb-6">
+          <div className="bg-at-surface-alt border border-at-border rounded-md p-4 mb-6">
             <div className="flex items-center mb-2">
-              <BuildingOffice2Icon className="h-5 w-5 text-slate-500 mr-2" />
-              <h3 className="font-semibold text-slate-700">이전 소속 정보</h3>
+              <BuildingOffice2Icon className="h-5 w-5 text-at-text-weak mr-2" />
+              <h3 className="font-semibold text-at-text-secondary">이전 소속 정보</h3>
             </div>
-            <div className="space-y-1 text-sm text-slate-600">
+            <div className="space-y-1 text-sm text-at-text-secondary">
               <p><strong>이름:</strong> {user.name || '정보 없음'}</p>
               <p><strong>이메일:</strong> {user.email || '정보 없음'}</p>
               <p><strong>이전 병원:</strong> {user.clinic?.name || '정보 없음'}</p>
@@ -580,12 +575,12 @@ export default function ResignedPage() {
           </div>
 
           {/* 다음 단계 안내 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+          <div className="bg-at-accent-light border border-at-border rounded-md p-4 mb-6">
             <div className="flex items-start">
-              <ArrowRightCircleIcon className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+              <ArrowRightCircleIcon className="h-5 w-5 text-at-accent mr-2 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-blue-900 mb-1">다음 단계를 선택하세요</h3>
-                <p className="text-sm text-blue-700">
+                <h3 className="font-semibold text-at-accent mb-1">다음 단계를 선택하세요</h3>
+                <p className="text-sm text-at-accent">
                   새 병원을 등록하거나, 기존 병원에 가입 신청할 수 있습니다.
                 </p>
               </div>
@@ -603,7 +598,7 @@ export default function ResignedPage() {
 
             <button
               onClick={() => setViewMode('join-clinic')}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center"
+              className="w-full bg-at-accent hover:bg-at-accent-hover text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center"
             >
               <BuildingOffice2Icon className="h-5 w-5 mr-2" />
               다른 병원에 가입하기
@@ -611,7 +606,7 @@ export default function ResignedPage() {
 
             <button
               onClick={handleLogout}
-              className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-md transition-colors"
+              className="w-full bg-at-border hover:bg-at-border text-at-text font-bold py-3 px-4 rounded-md transition-colors"
             >
               로그아웃
             </button>
@@ -619,11 +614,11 @@ export default function ResignedPage() {
         </div>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-at-text-secondary">
             문의사항이 있으신가요?
           </p>
-          <p className="text-sm text-slate-600">
-            <a href="mailto:hiclinic.inc@gmail.com" className="text-blue-600 hover:text-blue-700">
+          <p className="text-sm text-at-text-secondary">
+            <a href="mailto:hiclinic.inc@gmail.com" className="text-at-accent hover:text-at-accent">
               hiclinic.inc@gmail.com
             </a>로 문의해 주세요.
           </p>

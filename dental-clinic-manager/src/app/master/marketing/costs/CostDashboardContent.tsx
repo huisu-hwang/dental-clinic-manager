@@ -45,19 +45,19 @@ export default function CostDashboardContent({ embedded }: Props) {
 
   // 독립 페이지로 접근한 경우
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-at-surface-alt">
       {/* 헤더 */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-at-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16 gap-4">
             <button
               onClick={() => router.back()}
-              className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+              className="p-2 text-at-text-weak hover:text-at-text-secondary transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
             <CurrencyDollarIcon className="h-5 w-5 text-emerald-600" />
-            <h1 className="text-xl font-bold text-slate-800">API 비용 대시보드</h1>
+            <h1 className="text-xl font-bold text-at-text">API 비용 대시보드</h1>
             <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">마스터 전용</span>
           </div>
         </div>

@@ -105,28 +105,28 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setSort('latest'); setPage(1) }}
-            className={`text-sm font-medium px-3 py-1 rounded-lg ${sort === 'latest' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+            className={`text-sm font-medium px-3 py-1 rounded-xl ${sort === 'latest' ? 'bg-at-text text-white' : 'text-at-text-weak hover:bg-at-surface-hover'}`}
           >
             <MessageCircle className="w-3.5 h-3.5 inline mr-1" />최신
           </button>
           <button
             onClick={() => { setSort('popular'); setPage(1) }}
-            className={`text-sm font-medium px-3 py-1 rounded-lg ${sort === 'popular' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+            className={`text-sm font-medium px-3 py-1 rounded-xl ${sort === 'popular' ? 'bg-at-text text-white' : 'text-at-text-weak hover:bg-at-surface-hover'}`}
           >
             <TrendingUp className="w-3.5 h-3.5 inline mr-1" />인기
           </button>
           {(isLoggedIn || profileId) && (
             <>
-              <span className="w-px h-4 bg-gray-200 mx-0.5" />
+              <span className="w-px h-4 bg-at-border mx-0.5" />
               <button
                 onClick={() => { setSort('my_likes'); setPage(1) }}
-                className={`text-sm font-medium px-3 py-1 rounded-lg ${sort === 'my_likes' ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`text-sm font-medium px-3 py-1 rounded-xl ${sort === 'my_likes' ? 'bg-red-500 text-white' : 'text-at-text-weak hover:bg-at-surface-hover'}`}
               >
                 <Heart className="w-3.5 h-3.5 inline mr-1" />내 좋아요
               </button>
               <button
                 onClick={() => { setSort('my_scraps'); setPage(1) }}
-                className={`text-sm font-medium px-3 py-1 rounded-lg ${sort === 'my_scraps' ? 'bg-yellow-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`text-sm font-medium px-3 py-1 rounded-xl ${sort === 'my_scraps' ? 'bg-yellow-500 text-white' : 'text-at-text-weak hover:bg-at-surface-hover'}`}
               >
                 <Bookmark className="w-3.5 h-3.5 inline mr-1" />내 스크랩
               </button>
@@ -135,7 +135,7 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
         </div>
         <div className="flex items-center gap-3">
           {!loading && (
-            <span className="text-xs text-gray-400 font-normal">총 {total}건</span>
+            <span className="text-xs text-at-text-weak font-normal">총 {total}건</span>
           )}
           {profileId && !isBanned && (
             <Button onClick={onNewPost} className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
       {/* 검색 */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
           <Input
             type="text"
             placeholder="제목 또는 내용 검색..."
@@ -166,7 +166,7 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
 
       {/* 에러 */}
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg">
+        <div className="flex items-center gap-2 p-4 bg-at-error-bg text-at-error rounded-xl">
           <AlertCircle className="w-5 h-5" /><span>{error}</span>
         </div>
       )}
@@ -174,21 +174,21 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
       {/* 목록 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <div className="w-16 h-16 bg-sky-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MessageCircle className="w-8 h-8 text-sky-300" />
+        <div className="text-center py-16 text-at-text-secondary">
+          <div className="w-16 h-16 bg-at-surface-alt rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageCircle className="w-8 h-8 text-at-text-weak" />
           </div>
-          <p className="font-medium text-gray-600 mb-1">게시글이 없습니다</p>
-          <p className="text-sm text-gray-400">새로운 글이 작성되면 여기에 표시됩니다.</p>
+          <p className="font-medium text-at-text-secondary mb-1">게시글이 없습니다</p>
+          <p className="text-sm text-at-text-weak">새로운 글이 작성되면 여기에 표시됩니다.</p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl border border-gray-200">
+          <div className="bg-white rounded-2xl border border-at-border shadow-at-card">
             {/* 테이블 헤더 */}
-            <div className="flex items-center px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+            <div className="flex items-center px-4 py-2 border-b border-at-border bg-at-surface-alt text-xs font-medium text-at-text-weak">
               <div className="w-5 flex-shrink-0" />
               <div className="hidden sm:block w-20 flex-shrink-0 text-center">분류</div>
               <div className="flex-1 min-w-0 text-center">제목</div>
@@ -207,7 +207,7 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-hover"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
@@ -222,15 +222,15 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
                 }, [])
                 .map((p, i) =>
                   typeof p === 'string' ? (
-                    <span key={`dots-${i}`} className="px-2 text-gray-400 text-sm">...</span>
+                    <span key={`dots-${i}`} className="px-2 text-at-text-weak text-sm">...</span>
                   ) : (
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
-                      className={`min-w-[28px] px-2 py-1 text-xs rounded-lg border transition-colors ${
+                      className={`min-w-[28px] px-2 py-1 text-xs rounded-xl border transition-colors ${
                         page === p
-                          ? 'bg-sky-500 text-white border-sky-500'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          ? 'bg-at-accent text-white border-at-accent'
+                          : 'border-at-border text-at-text-secondary hover:bg-at-surface-hover'
                       }`}
                     >
                       {p}
@@ -240,7 +240,7 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="px-2 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                className="px-2 py-1 text-xs rounded-xl border border-at-border disabled:opacity-40 hover:bg-at-surface-hover"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>

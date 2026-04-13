@@ -351,18 +351,18 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   return (
     <div className="space-y-6">
       {/* 시술 정보 */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-slate-800">시술 정보</h3>
+      <div className="bg-white rounded-xl border border-at-border p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-at-text">시술 정보</h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-at-text mb-1">
               시술 종류 <span className="text-red-500">*</span>
             </label>
             <select
               value={procedureType}
               onChange={(e) => setProcedureType(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm"
             >
               <option value="">선택하세요</option>
               {PROCEDURE_TYPES.map((t) => (
@@ -371,35 +371,35 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">시술 기간</label>
+            <label className="block text-sm font-medium text-at-text mb-1">시술 기간</label>
             <input
               type="text"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
               placeholder="예: 3개월"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">시술 상세</label>
+          <label className="block text-sm font-medium text-at-text mb-1">시술 상세</label>
           <input
             type="text"
             value={procedureDetail}
             onChange={(e) => setProcedureDetail(e.target.value)}
             placeholder="예: 상악 좌측 제1대구치 임플란트"
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-at-border rounded-xl text-sm"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">환자 나이대</label>
+            <label className="block text-sm font-medium text-at-text mb-1">환자 나이대</label>
             <select
               value={patientAge}
               onChange={(e) => setPatientAge(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm"
             >
               <option value="">선택</option>
               {['10대', '20대', '30대', '40대', '50대', '60대', '70대 이상'].map((a) => (
@@ -408,11 +408,11 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">성별</label>
+            <label className="block text-sm font-medium text-at-text mb-1">성별</label>
             <select
               value={patientGender}
               onChange={(e) => setPatientGender(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm"
             >
               <option value="">선택</option>
               <option value="남성">남성</option>
@@ -420,11 +420,11 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">어투</label>
+            <label className="block text-sm font-medium text-at-text mb-1">어투</label>
             <select
               value={tone}
               onChange={(e) => setTone(e.target.value as ToneType)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm"
             >
               {Object.entries(TONE_LABELS).map(([v, { label }]) => (
                 <option key={v} value={v}>{label}</option>
@@ -434,13 +434,13 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">주소(증상)</label>
+          <label className="block text-sm font-medium text-at-text mb-1">주소(증상)</label>
           <input
             type="text"
             value={chiefComplaint}
             onChange={(e) => setChiefComplaint(e.target.value)}
             placeholder="예: 어금니 상실로 저작 곤란"
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-at-border rounded-xl text-sm"
           />
         </div>
 
@@ -456,16 +456,16 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
             type="checkbox"
             checked={useResearch}
             onChange={(e) => setUseResearch(e.target.checked)}
-            className="w-4 h-4 text-indigo-600 border-slate-300 rounded"
+            className="w-4 h-4 text-indigo-600 border-at-border rounded"
           />
-          <span className="text-sm text-slate-700">논문 인용 포함</span>
+          <span className="text-sm text-at-text">논문 인용 포함</span>
         </label>
       </div>
 
       {/* 임상 사진 업로드 - 3단계 */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+      <div className="bg-white rounded-xl border border-at-border p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">
+          <h3 className="text-lg font-semibold text-at-text">
             임상 사진 <span className="text-red-500">*</span>
           </h3>
           <div className="flex items-center gap-2">
@@ -474,13 +474,13 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                 type="button"
                 onClick={() => handleBatchNormalize()}
                 disabled={isGenerating}
-                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors disabled:opacity-40"
+                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors disabled:opacity-40"
               >
                 <SparklesIcon className="h-3.5 w-3.5" />
                 밝기/색조 통일
               </button>
             )}
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-at-text">
               {totalPhotos}/{MAX_TOTAL_PHOTOS}장
             </span>
           </div>
@@ -491,12 +491,12 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           const canAdd = catPhotos.length < MAX_PHOTOS_PER_CATEGORY && totalPhotos < MAX_TOTAL_PHOTOS
 
           return (
-            <div key={catType} className="border border-slate-200 rounded-lg p-4">
+            <div key={catType} className="border border-at-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold text-slate-700">
+                <h4 className="text-sm font-semibold text-at-text">
                   {CLINICAL_PHOTO_TYPE_LABELS[catType]}
                 </h4>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-at-text">
                   {catPhotos.length}/{MAX_PHOTOS_PER_CATEGORY}장
                 </span>
               </div>
@@ -506,7 +506,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
                   {catPhotos.map((photo, idx) => (
                     <div key={photo.id} className="relative group">
-                      <div className="relative aspect-[4/3] rounded-lg overflow-hidden border border-slate-200">
+                      <div className="relative aspect-[4/3] rounded-xl overflow-hidden border border-at-border">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={photo.previewUrl}
@@ -521,7 +521,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                         )}
                         {photo.uploadError && (
                           <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-                            <span className="text-xs text-red-700 bg-white px-2 py-1 rounded font-medium">
+                            <span className="text-xs text-at-error bg-white px-2 py-1 rounded font-medium">
                               {photo.uploadError}
                             </span>
                           </div>
@@ -538,7 +538,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                         value={photo.caption}
                         onChange={(e) => handleCaptionChange(photo.id, e.target.value)}
                         placeholder="사진 설명 (선택)"
-                        className="w-full mt-1 px-2 py-1 text-xs border border-slate-200 rounded"
+                        className="w-full mt-1 px-2 py-1 text-xs border border-at-border rounded"
                       />
 
                       {/* 액션 버튼 */}
@@ -549,7 +549,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                             onClick={() => handlePhotoReorder(photo.id, 'up')}
                             className="p-1 bg-white/90 rounded shadow-sm hover:bg-white"
                           >
-                            <ArrowUpIcon className="h-3 w-3 text-slate-600" />
+                            <ArrowUpIcon className="h-3 w-3 text-at-text" />
                           </button>
                         )}
                         {idx < catPhotos.length - 1 && (
@@ -558,7 +558,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                             onClick={() => handlePhotoReorder(photo.id, 'down')}
                             className="p-1 bg-white/90 rounded shadow-sm hover:bg-white"
                           >
-                            <ArrowDownIcon className="h-3 w-3 text-slate-600" />
+                            <ArrowDownIcon className="h-3 w-3 text-at-text" />
                           </button>
                         )}
                         <button
@@ -572,7 +572,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                         <button
                           type="button"
                           onClick={() => handlePhotoRemove(photo.id)}
-                          className="p-1 bg-red-50/90 rounded shadow-sm hover:bg-red-100"
+                          className="p-1 bg-at-error-bg/90 rounded shadow-sm hover:bg-at-error-bg"
                         >
                           <XMarkIcon className="h-3 w-3 text-red-500" />
                         </button>
@@ -584,9 +584,9 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
 
               {/* 사진 추가 버튼 */}
               {canAdd && (
-                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors">
-                  <PhotoIcon className="h-5 w-5 text-slate-400" />
-                  <span className="text-sm text-slate-500">사진 추가</span>
+                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-at-border rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors">
+                  <PhotoIcon className="h-5 w-5 text-at-text" />
+                  <span className="text-sm text-at-text">사진 추가</span>
                   <input
                     ref={(el) => { fileInputRefs.current[catType] = el }}
                     type="file"
@@ -604,27 +604,27 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
 
       {/* 환자 동의 확인 */}
       <div className={`rounded-xl border-2 p-5 ${
-        patientConsent ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-300'
+        patientConsent ? 'bg-at-success-bg border-green-300' : 'bg-at-warning-bg border-amber-300'
       }`}>
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
             checked={patientConsent}
             onChange={(e) => setPatientConsent(e.target.checked)}
-            className="w-5 h-5 mt-0.5 text-green-600 border-slate-300 rounded"
+            className="w-5 h-5 mt-0.5 text-at-success border-at-border rounded"
           />
           <div>
             <div className="flex items-center gap-2">
               {patientConsent ? (
-                <ShieldCheckIcon className="h-5 w-5 text-green-600" />
+                <ShieldCheckIcon className="h-5 w-5 text-at-success" />
               ) : (
-                <ExclamationTriangleIcon className="h-5 w-5 text-amber-600" />
+                <ExclamationTriangleIcon className="h-5 w-5 text-at-warning" />
               )}
-              <span className="font-medium text-slate-800">
+              <span className="font-medium text-at-text">
                 환자 동의서 확인 <span className="text-red-500">*</span>
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-at-text mt-1">
               본 임상 사례 게시에 대해 환자로부터 서면 동의를 받았음을 확인합니다.
               동의서 미확인 시 발행이 차단됩니다.
             </p>

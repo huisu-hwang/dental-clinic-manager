@@ -1,0 +1,181 @@
+<h2>클릭 시 인라인 확장 — 상세 내용 미리보기</h2>
+<p class="subtitle">각 섹션의 클릭 → 확장 동작을 아래에서 확인해 주세요</p>
+
+<style>
+.section-box { background:#f8fafc; border-radius:12px; padding:16px; margin-bottom:20px; border:1px solid #e2e8f0; }
+.section-title { font-size:13px; font-weight:600; color:#374151; margin-bottom:12px; }
+.stat-grid { display:grid; gap:8px; }
+.stat-card {
+  background:white; border-radius:8px; padding:10px 14px; text-align:center;
+  cursor:pointer; border:1.5px solid transparent; transition:all 0.15s;
+  position:relative;
+}
+.stat-card:hover { border-color:#3b82f6; box-shadow:0 2px 8px rgba(59,130,246,0.15); }
+.stat-card.active { border-color:#3b82f6; background:#eff6ff; }
+.stat-card .hint { font-size:9px; color:#94a3b8; margin-top:2px; }
+.expand-panel {
+  background:white; border:1px solid #e2e8f0; border-radius:8px;
+  margin-top:8px; overflow:hidden; animation:slideDown 0.2s ease;
+}
+@keyframes slideDown { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.expand-header { background:#f1f5f9; padding:8px 14px; font-size:11px; font-weight:600; color:#475569; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; }
+.expand-row { display:flex; align-items:center; padding:7px 14px; border-bottom:1px solid #f8fafc; font-size:12px; gap:8px; }
+.expand-row:last-child { border-bottom:none; }
+.badge { font-size:10px; padding:2px 7px; border-radius:99px; font-weight:500; }
+.badge-success { background:#dcfce7; color:#16a34a; }
+.badge-fail { background:#fee2e2; color:#dc2626; }
+.badge-review { background:#fef3c7; color:#d97706; }
+.tag-present { background:#dcfce7; color:#16a34a; font-size:10px; padding:1px 6px; border-radius:99px; }
+.tag-late { background:#fef9c3; color:#854d0e; font-size:10px; padding:1px 6px; border-radius:99px; }
+.tag-absent { background:#fee2e2; color:#dc2626; font-size:10px; padding:1px 6px; border-radius:99px; }
+.tag-out { background:#dbeafe; color:#1d4ed8; font-size:10px; padding:1px 6px; border-radius:99px; }
+</style>
+
+<!-- ═══ A. 오늘의 현황 ═══ -->
+<div class="section-box">
+  <div class="section-title">📊 A. 오늘의 현황 — 카드 클릭 시 상세 목록 펼쳐짐</div>
+  <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+
+    <!-- 성공/상담 (active 예시) -->
+    <div class="stat-card active" onclick="toggle('consult-detail')">
+      <div style="font-size:18px;font-weight:bold;color:#16a34a">3<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">5</span></div>
+      <div style="font-size:11px;color:#64748b">성공/상담</div>
+      <div class="hint">▼ 클릭하여 목록 보기</div>
+    </div>
+    <div class="stat-card" onclick="toggle('recall-detail')">
+      <div style="font-size:18px;font-weight:bold;color:#ea580c">2<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">8</span></div>
+      <div style="font-size:11px;color:#64748b">예약/리콜</div>
+      <div class="hint">▼ 클릭하여 목록 보기</div>
+    </div>
+    <div class="stat-card" onclick="toggle('gift-detail')">
+      <div style="font-size:18px;font-weight:bold;color:#7c3aed">1<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">3</span></div>
+      <div style="font-size:11px;color:#64748b">리뷰/선물</div>
+      <div class="hint">▼ 클릭하여 목록 보기</div>
+    </div>
+  </div>
+
+  <!-- 상담 상세 (열린 상태) -->
+  <div class="expand-panel" id="consult-detail">
+    <div class="expand-header"><span>📋 오늘 상담 목록</span><span style="color:#94a3b8;font-weight:400">총 5건</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">홍길동</span><span style="color:#64748b;flex:1">임플란트 상담</span><span class="badge badge-success">✓ 성공</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">김영희</span><span style="color:#64748b;flex:1">교정 상담</span><span class="badge badge-fail">✗ 보류</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">이철수</span><span style="color:#64748b;flex:1">라미네이트 상담</span><span class="badge badge-success">✓ 성공</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">박지영</span><span style="color:#64748b;flex:1">미백 상담</span><span class="badge badge-success">✓ 성공</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">최민준</span><span style="color:#64748b;flex:1">충치 치료 상담</span><span class="badge badge-fail">✗ 보류</span></div>
+  </div>
+
+  <!-- 리콜 상세 (숨김) -->
+  <div class="expand-panel" id="recall-detail" style="display:none">
+    <div class="expand-header"><span>📞 오늘 리콜 현황</span><span style="color:#94a3b8;font-weight:400">예약 2 / 리콜 8건</span></div>
+    <div class="expand-row"><span style="color:#64748b">예약 완료</span><div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;justify-content:flex-end"><span class="badge badge-success">홍길동</span><span class="badge badge-success">김영희</span></div></div>
+    <div class="expand-row"><span style="color:#64748b">미예약</span><div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;justify-content:flex-end"><span class="badge badge-fail">이철수</span><span class="badge badge-fail">박지영</span><span class="badge badge-fail">+4명</span></div></div>
+  </div>
+
+  <!-- 선물 상세 (숨김) -->
+  <div class="expand-panel" id="gift-detail" style="display:none">
+    <div class="expand-header"><span>🎁 오늘 선물/리뷰 목록</span><span style="color:#94a3b8;font-weight:400">선물 3건</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">홍길동</span><span style="color:#64748b;flex:1">치약세트 × 1</span><span class="badge badge-review">리뷰 ✓</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">김영희</span><span style="color:#64748b;flex:1">칫솔세트 × 2</span><span style="font-size:10px;color:#94a3b8">리뷰 없음</span></div>
+    <div class="expand-row"><span style="font-weight:500;color:#1e293b;width:70px">이철수</span><span style="color:#64748b;flex:1">구강세정기 × 1</span><span style="font-size:10px;color:#94a3b8">리뷰 없음</span></div>
+  </div>
+</div>
+
+<!-- ═══ B. 팀 출퇴근 현황 ═══ -->
+<div class="section-box">
+  <div class="section-title">👥 B. 팀 출퇴근 — 숫자 클릭 시 해당 직원 목록</div>
+  <div style="background:white;border-radius:8px;padding:12px">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center">
+      <div class="stat-card active" style="padding:8px 4px" onclick="toggle('att-detail')">
+        <div style="font-size:16px;font-weight:bold;color:#16a34a">4<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">6</span></div>
+        <div style="font-size:10px;color:#16a34a">출근/전체</div>
+      </div>
+      <div class="stat-card" style="padding:8px 4px">
+        <div style="font-size:16px;font-weight:bold;color:#2563eb">1</div>
+        <div style="font-size:10px;color:#2563eb">퇴근</div>
+      </div>
+      <div class="stat-card" style="padding:8px 4px">
+        <div style="font-size:16px;font-weight:bold;color:#ea580c">1</div>
+        <div style="font-size:10px;color:#ea580c">결근</div>
+      </div>
+      <div class="stat-card" style="padding:8px 4px">
+        <div style="font-size:16px;font-weight:bold;color:#ca8a04">1</div>
+        <div style="font-size:10px;color:#ca8a04">지각</div>
+      </div>
+      <div class="stat-card" style="padding:8px 4px">
+        <div style="font-size:16px;font-weight:bold;color:#dc2626">0</div>
+        <div style="font-size:10px;color:#dc2626">조퇴</div>
+      </div>
+      <div class="stat-card" style="padding:8px 4px">
+        <div style="font-size:16px;font-weight:bold;color:#7c3aed">1</div>
+        <div style="font-size:10px;color:#7c3aed">초과</div>
+      </div>
+    </div>
+
+    <!-- 출근 직원 상세 (열린 상태) -->
+    <div class="expand-panel" id="att-detail" style="margin-top:10px">
+      <div class="expand-header"><span>🟢 출근 직원 목록</span><span style="color:#94a3b8;font-weight:400">4명</span></div>
+      <div class="expand-row">
+        <span style="font-weight:500;color:#1e293b;width:70px">김간호</span>
+        <span style="color:#64748b;flex:1">09:01 출근</span>
+        <span class="tag-present">정상출근</span>
+      </div>
+      <div class="expand-row">
+        <span style="font-weight:500;color:#1e293b;width:70px">이실장</span>
+        <span style="color:#64748b;flex:1">09:15 출근</span>
+        <span class="tag-late">지각 15분</span>
+      </div>
+      <div class="expand-row">
+        <span style="font-weight:500;color:#1e293b;width:70px">박데스크</span>
+        <span style="color:#64748b;flex:1">08:58 출근 · 18:32 퇴근</span>
+        <span class="tag-out">퇴근완료</span>
+      </div>
+      <div class="expand-row">
+        <span style="font-weight:500;color:#1e293b;width:70px">최위생사</span>
+        <span style="color:#64748b;flex:1">09:00 출근</span>
+        <span class="tag-present">정상출근</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ C. 주간 통계 ═══ -->
+<div class="section-box">
+  <div class="section-title">📈 C. 주간 통계 — 카드 클릭 시 일별 상세</div>
+  <div style="background:white;border-radius:8px;padding:12px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:0">
+      <div class="stat-card active" onclick="toggle('weekly-detail')">
+        <div style="font-size:16px;font-weight:bold;color:#16a34a">12<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">20</span></div>
+        <div style="font-size:10px;color:#64748b">성공/상담 (60%)</div>
+        <div class="hint">▼ 일별 보기</div>
+      </div>
+      <div class="stat-card">
+        <div style="font-size:16px;font-weight:bold;color:#ea580c">8<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">15</span></div>
+        <div style="font-size:10px;color:#64748b">예약/리콜</div>
+        <div class="hint">▼ 일별 보기</div>
+      </div>
+      <div class="stat-card">
+        <div style="font-size:16px;font-weight:bold;color:#7c3aed">5<span style="color:#94a3b8;font-weight:normal">/</span><span style="color:#475569">3</span></div>
+        <div style="font-size:10px;color:#64748b">선물/리뷰</div>
+        <div class="hint">▼ 일별 보기</div>
+      </div>
+    </div>
+
+    <!-- 주간 일별 상세 -->
+    <div class="expand-panel" id="weekly-detail" style="margin-top:10px">
+      <div class="expand-header"><span>📅 이번 주 상담 일별 현황</span></div>
+      <div class="expand-row"><span style="color:#64748b;width:40px">월</span><span style="color:#1e293b;flex:1">3.31</span><span style="font-weight:600;color:#16a34a">2<span style="color:#94a3b8;font-weight:normal">/</span>4</span><div style="width:60px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden"><div style="width:50%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#64748b;width:40px">화</span><span style="color:#1e293b;flex:1">4.01</span><span style="font-weight:600;color:#16a34a">4<span style="color:#94a3b8;font-weight:normal">/</span>5</span><div style="width:60px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden"><div style="width:80%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#64748b;width:40px">수</span><span style="color:#1e293b;flex:1">4.02</span><span style="font-weight:600;color:#16a34a">3<span style="color:#94a3b8;font-weight:normal">/</span>6</span><div style="width:60px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden"><div style="width:50%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#64748b;width:40px">목</span><span style="color:#1e293b;flex:1">4.03</span><span style="font-weight:600;color:#16a34a">3<span style="color:#94a3b8;font-weight:normal">/</span>5</span><div style="width:60px;margin-left:8px;background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden"><div style="width:60%;height:100%;background:#16a34a;border-radius:99px"></div></div></div>
+      <div class="expand-row"><span style="color:#64748b;width:40px">오늘</span><span style="color:#1e293b;flex:1">4.04</span><span style="font-weight:600;color:#16a34a">-<span style="color:#94a3b8;font-weight:normal">/</span>진행중</span><div style="width:60px;margin-left:8px"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggle(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>

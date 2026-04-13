@@ -322,16 +322,16 @@ export default function ProtocolPermissionManager({
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-        <div className="bg-white p-8 rounded-lg relative">
+        <div className="bg-white p-8 rounded-2xl relative">
           <button
             onClick={onClose}
-            className="absolute top-2 right-2 p-2 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+            className="absolute top-2 right-2 p-2 text-at-text-weak hover:text-at-text-secondary rounded-xl hover:bg-at-surface-hover"
             title="닫기"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">권한 정보를 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto mb-4"></div>
+          <p className="text-at-text-secondary">권한 정보를 불러오는 중...</p>
         </div>
       </div>
     )
@@ -339,21 +339,21 @@ export default function ProtocolPermissionManager({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8 relative">
+      <div className="bg-white rounded-2xl shadow-at-card max-w-4xl w-full my-8 relative">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+        <div className="flex items-center justify-between p-6 border-b border-at-border">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <ShieldCheckIcon className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-at-tag rounded-xl flex items-center justify-center">
+              <ShieldCheckIcon className="w-5 h-5 text-at-accent" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800">프로토콜 접근 권한 관리</h2>
-              <p className="text-sm text-slate-500">{protocolTitle}</p>
+              <h2 className="text-lg font-bold text-at-text">프로토콜 접근 권한 관리</h2>
+              <p className="text-sm text-at-text-weak">{protocolTitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-800 rounded-lg hover:bg-slate-100 border border-slate-300 bg-white"
+            className="flex items-center gap-2 px-3 py-2 text-at-text-secondary hover:text-at-text rounded-xl hover:bg-at-surface-hover border border-at-border bg-white"
           >
             <XMarkIcon className="h-5 w-5" />
             <span className="text-sm font-medium">닫기</span>
@@ -363,25 +363,25 @@ export default function ProtocolPermissionManager({
         {/* Body */}
         <div className="p-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+            <div className="mb-4 p-3 bg-at-error-bg border border-red-200 text-at-error rounded-xl text-sm">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm flex items-center">
+            <div className="mb-4 p-3 bg-at-success-bg border border-green-200 text-at-success rounded-xl text-sm flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2" />
               {success}
             </div>
           )}
 
           {/* 설명 */}
-          <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+          <div className="mb-4 p-4 bg-at-tag border border-at-accent/20 rounded-xl">
             <div className="flex items-start space-x-2">
-              <UserGroupIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
+              <UserGroupIcon className="h-5 w-5 text-at-accent mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-at-text">
                 <p className="font-medium mb-1">접근 권한 안내</p>
-                <ul className="list-disc list-inside space-y-1 text-blue-700">
+                <ul className="list-disc list-inside space-y-1 text-at-text-secondary">
                   <li><strong>조회:</strong> 해당 프로토콜을 볼 수 있습니다.</li>
                   <li><strong>수정:</strong> 프로토콜 내용을 수정할 수 있습니다.</li>
                   <li><strong>생성:</strong> 새로운 프로토콜을 생성할 수 있습니다.</li>
@@ -394,17 +394,17 @@ export default function ProtocolPermissionManager({
 
           {/* 일괄 선택 버튼 */}
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <span className="text-sm font-medium text-slate-700">직원 목록 ({staffList.length}명)</span>
+            <span className="text-sm font-medium text-at-text-secondary">직원 목록 ({staffList.length}명)</span>
             <div className="flex items-center flex-wrap gap-2">
               <button
                 onClick={() => handleSelectAll('can_view')}
-                className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+                className="px-3 py-1.5 text-xs font-medium text-at-accent bg-at-tag rounded-lg hover:bg-at-accent-light"
               >
                 전체 조회
               </button>
               <button
                 onClick={() => handleSelectAll('can_edit')}
-                className="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100"
+                className="px-3 py-1.5 text-xs font-medium text-at-success bg-at-success-bg rounded-lg hover:bg-at-success-bg"
               >
                 전체 수정
               </button>
@@ -416,19 +416,19 @@ export default function ProtocolPermissionManager({
               </button>
               <button
                 onClick={() => handleSelectAll('can_delete')}
-                className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                className="px-3 py-1.5 text-xs font-medium text-at-error bg-at-error-bg rounded-lg hover:bg-at-error-bg"
               >
                 전체 삭제
               </button>
               <button
                 onClick={handleSelectAllPermissions}
-                className="px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100"
+                className="px-3 py-1.5 text-xs font-medium text-at-warning bg-at-warning-bg rounded-lg hover:bg-amber-100"
               >
                 모든 권한
               </button>
               <button
                 onClick={handleDeselectAll}
-                className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
+                className="px-3 py-1.5 text-xs font-medium text-at-text-secondary bg-at-surface-alt rounded-lg hover:bg-at-surface-hover"
               >
                 전체 해제
               </button>
@@ -437,54 +437,54 @@ export default function ProtocolPermissionManager({
 
           {/* 직원 목록 */}
           {staffList.length === 0 ? (
-            <div className="text-center py-8 bg-slate-50 rounded-lg">
-              <UserGroupIcon className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">권한을 부여할 직원이 없습니다.</p>
-              <p className="text-sm text-slate-400 mt-1">승인된 직원만 목록에 표시됩니다.</p>
+            <div className="text-center py-8 bg-at-surface-alt rounded-xl">
+              <UserGroupIcon className="h-12 w-12 text-at-text-weak mx-auto mb-3" />
+              <p className="text-at-text-secondary">권한을 부여할 직원이 없습니다.</p>
+              <p className="text-sm text-at-text-weak mt-1">승인된 직원만 목록에 표시됩니다.</p>
             </div>
           ) : (
-            <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-lg">
+            <div className="max-h-80 overflow-y-auto border border-at-border rounded-xl">
               <table className="w-full">
-                <thead className="bg-slate-50 sticky top-0">
+                <thead className="bg-at-surface-alt sticky top-0">
                   <tr>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">직원</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-slate-600">직급</th>
-                    <th className="text-center px-2 py-3 text-sm font-medium text-slate-600 w-16">
+                    <th className="text-left px-4 py-3 text-sm font-medium text-at-text-secondary">직원</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-at-text-secondary">직급</th>
+                    <th className="text-center px-2 py-3 text-sm font-medium text-at-text-secondary w-16">
                       <span className="flex items-center justify-center" title="조회 권한">
                         <EyeIcon className="h-4 w-4" />
                       </span>
                     </th>
-                    <th className="text-center px-2 py-3 text-sm font-medium text-slate-600 w-16">
+                    <th className="text-center px-2 py-3 text-sm font-medium text-at-text-secondary w-16">
                       <span className="flex items-center justify-center" title="수정 권한">
                         <PencilSquareIcon className="h-4 w-4" />
                       </span>
                     </th>
-                    <th className="text-center px-2 py-3 text-sm font-medium text-slate-600 w-16">
+                    <th className="text-center px-2 py-3 text-sm font-medium text-at-text-secondary w-16">
                       <span className="flex items-center justify-center" title="생성 권한">
                         <PlusCircleIcon className="h-4 w-4" />
                       </span>
                     </th>
-                    <th className="text-center px-2 py-3 text-sm font-medium text-slate-600 w-16">
+                    <th className="text-center px-2 py-3 text-sm font-medium text-at-text-secondary w-16">
                       <span className="flex items-center justify-center" title="삭제 권한">
                         <TrashIcon className="h-4 w-4" />
                       </span>
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-at-border">
                   {staffList.map(staff => {
                     const perm = permissions.get(staff.id) || { ...DEFAULT_PERMISSION }
 
                     return (
-                      <tr key={staff.id} className="hover:bg-slate-50">
+                      <tr key={staff.id} className="hover:bg-at-surface-hover">
                         <td className="px-4 py-3">
                           <div>
-                            <p className="font-medium text-slate-800">{staff.name}</p>
-                            <p className="text-xs text-slate-500">{staff.email}</p>
+                            <p className="font-medium text-at-text">{staff.name}</p>
+                            <p className="text-xs text-at-text-weak">{staff.email}</p>
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-at-surface-alt text-at-text-secondary">
                             {ROLE_LABELS[staff.role] || staff.role}
                           </span>
                         </td>
@@ -493,8 +493,8 @@ export default function ProtocolPermissionManager({
                             onClick={() => handlePermissionToggle(staff.id, 'can_view')}
                             className={`p-2 rounded-lg transition-colors ${
                               perm.can_view
-                                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                ? 'bg-at-tag text-at-accent hover:bg-at-accent-light'
+                                : 'bg-at-surface-alt text-at-text-weak hover:bg-at-surface-hover'
                             }`}
                             title={perm.can_view ? '조회 권한 해제' : '조회 권한 부여'}
                           >
@@ -506,8 +506,8 @@ export default function ProtocolPermissionManager({
                             onClick={() => handlePermissionToggle(staff.id, 'can_edit')}
                             className={`p-2 rounded-lg transition-colors ${
                               perm.can_edit
-                                ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                ? 'bg-at-success-bg text-at-success hover:bg-green-200'
+                                : 'bg-at-surface-alt text-at-text-weak hover:bg-at-surface-hover'
                             }`}
                             title={perm.can_edit ? '수정 권한 해제' : '수정 권한 부여'}
                           >
@@ -520,7 +520,7 @@ export default function ProtocolPermissionManager({
                             className={`p-2 rounded-lg transition-colors ${
                               perm.can_create
                                 ? 'bg-purple-100 text-purple-600 hover:bg-purple-200'
-                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                : 'bg-at-surface-alt text-at-text-weak hover:bg-at-surface-hover'
                             }`}
                             title={perm.can_create ? '생성 권한 해제' : '생성 권한 부여'}
                           >
@@ -532,8 +532,8 @@ export default function ProtocolPermissionManager({
                             onClick={() => handlePermissionToggle(staff.id, 'can_delete')}
                             className={`p-2 rounded-lg transition-colors ${
                               perm.can_delete
-                                ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                ? 'bg-at-error-bg text-at-error hover:bg-red-200'
+                                : 'bg-at-surface-alt text-at-text-weak hover:bg-at-surface-hover'
                             }`}
                             title={perm.can_delete ? '삭제 권한 해제' : '삭제 권한 부여'}
                           >
@@ -549,33 +549,33 @@ export default function ProtocolPermissionManager({
           )}
 
           {/* 권한 요약 */}
-          <div className="mt-4 flex items-center justify-between text-sm text-slate-600 bg-slate-50 rounded-lg px-4 py-3 flex-wrap gap-2">
+          <div className="mt-4 flex items-center justify-between text-sm text-at-text-secondary bg-at-surface-alt rounded-xl px-4 py-3 flex-wrap gap-2">
             <div className="flex flex-wrap gap-3">
               <span>
-                <span className="font-medium text-blue-600">{countPermissions('can_view')}</span> 조회
+                <span className="font-medium text-at-accent">{countPermissions('can_view')}</span> 조회
               </span>
               <span>
-                <span className="font-medium text-green-600">{countPermissions('can_edit')}</span> 수정
+                <span className="font-medium text-at-success">{countPermissions('can_edit')}</span> 수정
               </span>
               <span>
                 <span className="font-medium text-purple-600">{countPermissions('can_create')}</span> 생성
               </span>
               <span>
-                <span className="font-medium text-red-600">{countPermissions('can_delete')}</span> 삭제
+                <span className="font-medium text-at-error">{countPermissions('can_delete')}</span> 삭제
               </span>
             </div>
             {hasChanges() && (
-              <span className="text-amber-600 font-medium">변경 사항 있음</span>
+              <span className="text-at-warning font-medium">변경 사항 있음</span>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-at-border bg-at-surface-alt">
           {success ? (
             <button
               onClick={onClose}
-              className="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center"
+              className="px-4 py-2 text-white bg-at-success hover:bg-green-700 rounded-xl flex items-center"
             >
               <CheckCircleIcon className="h-5 w-5 mr-2" />
               닫기
@@ -584,17 +584,17 @@ export default function ProtocolPermissionManager({
             <>
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+                className="px-4 py-2 text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-hover"
               >
                 취소
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges()}
-                className={`px-4 py-2 text-white rounded-lg flex items-center ${
+                className={`px-4 py-2 text-white rounded-xl flex items-center ${
                   saving || !hasChanges()
-                    ? 'bg-slate-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                    ? 'bg-at-surface-alt text-at-text-weak cursor-not-allowed'
+                    : 'bg-at-accent hover:bg-at-accent-hover'
                 }`}
               >
                 {saving ? (

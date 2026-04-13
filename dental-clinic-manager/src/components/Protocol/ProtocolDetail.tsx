@@ -302,12 +302,12 @@ export default function ProtocolDetail({
 
   const getStatusBadgeClass = (status: string) => {
     const classes: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-800',
-      active: 'bg-green-100 text-green-800',
-      archived: 'bg-slate-100 text-slate-600',
+      draft: 'bg-at-surface-alt text-at-text',
+      active: 'bg-at-success-bg text-green-800',
+      archived: 'bg-at-surface-alt text-at-text-secondary',
       pending_review: 'bg-amber-100 text-amber-800'
     }
-    return classes[status] || 'bg-gray-100 text-gray-800'
+    return classes[status] || 'bg-at-surface-alt text-at-text'
   }
 
   const formatDate = (dateString: string) => {
@@ -324,8 +324,8 @@ export default function ProtocolDetail({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-8 rounded-lg">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-600">프로토콜을 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent mx-auto mb-4"></div>
+          <p className="text-at-text-secondary">프로토콜을 불러오는 중...</p>
         </div>
       </div>
     )
@@ -335,11 +335,11 @@ export default function ProtocolDetail({
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white p-8 rounded-lg max-w-md w-full">
-          <h3 className="text-xl font-bold text-red-600 mb-4">오류 발생</h3>
-          <p className="text-slate-600 mb-6">{error || '프로토콜을 불러올 수 없습니다.'}</p>
+          <h3 className="text-xl font-bold text-at-error mb-4">오류 발생</h3>
+          <p className="text-at-text-secondary mb-6">{error || '프로토콜을 불러올 수 없습니다.'}</p>
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="w-full px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover"
           >
             닫기
           </button>
@@ -352,16 +352,16 @@ export default function ProtocolDetail({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-auto">
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-slate-200">
+        <div className="flex items-start justify-between p-6 border-b border-at-border">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-2xl font-bold text-slate-800">{protocol.title}</h2>
+              <h2 className="text-2xl font-bold text-at-text">{protocol.title}</h2>
               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(protocol.status)}`}>
                 {getStatusLabel(protocol.status)}
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-at-text-secondary">
               {protocol.category && (
                 <span className="flex items-center">
                   <FolderIcon className="h-4 w-4 mr-1" />
@@ -392,11 +392,11 @@ export default function ProtocolDetail({
 
             {protocol.tags && protocol.tags.length > 0 && (
               <div className="flex items-center flex-wrap gap-2 mt-3">
-                <TagIcon className="h-4 w-4 text-slate-400" />
+                <TagIcon className="h-4 w-4 text-at-text-weak" />
                 {protocol.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="inline-flex px-2 py-0.5 text-xs rounded-md bg-slate-100 text-slate-600"
+                    className="inline-flex px-2 py-0.5 text-xs rounded-xl bg-at-surface-alt text-at-text-secondary"
                   >
                     {tag}
                   </span>
@@ -410,7 +410,7 @@ export default function ProtocolDetail({
             {canEdit && protocol.status !== 'pending_review' && !isOwner && (
               <button
                 onClick={() => setShowReviewRequestModal(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md border border-indigo-200 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 transition-colors"
                 title="검토 요청"
               >
                 <PaperAirplaneIcon className="h-4 w-4" />
@@ -423,7 +423,7 @@ export default function ProtocolDetail({
                 <button
                   onClick={handleApproveReview}
                   disabled={reviewLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-md border border-green-200 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-at-success bg-at-success-bg hover:bg-at-success-bg rounded-xl border border-green-200 transition-colors disabled:opacity-50"
                   title="승인"
                 >
                   <CheckCircleIcon className="h-4 w-4" />
@@ -432,7 +432,7 @@ export default function ProtocolDetail({
                 <button
                   onClick={() => setShowRejectModal(true)}
                   disabled={reviewLoading}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-at-error bg-at-error-bg hover:bg-at-error-bg rounded-xl border border-red-200 transition-colors disabled:opacity-50"
                   title="반려"
                 >
                   <XCircleIcon className="h-4 w-4" />
@@ -443,7 +443,7 @@ export default function ProtocolDetail({
             {isOwner && (
               <button
                 onClick={() => setShowPermissionManager(true)}
-                className="p-2 text-purple-600 hover:bg-purple-50 rounded-md"
+                className="p-2 text-purple-600 hover:bg-purple-50 rounded-xl"
                 title="접근 권한 관리"
               >
                 <ShieldCheckIcon className="h-5 w-5" />
@@ -452,7 +452,7 @@ export default function ProtocolDetail({
             {canEdit && onSplit && protocol.currentVersion?.steps && protocol.currentVersion.steps.length >= 2 && (
               <button
                 onClick={() => onSplit(protocol)}
-                className="p-2 text-orange-600 hover:bg-orange-50 rounded-md"
+                className="p-2 text-orange-600 hover:bg-orange-50 rounded-xl"
                 title="분할"
               >
                 <ScissorsIcon className="h-5 w-5" />
@@ -461,7 +461,7 @@ export default function ProtocolDetail({
             {canEdit && protocol.status !== 'pending_review' && (
               <button
                 onClick={() => onEdit(protocol)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
+                className="p-2 text-at-accent hover:bg-at-accent-light rounded-xl"
                 title="수정"
               >
                 <PencilIcon className="h-5 w-5" />
@@ -470,7 +470,7 @@ export default function ProtocolDetail({
             {canDelete && (
               <button
                 onClick={handleDelete}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-md"
+                className="p-2 text-at-error hover:bg-at-error-bg rounded-xl"
                 title="삭제"
               >
                 <TrashIcon className="h-5 w-5" />
@@ -478,7 +478,7 @@ export default function ProtocolDetail({
             )}
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600"
+              className="p-2 text-at-text-weak hover:text-at-text-secondary"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -487,14 +487,14 @@ export default function ProtocolDetail({
 
         {/* Tab Navigation */}
         {canViewHistory && (
-          <div className="border-b border-slate-200 px-6">
+          <div className="border-b border-at-border px-6">
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('content')}
                 className={`py-3 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'content'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    ? 'border-at-accent text-at-accent'
+                    : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                 }`}
               >
                 내용
@@ -503,8 +503,8 @@ export default function ProtocolDetail({
                 onClick={() => setActiveTab('history')}
                 className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center ${
                   activeTab === 'history'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    ? 'border-at-accent text-at-accent'
+                    : 'border-transparent text-at-text-weak hover:text-at-text-secondary hover:border-at-border'
                 }`}
               >
                 <ClockIcon className="h-4 w-4 mr-2" />
@@ -516,7 +516,7 @@ export default function ProtocolDetail({
 
         {/* 검토 대기 안내 배너 */}
         {protocol.status === 'pending_review' && pendingReview && (
-          <div className="mx-6 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mx-6 mt-4 p-3 bg-at-warning-bg border border-amber-200 rounded-lg">
             <div className="flex items-start gap-2">
               <ClockIcon className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -524,7 +524,7 @@ export default function ProtocolDetail({
                 <p className="text-sm text-amber-700 mt-0.5">
                   {pendingReview.requested_by_user?.name || '사용자'}님이 검토를 요청했습니다.
                   {pendingReview.request_message && (
-                    <span className="block mt-1 text-amber-600">요청 메시지: {pendingReview.request_message}</span>
+                    <span className="block mt-1 text-at-warning">요청 메시지: {pendingReview.request_message}</span>
                   )}
                 </p>
                 <p className="text-xs text-amber-500 mt-1">
@@ -540,8 +540,8 @@ export default function ProtocolDetail({
           {activeTab === 'content' ? (
             <div className="space-y-6">
               {protocol.currentVersion?.change_summary && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
+                <div className="mb-4 p-3 bg-at-accent-light border border-at-border rounded-xl">
+                  <p className="text-sm text-at-accent">
                     <strong>최근 변경사항:</strong> {protocol.currentVersion.change_summary}
                   </p>
                 </div>
@@ -550,8 +550,8 @@ export default function ProtocolDetail({
                 <div className="space-y-4">
                   <ProtocolStepViewer steps={protocol.currentVersion.steps} />
                   {protocol.currentVersion.content && (
-                    <details className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                      <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+                    <details className="rounded-lg border border-at-border bg-at-surface-alt p-4">
+                      <summary className="cursor-pointer text-sm font-semibold text-at-text-secondary">
                         통합 본문 보기
                       </summary>
                       <div className="prose prose-sm max-w-none pt-3" dangerouslySetInnerHTML={{ __html: sanitizeHtml(protocol.currentVersion.content) }} />
@@ -577,10 +577,10 @@ export default function ProtocolDetail({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-at-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+            className="px-4 py-2 text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-alt"
           >
             닫기
           </button>
@@ -605,19 +605,19 @@ export default function ProtocolDetail({
       {showReviewRequestModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">프로토콜 검토 요청</h3>
-            <p className="text-sm text-slate-600 mb-4">
+            <h3 className="text-lg font-bold text-at-text mb-4">프로토콜 검토 요청</h3>
+            <p className="text-sm text-at-text-secondary mb-4">
               대표원장에게 &quot;{protocol.title}&quot; 프로토콜의 검토를 요청합니다.
               승인되면 프로토콜이 활성화됩니다.
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 요청 메시지 (선택)
               </label>
               <textarea
                 value={reviewRequestMessage}
                 onChange={(e) => setReviewRequestMessage(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 rows={3}
                 placeholder="검토 시 참고할 내용을 작성해주세요..."
               />
@@ -625,14 +625,14 @@ export default function ProtocolDetail({
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => { setShowReviewRequestModal(false); setReviewRequestMessage('') }}
-                className="px-4 py-2 text-sm text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                className="px-4 py-2 text-sm text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-alt"
               >
                 취소
               </button>
               <button
                 onClick={handleRequestReview}
                 disabled={reviewLoading}
-                className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {reviewLoading ? (
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -650,19 +650,19 @@ export default function ProtocolDetail({
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">프로토콜 검토 반려</h3>
-            <p className="text-sm text-slate-600 mb-4">
+            <h3 className="text-lg font-bold text-at-text mb-4">프로토콜 검토 반려</h3>
+            <p className="text-sm text-at-text-secondary mb-4">
               &quot;{protocol.title}&quot; 프로토콜을 반려합니다.
               프로토콜은 이전 상태로 되돌아갑니다.
             </p>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 반려 사유 (선택)
               </label>
               <textarea
                 value={rejectMessage}
                 onChange={(e) => setRejectMessage(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 rows={3}
                 placeholder="반려 사유를 입력해주세요..."
               />
@@ -670,14 +670,14 @@ export default function ProtocolDetail({
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => { setShowRejectModal(false); setRejectMessage('') }}
-                className="px-4 py-2 text-sm text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                className="px-4 py-2 text-sm text-at-text-secondary bg-white border border-at-border rounded-xl hover:bg-at-surface-alt"
               >
                 취소
               </button>
               <button
                 onClick={handleRejectReview}
                 disabled={reviewLoading}
-                className="px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-4 py-2 text-sm text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {reviewLoading ? (
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />

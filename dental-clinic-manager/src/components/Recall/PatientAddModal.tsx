@@ -46,7 +46,6 @@ export default function PatientAddModal({
     ruleName?: string
   }>({ show: false, reason: null })
 
-  // 폼 초기화
   const resetForm = () => {
     setFormData({
       patient_name: '',
@@ -61,17 +60,12 @@ export default function PatientAddModal({
     setError(null)
   }
 
-  // 입력값 변경 핸들러
   const handleChange = (field: keyof RecallPatientFormData, value: string | Gender | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  // 전화번호 포맷팅
   const formatPhoneNumber = (value: string): string => {
-    // 숫자만 추출
     const numbers = value.replace(/\D/g, '')
-
-    // 포맷팅
     if (numbers.length <= 3) {
       return numbers
     } else if (numbers.length <= 7) {
@@ -79,16 +73,14 @@ export default function PatientAddModal({
     } else if (numbers.length <= 11) {
       return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`
     }
-    return numbers.slice(0, 13) // 최대 길이 제한
+    return numbers.slice(0, 13)
   }
 
-  // 전화번호 입력 핸들러
   const handlePhoneChange = (value: string) => {
     const formatted = formatPhoneNumber(value)
     handleChange('phone_number', formatted)
   }
 
-  // 유효성 검사
   const validateForm = (): boolean => {
     if (!formData.patient_name.trim()) {
       setError('환자 이름을 입력해주세요.')
@@ -106,7 +98,6 @@ export default function PatientAddModal({
     return true
   }
 
-  // 실제 저장 실행
   const doSave = async (excludeReason?: RecallExcludeReason | null) => {
     setIsSaving(true)
     setError(null)
@@ -133,7 +124,6 @@ export default function PatientAddModal({
     }
   }
 
-  // 저장 (제외 규칙 체크 후)
   const handleSave = async () => {
     if (!validateForm()) return
 
@@ -141,7 +131,6 @@ export default function PatientAddModal({
     setError(null)
 
     try {
-      // 제외 규칙 매칭 체크
       const { matched, rules } = await recallPatientService.checkExcludeRules(
         formData.patient_name,
         formData.phone_number,
@@ -159,7 +148,6 @@ export default function PatientAddModal({
         return
       }
 
-      // 매칭 없으면 바로 저장
       await doSave()
     } catch (err) {
       console.error('Patient add error:', err)
@@ -168,18 +156,15 @@ export default function PatientAddModal({
     }
   }
 
-  // 제외 대상이지만 그래도 추가
   const handleConfirmAdd = async () => {
     setExcludeConfirm({ show: false, reason: null })
     await doSave()
   }
 
-  // 추가 취소
   const handleCancelAdd = () => {
     setExcludeConfirm({ show: false, reason: null })
   }
 
-  // 모달 닫기
   const handleClose = () => {
     resetForm()
     onClose()
@@ -187,18 +172,20 @@ export default function PatientAddModal({
 
   if (!isOpen) return null
 
+  const inputClass = "w-full p-2.5 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-at-card w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-at-border">
           <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">환자 추가</h3>
+            <UserPlus className="w-5 h-5 text-at-accent" />
+            <h3 className="font-semibold text-at-text">환자 추가</h3>
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-at-text-weak hover:text-at-text-secondary"
           >
             <X className="w-6 h-6" />
           </button>
@@ -208,7 +195,7 @@ export default function PatientAddModal({
         <div className="p-4 space-y-4">
           {/* 에러 메시지 */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-at-error-bg text-at-error rounded-xl">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <p className="text-sm">{error}</p>
             </div>
@@ -216,10 +203,10 @@ export default function PatientAddModal({
 
           {/* 환자 이름 (필수) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">
               <span className="flex items-center gap-1">
                 <User className="w-4 h-4" />
-                환자 이름 <span className="text-red-500">*</span>
+                환자 이름 <span className="text-at-error">*</span>
               </span>
             </label>
             <input
@@ -227,16 +214,16 @@ export default function PatientAddModal({
               value={formData.patient_name}
               onChange={(e) => handleChange('patient_name', e.target.value)}
               placeholder="홍길동"
-              className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClass}
             />
           </div>
 
           {/* 전화번호 (필수) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">
               <span className="flex items-center gap-1">
                 <Phone className="w-4 h-4" />
-                전화번호 <span className="text-red-500">*</span>
+                전화번호 <span className="text-at-error">*</span>
               </span>
             </label>
             <input
@@ -244,13 +231,13 @@ export default function PatientAddModal({
               value={formData.phone_number}
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="010-1234-5678"
-              className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClass}
             />
           </div>
 
           {/* 차트번호 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">
               <span className="flex items-center gap-1">
                 <FileText className="w-4 h-4" />
                 차트번호
@@ -261,14 +248,14 @@ export default function PatientAddModal({
               value={formData.chart_number}
               onChange={(e) => handleChange('chart_number', e.target.value)}
               placeholder="C-12345"
-              className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClass}
             />
           </div>
 
           {/* 생년월일 & 성별 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   생년월일
@@ -278,17 +265,17 @@ export default function PatientAddModal({
                 type="date"
                 value={formData.birth_date}
                 onChange={(e) => handleChange('birth_date', e.target.value)}
-                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 성별
               </label>
               <select
                 value={formData.gender || ''}
                 onChange={(e) => handleChange('gender', e.target.value as Gender || undefined)}
-                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={inputClass}
               >
                 <option value="">선택안함</option>
                 {(Object.keys(GENDER_LABELS) as Gender[]).map(gender => (
@@ -303,18 +290,18 @@ export default function PatientAddModal({
           {/* 마지막 내원일 & 치료 종류 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 마지막 내원일
               </label>
               <input
                 type="date"
                 value={formData.last_visit_date}
                 onChange={(e) => handleChange('last_visit_date', e.target.value)}
-                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 치료 종류
               </label>
               <input
@@ -322,14 +309,14 @@ export default function PatientAddModal({
                 value={formData.treatment_type}
                 onChange={(e) => handleChange('treatment_type', e.target.value)}
                 placeholder="스케일링"
-                className="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={inputClass}
               />
             </div>
           </div>
 
           {/* 메모 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">
               <span className="flex items-center gap-1">
                 <Clipboard className="w-4 h-4" />
                 메모
@@ -340,16 +327,16 @@ export default function PatientAddModal({
               onChange={(e) => handleChange('notes', e.target.value)}
               rows={3}
               placeholder="환자에 대한 추가 메모..."
-              className="w-full p-2.5 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-2.5 border border-at-border rounded-xl text-sm resize-none focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             />
           </div>
         </div>
 
         {/* 제외 환자 확인 다이얼로그 */}
         {excludeConfirm.show && (
-          <div className="mx-4 mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mx-4 mb-4 p-4 bg-at-warning-bg border border-amber-200 rounded-xl">
             <div className="flex items-start gap-2 mb-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-at-warning flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-amber-800">
                   제외 환자 목록에 등록된 환자입니다
@@ -363,14 +350,14 @@ export default function PatientAddModal({
               <button
                 onClick={handleCancelAdd}
                 disabled={isSaving}
-                className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="px-3 py-1.5 text-sm text-at-text-secondary border border-at-border rounded-xl hover:bg-at-surface-hover disabled:opacity-50"
               >
                 추가하지 않기
               </button>
               <button
                 onClick={handleConfirmAdd}
                 disabled={isSaving}
-                className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:opacity-50"
               >
                 그래도 추가
               </button>
@@ -379,17 +366,17 @@ export default function PatientAddModal({
         )}
 
         {/* 푸터 */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+        <div className="flex justify-end gap-3 p-4 border-t border-at-border">
           <button
             onClick={handleClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-at-text-secondary border border-at-border rounded-xl hover:bg-at-surface-hover"
           >
             취소
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving || excludeConfirm.show}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
               <>

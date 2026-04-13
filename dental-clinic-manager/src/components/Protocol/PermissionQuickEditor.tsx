@@ -43,76 +43,48 @@ export default function PermissionQuickEditor({
   const popoverRef = useRef<HTMLDivElement>(null)
   const [adjustedPos, setAdjustedPos] = useState(position)
 
-  // Adjust position to stay within viewport
   useEffect(() => {
     if (!popoverRef.current) return
     const rect = popoverRef.current.getBoundingClientRect()
     const padding = 16
     let x = position.x
     let y = position.y
-
-    if (x + rect.width > window.innerWidth - padding) {
-      x = window.innerWidth - rect.width - padding
-    }
+    if (x + rect.width > window.innerWidth - padding) x = window.innerWidth - rect.width - padding
     if (x < padding) x = padding
-    if (y + rect.height > window.innerHeight - padding) {
-      y = position.y - rect.height - 8
-    }
+    if (y + rect.height > window.innerHeight - padding) y = position.y - rect.height - 8
     if (y < padding) y = padding
-
     setAdjustedPos({ x, y })
   }, [position])
 
-  // Close on Escape key
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onClose()
-      }
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) onClose()
     }
-    // Use setTimeout to avoid immediate close from the click that opened it
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside)
-    }, 100)
-    return () => {
-      clearTimeout(timer)
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    const timer = setTimeout(() => { document.addEventListener('mousedown', handleClickOutside) }, 100)
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handleClickOutside) }
   }, [onClose])
 
   const handleToggle = useCallback((permType: keyof PermissionData) => {
     setPermissions(prev => {
       if (permType === 'can_view') {
-        if (prev.can_view) {
-          // Turning off view disables all
-          return { ...DEFAULT_PERMISSION }
-        }
+        if (prev.can_view) return { ...DEFAULT_PERMISSION }
         return { ...prev, can_view: true }
       }
-      if (prev[permType]) {
-        return { ...prev, [permType]: false }
-      }
-      // Enabling any other perm auto-enables can_view
+      if (prev[permType]) return { ...prev, [permType]: false }
       return { ...prev, can_view: true, [permType]: true }
     })
   }, [])
 
   const handleSave = async () => {
     setSaving(true)
-    try {
-      await onSave(staffId, protocolId, permissions)
-    } finally {
-      setSaving(false)
-    }
+    try { await onSave(staffId, protocolId, permissions) }
+    finally { setSaving(false) }
   }
 
   const hasChanges =
@@ -122,71 +94,54 @@ export default function PermissionQuickEditor({
     permissions.can_delete !== currentPermissions.can_delete
 
   const toggleItems: Array<{ key: keyof PermissionData; label: string; activeColor: string }> = [
-    { key: 'can_view', label: '조회', activeColor: 'bg-blue-100 text-blue-700 border-blue-300' },
-    { key: 'can_edit', label: '수정', activeColor: 'bg-green-100 text-green-700 border-green-300' },
+    { key: 'can_view', label: '조회', activeColor: 'bg-at-tag text-at-accent border-at-accent' },
+    { key: 'can_edit', label: '수정', activeColor: 'bg-at-success-bg text-at-success border-green-300' },
     { key: 'can_create', label: '생성', activeColor: 'bg-purple-100 text-purple-700 border-purple-300' },
-    { key: 'can_delete', label: '삭제', activeColor: 'bg-red-100 text-red-700 border-red-300' }
+    { key: 'can_delete', label: '삭제', activeColor: 'bg-at-error-bg text-at-error border-red-300' }
   ]
 
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 z-[70]" />
-      {/* Popover */}
       <div
         ref={popoverRef}
-        className="fixed z-[71] bg-white rounded-xl shadow-xl border border-slate-200 w-64"
+        className="fixed z-[71] bg-white rounded-2xl shadow-at-card border border-at-border w-64"
         style={{ left: adjustedPos.x, top: adjustedPos.y }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-at-border">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-800 truncate">{staffName}</p>
-            <p className="text-xs text-slate-500 truncate">{protocolTitle}</p>
+            <p className="text-sm font-semibold text-at-text truncate">{staffName}</p>
+            <p className="text-xs text-at-text-weak truncate">{protocolTitle}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="ml-2 p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-          >
+          <button onClick={onClose} className="ml-2 p-1 text-at-text-weak hover:text-at-text-secondary rounded-lg hover:bg-at-surface-hover">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Permission toggles */}
         <div className="p-3 space-y-2">
           {toggleItems.map(({ key, label, activeColor }) => (
             <button
               key={key}
               onClick={() => handleToggle(key)}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                permissions[key]
-                  ? activeColor
-                  : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
+                permissions[key] ? activeColor : 'bg-at-surface-alt text-at-text-weak border-at-border hover:bg-at-surface-hover'
               }`}
             >
-              <span className={`w-2.5 h-2.5 rounded-full mr-3 ${
-                permissions[key] ? 'bg-current' : 'bg-slate-300'
-              }`} />
+              <span className={`w-2.5 h-2.5 rounded-full mr-3 ${permissions[key] ? 'bg-current' : 'bg-at-border'}`} />
               {label}
             </button>
           ))}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-slate-100">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-          >
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-at-border">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-at-text-secondary hover:bg-at-surface-hover rounded-xl">
             취소
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !hasChanges}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg ${
-              saving || !hasChanges
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+            className={`px-3 py-1.5 text-sm font-medium rounded-xl ${
+              saving || !hasChanges ? 'bg-at-surface-alt text-at-text-weak cursor-not-allowed' : 'bg-at-accent text-white hover:bg-at-accent-hover'
             }`}
           >
             {saving ? '저장 중...' : '저장'}

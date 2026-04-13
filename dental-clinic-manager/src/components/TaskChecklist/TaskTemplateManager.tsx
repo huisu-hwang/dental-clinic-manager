@@ -14,8 +14,8 @@ import {
 } from 'lucide-react'
 
 const PERIOD_COLORS = [
-  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-400' },
-  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', dot: 'bg-blue-400' },
+  { bg: 'bg-at-warning-bg', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-400' },
+  { bg: 'bg-at-accent-light', border: 'border-at-border', text: 'text-at-accent', dot: 'bg-blue-400' },
   { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', dot: 'bg-indigo-400' },
   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-400' },
   { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', dot: 'bg-rose-400' },
@@ -23,10 +23,10 @@ const PERIOD_COLORS = [
 ]
 
 const STATUS_BADGE: Record<TaskTemplateStatus, { bg: string; text: string }> = {
-  draft: { bg: 'bg-slate-100', text: 'text-slate-600' },
+  draft: { bg: 'bg-at-surface-alt', text: 'text-at-text' },
   pending_approval: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-  approved: { bg: 'bg-green-100', text: 'text-green-700' },
-  rejected: { bg: 'bg-red-100', text: 'text-red-700' },
+  approved: { bg: 'bg-at-success-bg', text: 'text-at-success' },
+  rejected: { bg: 'bg-at-error-bg', text: 'text-at-error' },
 }
 
 interface Staff {
@@ -530,7 +530,7 @@ export default function TaskTemplateManager() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
       </div>
     )
   }
@@ -538,11 +538,11 @@ export default function TaskTemplateManager() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-at-border p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">업무 체크리스트 관리</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="text-lg font-bold text-at-text">업무 체크리스트 관리</h2>
+            <p className="text-sm text-at-text mt-1">
               {isOwner
                 ? '직원별 업무를 생성하면 즉시 반영됩니다.'
                 : '직원별 업무를 생성하고 원장에게 결재를 요청하세요.'}
@@ -556,7 +556,7 @@ export default function TaskTemplateManager() {
                 <button
                   onClick={() => handleSubmitForApproval(filteredTemplates.filter(t => t.status === 'draft' || t.status === 'rejected').map(t => t.id))}
                   disabled={submitting}
-                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
                 >
                   <Send className="w-4 h-4 mr-1.5" />
                   {submitting ? '요청 중...' : `전체 결재 요청 (${allDraftCount})`}
@@ -565,7 +565,7 @@ export default function TaskTemplateManager() {
             })()}
             <button
               onClick={() => { resetBulkForm(); setShowBulkForm(true); setShowForm(false); setShowExcelUpload(false) }}
-              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-at-accent text-white text-sm font-medium rounded-xl hover:bg-at-accent transition-colors"
             >
               <Plus className="w-4 h-4 mr-1.5" />
               업무 추가
@@ -580,7 +580,7 @@ export default function TaskTemplateManager() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-xl hover:bg-green-600 transition-colors"
               >
                 <Upload className="w-4 h-4 mr-1.5" />
                 엑셀 업로드
@@ -588,7 +588,7 @@ export default function TaskTemplateManager() {
             </div>
             <button
               onClick={() => { setEditingConfig({ keys: [...periodConfig.keys], labels: { ...periodConfig.labels } }); setShowPeriodSettings(true) }}
-              className="inline-flex items-center px-3 py-2 border border-slate-300 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center px-3 py-2 border border-at-border text-at-text text-sm font-medium rounded-xl hover:bg-at-surface-alt transition-colors"
               title="시간대 설정"
             >
               <Settings className="w-4 h-4 mr-1.5" />
@@ -598,13 +598,13 @@ export default function TaskTemplateManager() {
         </div>
 
         {/* 필터 */}
-        <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-slate-100">
+        <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-at-border">
           <div className="flex items-center space-x-2">
-            <Users className="w-4 h-4 text-slate-400" />
+            <Users className="w-4 h-4 text-at-text" />
             <select
               value={filterUser}
               onChange={(e) => setFilterUser(e.target.value)}
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500"
+              className="text-sm border border-at-border rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-at-accent"
             >
               <option value="all">전체 직원</option>
               {staff.map(s => (
@@ -613,11 +613,11 @@ export default function TaskTemplateManager() {
             </select>
           </div>
           <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-slate-400" />
+            <Filter className="w-4 h-4 text-at-text" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500"
+              className="text-sm border border-at-border rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-at-accent"
             >
               <option value="all">전체 상태</option>
               <option value="draft">초안</option>
@@ -629,7 +629,7 @@ export default function TaskTemplateManager() {
           {filteredTemplates.length > 0 && (
             <button
               onClick={selectAll}
-              className="text-sm text-blue-600 hover:text-blue-800 ml-auto"
+              className="text-sm text-at-accent hover:text-at-accent ml-auto"
             >
               {selectedIds.size === filteredTemplates.length ? '선택 해제' : '전체 선택'}
             </button>
@@ -639,23 +639,23 @@ export default function TaskTemplateManager() {
 
       {/* 업무 추가/수정 폼 */}
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-4 sm:p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-at-border p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800">
+            <h3 className="font-semibold text-at-text">
               {editingTemplate ? '업무 수정' : '새 업무 추가'}
             </h3>
-            <button onClick={resetForm} className="p-1 hover:bg-slate-100 rounded-lg">
-              <X className="w-5 h-5 text-slate-400" />
+            <button onClick={resetForm} className="p-1 hover:bg-at-surface-alt rounded-xl">
+              <X className="w-5 h-5 text-at-text" />
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">담당 직원 *</label>
+              <label className="block text-sm font-medium text-at-text mb-1">담당 직원 *</label>
               <select
                 value={formData.assigned_user_id}
                 onChange={(e) => setFormData(prev => ({ ...prev, assigned_user_id: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               >
                 <option value="">직원 선택</option>
                 {staff.map(s => (
@@ -665,17 +665,17 @@ export default function TaskTemplateManager() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">시간대 *</label>
+              <label className="block text-sm font-medium text-at-text mb-1">시간대 *</label>
               <div className="flex gap-2">
                 {periodOptions.map(opt => {
                   const selected = formData.period === opt.value
                   return (
                     <label
                       key={opt.value}
-                      className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors ${
+                      className={`flex-1 flex items-center justify-center cursor-pointer rounded-xl border px-3 py-2 text-sm transition-colors ${
                         selected
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                          : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                          ? 'border-at-accent bg-at-accent-light text-at-accent font-medium'
+                          : 'border-at-border bg-white text-at-text hover:bg-at-surface-alt'
                       }`}
                     >
                       <input
@@ -694,49 +694,49 @@ export default function TaskTemplateManager() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">업무명 *</label>
+              <label className="block text-sm font-medium text-at-text mb-1">업무명 *</label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="예: 진료실 소독 및 준비"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">설명</label>
+              <label className="block text-sm font-medium text-at-text mb-1">설명</label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="업무에 대한 상세 설명 (선택)"
                 rows={2}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">정렬 순서</label>
+              <label className="block text-sm font-medium text-at-text mb-1">정렬 순서</label>
               <input
                 type="number"
                 value={formData.sort_order}
                 onChange={(e) => setFormData(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
               />
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-100">
+          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-at-border">
             <button
               onClick={resetForm}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleSave}
               disabled={saving || !formData.assigned_user_id || !formData.title.trim()}
-              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 bg-at-accent text-white text-sm font-medium rounded-xl hover:bg-at-accent transition-colors disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-1.5" />
               {saving ? '저장 중...' : editingTemplate ? '수정' : '추가'}
@@ -749,19 +749,19 @@ export default function TaskTemplateManager() {
       {showBulkForm && (
         <div className="bg-white rounded-xl shadow-sm border border-indigo-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800">업무 일괄 입력</h3>
-            <button onClick={resetBulkForm} className="p-1 hover:bg-slate-100 rounded-lg">
-              <X className="w-5 h-5 text-slate-400" />
+            <h3 className="font-semibold text-at-text">업무 일괄 입력</h3>
+            <button onClick={resetBulkForm} className="p-1 hover:bg-at-surface-alt rounded-xl">
+              <X className="w-5 h-5 text-at-text" />
             </button>
           </div>
 
           {/* 담당 직원 선택 (상단 고정) */}
-          <div className="mb-4 pb-4 border-b border-slate-100">
-            <label className="block text-sm font-medium text-slate-700 mb-1">담당 직원 *</label>
+          <div className="mb-4 pb-4 border-b border-at-border">
+            <label className="block text-sm font-medium text-at-text mb-1">담당 직원 *</label>
             <select
               value={bulkAssignedUserId}
               onChange={(e) => setBulkAssignedUserId(e.target.value)}
-              className="w-full sm:w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full sm:w-64 border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             >
               <option value="">직원 선택</option>
               {staff.map(s => (
@@ -771,10 +771,10 @@ export default function TaskTemplateManager() {
           </div>
 
           {/* 업무 목록 입력 */}
-          <p className="text-xs text-slate-500 mb-3">선택한 직원에게 할당할 업무를 입력하세요.</p>
+          <p className="text-xs text-at-text mb-3">선택한 직원에게 할당할 업무를 입력하세요.</p>
           <div className="space-y-2">
             {/* 헤더 */}
-            <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-slate-500 px-1">
+            <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-at-text px-1">
               <div className="col-span-1 text-center">#</div>
               <div className="col-span-5">업무명 *</div>
               <div className="col-span-5">시간대</div>
@@ -782,12 +782,12 @@ export default function TaskTemplateManager() {
             </div>
 
             {bulkItems.map((item, index) => (
-              <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-50 rounded-lg p-2 sm:p-1 sm:bg-transparent">
+              <div key={index} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-at-surface-alt rounded-xl p-2 sm:p-1 sm:bg-transparent">
                 <div className="hidden sm:flex sm:col-span-1 justify-center">
-                  <span className="text-xs text-slate-400">{index + 1}</span>
+                  <span className="text-xs text-at-text">{index + 1}</span>
                 </div>
                 <div className="sm:col-span-5">
-                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">업무명 *</label>
+                  <label className="sm:hidden text-xs text-at-text mb-1 block">업무명 *</label>
                   <input
                     type="text"
                     value={item.title}
@@ -813,13 +813,13 @@ export default function TaskTemplateManager() {
                     }}
                     data-bulk-title
                     placeholder="예: 진료실 소독 및 준비"
-                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full border border-at-border rounded-xl px-2 py-1.5 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                   />
                 </div>
                 <div className="sm:col-span-5">
-                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
+                  <label className="sm:hidden text-xs text-at-text mb-1 block">시간대</label>
                   <div
-                    className="flex gap-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1"
+                    className="flex gap-1 rounded-xl focus:outline-none focus:ring-2 focus:ring-at-accent focus:ring-offset-1"
                     tabIndex={0}
                     data-bulk-period={index}
                     role="radiogroup"
@@ -877,10 +877,10 @@ export default function TaskTemplateManager() {
                         <label
                           key={opt.value}
                           onClick={() => updateBulkItem(index, 'period', opt.value)}
-                          className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
+                          className={`flex-1 flex items-center justify-center cursor-pointer rounded-xl border px-1.5 py-1.5 text-xs transition-colors ${
                             selected
                               ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
-                              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+                              : 'border-at-border bg-white text-at-text hover:bg-at-surface-alt'
                           }`}
                         >
                           {opt.label}
@@ -893,7 +893,7 @@ export default function TaskTemplateManager() {
                   {bulkItems.length > 1 && (
                     <button
                       onClick={() => removeBulkItem(index)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                       title="행 삭제"
                     >
                       <Trash2 className="w-4 h-4 text-red-400" />
@@ -904,28 +904,28 @@ export default function TaskTemplateManager() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-at-border">
             <button
               onClick={addBulkItem}
-              className="inline-flex items-center px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              className="inline-flex items-center px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
             >
               <Plus className="w-4 h-4 mr-1" />
               행 추가
             </button>
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-at-text">
                 {bulkItems.filter(i => i.title.trim()).length}개 항목 입력됨
               </span>
               <button
                 onClick={resetBulkForm}
-                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleBulkSave}
                 disabled={bulkSaving || !bulkAssignedUserId || bulkItems.filter(i => i.title.trim()).length === 0}
-                className="inline-flex items-center px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-xl hover:bg-indigo-600 transition-colors disabled:opacity-50"
               >
                 <Save className="w-4 h-4 mr-1.5" />
                 {bulkSaving ? '저장 중...' : '일괄 추가'}
@@ -940,35 +940,35 @@ export default function TaskTemplateManager() {
         <div className="bg-white rounded-xl shadow-sm border border-green-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold text-slate-800">엑셀 자동 분석 결과</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="font-semibold text-at-text">엑셀 자동 분석 결과</h3>
+              <p className="text-xs text-at-text mt-1">
                 엑셀에서 직원 이름과 업무를 자동으로 인식했습니다. 필요시 수정 후 업로드하세요.
               </p>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={downloadExcelTemplate}
-                className="inline-flex items-center text-xs text-green-600 hover:text-green-800"
+                className="inline-flex items-center text-xs text-at-success hover:text-green-800"
               >
                 <Download className="w-3.5 h-3.5 mr-1" />
                 양식 다운로드
               </button>
-              <button onClick={resetExcelUpload} className="p-1 hover:bg-slate-100 rounded-lg">
-                <X className="w-5 h-5 text-slate-400" />
+              <button onClick={resetExcelUpload} className="p-1 hover:bg-at-surface-alt rounded-xl">
+                <X className="w-5 h-5 text-at-text" />
               </button>
             </div>
           </div>
 
           <div className="flex items-center space-x-3 text-xs mb-3">
-            <span className="text-slate-600">
+            <span className="text-at-text">
               전체 {excelPreview.length}건
             </span>
-            <span className="text-green-600">
+            <span className="text-at-success">
               <CheckCircle2 className="w-3.5 h-3.5 inline mr-0.5" />
               유효 {excelPreview.filter(i => i.valid).length}건
             </span>
             {excelPreview.filter(i => !i.valid).length > 0 && (
-              <span className="text-red-600">
+              <span className="text-at-error">
                 <AlertCircle className="w-3.5 h-3.5 inline mr-0.5" />
                 수정 필요 {excelPreview.filter(i => !i.valid).length}건
               </span>
@@ -977,7 +977,7 @@ export default function TaskTemplateManager() {
 
           <div className="space-y-2">
             {/* 헤더 */}
-            <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-slate-500 px-1">
+            <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-xs font-medium text-at-text px-1">
               <div className="col-span-1 text-center">#</div>
               <div className="col-span-2">담당자</div>
               <div className="col-span-4">업무명</div>
@@ -988,8 +988,8 @@ export default function TaskTemplateManager() {
             {excelPreview.map((item, idx) => (
               <div
                 key={idx}
-                className={`grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-lg p-2 ${
-                  item.valid ? 'bg-slate-50' : 'bg-red-50 border border-red-200'
+                className={`grid grid-cols-1 sm:grid-cols-12 gap-2 items-center rounded-xl p-2 ${
+                  item.valid ? 'bg-at-surface-alt' : 'bg-at-error-bg border border-red-200'
                 }`}
               >
                 <div className="hidden sm:flex sm:col-span-1 justify-center">
@@ -1000,11 +1000,11 @@ export default function TaskTemplateManager() {
                   )}
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">담당자</label>
+                  <label className="sm:hidden text-xs text-at-text mb-1 block">담당자</label>
                   <select
                     value={item.assigned_user_id}
                     onChange={(e) => updateExcelRow(idx, 'assigned_user_id', e.target.value)}
-                    className={`w-full border rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
+                    className={`w-full border rounded-xl px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                       item.assigned_user_id ? 'border-green-300' : 'border-red-300'
                     }`}
                   >
@@ -1015,26 +1015,26 @@ export default function TaskTemplateManager() {
                   </select>
                 </div>
                 <div className="sm:col-span-4">
-                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">업무명</label>
+                  <label className="sm:hidden text-xs text-at-text mb-1 block">업무명</label>
                   <input
                     type="text"
                     value={item.title}
                     onChange={(e) => updateExcelRow(idx, 'title', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    className="w-full border border-at-border rounded-xl px-2 py-1.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
                 <div className="sm:col-span-4">
-                  <label className="sm:hidden text-xs text-slate-500 mb-1 block">시간대</label>
+                  <label className="sm:hidden text-xs text-at-text mb-1 block">시간대</label>
                   <div className="flex gap-1">
                     {periodOptions.map(opt => {
                       const selected = item.period === opt.value
                       return (
                         <label
                           key={opt.value}
-                          className={`flex-1 flex items-center justify-center cursor-pointer rounded-lg border px-1.5 py-1.5 text-xs transition-colors ${
+                          className={`flex-1 flex items-center justify-center cursor-pointer rounded-xl border px-1.5 py-1.5 text-xs transition-colors ${
                             selected
-                              ? 'border-green-500 bg-green-50 text-green-700 font-medium'
-                              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'
+                              ? 'border-green-500 bg-at-success-bg text-at-success font-medium'
+                              : 'border-at-border bg-white text-at-text hover:bg-at-surface-alt'
                           }`}
                         >
                           <input
@@ -1054,7 +1054,7 @@ export default function TaskTemplateManager() {
                 <div className="sm:col-span-1 flex justify-end sm:justify-center">
                   <button
                     onClick={() => removeExcelRow(idx)}
-                    className="p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                    className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                     title="행 삭제"
                   >
                     <Trash2 className="w-4 h-4 text-red-400" />
@@ -1064,17 +1064,17 @@ export default function TaskTemplateManager() {
             ))}
           </div>
 
-          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-100">
+          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-at-border">
             <button
               onClick={resetExcelUpload}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleExcelUpload}
               disabled={excelUploading || excelPreview.filter(i => i.valid).length === 0}
-              className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-xl hover:bg-green-600 transition-colors disabled:opacity-50"
             >
               <Upload className="w-4 h-4 mr-1.5" />
               {excelUploading ? '업로드 중...' : `유효 항목 ${excelPreview.filter(i => i.valid).length}건 업로드`}
@@ -1085,12 +1085,12 @@ export default function TaskTemplateManager() {
 
       {/* 직원별 업무 목록 */}
       {Object.keys(groupedByUser).length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileEdit className="w-8 h-8 text-slate-400" />
+        <div className="bg-white rounded-xl shadow-sm border border-at-border p-8 text-center">
+          <div className="w-16 h-16 bg-at-surface-alt rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileEdit className="w-8 h-8 text-at-text" />
           </div>
-          <p className="text-slate-500 text-sm">등록된 업무가 없습니다.</p>
-          <p className="text-slate-400 text-xs mt-1">&quot;업무 추가&quot; 버튼을 눌러 직원별 업무를 등록하세요.</p>
+          <p className="text-at-text text-sm">등록된 업무가 없습니다.</p>
+          <p className="text-at-text text-xs mt-1">&quot;업무 추가&quot; 버튼을 눌러 직원별 업무를 등록하세요.</p>
         </div>
       ) : (
         Object.entries(groupedByUser).map(([userId, userTemplates]) => {
@@ -1115,8 +1115,8 @@ export default function TaskTemplateManager() {
           }, {} as Record<string, TaskTemplate[]>)
 
           return (
-            <div key={userId} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div key={userId} className="bg-white rounded-xl shadow-sm border border-at-border overflow-hidden">
+              <div className="px-4 sm:px-6 py-3 bg-at-surface-alt border-b border-at-border flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -1133,22 +1133,22 @@ export default function TaskTemplateManager() {
                         return next
                       })
                     }}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent"
                     title={`${staffMember?.name || ''} 전체 선택`}
                   />
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold text-blue-600">
+                  <div className="w-8 h-8 bg-at-tag rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold text-at-accent">
                       {staffMember?.name?.charAt(0) || '?'}
                     </span>
                   </div>
                   <div>
-                    <span className="font-medium text-slate-800">{staffMember?.name || '알 수 없음'}</span>
-                    <span className="text-xs text-slate-500 ml-2">
+                    <span className="font-medium text-at-text">{staffMember?.name || '알 수 없음'}</span>
+                    <span className="text-xs text-at-text ml-2">
                       {staffMember ? getRoleName(staffMember.role) : ''}
                     </span>
                   </div>
                 </div>
-                <span className="text-sm text-slate-500">{sorted.length}개 업무</span>
+                <span className="text-sm text-at-text">{sorted.length}개 업무</span>
               </div>
 
               {/* 직원별 결재 요청 바 */}
@@ -1156,15 +1156,15 @@ export default function TaskTemplateManager() {
                 const userDrafts = sorted.filter(t => t.status === 'draft' || t.status === 'rejected')
                 if (userDrafts.length === 0) return null
                 return (
-                  <div className="px-4 sm:px-6 py-2 bg-yellow-50 border-b border-yellow-200 flex items-center justify-between">
-                    <span className="text-xs text-yellow-700">
+                  <div className="px-4 sm:px-6 py-2 bg-at-warning-bg border-b border-yellow-200 flex items-center justify-between">
+                    <span className="text-xs text-at-warning">
                       결재 대기: 초안 {userDrafts.filter(t => t.status === 'draft').length}건
                       {userDrafts.some(t => t.status === 'rejected') && `, 반려 ${userDrafts.filter(t => t.status === 'rejected').length}건`}
                     </span>
                     <button
                       onClick={() => handleSubmitForApproval(userDrafts.map(t => t.id))}
                       disabled={submitting}
-                      className="inline-flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-md hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
                     >
                       <Send className="w-3 h-3 mr-1" />
                       {submitting ? '요청 중...' : `결재 요청 (${userDrafts.length})`}
@@ -1199,7 +1199,7 @@ export default function TaskTemplateManager() {
                               return next
                             })
                           }}
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="w-3.5 h-3.5 rounded border-at-border text-at-accent focus:ring-at-accent"
                           title={`${periodLabel} 전체 선택`}
                         />
                         <div className={`w-2 h-2 rounded-full ${color.dot}`} />
@@ -1209,7 +1209,7 @@ export default function TaskTemplateManager() {
                     </div>
 
                     {/* 해당 시간대 업무 목록 */}
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-at-border">
                       {periodTemplates.map(template => {
                         const statusBadge = STATUS_BADGE[template.status]
 
@@ -1223,19 +1223,19 @@ export default function TaskTemplateManager() {
                               type="checkbox"
                               checked={selectedIds.has(template.id)}
                               onChange={() => toggleSelect(template.id)}
-                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent"
                             />
 
                             {/* 업무 내용 */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium text-slate-800">{template.title}</span>
+                                <span className="text-sm font-medium text-at-text">{template.title}</span>
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge.bg} ${statusBadge.text}`}>
                                   {TEMPLATE_STATUS_LABELS[template.status]}
                                 </span>
                               </div>
                               {template.description && (
-                                <p className="text-xs text-slate-500 mt-0.5">{template.description}</p>
+                                <p className="text-xs text-at-text mt-0.5">{template.description}</p>
                               )}
                               {template.status === 'rejected' && template.rejection_reason && (
                                 <p className="text-xs text-red-500 mt-0.5 flex items-center">
@@ -1249,14 +1249,14 @@ export default function TaskTemplateManager() {
                             <div className="flex items-center space-x-1">
                               <button
                                 onClick={() => handleEdit(template)}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                                className="p-1.5 rounded-xl hover:bg-at-surface-alt transition-colors"
                                 title="수정"
                               >
-                                <Edit3 className="w-4 h-4 text-slate-400" />
+                                <Edit3 className="w-4 h-4 text-at-text" />
                               </button>
                               <button
                                 onClick={() => handleDelete(template.id)}
-                                className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                                 title="삭제"
                               >
                                 <Trash2 className="w-4 h-4 text-red-400" />
@@ -1278,17 +1278,17 @@ export default function TaskTemplateManager() {
       {showPeriodSettings && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-800">시간대 설정</h3>
-              <button onClick={() => setShowPeriodSettings(false)} className="p-1 rounded-lg hover:bg-slate-100">
-                <X className="w-5 h-5 text-slate-400" />
+            <div className="flex items-center justify-between px-6 py-4 border-b border-at-border">
+              <h3 className="text-lg font-bold text-at-text">시간대 설정</h3>
+              <button onClick={() => setShowPeriodSettings(false)} className="p-1 rounded-xl hover:bg-at-surface-alt">
+                <X className="w-5 h-5 text-at-text" />
               </button>
             </div>
             <div className="p-6 space-y-3">
-              <p className="text-sm text-slate-500">시간대를 추가, 삭제, 수정할 수 있습니다.</p>
+              <p className="text-sm text-at-text">시간대를 추가, 삭제, 수정할 수 있습니다.</p>
               {editingConfig.keys.map((key, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 w-5 text-center">{idx + 1}</span>
+                  <span className="text-xs text-at-text w-5 text-center">{idx + 1}</span>
                   <input
                     type="text"
                     value={editingConfig.labels[key] || ''}
@@ -1296,7 +1296,7 @@ export default function TaskTemplateManager() {
                       const newLabels = { ...editingConfig.labels, [key]: e.target.value }
                       setEditingConfig(prev => ({ ...prev, labels: newLabels }))
                     }}
-                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 border border-at-border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                     placeholder="시간대 이름"
                   />
                   {editingConfig.keys.length > 1 && (
@@ -1307,7 +1307,7 @@ export default function TaskTemplateManager() {
                         delete newLabels[key]
                         setEditingConfig({ keys: newKeys, labels: newLabels })
                       }}
-                      className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-xl hover:bg-at-error-bg transition-colors"
                       title="삭제"
                     >
                       <Trash2 className="w-4 h-4 text-red-400" />
@@ -1323,25 +1323,25 @@ export default function TaskTemplateManager() {
                     labels: { ...prev.labels, [newKey]: '' },
                   }))
                 }}
-                className="w-full flex items-center justify-center gap-1.5 border border-dashed border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 hover:border-slate-400 transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 border border-dashed border-at-border rounded-xl px-3 py-2 text-sm text-at-text hover:bg-at-surface-alt hover:border-at-border transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 시간대 추가
               </button>
             </div>
-            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-at-border bg-at-surface-alt rounded-b-xl">
               <button
                 onClick={() => {
                   setEditingConfig({ keys: [...DEFAULT_PERIOD_KEYS], labels: { ...DEFAULT_PERIOD_LABELS } })
                 }}
-                className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                className="text-sm text-at-text hover:text-at-text transition-colors"
               >
                 기본값으로 초기화
               </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowPeriodSettings(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-at-text border border-at-border rounded-xl hover:bg-at-surface-alt transition-colors"
                 >
                   취소
                 </button>
@@ -1361,7 +1361,7 @@ export default function TaskTemplateManager() {
                     savePeriodConfig(config)
                     setShowPeriodSettings(false)
                   }}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent transition-colors"
                 >
                   저장
                 </button>
@@ -1376,31 +1376,31 @@ export default function TaskTemplateManager() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-2 duration-300">
             <div className="px-6 pt-6 pb-4 text-center">
-              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 bg-at-error-bg rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-7 h-7 text-red-500" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800 mb-2">
+              <h3 className="text-lg font-bold text-at-text mb-2">
                 {deleteConfirm.type === 'single' ? '업무 삭제' : '선택 업무 삭제'}
               </h3>
-              <p className="text-sm text-slate-500 leading-relaxed">
+              <p className="text-sm text-at-text leading-relaxed">
                 {deleteConfirm.type === 'single' ? (
                   <>
-                    <span className="font-medium text-slate-700">&quot;{deleteConfirm.templateTitle}&quot;</span>
+                    <span className="font-medium text-at-text">&quot;{deleteConfirm.templateTitle}&quot;</span>
                     <br />업무를 삭제하시겠습니까?
                   </>
                 ) : (
                   <>
-                    선택한 <span className="font-semibold text-red-600">{deleteConfirm.count}개</span> 업무를
+                    선택한 <span className="font-semibold text-at-error">{deleteConfirm.count}개</span> 업무를
                     <br />삭제하시겠습니까?
                   </>
                 )}
               </p>
-              <p className="text-xs text-slate-400 mt-2">삭제된 업무는 복구할 수 없습니다.</p>
+              <p className="text-xs text-at-text mt-2">삭제된 업무는 복구할 수 없습니다.</p>
             </div>
             <div className="px-6 pb-6 flex gap-3">
               <button
                 onClick={() => setDeleteConfirm({ show: false, type: 'single' })}
-                className="flex-1 px-4 py-3 text-sm font-medium text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                className="flex-1 px-4 py-3 text-sm font-medium text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border transition-colors"
               >
                 취소
               </button>
@@ -1423,7 +1423,7 @@ export default function TaskTemplateManager() {
           <div className="w-px h-5 bg-slate-600" />
           <button
             onClick={handleBulkDelete}
-            className="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+            className="inline-flex items-center px-3 py-1.5 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors"
           >
             <Trash2 className="w-4 h-4 mr-1" />
             삭제
@@ -1438,7 +1438,7 @@ export default function TaskTemplateManager() {
               <button
                 onClick={() => handleSubmitForApproval()}
                 disabled={submitting}
-                className="inline-flex items-center px-3 py-1.5 bg-yellow-500 text-white text-sm font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-3 py-1.5 bg-yellow-500 text-white text-sm font-medium rounded-xl hover:bg-yellow-600 transition-colors disabled:opacity-50"
               >
                 <Send className="w-4 h-4 mr-1" />
                 {submitting ? '요청 중...' : `결재 요청 (${selectedDraftCount})`}
@@ -1447,7 +1447,7 @@ export default function TaskTemplateManager() {
           })()}
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="p-1.5 rounded-lg hover:bg-slate-700 transition-colors"
+            className="p-1.5 rounded-xl hover:bg-slate-700 transition-colors"
             title="선택 해제"
           >
             <X className="w-4 h-4" />

@@ -148,31 +148,31 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
   if (loading && staff.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-slate-200">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 text-purple-600">
+      <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-purple-50 text-purple-600">
           <FileText className="w-4 h-4" />
         </div>
-        <h3 className="text-base font-semibold text-slate-800">
+        <h3 className="text-base font-semibold text-at-text">
           연차 관리 (소진 연차 입력)
         </h3>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm flex items-center">
           <AlertCircle className="w-4 h-4 mr-2" />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md text-sm flex items-center">
+        <div className="bg-at-success-bg border border-green-200 text-at-success px-4 py-3 rounded-md text-sm flex items-center">
           <CheckCircle className="w-4 h-4 mr-2" />
           {success}
         </div>
@@ -180,9 +180,9 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 왼쪽: 직원 목록 */}
-        <div className="border border-slate-200 rounded-lg">
-          <div className="p-4 border-b border-slate-200 bg-slate-50">
-            <h4 className="font-medium text-slate-800">직원 선택</h4>
+        <div className="border border-at-border rounded-xl">
+          <div className="p-4 border-b border-at-border bg-at-surface-alt">
+            <h4 className="font-medium text-at-text">직원 선택</h4>
           </div>
           <div className="max-h-96 overflow-y-auto">
             {staff.map((member) => {
@@ -191,27 +191,27 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                 <div
                   key={member.id}
                   onClick={() => setSelectedUser(member.id)}
-                  className={`p-4 border-b border-slate-100 cursor-pointer transition-colors ${
+                  className={`p-4 border-b border-at-border cursor-pointer transition-colors ${
                     selectedUser === member.id
-                      ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                      : 'hover:bg-slate-50'
+                      ? 'bg-at-accent-light border-l-4 border-l-blue-500'
+                      : 'hover:bg-at-surface-alt'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-slate-500" />
+                      <div className="w-8 h-8 bg-at-border rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-at-text" />
                       </div>
                       <div>
-                        <p className="font-medium text-slate-800">{member.name}</p>
-                        <p className="text-xs text-slate-500">{getRoleLabel(member.role)}</p>
+                        <p className="font-medium text-at-text">{member.name}</p>
+                        <p className="text-xs text-at-text">{getRoleLabel(member.role)}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-indigo-600">
                         잔여 {balance?.remaining_days ?? '-'}일
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-at-text">
                         {balance ? `${balance.used_days}/${balance.total_days}` : '미설정'}
                       </p>
                     </div>
@@ -227,54 +227,54 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
           {selectedUser ? (
             <div className="space-y-4">
               {/* 선택된 직원 정보 */}
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="p-4 bg-at-accent-light rounded-xl border border-at-border">
                 <div className="mb-2">
-                  <p className="font-semibold text-slate-800">{selectedStaff?.name}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="font-semibold text-at-text">{selectedStaff?.name}</p>
+                  <p className="text-xs text-at-text">
                     {selectedStaff?.hire_date
                       ? `입사일: ${new Date(selectedStaff.hire_date).toLocaleDateString('ko-KR')}`
                       : '입사일 미등록'}
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xs text-slate-500">총 연차</p>
-                    <p className="font-bold text-blue-600">{selectedBalance?.total_days ?? 0}일</p>
+                  <div className="bg-white rounded-xl p-2">
+                    <p className="text-xs text-at-text">총 연차</p>
+                    <p className="font-bold text-at-accent">{selectedBalance?.total_days ?? 0}일</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xs text-slate-500">사용</p>
-                    <p className="font-bold text-green-600">{selectedBalance?.used_days ?? 0}일</p>
+                  <div className="bg-white rounded-xl p-2">
+                    <p className="text-xs text-at-text">사용</p>
+                    <p className="font-bold text-at-success">{selectedBalance?.used_days ?? 0}일</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2">
-                    <p className="text-xs text-slate-500">잔여</p>
+                  <div className="bg-white rounded-xl p-2">
+                    <p className="text-xs text-at-text">잔여</p>
                     <p className="font-bold text-indigo-600">{selectedBalance?.remaining_days ?? 0}일</p>
                   </div>
                 </div>
               </div>
 
               {/* 조정 입력 폼 */}
-              <form onSubmit={handleSubmit} className="border border-slate-200 rounded-lg p-4 space-y-4">
-                <h5 className="font-medium text-slate-800 flex items-center">
+              <form onSubmit={handleSubmit} className="border border-at-border rounded-xl p-4 space-y-4">
+                <h5 className="font-medium text-at-text flex items-center">
                   <Plus className="w-4 h-4 mr-2" />
                   연차 조정 추가
                 </h5>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text mb-1">
                       조정 유형 *
                     </label>
                     <select
                       value={formData.adjustment_type}
                       onChange={(e) => setFormData({ ...formData, adjustment_type: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-at-border rounded-xl"
                     >
                       <option value="deduct">차감 (이미 사용한 연차)</option>
                       <option value="add">추가 (연차 부여)</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text mb-1">
                       일수 *
                     </label>
                     <input
@@ -283,7 +283,7 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                       min="0.5"
                       value={formData.days}
                       onChange={(e) => setFormData({ ...formData, days: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-at-border rounded-xl"
                       placeholder="1"
                     />
                   </div>
@@ -291,13 +291,13 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text mb-1">
                       연차 종류
                     </label>
                     <select
                       value={formData.leave_type_id}
                       onChange={(e) => setFormData({ ...formData, leave_type_id: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-at-border rounded-xl"
                     >
                       <option value="">선택 안함</option>
                       {leaveTypes.map((type) => (
@@ -306,27 +306,27 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className="block text-sm font-medium text-at-text mb-1">
                       사용일자
                     </label>
                     <input
                       type="date"
                       value={formData.use_date}
                       onChange={(e) => setFormData({ ...formData, use_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-at-border rounded-xl"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-at-text mb-1">
                     사유 *
                   </label>
                   <textarea
                     value={formData.reason}
                     onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                     rows={2}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-at-border rounded-xl"
                     placeholder="조정 사유를 입력해주세요 (예: 시스템 도입 전 사용한 연차)"
                   />
                 </div>
@@ -334,7 +334,7 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full py-2 text-sm font-medium text-white bg-at-accent rounded-xl hover:bg-at-accent-hover disabled:opacity-50"
                 >
                   {loading ? '처리 중...' : '조정 추가'}
                 </button>
@@ -342,35 +342,35 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
 
               {/* 조정 내역 */}
               {adjustments.length > 0 && (
-                <div className="border border-slate-200 rounded-lg">
-                  <div className="p-3 border-b border-slate-200 bg-slate-50">
-                    <h5 className="font-medium text-slate-800 text-sm">조정 내역</h5>
+                <div className="border border-at-border rounded-xl">
+                  <div className="p-3 border-b border-at-border bg-at-surface-alt">
+                    <h5 className="font-medium text-at-text text-sm">조정 내역</h5>
                   </div>
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-at-border">
                     {adjustments.map((adj) => (
                       <div key={adj.id} className="p-3 flex items-center justify-between">
                         <div>
                           <div className="flex items-center space-x-2">
                             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                               adj.adjustment_type === 'deduct'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-green-100 text-green-700'
+                                ? 'bg-at-error-bg text-at-error'
+                                : 'bg-at-success-bg text-at-success'
                             }`}>
                               {adj.adjustment_type === 'deduct' ? '차감' : '추가'}
                             </span>
                             <span className="font-medium">{adj.days}일</span>
                             {adj.leave_types && (
-                              <span className="text-xs text-slate-500">({adj.leave_types.name})</span>
+                              <span className="text-xs text-at-text">({adj.leave_types.name})</span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500 mt-1">{adj.reason}</p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs text-at-text mt-1">{adj.reason}</p>
+                          <p className="text-xs text-at-text">
                             {new Date(adj.adjusted_at).toLocaleDateString('ko-KR')} - {adj.adjusted_by_user?.name}
                           </p>
                         </div>
                         <button
                           onClick={() => handleDeleteAdjustment(adj.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                          className="p-1.5 text-at-text hover:text-at-error hover:bg-at-error-bg rounded-xl"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -381,9 +381,9 @@ export default function LeaveAdminInput({ year, leaveTypes, onSuccess }: LeaveAd
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64 border border-slate-200 rounded-lg bg-slate-50">
-              <div className="text-center text-slate-500">
-                <User className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+            <div className="flex items-center justify-center h-64 border border-at-border rounded-xl bg-at-surface-alt">
+              <div className="text-center text-at-text">
+                <User className="w-12 h-12 mx-auto mb-2 text-at-text" />
                 <p>왼쪽에서 직원을 선택해주세요</p>
               </div>
             </div>

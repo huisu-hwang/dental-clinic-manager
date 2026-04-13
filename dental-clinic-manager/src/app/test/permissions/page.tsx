@@ -41,7 +41,7 @@ export default function PermissionsTestPage() {
       <h1 className="text-3xl font-bold mb-6">🔐 권한 시스템 테스트</h1>
 
       {/* 현재 사용자 정보 */}
-      <div className="bg-blue-50 p-4 rounded-lg mb-6">
+      <div className="bg-at-accent-light p-4 rounded-xl mb-6">
         <h2 className="text-xl font-bold mb-2">현재 사용자 정보</h2>
         <div className="grid grid-cols-2 gap-2">
           <p><strong>이름:</strong> {user.name}</p>
@@ -52,7 +52,7 @@ export default function PermissionsTestPage() {
       </div>
 
       {/* 현재 권한 목록 */}
-      <div className="bg-green-50 p-4 rounded-lg mb-6">
+      <div className="bg-at-success-bg p-4 rounded-xl mb-6">
         <h2 className="text-xl font-bold mb-2">현재 보유 권한 ({permissions.size}개)</h2>
         <div className="flex flex-wrap gap-2 mt-2">
           {permissions.size > 0 ? (
@@ -62,13 +62,13 @@ export default function PermissionsTestPage() {
               </span>
             ))
           ) : (
-            <p className="text-gray-500">권한이 없습니다.</p>
+            <p className="text-at-text-weak">권한이 없습니다.</p>
           )}
         </div>
       </div>
 
       {/* 기본 권한 비교 */}
-      <div className="bg-yellow-50 p-4 rounded-lg mb-6">
+      <div className="bg-at-warning-bg p-4 rounded-xl mb-6">
         <h2 className="text-xl font-bold mb-2">역할별 기본 권한과 비교</h2>
         <div className="mt-2">
           <p className="mb-2"><strong>{getRoleLabel(user.role || '')} 기본 권한:</strong></p>
@@ -84,13 +84,13 @@ export default function PermissionsTestPage() {
               >
                 {perm} {permissions.has(perm) ? '✓' : '✗'}
               </span>
-            )) || <p className="text-gray-500">기본 권한이 정의되지 않았습니다.</p>}
+            )) || <p className="text-at-text-weak">기본 권한이 정의되지 않았습니다.</p>}
           </div>
         </div>
       </div>
 
       {/* 권한 테스트 */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
+      <div className="bg-white p-4 rounded-xl border border-at-border mb-6">
         <h2 className="text-xl font-bold mb-4">권한 테스트</h2>
 
         {/* 단일 권한 테스트 */}
@@ -133,7 +133,7 @@ export default function PermissionsTestPage() {
       </div>
 
       {/* 권한 그룹별 표시 */}
-      <div className="bg-gray-50 p-4 rounded-lg">
+      <div className="bg-at-surface-alt p-4 rounded-xl">
         <h2 className="text-xl font-bold mb-4">권한 그룹별 상태</h2>
         {Object.entries(PERMISSION_GROUPS).map(([groupName, perms]) => (
           <div key={groupName} className="mb-4">
@@ -144,9 +144,9 @@ export default function PermissionsTestPage() {
                 return (
                   <div key={perm.key} className="flex items-center space-x-2">
                     <span className={`w-4 h-4 rounded-full ${
-                      hasPerm ? 'bg-green-500' : 'bg-gray-300'
+                      hasPerm ? 'bg-green-500' : 'bg-at-border'
                     }`} />
-                    <span className={`text-sm ${hasPerm ? 'text-green-700' : 'text-gray-500'}`}>
+                    <span className={`text-sm ${hasPerm ? 'text-at-success' : 'text-at-text-weak'}`}>
                       {perm.label}
                     </span>
                   </div>

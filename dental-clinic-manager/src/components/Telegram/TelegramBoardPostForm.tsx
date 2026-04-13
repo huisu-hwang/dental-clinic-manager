@@ -32,7 +32,6 @@ interface TelegramBoardPostFormProps {
 
 const MAX_FILES = 5
 
-// 파일 확장자로 타입 판단
 const getFileType = (fileName?: string): 'image' | 'pdf' | 'excel' | 'word' | 'video' | 'other' => {
   if (!fileName) return 'other'
   const ext = fileName.split('.').pop()?.toLowerCase()
@@ -52,11 +51,11 @@ const getFileIcon = (fileName?: string) => {
     case 'pdf':
       return <FileText className="w-4 h-4 text-red-500" />
     case 'excel':
-      return <FileSpreadsheet className="w-4 h-4 text-green-600" />
+      return <FileSpreadsheet className="w-4 h-4 text-at-success" />
     case 'word':
-      return <FileType className="w-4 h-4 text-blue-600" />
+      return <FileType className="w-4 h-4 text-at-accent" />
     default:
-      return <FileText className="w-4 h-4 text-gray-500" />
+      return <FileText className="w-4 h-4 text-at-text-weak" />
   }
 }
 
@@ -86,12 +85,10 @@ export default function TelegramBoardPostForm({
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 에디터 내 미디어 업로드 핸들러 (이미지/동영상 본문 삽입)
   const handleMediaUpload = useCallback(async (file: File) => {
     return mediaService.uploadTelegramBoardMedia(file)
   }, [])
 
-  // 첨부 파일 업로드
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -147,13 +144,13 @@ export default function TelegramBoardPostForm({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-at-border overflow-hidden shadow-at-card">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-900">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-at-border bg-at-surface-alt">
+        <h3 className="text-sm font-semibold text-at-text">
           {mode === 'create' ? '새 글 작성' : '글 수정'}
         </h3>
-        <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+        <button onClick={onCancel} className="text-at-text-weak hover:text-at-text-secondary">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -162,7 +159,7 @@ export default function TelegramBoardPostForm({
       <form onSubmit={handleSubmit} className="p-4 space-y-4">
         {/* 제목 */}
         <div>
-          <label htmlFor="post-title" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="post-title" className="block text-sm font-medium text-at-text-secondary mb-1">
             제목
           </label>
           <Input
@@ -178,14 +175,14 @@ export default function TelegramBoardPostForm({
         {/* 카테고리 선택 */}
         {categories.length > 0 && (
           <div>
-            <label htmlFor="post-category" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="post-category" className="block text-sm font-medium text-at-text-secondary mb-1">
               카테고리
             </label>
             <select
               id="post-category"
               value={selectedCategoryId}
               onChange={e => setSelectedCategoryId(e.target.value)}
-              className="w-full h-9 px-3 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              className="w-full h-9 px-3 text-sm border border-at-border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-at-accent focus:border-at-accent"
             >
               <option value="">자동 분류 (AI)</option>
               {categories.filter(c => !c.is_default).map(cat => (
@@ -195,15 +192,15 @@ export default function TelegramBoardPostForm({
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-at-text-weak mt-1">
               선택하지 않으면 AI가 자동으로 카테고리를 분류합니다.
             </p>
           </div>
         )}
 
-        {/* 본문 에디터 (EnhancedTiptapEditor) */}
+        {/* 본문 에디터 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-at-text-secondary mb-1">
             내용
           </label>
           <EnhancedTiptapEditor
@@ -217,34 +214,32 @@ export default function TelegramBoardPostForm({
 
         {/* 첨부 파일 섹션 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            첨부 파일 <span className="text-xs text-gray-400 font-normal">({fileUrls.length}/{MAX_FILES})</span>
+          <label className="block text-sm font-medium text-at-text-secondary mb-1">
+            첨부 파일 <span className="text-xs text-at-text-weak font-normal">({fileUrls.length}/{MAX_FILES})</span>
           </label>
 
-          {/* 파일 목록 */}
           {fileUrls.length > 0 && (
             <div className="space-y-2 mb-3">
               {fileUrls.map((file, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                <div key={i} className="flex items-center gap-2 p-2 bg-at-surface-alt rounded-xl">
                   {getFileIcon(file.name)}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 truncate">{file.name}</p>
+                    <p className="text-sm text-at-text truncate">{file.name}</p>
                     {file.size && (
-                      <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                      <p className="text-xs text-at-text-weak">{formatFileSize(file.size)}</p>
                     )}
                   </div>
-                  {/* 이미지 썸네일 미리보기 */}
                   {getFileType(file.name) === 'image' && file.url && (
                     <img
                       src={file.url}
                       alt={file.name}
-                      className="w-10 h-10 rounded object-cover flex-shrink-0"
+                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                     />
                   )}
                   <button
                     type="button"
                     onClick={() => handleRemoveFile(i)}
-                    className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                    className="p-1 text-at-text-weak hover:text-at-error transition-colors flex-shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -253,19 +248,18 @@ export default function TelegramBoardPostForm({
             </div>
           )}
 
-          {/* 파일 업로드 버튼 */}
           {fileUrls.length < MAX_FILES && (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center cursor-pointer hover:border-sky-300 transition-colors"
+              className="border-2 border-dashed border-at-border rounded-xl p-4 text-center cursor-pointer hover:border-at-accent transition-colors"
             >
               {uploading ? (
-                <div className="flex items-center justify-center gap-2 text-gray-500">
+                <div className="flex items-center justify-center gap-2 text-at-text-secondary">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-sm">업로드 중...</span>
                 </div>
               ) : (
-                <div className="flex items-center justify-center gap-2 text-gray-400">
+                <div className="flex items-center justify-center gap-2 text-at-text-weak">
                   <Upload className="w-4 h-4" />
                   <span className="text-sm">클릭하여 파일 첨부 (최대 50MB, {MAX_FILES}개)</span>
                 </div>
@@ -283,20 +277,20 @@ export default function TelegramBoardPostForm({
           />
 
           {uploadError && (
-            <p className="text-xs text-red-500 mt-1">{uploadError}</p>
+            <p className="text-xs text-at-error mt-1">{uploadError}</p>
           )}
         </div>
 
         {/* 텔레그램 알림 (생성 시만) */}
         {mode === 'create' && (
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-at-text-secondary cursor-pointer">
             <input
               type="checkbox"
               checked={notifyTelegram}
               onChange={e => setNotifyTelegram(e.target.checked)}
-              className="rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+              className="rounded border-at-border text-at-accent focus:ring-at-accent"
             />
-            <SendIcon className="w-3.5 h-3.5 text-sky-500" />
+            <SendIcon className="w-3.5 h-3.5 text-at-accent" />
             텔레그램 그룹에 알림 전송
           </label>
         )}

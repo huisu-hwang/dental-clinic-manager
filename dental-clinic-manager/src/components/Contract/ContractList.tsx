@@ -29,11 +29,11 @@ const STATUS_LABELS: Record<ContractStatus, string> = {
 }
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
+  draft: 'bg-at-surface-alt text-at-text',
   pending_employee_signature: 'bg-yellow-100 text-yellow-800',
-  pending_employer_signature: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800'
+  pending_employer_signature: 'bg-at-tag text-at-accent',
+  completed: 'bg-at-success-bg text-green-800',
+  cancelled: 'bg-at-error-bg text-red-800'
 }
 
 export default function ContractList({ currentUser, clinicId }: ContractListProps) {
@@ -271,63 +271,63 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="p-4 sm:p-6 bg-white min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-800">{error}</p>
-        <button
-          onClick={loadContracts}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          다시 시도
-        </button>
+      <div className="p-4 sm:p-6 bg-white min-h-screen">
+        <div className="p-4 bg-at-error-bg border border-red-200 rounded-xl">
+          <p className="text-red-800">{error}</p>
+          <button
+            onClick={loadContracts}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            다시 시도
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div>
-      {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-      <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-xl shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">근로계약서 관리</h2>
-              <p className="text-blue-100 text-sm">Employment Contract Management</p>
-            </div>
+    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
+            <FileText className="w-5 h-5 text-at-accent" />
           </div>
-          {(currentUser.role === 'owner' || currentUser.role === 'manager') && (
-            <button
-              onClick={handleCreateNew}
-              className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              새 계약서 작성
-            </button>
-          )}
+          <div>
+            <h2 className="text-lg font-bold text-at-text">근로계약서 관리</h2>
+            <p className="text-at-text text-sm">Employment Contract Management</p>
+          </div>
         </div>
+        {(currentUser.role === 'owner' || currentUser.role === 'manager') && (
+          <button
+            onClick={handleCreateNew}
+            className="flex items-center px-4 py-2 bg-at-accent hover:bg-at-accent-hover text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            새 계약서 작성
+          </button>
+        )}
       </div>
 
-      {/* 필터 영역 - 스크롤 시 고정 */}
-      <div className="sticky top-[calc(3.5rem+72px)] z-10 border-x border-b border-slate-200 bg-slate-50 p-4">
+      {/* 필터 영역 */}
+      <div className="bg-at-surface-alt rounded-xl p-4">
         <div className="flex flex-col md:flex-row gap-4">
           {/* 검색 */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-at-text" />
             <input
               type="text"
               placeholder="직원 이름으로 검색..."
               onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-transparent"
             />
           </div>
 
@@ -335,10 +335,10 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => handleStatusFilter('all')}
-              className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+              className={`px-4 py-2 rounded-xl transition-colors text-sm font-medium ${
                 filters.status === undefined
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                  ? 'bg-at-accent text-white'
+                  : 'bg-white text-at-text border border-at-border hover:bg-at-surface-alt'
               }`}
             >
               전체
@@ -347,10 +347,10 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
               <button
                 key={status}
                 onClick={() => handleStatusFilter(status)}
-                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                className={`px-4 py-2 rounded-xl transition-colors text-sm font-medium ${
                   filters.status === status
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    ? 'bg-at-accent text-white'
+                    : 'bg-white text-at-text border border-at-border hover:bg-at-surface-alt'
                 }`}
               >
                 {STATUS_LABELS[status]}
@@ -361,13 +361,13 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       </div>
 
       {/* 콘텐츠 영역 */}
-      <div className="bg-white border-x border-b border-slate-200 rounded-b-xl p-6">
+      <div>
         {/* 계약서 목록 */}
         {contracts.length === 0 ? (
-          <div className="text-center py-12 bg-slate-50 rounded-lg">
-            <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">근로계약서가 없습니다</h3>
-            <p className="text-slate-600 mb-4">
+          <div className="text-center py-12 bg-at-surface-alt rounded-xl">
+            <FileText className="w-12 h-12 text-at-text mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-at-text mb-2">근로계약서가 없습니다</h3>
+            <p className="text-at-text mb-4">
               {filters.status || filters.search
                 ? '검색 조건에 맞는 계약서가 없습니다.'
                 : '새로운 근로계약서를 작성해보세요.'}
@@ -375,7 +375,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
             {(currentUser.role === 'owner' || currentUser.role === 'manager') && !filters.status && !filters.search && (
               <button
                 onClick={handleCreateNew}
-                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="inline-flex items-center px-6 py-3 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover transition-colors font-medium"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 첫 계약서 작성하기
@@ -383,55 +383,55 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
             )}
           </div>
         ) : (
-          <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <div className="border border-at-border rounded-xl overflow-hidden">
             <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-at-surface-alt border-b border-at-border">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-at-text uppercase tracking-wider">
                     직원명
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-at-text uppercase tracking-wider">
                     근로 기간
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-at-text uppercase tracking-wider">
                     기본급
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-at-text uppercase tracking-wider">
                     상태
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-at-text uppercase tracking-wider">
                     작성일
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-at-text uppercase tracking-wider">
                     작업
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
+              <tbody className="bg-white divide-y divide-at-border">
                 {contracts.map(contract => (
                   <tr
                     key={contract.id}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                    className="hover:bg-at-surface-alt cursor-pointer transition-colors"
                     onClick={() => handleContractClick(contract.id)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-slate-900">
+                      <div className="text-sm font-medium text-at-text">
                         {contract.contract_data.employee_name}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-900">
+                      <div className="text-sm text-at-text">
                         {formatDate(contract.contract_data.employment_period_start)}
                         {contract.contract_data.employment_period_end && (
                           <> ~ {formatDate(contract.contract_data.employment_period_end)}</>
                         )}
                         {contract.contract_data.is_permanent && (
-                          <span className="ml-2 text-blue-600 font-medium">(무기한)</span>
+                          <span className="ml-2 text-at-accent font-medium">(무기한)</span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-900">
+                      <div className="text-sm text-at-text">
                         {formatSalary(contract.contract_data.salary_base)}
                       </div>
                     </td>
@@ -444,7 +444,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                         {STATUS_LABELS[contract.status]}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-at-text">
                       {formatDate(contract.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -454,16 +454,16 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
                             e.stopPropagation()
                             handleContractClick(contract.id)
                           }}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-at-accent hover:text-at-accent"
                         >
                           보기
                         </button>
                         {contract.status === 'cancelled' && (currentUser?.role === 'owner' || currentUser?.role === 'manager') && (
                           <>
-                            <span className="text-slate-300">|</span>
+                            <span className="text-at-text">|</span>
                             <button
                               onClick={e => handleDeleteClick(contract, e)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-at-error hover:text-red-900"
                             >
                               삭제
                             </button>
@@ -480,14 +480,14 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
         {/* 통계 */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6">
-          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <p className="text-sm text-slate-600">전체</p>
-            <p className="text-2xl font-bold text-slate-900">{contracts.length}</p>
+          <div className="bg-at-surface-alt p-4 rounded-xl border border-at-border">
+            <p className="text-sm text-at-text">전체</p>
+            <p className="text-2xl font-bold text-at-text">{contracts.length}</p>
           </div>
           {(Object.keys(STATUS_LABELS) as ContractStatus[]).map(status => (
-            <div key={status} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <p className="text-sm text-slate-600">{STATUS_LABELS[status]}</p>
-              <p className="text-2xl font-bold text-slate-900">
+            <div key={status} className="bg-at-surface-alt p-4 rounded-xl border border-at-border">
+              <p className="text-sm text-at-text">{STATUS_LABELS[status]}</p>
+              <p className="text-2xl font-bold text-at-text">
                 {contracts.filter(c => c.status === status).length}
               </p>
             </div>
@@ -499,25 +499,25 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       {deleteModalOpen && contractToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-slate-900 mb-4">계약서 삭제 확인</h3>
+            <h3 className="text-xl font-bold text-at-text mb-4">계약서 삭제 확인</h3>
             <div className="mb-6">
-              <p className="text-slate-700 mb-4">
+              <p className="text-at-text mb-4">
                 취소된 계약서를 영구적으로 삭제하시겠습니까?
                 <br />
-                <span className="text-red-600 font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>
+                <span className="text-at-error font-semibold">삭제된 데이터는 복구할 수 없습니다.</span>
               </p>
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <p className="text-sm text-slate-600 mb-1">
+              <div className="bg-at-surface-alt p-4 rounded-xl border border-at-border">
+                <p className="text-sm text-at-text mb-1">
                   <span className="font-semibold">직원명:</span> {contractToDelete.contract_data.employee_name}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-at-text">
                   <span className="font-semibold">계약 기간:</span>{' '}
                   {formatDate(contractToDelete.contract_data.employment_period_start)}
                   {contractToDelete.contract_data.employment_period_end && (
                     <> ~ {formatDate(contractToDelete.contract_data.employment_period_end)}</>
                   )}
                   {contractToDelete.contract_data.is_permanent && (
-                    <span className="ml-2 text-blue-600">(무기한)</span>
+                    <span className="ml-2 text-at-accent">(무기한)</span>
                   )}
                 </p>
               </div>
@@ -526,14 +526,14 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
               <button
                 onClick={handleCancelDelete}
                 disabled={deleting}
-                className="px-4 py-2 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50"
+                className="px-4 py-2 text-at-text bg-at-surface-alt rounded-xl hover:bg-at-border disabled:opacity-50"
               >
                 취소
               </button>
               <button
                 onClick={handleConfirmDelete}
                 disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {deleting ? (
                   <>

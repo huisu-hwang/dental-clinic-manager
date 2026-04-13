@@ -33,13 +33,13 @@ export default function TelegramBoardPostActions({
   }
 
   return (
-    <div className="flex items-center gap-2 py-3 border-t border-b border-gray-100">
+    <div className="flex items-center gap-2 py-3 border-t border-b border-at-border">
       <Button
         variant="outline"
         size="sm"
         onClick={handleLike}
         disabled={liking}
-        className={isLiked ? 'text-red-500 border-red-200 bg-red-50' : ''}
+        className={isLiked ? 'text-red-500 border-at-border bg-at-error-bg' : ''}
       >
         <Heart className={`w-4 h-4 mr-1.5 ${isLiked ? 'fill-red-500' : ''}`} />
         좋아요 {likeCount > 0 && likeCount}
@@ -49,7 +49,7 @@ export default function TelegramBoardPostActions({
         size="sm"
         onClick={handleScrap}
         disabled={scraping}
-        className={isScraped ? 'text-yellow-600 border-yellow-200 bg-yellow-50' : ''}
+        className={isScraped ? 'text-at-warning border-at-border bg-at-warning-bg' : ''}
       >
         <Bookmark className={`w-4 h-4 mr-1.5 ${isScraped ? 'fill-yellow-500' : ''}`} />
         스크랩 {scrapCount > 0 && scrapCount}
