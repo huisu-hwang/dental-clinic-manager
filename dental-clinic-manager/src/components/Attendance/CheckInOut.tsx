@@ -244,7 +244,7 @@ export default function CheckInOut() {
   const workingMinutes = calculateWorkingMinutes()
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* 섹션 1: 현재 시간 */}
       <div>
         <SectionHeader number={1} title="현재 시간" icon={Clock} />

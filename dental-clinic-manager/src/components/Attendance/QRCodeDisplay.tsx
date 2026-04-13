@@ -298,7 +298,7 @@ export default function QRCodeDisplay() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* 헤더 */}
       <div>
         <h1 className="text-2xl font-bold text-at-text">QR 코드 관리</h1>
