@@ -242,7 +242,7 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
       className="relative"
       onMouseEnter={(e) => {
         const rect = e.currentTarget.getBoundingClientRect()
-        setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 6 })
+        setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 2 })
       }}
       onMouseLeave={() => setPos(null)}
     >
@@ -253,7 +253,7 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
           style={{ left: pos.x, top: pos.y }}
         >
           {label}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800" />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-[3px] border-transparent border-b-slate-800" />
         </div>
       )}
     </div>
