@@ -895,20 +895,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   return (
     <nav className="flex flex-col h-full w-full">
       {/* 상단 아이콘 버튼: 메뉴 편집 + 접기/펼치기 */}
-      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-end'} px-1 pb-2 gap-1`}>
+      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-end'} px-2 pb-1 gap-0.5`}>
         {!isCollapsed && (
           <Tooltip label={isEditMode ? '편집 완료' : '메뉴 편집'}>
             <button
               onClick={toggleEditMode}
               className={`
-                p-1.5 rounded-lg transition-all duration-200 w-full flex items-center justify-center
+                p-1 rounded-md transition-all duration-200 flex items-center justify-center
                 ${isEditMode
                   ? 'bg-at-accent text-white hover:bg-at-accent-hover'
                   : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover'
                 }
               `}
             >
-              {isEditMode ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
+              {isEditMode ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
             </button>
           </Tooltip>
         )}
@@ -916,9 +916,9 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
           <Tooltip label={isCollapsed ? '메뉴 펼치기' : '메뉴 접기'}>
             <button
               onClick={onToggleCollapse}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 w-full flex items-center justify-center"
+              className="p-1 rounded-md text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover transition-all duration-200 flex items-center justify-center"
             >
-              {isCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+              {isCollapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}
             </button>
           </Tooltip>
         )}
