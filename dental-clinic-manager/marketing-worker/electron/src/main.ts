@@ -1,5 +1,5 @@
 import { app, Notification } from 'electron';
-import { isFirstRun, getConfig, setConfig } from './config-store';
+import { isFirstRun, getConfig, setConfig, getUpdateMeta, setUpdateMeta } from './config-store';
 import { createTray, updateTrayStatus } from './tray';
 import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResult } from './worker-bridge';
 import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
@@ -58,6 +58,12 @@ async function autoRegister(): Promise<boolean> {
 
 async function onAppReady(): Promise<void> {
   log('info', '[Main] App ready');
+
+  // 최초 설치 시각 기록
+  const meta = getUpdateMeta();
+  if (!meta.installedAt) {
+    setUpdateMeta({ installedAt: new Date().toISOString() });
+  }
 
   createTray();
   initAutoUpdater();

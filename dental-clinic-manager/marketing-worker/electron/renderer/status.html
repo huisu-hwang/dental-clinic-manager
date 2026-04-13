@@ -207,6 +207,7 @@
 
     .version-item:nth-child(odd) { border-right: 1px solid #f4f4f5; }
     .version-item:nth-last-child(-n+2) { border-bottom: none; }
+    .version-item:nth-last-child(-n+2):nth-child(odd) { border-right: 1px solid #f4f4f5; }
 
     .version-label { font-size: 12px; color: #71717a; }
     .version-value { font-size: 13px; font-weight: 600; color: #18181b; }
@@ -279,6 +280,14 @@
         <div class="version-item">
           <span class="version-label">업데이트 상태</span>
           <span class="version-value" id="updateStatus">-</span>
+        </div>
+        <div class="version-item">
+          <span class="version-label">마지막 업데이트</span>
+          <span class="version-value" id="lastUpdatedAt">-</span>
+        </div>
+        <div class="version-item">
+          <span class="version-label">설치 날짜</span>
+          <span class="version-value" id="installedAt">-</span>
         </div>
       </div>
     </div>
@@ -458,6 +467,9 @@
         var statusKey = info.updateStatus || 'up-to-date';
         statusEl.textContent = UPDATE_STATUS_LABELS[statusKey] || statusKey;
         statusEl.className = 'version-value ' + statusKey;
+
+        document.getElementById('lastUpdatedAt').textContent = formatDate(info.lastUpdatedAt);
+        document.getElementById('installedAt').textContent = formatDate(info.installedAt);
       }).catch(function() {});
     }
 
