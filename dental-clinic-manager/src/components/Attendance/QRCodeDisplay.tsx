@@ -329,27 +329,27 @@ export default function QRCodeDisplay() {
           </div>
 
           {/* QR 코드 표시 영역 */}
-          <div className="text-center space-y-4">
-            <div className="inline-block p-8 bg-white border-4 border-at-border rounded-xl">
+          <div className="flex flex-col sm:flex-row gap-6 items-start">
+            <div className="p-6 bg-white border-4 border-at-border rounded-xl flex-shrink-0">
               <canvas
                 ref={canvasRef}
-                className="mx-auto"
                 style={{ imageRendering: 'pixelated' }}
               />
             </div>
-
-            <div className="text-lg font-semibold text-at-text print:text-2xl">
-              출퇴근 인증
-            </div>
-            <div className="text-sm text-at-text-secondary">
-              {qrCode.valid_until && qrCode.valid_until !== qrCode.valid_date ? (
-                <>유효 기간: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')} ~ {new Date(qrCode.valid_until).toLocaleDateString('ko-KR')}</>
-              ) : (
-                <>유효 날짜: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')}</>
-              )}
-            </div>
-            <div className="text-xs text-at-text-weak">
-              인증 반경: {qrCode.radius_meters}m 이내
+            <div className="space-y-2">
+              <div className="text-lg font-semibold text-at-text print:text-2xl">
+                출퇴근 인증
+              </div>
+              <div className="text-sm text-at-text-secondary">
+                {qrCode.valid_until && qrCode.valid_until !== qrCode.valid_date ? (
+                  <>유효 기간: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')} ~ {new Date(qrCode.valid_until).toLocaleDateString('ko-KR')}</>
+                ) : (
+                  <>유효 날짜: {new Date(qrCode.valid_date).toLocaleDateString('ko-KR')}</>
+                )}
+              </div>
+              <div className="text-xs text-at-text-weak">
+                인증 반경: {qrCode.radius_meters}m 이내
+              </div>
             </div>
           </div>
 
