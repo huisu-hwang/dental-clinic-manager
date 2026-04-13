@@ -234,26 +234,26 @@ function SortableMenuItem({ id, children }: { id: string; children: (listeners: 
   )
 }
 
-// 즉시 표시 fixed 툴팁 (overflow clip 우회, 딜레이 없음)
+// 즉시 표시 fixed 툴팁 (overflow clip 우회, 딜레이 없음) - 하방 표시
 function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   return (
     <div
-      className="relative w-full"
+      className="relative"
       onMouseEnter={(e) => {
         const rect = e.currentTarget.getBoundingClientRect()
-        setPos({ x: rect.right + 8, y: rect.top + rect.height / 2 })
+        setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 6 })
       }}
       onMouseLeave={() => setPos(null)}
     >
       {children}
       {pos && (
         <div
-          className="fixed z-[9999] bg-slate-800 text-white text-xs font-medium rounded-md px-2 py-1 whitespace-nowrap shadow-lg pointer-events-none -translate-y-1/2"
+          className="fixed z-[9999] bg-slate-800 text-white text-xs font-medium rounded-md px-2 py-1 whitespace-nowrap shadow-lg pointer-events-none -translate-x-1/2"
           style={{ left: pos.x, top: pos.y }}
         >
           {label}
-          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-800" />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800" />
         </div>
       )}
     </div>
@@ -894,8 +894,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
 
   return (
     <nav className="flex flex-col h-full w-full">
-      {/* 상단 아이콘 버튼: 메뉴 편집 + 접기/펼치기 */}
-      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-end'} px-2 pb-1 gap-0.5`}>
+      {/* 사이드바 최상단 헤더: 우측에 아이콘 버튼 배치 */}
+      <div className="flex items-center justify-end px-2 pt-1 pb-2 border-b border-at-border mb-1 gap-0.5">
         {!isCollapsed && (
           <Tooltip label={isEditMode ? '편집 완료' : '메뉴 편집'}>
             <button
