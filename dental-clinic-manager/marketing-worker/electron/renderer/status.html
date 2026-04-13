@@ -282,8 +282,8 @@
           <span class="version-value" id="updateStatus">-</span>
         </div>
         <div class="version-item">
-          <span class="version-label">마지막 업데이트</span>
-          <span class="version-value" id="lastUpdatedAt">-</span>
+          <span class="version-label">업데이트 날짜</span>
+          <span class="version-value" id="currentVersionReleasedAt">-</span>
         </div>
         <div class="version-item">
           <span class="version-label">설치 날짜</span>
@@ -468,7 +468,7 @@
         statusEl.textContent = UPDATE_STATUS_LABELS[statusKey] || statusKey;
         statusEl.className = 'version-value ' + statusKey;
 
-        document.getElementById('lastUpdatedAt').textContent = formatDate(info.lastUpdatedAt);
+        document.getElementById('currentVersionReleasedAt').textContent = formatDate(info.currentVersionReleasedAt);
         document.getElementById('installedAt').textContent = formatDate(info.installedAt);
       }).catch(function() {});
     }

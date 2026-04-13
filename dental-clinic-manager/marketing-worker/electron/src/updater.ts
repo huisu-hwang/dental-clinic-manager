@@ -60,6 +60,8 @@ export function initAutoUpdater(): void {
     setUpdateMeta({
       latestVersion: info.version,
       updateStatus: 'up-to-date',
+      // 현재 버전의 GitHub 릴리즈 날짜 (서버에 배포된 날짜)
+      currentVersionReleasedAt: info.releaseDate || '',
     });
     if (isManualCheck) {
       notify('클리닉 매니저 워커', '현재 최신 버전을 사용 중입니다.');

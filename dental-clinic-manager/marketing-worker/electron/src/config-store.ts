@@ -13,11 +13,12 @@ interface StoreSchema {
   headless: boolean;
   isConfigured: boolean;
   // 업데이트 메타데이터
-  lastUpdateCheck: string;   // 마지막 업데이트 확인 시각 (ISO)
-  lastUpdatedAt: string;     // 마지막 업데이트 설치 시각 (ISO)
-  installedAt: string;       // 최초 설치 시각 (ISO)
-  latestVersion: string;     // 확인된 최신 버전
-  updateStatus: string;      // 업데이트 상태 (up-to-date, available, downloading, downloaded)
+  lastUpdateCheck: string;         // 마지막 업데이트 확인 시각 (ISO)
+  lastUpdatedAt: string;           // 마지막 업데이트 설치 시각 (ISO)
+  installedAt: string;             // 최초 설치 시각 (ISO)
+  currentVersionReleasedAt: string; // 현재 버전 GitHub 릴리즈 날짜 (ISO)
+  latestVersion: string;           // 확인된 최신 버전
+  updateStatus: string;            // 업데이트 상태 (up-to-date, available, downloading, downloaded)
   githubToken: string;       // GitHub PAT (private repo 업데이트용)
   // DentWeb DB 설정
   dentwebDbServer: string;
@@ -49,6 +50,7 @@ export interface UpdateMeta {
   lastUpdateCheck: string;
   lastUpdatedAt: string;
   installedAt: string;
+  currentVersionReleasedAt: string;
   latestVersion: string;
   updateStatus: string;
 }
@@ -65,6 +67,7 @@ const store = new Store<StoreSchema>({
     lastUpdateCheck: '',
     lastUpdatedAt: '',
     installedAt: '',
+    currentVersionReleasedAt: '',
     latestVersion: '',
     updateStatus: 'up-to-date',
     githubToken: '',
@@ -117,6 +120,7 @@ export function getUpdateMeta(): UpdateMeta {
     lastUpdateCheck: store.get('lastUpdateCheck'),
     lastUpdatedAt: store.get('lastUpdatedAt'),
     installedAt: store.get('installedAt'),
+    currentVersionReleasedAt: store.get('currentVersionReleasedAt'),
     latestVersion: store.get('latestVersion'),
     updateStatus: store.get('updateStatus'),
   };
@@ -129,6 +133,7 @@ export function setUpdateMeta(partial: Partial<UpdateMeta>): void {
   if (partial.lastUpdateCheck !== undefined) store.set('lastUpdateCheck', partial.lastUpdateCheck);
   if (partial.lastUpdatedAt !== undefined) store.set('lastUpdatedAt', partial.lastUpdatedAt);
   if (partial.installedAt !== undefined) store.set('installedAt', partial.installedAt);
+  if (partial.currentVersionReleasedAt !== undefined) store.set('currentVersionReleasedAt', partial.currentVersionReleasedAt);
   if (partial.latestVersion !== undefined) store.set('latestVersion', partial.latestVersion);
   if (partial.updateStatus !== undefined) store.set('updateStatus', partial.updateStatus);
 }
