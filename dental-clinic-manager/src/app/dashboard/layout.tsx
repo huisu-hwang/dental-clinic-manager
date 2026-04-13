@@ -155,7 +155,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
       <aside
         className={`
-          fixed top-14 w-64 ${isSidebarCollapsed ? 'lg:w-[68px]' : 'lg:w-56'} h-[calc(100vh-3.5rem)] bg-at-surface border-r border-at-border z-20 overflow-y-auto py-3 ${isSidebarCollapsed ? 'lg:px-1.5' : 'px-0'} fixed-sidebar-safe
+          fixed top-14 w-64 ${isSidebarCollapsed ? 'lg:w-[68px]' : 'lg:w-48'} h-[calc(100vh-3.5rem)] bg-at-surface border-r border-at-border z-20 overflow-y-auto py-3 ${isSidebarCollapsed ? 'lg:px-1.5' : 'px-0'} fixed-sidebar-safe
           transition-all duration-300 ease-in-out
           lg:left-0
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
@@ -173,7 +173,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* 메인 콘텐츠 */}
       <div className="pt-14 pt-header-safe">
-        <main className={`${isSidebarCollapsed ? 'lg:pl-[68px]' : 'lg:pl-56'} px-0 transition-[padding] duration-300`}>
+        <main className={`${isSidebarCollapsed ? 'lg:pl-[68px]' : 'lg:pl-48'} px-0 transition-[padding] duration-300`}>
           {children}
         </main>
       </div>
