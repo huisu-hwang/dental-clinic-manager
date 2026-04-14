@@ -31,6 +31,8 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null)
   const [salaryType, setSalaryType] = useState<'gross' | 'net'>('gross')
   const [periodType, setPeriodType] = useState<'unset' | 'permanent' | 'fixed'>('unset')
+  const [fixedPeriodUnit, setFixedPeriodUnit] = useState<'years' | 'months' | 'custom'>('years')
+  const [fixedPeriodValue, setFixedPeriodValue] = useState<number>(1)
   const [formData, setFormData] = useState<Partial<ContractData>>({
     employment_period_start: new Date().toISOString().split('T')[0],
     salary_base: 0,
@@ -42,6 +44,26 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
     pension_insurance: true,
     is_permanent: false
   })
+
+  // 기한 정함(년/월)일 때 시작일 기준으로 종료일 자동 계산
+  useEffect(() => {
+    if (periodType !== 'fixed') return
+    if (fixedPeriodUnit === 'custom') return
+    if (!formData.employment_period_start) return
+
+    const start = new Date(formData.employment_period_start)
+    if (isNaN(start.getTime())) return
+
+    const endDate = new Date(start)
+    if (fixedPeriodUnit === 'years') {
+      endDate.setFullYear(endDate.getFullYear() + fixedPeriodValue)
+    } else if (fixedPeriodUnit === 'months') {
+      endDate.setMonth(endDate.getMonth() + fixedPeriodValue)
+    }
+    endDate.setDate(endDate.getDate() - 1)
+    
+    setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
+  }, [periodType, fixedPeriodUnit, fixedPeriodValue, formData.employment_period_start])
 
   // Debug logging for employees prop
   useEffect(() => {
@@ -182,6 +204,16 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
 
     if (!formData.employment_period_start || !formData.salary_base) {
       await appAlert('필수 항목을 입력해주세요.')
+      return
+    }
+
+    if (periodType === 'unset') {
+      await appAlert('근로 기한을 선택해주세요 (무기한 또는 기간 있음).')
+      return
+    }
+    
+    if (periodType === 'fixed' && !formData.employment_period_end) {
+      await appAlert('계약 기간(종료일)을 설정해주세요.')
       return
     }
 
@@ -350,65 +382,83 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
 
           {/* 기간 있음 선택 시 */}
           {periodType === 'fixed' && (
-            <div className="pl-0 space-y-3">
-              {/* 년 단위 빠른 선택 */}
-              <div>
-                <p className="text-xs text-at-text-secondary mb-1.5">년 단위</p>
-                <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3].map(years => (
-                    <button
-                      key={years}
-                      type="button"
-                      onClick={() => {
-                        const start = formData.employment_period_start
-                        if (!start) return
-                        const endDate = new Date(start)
-                        endDate.setFullYear(endDate.getFullYear() + years)
-                        endDate.setDate(endDate.getDate() - 1)
-                        setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
-                      }}
-                      className="px-3 py-1 text-xs border border-at-border rounded hover:border-at-accent hover:text-at-accent transition-colors"
-                    >
-                      {years}년
-                    </button>
-                  ))}
+            <div className="mt-3 p-4 bg-at-surface-alt border border-at-border rounded-xl space-y-4">
+              <div className="flex flex-wrap gap-4">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={fixedPeriodUnit === 'years'}
+                    onChange={() => setFixedPeriodUnit('years')}
+                    className="text-at-accent focus:ring-at-accent"
+                  />
+                  <span className="text-sm">년 단위</span>
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={fixedPeriodUnit === 'months'}
+                    onChange={() => setFixedPeriodUnit('months')}
+                    className="text-at-accent focus:ring-at-accent"
+                  />
+                  <span className="text-sm">월 단위</span>
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={fixedPeriodUnit === 'custom'}
+                    onChange={() => setFixedPeriodUnit('custom')}
+                    className="text-at-accent focus:ring-at-accent"
+                  />
+                  <span className="text-sm">직접 입력</span>
+                </label>
+              </div>
+
+              {fixedPeriodUnit === 'years' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={fixedPeriodValue}
+                    onChange={e => setFixedPeriodValue(parseInt(e.target.value) || 1)}
+                    className="w-24 px-3 py-1.5 border border-at-border rounded focus:ring-2 focus:ring-at-accent text-right"
+                  />
+                  <span className="text-sm">년 설정</span>
+                  <div className="ml-4 text-sm text-at-accent bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
+                    <span className="font-semibold mr-1">종료일:</span> 
+                    {formData.employment_period_end || '시작일을 먼저 선택해주세요'}
+                  </div>
                 </div>
-              </div>
-              {/* 월 단위 빠른 선택 */}
-              <div>
-                <p className="text-xs text-at-text-secondary mb-1.5">월 단위</p>
-                <div className="flex flex-wrap gap-2">
-                  {[3, 6, 12].map(months => (
-                    <button
-                      key={months}
-                      type="button"
-                      onClick={() => {
-                        const start = formData.employment_period_start
-                        if (!start) return
-                        const endDate = new Date(start)
-                        endDate.setMonth(endDate.getMonth() + months)
-                        endDate.setDate(endDate.getDate() - 1)
-                        setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
-                      }}
-                      className="px-3 py-1 text-xs border border-at-border rounded hover:border-at-accent hover:text-at-accent transition-colors"
-                    >
-                      {months}개월
-                    </button>
-                  ))}
-                  <span className="text-xs text-at-text-secondary self-center">시작일 기준 자동 계산</span>
+              )}
+
+              {fixedPeriodUnit === 'months' && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={fixedPeriodValue}
+                    onChange={e => setFixedPeriodValue(parseInt(e.target.value) || 1)}
+                    className="w-24 px-3 py-1.5 border border-at-border rounded focus:ring-2 focus:ring-at-accent text-right"
+                  />
+                  <span className="text-sm">개월 설정</span>
+                  <div className="ml-4 text-sm text-at-accent bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 flex items-center">
+                    <span className="font-semibold mr-1">종료일:</span> 
+                    {formData.employment_period_end || '시작일을 먼저 선택해주세요'}
+                  </div>
                 </div>
-              </div>
-              {/* 직접 입력 */}
-              <div>
-                <label className="block text-xs text-at-text-secondary mb-1">종료일 직접 입력</label>
-                <input
-                  type="date"
-                  name="employment_period_end"
-                  value={formData.employment_period_end || ''}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
-                />
-              </div>
+              )}
+
+              {fixedPeriodUnit === 'custom' && (
+                <div>
+                  <label className="block text-xs text-at-text-secondary mb-1">종료일 직접 입력</label>
+                  <input
+                    type="date"
+                    name="employment_period_end"
+                    value={formData.employment_period_end || ''}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
