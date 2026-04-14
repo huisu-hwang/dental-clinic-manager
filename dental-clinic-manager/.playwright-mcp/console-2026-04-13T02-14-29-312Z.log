@@ -1,0 +1,258 @@
+[    1307ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[    1382ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[    1382ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[    1384ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[    1384ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[    1384ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[    1652ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://beahjntkmkfhpcbhfnrr.supabase.co/auth/v1/token?grant_type=refresh_token:0
+[    1653ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    1653ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[    1654ms] [ERROR] AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+    at handleError (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:80:11)
+    at async _handleRequest (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:123:9)
+    at async _request (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/fetch.js:105:18)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:1588:24)
+    at async eval (webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/lib/helpers.js:206:36) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    1654ms] [LOG] [Supabase] Auth event: SIGNED_OUT @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    1654ms] [LOG] [Supabase] User signed out detected @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:92
+[    1668ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    1668ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[    1669ms] [LOG] AuthContext: storage에서 사용자 정보 복원 {id: 1d44b907-9cde-4ef4-bf01-109ecfdf98b6, clinic_id: fac23613-66f2-4f89-84a0-d38ad2e38114, email: sani81@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:204
+[    1669ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[    1700ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    1768ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1838ms] [LOG] [Fast Refresh] done in 70ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2180ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2205ms] [LOG] [Fast Refresh] done in 25ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2535ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2556ms] [LOG] [Fast Refresh] done in 21ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    2783ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2798ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3019ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3034ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3281ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3303ms] [LOG] [Fast Refresh] done in 23ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3544ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3560ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3790ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3819ms] [LOG] [Fast Refresh] done in 30ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4042ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4064ms] [LOG] [Fast Refresh] done in 22ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4317ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4347ms] [LOG] [Fast Refresh] done in 31ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4700ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    4700ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    4700ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    4700ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    4703ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: fac23613-66f2-4f89-84a0-d38ad2e38114 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    4704ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    4705ms] [LOG] [Supabase] Environment check: {NODE_ENV: development, hasUrl: true, hasKey: true, urlValue: https://beahjntkmkfhpcbhfnrr.s..., keyValue: eyJhbGciOiJIUzI1NiIs...} @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:34
+[    4706ms] [LOG] [Supabase] Creating client... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:63
+[    4706ms] [LOG] [Supabase] Custom storage adapter initialized @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:67
+[    4706ms] [WARNING] Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key. @ webpack-internal:///(app-pages-browser)/./node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:84
+[    4706ms] [LOG] [Supabase] Client created successfully with custom storage @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:89
+[    4708ms] [LOG] [CookieStorage] Session cookies refreshed @ webpack-internal:///(app-pages-browser)/./src/lib/cookieStorageAdapter.ts:258
+[    4710ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: fac23613-66f2-4f89-84a0-d38ad2e38114 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    4710ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    4710ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[    4724ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    4724ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    4724ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    4724ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    4731ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    4731ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    4732ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4734ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    4734ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    4735ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[    4735ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    4735ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[    4735ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    4735ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    4735ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    4735ms] [LOG] [Supabase] Auth state change: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:93
+[    4736ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    4736ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    4736ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    4736ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[    4737ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    4737ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[    5032ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/workers/status?type=marketing:0
+[    5100ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/workers/status?type=all:0
+[    5702ms] [LOG] [Fast Refresh] done in 969ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5714ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    5737ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    5737ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5737ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    5738ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    5738ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    5738ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[    5738ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[    5738ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[    5740ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5740ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5740ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5740ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5757ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: fac23613-66f2-4f89-84a0-d38ad2e38114 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    5757ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    5759ms] [LOG] [Supabase] Using existing client @ webpack-internal:///(app-pages-browser)/./src/lib/supabase.ts:133
+[    5760ms] [LOG] 🔍 데이터베이스 검사 시작... @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:20
+[    5760ms] [LOG] [useSupabaseData] Client-side, starting data fetch for clinic: fac23613-66f2-4f89-84a0-d38ad2e38114 @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:389
+[    5760ms] [LOG] [useSupabaseData] 세션 확인 중... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:113
+[    5761ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5761ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5762ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5762ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5767ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    5767ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    5767ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[    5767ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[    5767ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[    5770ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5770ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5770ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5770ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5770ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/workers/status?type=marketing:0
+[    5780ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5780ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5780ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5780ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5793ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5793ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5793ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5793ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5816ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5816ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5816ms] [LOG] Current selectors: {weekSelector: 2026-W16, monthSelector: 2026-04, yearSelector: 2026} @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:157
+[    5816ms] [LOG] Year options: [2026] Selected: 2026 @ webpack-internal:///(app-pages-browser)/./src/app/dashboard/page.tsx:381
+[    5837ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[    5837ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    5839ms] [WARNING] [useSupabaseData] 세션이 유효하지 않음, 갱신 시도... @ webpack-internal:///(app-pages-browser)/./src/hooks/useSupabaseData.ts:116
+[    5840ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 1/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    6191ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    6193ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    6193ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[    6195ms] [ERROR] [sessionUtils] Attempt 1/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    6195ms] [LOG] [sessionUtils] Retrying in 1000ms... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:187
+[    6354ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    6517ms] [LOG] ✅ Table daily_reports: 191개 레코드, 구조: [id, created_at, date, naver_review_count, consult_proceed, consult_hold, recall_count, recall_booking_count, special_notes, clinic_id, recall_booking_names] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    6517ms] [LOG] 📄 daily_reports 샘플: {id: 870, created_at: 2025-12-26T09:51:24.471145+00:00, date: 2025-12-26, naver_review_count: 0, consult_proceed: 3} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    6517ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    6644ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    6766ms] [LOG] ✅ Table consult_logs: 434개 레코드, 구조: [id, created_at, date, patient_name, consult_content, consult_status, remarks, clinic_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    6766ms] [LOG] 📄 consult_logs 샘플: {id: 2580, created_at: 2025-12-12T14:34:54.315427+00:00, date: 2025-12-12, patient_name: 박정애(7247), consult_content: zir} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    6767ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    6899ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7017ms] [LOG] ✅ Table gift_logs: 252개 레코드, 구조: [id, created_at, date, patient_name, gift_type, naver_review, notes, clinic_id, quantity] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    7017ms] [LOG] 📄 gift_logs 샘플: {id: 177, created_at: 2025-10-16T04:43:55.307552+00:00, date: 2025-10-10, patient_name: 이창원, gift_type: 칫솔세트} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    7017ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7148ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7194ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    7194ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    7194ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    7194ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[    7194ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[    7194ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[    7202ms] [LOG] [sessionUtils] Attempting to refresh session... (Attempt 2/2) @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:160
+[    7202ms] [ERROR] [sessionUtils] Attempt 2/2 failed: Auth session missing! @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    7202ms] [ERROR] [useSupabaseData] 세션 갱신 실패: SESSION_EXPIRED @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[    7202ms] [LOG] [sessionUtils] Handling session expiration... @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:284
+[    7202ms] [LOG] [sessionUtils] Session data cleared @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:264
+[    7202ms] [LOG] [sessionUtils] Redirecting to login... session_expired @ webpack-internal:///(app-pages-browser)/./src/lib/sessionUtils.ts:273
+[    7275ms] [LOG] ✅ Table gift_inventory: 4개 레코드, 구조: [id, created_at, name, stock, clinic_id, category_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    7275ms] [LOG] 📄 gift_inventory 샘플: {id: 1, created_at: 2025-09-15T17:24:52.536478+00:00, name: 치실, stock: 20, clinic_id: de87b3fd-f936-49d8-a659-7b50b0019fe9} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    7275ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7403ms] [LOG] [CustomStorage] Using sessionStorage (rememberMe: false) @ webpack-internal:///(app-pages-browser)/./src/lib/customStorageAdapter.ts:18
+[    7518ms] [LOG] ✅ Table inventory_logs: 489개 레코드, 구조: [id, timestamp, name, reason, change, old_stock, new_stock, clinic_id] @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:42
+[    7518ms] [LOG] 📄 inventory_logs 샘플: {id: 252, timestamp: 2025-10-14T15:29:32.234+00:00, name: 칫솔세트, reason: 데이터 삭제로 인한 재고 복원: 김수미, change: 1} @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:44
+[    7518ms] [LOG] 📊 총 레코드 수: 1370개 @ webpack-internal:///(app-pages-browser)/./src/utils/dbInspector.ts:64
+[    7603ms] [LOG] [Fast Refresh] done in 1866ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7626ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8812ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776046472253 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[    8812ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776046471336 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[    8813ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776046473017 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[    8813ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776046472505 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[    8813ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776046471724 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[    8813ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776046472007 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[    8813ms] [WARNING] The resource http://localhost:3000/_next/static/css/app/layout.css?v=1776046472772 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/dashboard:0
+[    9999ms] [LOG] [Fast Refresh] done in 2373ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10025ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10856ms] [LOG] [Fast Refresh] done in 831ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11152ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11443ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/workers/status?type=marketing:0
+[   11547ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/telegram/auto-join:0
+[   11800ms] [ERROR] [DashboardHome] Error loading dental news: TypeError: Failed to fetch
+    at loadDentalNews (webpack-internal:///(app-pages-browser)/./src/components/Dashboard/DashboardHome.tsx:449:36)
+    at DashboardHome.useEffect (webpack-internal:///(app-pages-browser)/./src/components/Dashboard/DashboardHome.tsx:443:13)
+    at Object.react_stack_bottom_frame (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:23669:20)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at commitHookEffectListMount (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12345:29)
+    at commitHookPassiveMountEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:12466:11)
+    at reconnectPassiveEffects (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14563:11)
+    at doubleInvokeEffectsOnFiber (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16566:11)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:872:30)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16530:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17)
+    at recursivelyTraverseAndDoubleInvokeEffectsInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16536:17) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56
+[   12405ms] Invalid or unexpected token
+[   13190ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[  133298ms] ChunkLoadError: Loading chunk app/layout failed.
+(timeout: http://localhost:3000/_next/static/chunks/app/layout.js)
+    at __webpack_require__.f.j (http://localhost:3000/_next/static/chunks/webpack.js?v=1776046480928:850:29)
+    at http://localhost:3000/_next/static/chunks/webpack.js?v=1776046480928:145:40
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1776046480928:144:67)
+    at fn.e (http://localhost:3000/_next/static/chunks/webpack.js?v=1776046480928:381:50)
+    at loadChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:113:34)
+    at preloadModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:82:31)
+    at resolveModule (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2078:20)
+    at processFullStringRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2769:11)
+    at processFullBinaryRow (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2764:7)
+    at processBinaryChunk (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2967:15)
+    at progress (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:3231:13)
+[  134028ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/eb9143583c0c1073.webpack.hot-update.json:0
+[  134028ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:113
+[  134043ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[  134311ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/css/app/layout.css?v=1776046603584:0
+[  134315ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/chunks/main-app.js?v=1776046603584:0
+[  134317ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/chunks/app-pages-internals.js:0
+[  134322ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/chunks/app/page.js:0
+[  134391ms] Invalid or unexpected token

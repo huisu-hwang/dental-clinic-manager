@@ -1,0 +1,33 @@
+[     486ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[     541ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[     541ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[     543ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[     543ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[     543ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[     589ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[     589ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[     589ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[     655ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    1053ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1278ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/54ea28b3c4d6f37f.webpack.hot-update.json:0
+[    1390ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    1477ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/2603cdd5dbd89ae6.webpack.hot-update.json:0
+[    3375ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/ee8e1e1bfce7b805.webpack.hot-update.json:0
+[    3577ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4769ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[    4810ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[    4811ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[    4811ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[    4811ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[    4811ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[    4856ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    4856ms] [LOG] [AuthContext] Session check complete: no session @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[    4856ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[    4875ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    5047ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5114ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/806b3147a8705be9.webpack.hot-update.json:0
+[    5342ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/59b894e47a7e8548.webpack.hot-update.json:0
+[    5374ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5526ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5877ms] Invalid or unexpected token
+[    6382ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630

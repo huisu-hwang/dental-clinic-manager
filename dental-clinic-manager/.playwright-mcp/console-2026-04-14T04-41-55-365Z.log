@@ -1,0 +1,110 @@
+[    2524ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
+[    2595ms] [LOG] ===== AuthContext: checkAuth 시작 ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:41
+[    2595ms] [LOG] [AuthContext] Getting Supabase client... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:63
+[    2596ms] [LOG] [Supabase] Singleton instance created with auto-refresh enabled @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:100
+[    2596ms] [LOG] [AuthContext] Supabase client obtained @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:65
+[    2596ms] [LOG] [AuthContext] Checking Supabase session... @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:69
+[    2635ms] [LOG] [Supabase] Auth event: SIGNED_IN @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    2635ms] [LOG] [Supabase] User signed in @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:97
+[    2635ms] [LOG] [Supabase] Auth event: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/client.ts:87
+[    2636ms] [LOG] [AuthContext] Session check complete: session found @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:98
+[    2636ms] [LOG] AuthContext: Supabase 세션 발견 1d44b907-9cde-4ef4-bf01-109ecfdf98b6 @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:114
+[    2636ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    2636ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    2812ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    2814ms] [LOG] AuthContext: 사용자 프로필 로드 성공 {id: 1d44b907-9cde-4ef4-bf01-109ecfdf98b6, clinic_id: fac23613-66f2-4f89-84a0-d38ad2e38114, email: sani81@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:119
+[    2814ms] [LOG] ===== AuthContext: 로딩 완료, setLoading(false) ===== @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:358
+[    2821ms] [LOG] [Master] Checking permission for user: {id: 1d44b907-9cde-4ef4-bf01-109ecfdf98b6, clinic_id: fac23613-66f2-4f89-84a0-d38ad2e38114, email: sani81@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:122
+[    2821ms] [LOG] [Master] User is master_admin, loading data... @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:125
+[    2822ms] [LOG] [Master] Loading data... @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:154
+[    2822ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    2823ms] [LOG] [Master] Checking permission for user: {id: 1d44b907-9cde-4ef4-bf01-109ecfdf98b6, clinic_id: fac23613-66f2-4f89-84a0-d38ad2e38114, email: sani81@gmail.com, password_hash: null, name: 황희수} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:122
+[    2823ms] [LOG] [Master] User is master_admin, loading data... @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:125
+[    2823ms] [LOG] [Master] Loading data... @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:154
+[    2823ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    2824ms] [LOG] Auth state changed: INITIAL_SESSION @ webpack-internal:///(app-pages-browser)/./src/contexts/AuthContext.tsx:214
+[    2824ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    2824ms] [LOG] [SW] 등록 완료, scope: http://localhost:3000/ @ webpack-internal:///(app-pages-browser)/./src/components/PWA/ServiceWorkerRegistrar.tsx:133
+[    2825ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    2825ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    2833ms] [LOG] [Fast Refresh] done in 20ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3001ms] [LOG] [Master] Clinics result: {data: Array(15)} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:157
+[    3144ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    3157ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3172ms] [LOG] [Master] Clinics result: {data: Array(15)} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:157
+[    3564ms] [LOG] [Fast Refresh] done in 420ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    3572ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4049ms] [LOG] [Fast Refresh] done in 478ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4111ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4330ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4350ms] [LOG] [Fast Refresh] done in 21ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4578ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4593ms] [LOG] [Fast Refresh] done in 16ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    4844ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    4859ms] [LOG] [Fast Refresh] done in 16ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5049ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5064ms] [LOG] [Fast Refresh] done in 14ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5201ms] [LOG] [Master] Users result: {data: Array(19), error: null} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:163
+[    5201ms] [LOG] [Master] Total users loaded: 19 @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:182
+[    5201ms] [LOG] [Master] All users: [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object] @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:183
+[    5201ms] [LOG] [Master] Users by status: {pending: 1, active: 14, rejected: 0, suspended: 1, other: 3} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:195
+[    5201ms] [LOG] [Master] Pending users: 1 @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:209
+[    5201ms] [LOG] [Master] Pending users details: [Object] @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:210
+[    5201ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    5202ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    5327ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5349ms] [LOG] [Fast Refresh] done in 22ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5629ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    5695ms] [LOG] [Fast Refresh] done in 67ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    5728ms] [LOG] [Master] Statistics result: {data: Object} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:213
+[    5728ms] [LOG] [Master] Data loaded successfully @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:217
+[    6095ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6288ms] [LOG] [Fast Refresh] done in 193ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6297ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6457ms] [LOG] [Master] Users result: {data: Array(19), error: null} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:163
+[    6457ms] [LOG] [Master] Total users loaded: 19 @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:182
+[    6457ms] [LOG] [Master] All users: [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object] @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:183
+[    6457ms] [LOG] [Master] Users by status: {pending: 1, active: 14, rejected: 0, suspended: 1, other: 3} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:195
+[    6457ms] [LOG] [Master] Pending users: 1 @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:209
+[    6457ms] [LOG] [Master] Pending users details: [Object] @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:210
+[    6457ms] [LOG] [ensureConnection] Checking database connection... @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:25
+[    6465ms] [LOG] [ensureConnection] Session valid @ webpack-internal:///(app-pages-browser)/./src/lib/supabase/connectionCheck.ts:45
+[    6471ms] [LOG] [Fast Refresh] done in 175ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6568ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6584ms] [LOG] [Fast Refresh] done in 16ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6785ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    6797ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    6965ms] [LOG] [Master] Statistics result: {data: Object} @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:213
+[    6965ms] [LOG] [Master] Data loaded successfully @ webpack-internal:///(app-pages-browser)/./src/app/master/page.tsx:217
+[    7045ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7060ms] [LOG] [Fast Refresh] done in 15ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7266ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7287ms] [LOG] [Fast Refresh] done in 21ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7473ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7485ms] [LOG] [Fast Refresh] done in 11ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7691ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7703ms] [LOG] [Fast Refresh] done in 12ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    7945ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    7986ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8404ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8450ms] [LOG] [Fast Refresh] done in 46ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    8911ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    8944ms] [LOG] [Fast Refresh] done in 33ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9378ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9419ms] [LOG] [Fast Refresh] done in 41ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[    9911ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[    9976ms] [LOG] [Fast Refresh] done in 66ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   10500ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   10551ms] [LOG] [Fast Refresh] done in 50ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11229ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11322ms] [LOG] [Fast Refresh] done in 93ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   11942ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   11985ms] [LOG] [Fast Refresh] done in 42ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13043ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   13106ms] [LOG] [Fast Refresh] done in 64ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   13644ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   13707ms] [LOG] [Fast Refresh] done in 62ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   14248ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   14294ms] [LOG] [Fast Refresh] done in 46ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13
+[   14925ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/hot-reloader/app/hot-reloader-app.js:196
+[   14984ms] [LOG] [Fast Refresh] done in 59ms @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/dev/report-hmr-latency.js:13

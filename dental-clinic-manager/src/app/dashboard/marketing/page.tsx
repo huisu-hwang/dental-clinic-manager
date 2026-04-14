@@ -28,6 +28,7 @@ import ScheduleModal from '@/components/marketing/ScheduleModal'
 import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
+const ClinicalPhotoEditor = dynamic(() => import('@/components/marketing/clinical/ClinicalPhotoEditor'), { ssr: false })
 import ImageEditModal from '@/components/marketing/ImageEditModal'
 
 type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
@@ -450,14 +451,25 @@ function PostEditModal({
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null)
   const [editingImage, setEditingImage] = useState<{ fileName: string; prompt: string; path: string } | null>(null)
+  const [editingClinicalImage, setEditingClinicalImage] = useState<{ id: string; file?: File | null; previewUrl: string; imageIndex: number } | null>(null)
   const [currentImages, setCurrentImages] = useState(content?.generatedImages || post.generated_images || undefined)
   const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
   const canPublish = content?.body && !['published', 'publishing'].includes(post.status)
 
   const handleImageEdit = useCallback((imageIndex: number, currentImage: { fileName: string; prompt: string; path: string }) => {
+    // 임상글: ClinicalPhotoEditor로 편집 (File 없이 URL로 로드)
+    if (post.post_type === 'clinical' && currentImage.path) {
+      setEditingClinicalImage({
+        id: `clinical_${imageIndex}`,
+        file: null,
+        previewUrl: currentImage.path,
+        imageIndex,
+      })
+      return
+    }
     setEditingImageIndex(imageIndex)
     setEditingImage(currentImage)
-  }, [])
+  }, [post.post_type])
 
   const handleImageUpdated = useCallback((newImage: { fileName: string; prompt: string; path: string }) => {
     if (editingImageIndex === null || !currentImages) return
@@ -695,13 +707,49 @@ function PostEditModal({
           isLoading={isPublishing}
         />
 
-        {/* 이미지 편집 모달 */}
+        {/* 이미지 편집 모달 (일반 AI 이미지) */}
         {editingImage && (
           <ImageEditModal
             isOpen={!!editingImage}
             onClose={() => { setEditingImageIndex(null); setEditingImage(null) }}
             image={editingImage}
             onImageUpdated={handleImageUpdated}
+          />
+        )}
+
+        {/* 임상 사진 편집 모달 */}
+        {editingClinicalImage && (
+          <ClinicalPhotoEditor
+            photo={editingClinicalImage}
+            onSave={async (photoId, newFile, newPreviewUrl) => {
+              const idx = editingClinicalImage.imageIndex
+              if (!currentImages) return
+              // Storage에 재업로드
+              const formData = new FormData()
+              formData.append('file', newFile)
+              formData.append('photo_type', 'before')
+              try {
+                const res = await fetch('/api/marketing/clinical-photos/upload', {
+                  method: 'POST',
+                  body: formData,
+                })
+                if (res.ok) {
+                  const { url } = await res.json()
+                  const updatedImages = [...currentImages]
+                  const oldPath = updatedImages[idx]?.path
+                  updatedImages[idx] = { ...updatedImages[idx], path: url }
+                  setCurrentImages(updatedImages)
+                  if (oldPath) {
+                    setEditedBody((prev) => prev.replace(oldPath, url))
+                  }
+                  setHasChanges(true)
+                }
+              } catch (err) {
+                console.error('임상 사진 재업로드 실패:', err)
+              }
+              setEditingClinicalImage(null)
+            }}
+            onClose={() => setEditingClinicalImage(null)}
           />
         )}
       </div>
