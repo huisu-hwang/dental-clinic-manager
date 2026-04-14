@@ -458,7 +458,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
           {/* Article 4 - 계약기간 월급여액 */}
           <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제4조 (계약기간 월급여액) (세후)</h2>
+            <h2 className="text-lg font-bold mb-3">제4조 (계약기간 월급여액) ({data.salary_base_type === 'net' ? '세후' : '세전'})</h2>
             <p className="font-bold">월급여액: {formatSalary(data.salary_base)}</p>
           </section>
 
