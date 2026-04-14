@@ -258,7 +258,7 @@ function Tooltip({ label, children, direction = 'right' }: { label: string; chil
     : children
 
   return (
-    <div className="relative w-full">
+    <>
       {child}
       {pos && direction === 'bottom' && (
         <div
@@ -284,7 +284,7 @@ function Tooltip({ label, children, direction = 'right' }: { label: string; chil
           />
         </div>
       )}
-    </div>
+    </>
   )
 }
 
