@@ -43,7 +43,7 @@ const DATABASE_SCHEMA: DatabaseSchema = {
         { name: 'patient_name', type: 'text', description: '환자 이름' },
         { name: 'gift_type', type: 'text', description: '선물 종류' },
         { name: 'quantity', type: 'integer', description: '수량' },
-        { name: 'naver_review', type: 'text', description: '네이버 리뷰 작성 여부 (O/X)' },
+        { name: 'naver_review', type: 'text', description: '네이버 리뷰 작성 여부 (미작성, 네이버, 구글, 게시판)' },
         { name: 'notes', type: 'text', description: '비고' },
       ],
     },
@@ -735,7 +735,7 @@ ${JSON.stringify(data.consultLogs, null, 2)}`);
 
   if (data.giftLogs && data.giftLogs.length > 0) {
     const totalGifts = data.giftLogs.reduce((sum, g) => sum + (g.quantity || 1), 0);
-    const withReview = data.giftLogs.filter((g) => g.naver_review === 'O').length;
+    const withReview = data.giftLogs.filter((g) => g.naver_review !== '미작성').length;
     const giftTypes = data.giftLogs.reduce(
       (acc, g) => {
         acc[g.gift_type] = (acc[g.gift_type] || 0) + (g.quantity || 1);

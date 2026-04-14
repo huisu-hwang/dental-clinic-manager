@@ -82,6 +82,9 @@
       "mcp__supabase__apply_migration"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/tmp"
+    ]
   }
 }

@@ -27,7 +27,7 @@ export interface GiftLog {
   patient_name: string;
   gift_type: string;
   quantity: number;
-  naver_review: 'O' | 'X';
+  naver_review: '미작성' | '네이버' | '구글' | '게시판';
   notes: string;
   clinic_id?: string | null;
 }
@@ -117,7 +117,7 @@ export interface GiftRowData {
   patient_name: string;
   gift_type: string;
   quantity: number;
-  naver_review: 'O' | 'X';
+  naver_review: '미작성' | '네이버' | '구글' | '게시판';
   notes: string;
 }
 

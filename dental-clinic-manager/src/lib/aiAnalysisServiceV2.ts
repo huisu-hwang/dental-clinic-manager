@@ -52,7 +52,7 @@ const DATABASE_SCHEMA = {
         patient_name: 'VARCHAR(100) (환자 이름)',
         gift_type: 'VARCHAR(100) (선물 종류)',
         quantity: 'INTEGER (수량, 기본값 1)',
-        naver_review: 'VARCHAR(1) (네이버 리뷰 작성 여부: O/X)',
+        naver_review: 'VARCHAR(20) (리뷰 작성 여부: 미작성/네이버/구글/게시판)',
         notes: 'TEXT (비고)',
         created_at: 'TIMESTAMP',
       },
