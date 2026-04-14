@@ -52,6 +52,23 @@ jobs:
       - name: Build TypeScript + Scheduler Bundle
         run: npm run build
 
+      - name: Auto bump patch version
+        shell: bash
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          # 현재 릴리즈 태그 확인
+          EXISTING_TAG="worker-v${CURRENT_VERSION}"
+          if gh release view "${EXISTING_TAG}" --repo "$GITHUB_REPOSITORY" &>/dev/null; then
+            echo "Version ${CURRENT_VERSION} already released, bumping patch..."
+            npm version patch --no-git-tag-version
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            echo "Bumped to ${NEW_VERSION}"
+          else
+            echo "Version ${CURRENT_VERSION} not yet released, proceeding..."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install Playwright Chromium
         run: npx playwright install chromium
 
@@ -70,7 +87,7 @@ jobs:
           fi
 
       - name: Build Windows Installer
-        run: npx electron-builder --win --publish never
+        run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -81,46 +98,12 @@ jobs:
           path: dental-clinic-manager/marketing-worker/electron/release/*.exe
           retention-days: 30
 
-      - name: Upload to GitHub Release
+      - name: Verify Release Published
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          EXE_FILE=$(ls release/*.exe | head -1)
-          if [ -z "$EXE_FILE" ]; then
-            echo "No .exe file found"
-            exit 1
-          fi
-
-          # latest.yml도 함께 업로드 (electron-updater가 필요)
-          LATEST_YML=$(ls release/latest.yml 2>/dev/null || echo "")
-
           VERSION=$(node -p "require('./package.json').version")
           TAG="worker-v${VERSION}"
-          FILE_NAME=$(basename "$EXE_FILE")
-
-          echo "Uploading ${FILE_NAME} to GitHub Release ${TAG}..."
-
-          gh release create "${TAG}" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "클리닉 매니저 워커 v${VERSION}" \
-            --notes "클리닉 매니저 워커 v${VERSION} 업데이트" \
-            --prerelease 2>/dev/null || true
-
-          gh release delete-asset "${TAG}" "${FILE_NAME}" \
-            --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
-
-          gh release upload "${TAG}" "${EXE_FILE}" \
-            --repo "$GITHUB_REPOSITORY" --clobber
-
-          # latest.yml 업로드 (자동 업데이트에 필수)
-          if [ -n "$LATEST_YML" ]; then
-            gh release delete-asset "${TAG}" "latest.yml" \
-              --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
-            gh release upload "${TAG}" "${LATEST_YML}" \
-              --repo "$GITHUB_REPOSITORY" --clobber
-            echo "Uploaded latest.yml"
-          fi
-
-          echo "Upload complete!"
-          echo "Download URL: https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${FILE_NAME}"
+          echo "Verifying release ${TAG}..."
+          gh release view "${TAG}" --repo "$GITHUB_REPOSITORY" && echo "Release verified!" || echo "Warning: Release not found, electron-builder may have used a different tag format"

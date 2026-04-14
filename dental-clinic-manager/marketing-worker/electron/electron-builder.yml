@@ -2,7 +2,7 @@ publish:
   provider: github
   owner: huisu-hwang
   repo: dental-clinic-manager
-  releaseType: prerelease
+  releaseType: release
 appId: kr.co.hi-clinic.marketing-worker
 productName: 클리닉 매니저 워커
 artifactName: "clinic-manager-worker-${version}-setup.${ext}"

@@ -20,13 +20,20 @@ interface StoreSchema {
   latestVersion: string;           // 확인된 최신 버전
   updateStatus: string;            // 업데이트 상태 (up-to-date, available, downloading, downloaded)
   githubToken: string;       // GitHub PAT (private repo 업데이트용)
-  // DentWeb DB 설정
+  // DentWeb bridge
+  dentwebEnabled: boolean;
   dentwebDbServer: string;
   dentwebDbPort: number;
   dentwebDbDatabase: string;
-  dentwebDbAuth: string;     // 'windows' | 'sql'
+  dentwebDbAuthType: 'windows' | 'sql';
   dentwebDbUser: string;
   dentwebDbPassword: string;
+  dentwebClinicId: string;
+  dentwebApiKey: string;
+  dentwebSyncInterval: number;
+  dentwebLastSyncDate: string;
+  dentwebLastSyncStatus: string;
+  dentwebLastSyncPatientCount: number;
 }
 
 export interface AppConfig {
@@ -35,15 +42,20 @@ export interface AppConfig {
   autoStart: boolean;
   autoUpdate: boolean;
   headless: boolean;
-}
-
-export interface DentwebDbConfig {
-  server: string;
-  port: number;
-  database: string;
-  auth: 'windows' | 'sql';
-  user: string;
-  password: string;
+  // DentWeb bridge
+  dentwebEnabled: boolean;
+  dentwebDbServer: string;
+  dentwebDbPort: number;
+  dentwebDbDatabase: string;
+  dentwebDbAuthType: 'windows' | 'sql';
+  dentwebDbUser: string;
+  dentwebDbPassword: string;
+  dentwebClinicId: string;
+  dentwebApiKey: string;
+  dentwebSyncInterval: number;
+  dentwebLastSyncDate: string;
+  dentwebLastSyncStatus: string;
+  dentwebLastSyncPatientCount: number;
 }
 
 export interface UpdateMeta {
@@ -71,12 +83,20 @@ const store = new Store<StoreSchema>({
     latestVersion: '',
     updateStatus: 'up-to-date',
     githubToken: '',
-    dentwebDbServer: '',
+    // DentWeb bridge defaults
+    dentwebEnabled: false,
+    dentwebDbServer: 'localhost',
     dentwebDbPort: 1433,
     dentwebDbDatabase: 'DENTWEBDB',
-    dentwebDbAuth: 'windows',
+    dentwebDbAuthType: 'windows',
     dentwebDbUser: '',
     dentwebDbPassword: '',
+    dentwebClinicId: '',
+    dentwebApiKey: '',
+    dentwebSyncInterval: 300,
+    dentwebLastSyncDate: '',
+    dentwebLastSyncStatus: '',
+    dentwebLastSyncPatientCount: 0,
   },
 });
 
@@ -97,6 +117,20 @@ export function getConfig(): AppConfig {
     autoStart: store.get('autoStart'),
     autoUpdate: store.get('autoUpdate'),
     headless: store.get('headless'),
+    // DentWeb bridge
+    dentwebEnabled: store.get('dentwebEnabled'),
+    dentwebDbServer: store.get('dentwebDbServer'),
+    dentwebDbPort: store.get('dentwebDbPort'),
+    dentwebDbDatabase: store.get('dentwebDbDatabase'),
+    dentwebDbAuthType: store.get('dentwebDbAuthType'),
+    dentwebDbUser: store.get('dentwebDbUser'),
+    dentwebDbPassword: store.get('dentwebDbPassword'),
+    dentwebClinicId: store.get('dentwebClinicId'),
+    dentwebApiKey: store.get('dentwebApiKey'),
+    dentwebSyncInterval: store.get('dentwebSyncInterval'),
+    dentwebLastSyncDate: store.get('dentwebLastSyncDate'),
+    dentwebLastSyncStatus: store.get('dentwebLastSyncStatus'),
+    dentwebLastSyncPatientCount: store.get('dentwebLastSyncPatientCount'),
   };
 }
 
@@ -109,6 +143,20 @@ export function setConfig(partial: Partial<AppConfig>): void {
   if (partial.autoStart !== undefined) store.set('autoStart', partial.autoStart);
   if (partial.autoUpdate !== undefined) store.set('autoUpdate', partial.autoUpdate);
   if (partial.headless !== undefined) store.set('headless', partial.headless);
+  // DentWeb bridge
+  if (partial.dentwebEnabled !== undefined) store.set('dentwebEnabled', partial.dentwebEnabled);
+  if (partial.dentwebDbServer !== undefined) store.set('dentwebDbServer', partial.dentwebDbServer);
+  if (partial.dentwebDbPort !== undefined) store.set('dentwebDbPort', partial.dentwebDbPort);
+  if (partial.dentwebDbDatabase !== undefined) store.set('dentwebDbDatabase', partial.dentwebDbDatabase);
+  if (partial.dentwebDbAuthType !== undefined) store.set('dentwebDbAuthType', partial.dentwebDbAuthType);
+  if (partial.dentwebDbUser !== undefined) store.set('dentwebDbUser', partial.dentwebDbUser);
+  if (partial.dentwebDbPassword !== undefined) store.set('dentwebDbPassword', partial.dentwebDbPassword);
+  if (partial.dentwebClinicId !== undefined) store.set('dentwebClinicId', partial.dentwebClinicId);
+  if (partial.dentwebApiKey !== undefined) store.set('dentwebApiKey', partial.dentwebApiKey);
+  if (partial.dentwebSyncInterval !== undefined) store.set('dentwebSyncInterval', partial.dentwebSyncInterval);
+  if (partial.dentwebLastSyncDate !== undefined) store.set('dentwebLastSyncDate', partial.dentwebLastSyncDate);
+  if (partial.dentwebLastSyncStatus !== undefined) store.set('dentwebLastSyncStatus', partial.dentwebLastSyncStatus);
+  if (partial.dentwebLastSyncPatientCount !== undefined) store.set('dentwebLastSyncPatientCount', partial.dentwebLastSyncPatientCount);
   store.set('isConfigured', true);
 }
 
@@ -150,6 +198,27 @@ export function setGithubToken(token: string): void {
 }
 
 /**
+ * DentWeb 브릿지 설정만 반환
+ */
+export function getDentwebConfig() {
+  return {
+    enabled: store.get('dentwebEnabled'),
+    dbServer: store.get('dentwebDbServer'),
+    dbPort: store.get('dentwebDbPort'),
+    dbDatabase: store.get('dentwebDbDatabase'),
+    dbAuthType: store.get('dentwebDbAuthType'),
+    dbUser: store.get('dentwebDbUser'),
+    dbPassword: store.get('dentwebDbPassword'),
+    clinicId: store.get('dentwebClinicId'),
+    apiKey: store.get('dentwebApiKey'),
+    syncInterval: store.get('dentwebSyncInterval'),
+    lastSyncDate: store.get('dentwebLastSyncDate'),
+    lastSyncStatus: store.get('dentwebLastSyncStatus'),
+    lastSyncPatientCount: store.get('dentwebLastSyncPatientCount'),
+  };
+}
+
+/**
  * 워커 환경변수로 변환 (기존 marketing-worker의 process.env에 주입)
  */
 export function getWorkerEnvVars(): Record<string, string> {
@@ -158,30 +227,4 @@ export function getWorkerEnvVars(): Record<string, string> {
     WORKER_API_KEY: store.get('workerApiKey'),
     MARKETING_WORKER_PORT: '4001',
   };
-}
-
-/**
- * DentWeb DB 설정 조회
- */
-export function getDentwebConfig(): DentwebDbConfig {
-  return {
-    server: store.get('dentwebDbServer'),
-    port: store.get('dentwebDbPort'),
-    database: store.get('dentwebDbDatabase'),
-    auth: (store.get('dentwebDbAuth') as 'windows' | 'sql') || 'windows',
-    user: store.get('dentwebDbUser'),
-    password: store.get('dentwebDbPassword'),
-  };
-}
-
-/**
- * DentWeb DB 설정 저장
- */
-export function setDentwebConfig(cfg: Partial<DentwebDbConfig>): void {
-  if (cfg.server !== undefined) store.set('dentwebDbServer', cfg.server);
-  if (cfg.port !== undefined) store.set('dentwebDbPort', cfg.port);
-  if (cfg.database !== undefined) store.set('dentwebDbDatabase', cfg.database);
-  if (cfg.auth !== undefined) store.set('dentwebDbAuth', cfg.auth);
-  if (cfg.user !== undefined) store.set('dentwebDbUser', cfg.user);
-  if (cfg.password !== undefined) store.set('dentwebDbPassword', cfg.password);
 }

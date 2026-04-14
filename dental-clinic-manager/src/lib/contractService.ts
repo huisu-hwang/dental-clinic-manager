@@ -703,7 +703,10 @@ class ContractService {
 
       // Update contract status if changed
       if (newStatus !== contract.status) {
-        await this.updateContractStatus(data.contract_id, newStatus)
+        const updateResult = await this.updateContractStatus(data.contract_id, newStatus)
+        if (!updateResult.success) {
+          console.error('[contractService.signContract] Failed to update contract status:', updateResult.error)
+        }
       }
 
       // 알림 생성

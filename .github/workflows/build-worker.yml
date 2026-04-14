@@ -1,9 +1,13 @@
 name: Build & Release Worker
 
+# Disabled: consolidated into build-marketing-worker.yml
+# Only runs on manual dispatch now
 on:
-  push:
-    tags:
-      - 'worker-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag (e.g. worker-v1.2.0)'
+        required: true
 
 permissions:
   contents: write

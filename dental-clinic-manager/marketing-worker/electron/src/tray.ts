@@ -5,7 +5,7 @@ import { start as startWorker, stop as stopWorker, getStatus } from './worker-br
 import { getScrapingStatus } from './scraping-bridge';
 import { getSeoStatus } from './seo-bridge';
 import { getEmailMonitorStatus } from './email-bridge';
-import { getDentwebStatus } from './dentweb-bridge';
+import { getDentwebStatus, startDentwebSync, stopDentwebSync } from './dentweb-bridge';
 import { log } from './logger';
 import { checkForUpdatesManually, startAutoCheckIfEnabled } from './updater';
 import { createStatusWindow } from './status-window';
@@ -78,6 +78,7 @@ function rebuildMenu(): void {
     polling: '대기 중',
     syncing: '동기화 중',
     error: '오류',
+    db_disconnected: 'DB 연결 끊김',
   };
 
   const contextMenu = Menu.buildFromTemplate([
@@ -127,6 +128,21 @@ function rebuildMenu(): void {
           args: ['--hidden'],
         });
         log('info', `[Tray] 자동 실행: ${menuItem.checked}`);
+      },
+    },
+    {
+      label: '덴트웹 동기화',
+      type: 'checkbox',
+      checked: cfg.dentwebEnabled,
+      click: async (menuItem) => {
+        setConfig({ dentwebEnabled: menuItem.checked });
+        if (menuItem.checked) {
+          startDentwebSync();
+        } else {
+          stopDentwebSync();
+        }
+        rebuildMenu();
+        log('info', `[Tray] 덴트웹 동기화: ${menuItem.checked ? '활성화' : '비활성화'}`);
       },
     },
     {

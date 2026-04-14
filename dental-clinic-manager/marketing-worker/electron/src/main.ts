@@ -5,9 +5,9 @@ import { start as startWorker, stop as stopWorker, onStatusChange, onPublishResu
 import { startScraping, stopScraping, onScrapingStatusChange } from './scraping-bridge';
 import { startSeoWorker, stopSeoWorker, onSeoStatusChange } from './seo-bridge';
 import { startEmailMonitor, stopEmailMonitor, onEmailStatusChange } from './email-bridge';
-import { startDentwebBridge, stopDentwebBridge, onDentwebStatusChange } from './dentweb-bridge';
+import { startDentwebSync, stopDentwebSync, onDentwebStatusChange } from './dentweb-bridge';
 import { log } from './logger';
-import { initAutoUpdater, stopAutoUpdater } from './updater';
+import { initAutoUpdater, stopAutoUpdater, onBeforeUpdateRestart } from './updater';
 
 // ============================================
 // Electron 메인 프로세스 진입점
@@ -68,6 +68,16 @@ async function onAppReady(): Promise<void> {
   createTray();
   initAutoUpdater();
 
+  // 업데이트 재시작 전 모든 워커 브릿지 정리
+  onBeforeUpdateRestart(() => {
+    log('info', '[Main] 업데이트 재시작 전 워커 정리 중...');
+    stopScraping();
+    stopSeoWorker();
+    stopEmailMonitor();
+    stopDentwebSync();
+    stopWorker();
+  });
+
   onStatusChange((status, message) => {
     updateTrayStatus(status, message);
   });
@@ -124,6 +134,8 @@ async function onAppReady(): Promise<void> {
   onDentwebStatusChange((status, message) => {
     if (status === 'syncing') {
       log('info', `[Main] 덴트웹: ${message || '동기화 중'}`);
+    } else if (status === 'error' || status === 'db_disconnected') {
+      log('warn', `[Main] 덴트웹: ${message || '오류'}`);
     }
   });
 
@@ -132,7 +144,12 @@ async function onAppReady(): Promise<void> {
   startScraping();
   startSeoWorker();
   startEmailMonitor();
-  startDentwebBridge();
+
+  // DentWeb 브릿지: 설정되어 있으면 자동 시작
+  const cfg = getConfig();
+  if (cfg.dentwebEnabled) {
+    startDentwebSync();
+  }
 }
 
 function applyAutoStart(): void {
@@ -165,6 +182,6 @@ app.on('before-quit', async () => {
   stopScraping();
   stopSeoWorker();
   stopEmailMonitor();
-  stopDentwebBridge();
+  stopDentwebSync();
   await stopWorker();
 });
