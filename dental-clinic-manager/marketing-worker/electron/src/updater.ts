@@ -36,7 +36,10 @@ export function initAutoUpdater(): void {
   // 자동 다운로드 활성화
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.allowPrerelease = true;
+  // allowPrerelease=false: /releases/latest 엔드포인트 사용하여 'Latest' 마크된 non-prerelease 만 감지.
+  // true 로 두면 releases.atom 피드가 사용되는데, GitHub 피드가 구 prerelease(worker-v1.1.65 등)를
+  // 최신 non-prerelease(v1.1.X) 보다 앞에 배치하는 quirk 때문에 downgrade 오판이 발생함.
+  autoUpdater.allowPrerelease = false;
 
   // Private repo 토큰 설정
   const ghToken = getGithubToken();
@@ -61,6 +64,8 @@ export function initAutoUpdater(): void {
     setUpdateMeta({
       latestVersion: info.version,
       updateStatus: 'downloading',
+      // 최신 버전이 서버에 업로드된 시각
+      currentVersionReleasedAt: info.releaseDate || '',
     });
     notify('클리닉 매니저 워커', `새 버전 v${info.version}을 다운로드 중입니다.`);
     isManualCheck = false;
@@ -71,7 +76,7 @@ export function initAutoUpdater(): void {
     setUpdateMeta({
       latestVersion: info.version,
       updateStatus: 'up-to-date',
-      // 현재 버전의 GitHub 릴리즈 날짜 (서버에 배포된 날짜)
+      // 최신 버전(=현재 버전)이 서버에 업로드된 시각
       currentVersionReleasedAt: info.releaseDate || '',
     });
     if (isManualCheck) {
@@ -90,6 +95,8 @@ export function initAutoUpdater(): void {
       latestVersion: info.version,
       updateStatus: 'downloaded',
       lastUpdatedAt: new Date().toISOString(),
+      // 최신 버전이 서버에 업로드된 시각
+      currentVersionReleasedAt: info.releaseDate || '',
     });
     notify('클리닉 매니저 워커 업데이트', `v${info.version} 다운로드 완료. 10초 후 자동 재시작됩니다.`);
     isManualCheck = false;
