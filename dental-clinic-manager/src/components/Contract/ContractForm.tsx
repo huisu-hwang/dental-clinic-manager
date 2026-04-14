@@ -30,6 +30,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
   const [loading, setLoading] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null)
   const [salaryType, setSalaryType] = useState<'gross' | 'net'>('gross')
+  const [periodType, setPeriodType] = useState<'unset' | 'permanent' | 'fixed'>('unset')
   const [formData, setFormData] = useState<Partial<ContractData>>({
     employment_period_start: new Date().toISOString().split('T')[0],
     salary_base: 0,
@@ -39,7 +40,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
     health_insurance: true,
     employment_insurance: true,
     pension_insurance: true,
-    is_permanent: true
+    is_permanent: false
   })
 
   // Debug logging for employees prop
@@ -298,65 +299,116 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               </p>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-at-text-secondary mb-1">
-                시작일 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="employment_period_start"
-                value={formData.employment_period_start || ''}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-at-text-secondary mb-1">종료일</label>
-              <input
-                type="date"
-                name="employment_period_end"
-                value={formData.employment_period_end || ''}
-                onChange={handleInputChange}
-                disabled={formData.is_permanent}
-                className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt"
-              />
-            </div>
-          </div>
-          <div className="mt-2">
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                name="is_permanent"
-                checked={formData.is_permanent || false}
-                onChange={handleInputChange}
-                className="rounded border-at-border text-at-accent focus:ring-at-accent"
-              />
-              <span className="ml-2 text-sm text-at-text-secondary">무기한 계약 (종료일 없음)</span>
+
+          {/* 시작일 */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-at-text-secondary mb-1">
+              시작일 <span className="text-red-500">*</span>
             </label>
+            <input
+              type="date"
+              name="employment_period_start"
+              value={formData.employment_period_start || ''}
+              onChange={handleInputChange}
+              required
+              className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
+            />
           </div>
-          {/* 1년 단위 빠른 선택 */}
-          {!formData.is_permanent && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {[1, 2, 3].map(years => (
-                <button
-                  key={years}
-                  type="button"
-                  onClick={() => {
-                    const start = formData.employment_period_start
-                    if (!start) return
-                    const endDate = new Date(start)
-                    endDate.setFullYear(endDate.getFullYear() + years)
-                    endDate.setDate(endDate.getDate() - 1)
-                    setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
+
+          {/* 기간 유형 선택 */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">계약 유형</label>
+            <div className="flex gap-3">
+              <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="periodType"
+                  checked={periodType === 'permanent'}
+                  onChange={() => {
+                    setPeriodType('permanent')
+                    setFormData(prev => ({ ...prev, is_permanent: true, employment_period_end: undefined }))
                   }}
-                  className="px-3 py-1 text-xs border border-at-border rounded hover:border-at-accent hover:text-at-accent transition-colors"
-                >
-                  {years}년
-                </button>
-              ))}
-              <span className="text-xs text-at-text-secondary self-center">시작일 기준 자동 계산</span>
+                  className="text-at-accent focus:ring-at-accent"
+                />
+                <span className="text-sm">무기한 (종료일 없음)</span>
+              </label>
+              <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="periodType"
+                  checked={periodType === 'fixed'}
+                  onChange={() => {
+                    setPeriodType('fixed')
+                    setFormData(prev => ({ ...prev, is_permanent: false }))
+                  }}
+                  className="text-at-accent focus:ring-at-accent"
+                />
+                <span className="text-sm">기간 있음 (종료일 지정)</span>
+              </label>
+            </div>
+          </div>
+
+          {/* 기간 있음 선택 시 */}
+          {periodType === 'fixed' && (
+            <div className="pl-0 space-y-3">
+              {/* 년 단위 빠른 선택 */}
+              <div>
+                <p className="text-xs text-at-text-secondary mb-1.5">년 단위</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3].map(years => (
+                    <button
+                      key={years}
+                      type="button"
+                      onClick={() => {
+                        const start = formData.employment_period_start
+                        if (!start) return
+                        const endDate = new Date(start)
+                        endDate.setFullYear(endDate.getFullYear() + years)
+                        endDate.setDate(endDate.getDate() - 1)
+                        setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
+                      }}
+                      className="px-3 py-1 text-xs border border-at-border rounded hover:border-at-accent hover:text-at-accent transition-colors"
+                    >
+                      {years}년
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* 월 단위 빠른 선택 */}
+              <div>
+                <p className="text-xs text-at-text-secondary mb-1.5">월 단위</p>
+                <div className="flex flex-wrap gap-2">
+                  {[3, 6, 12].map(months => (
+                    <button
+                      key={months}
+                      type="button"
+                      onClick={() => {
+                        const start = formData.employment_period_start
+                        if (!start) return
+                        const endDate = new Date(start)
+                        endDate.setMonth(endDate.getMonth() + months)
+                        endDate.setDate(endDate.getDate() - 1)
+                        setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
+                      }}
+                      className="px-3 py-1 text-xs border border-at-border rounded hover:border-at-accent hover:text-at-accent transition-colors"
+                    >
+                      {months}개월
+                    </button>
+                  ))}
+                  <span className="text-xs text-at-text-secondary self-center">시작일 기준 자동 계산</span>
+                </div>
+              </div>
+              {/* 직접 입력 */}
+              <div>
+                <label className="block text-xs text-at-text-secondary mb-1">종료일 직접 입력</label>
+                <input
+                  type="date"
+                  name="employment_period_end"
+                  value={formData.employment_period_end || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
+                />
+              </div>
             </div>
           )}
         </div>
