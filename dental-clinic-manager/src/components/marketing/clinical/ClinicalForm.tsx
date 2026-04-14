@@ -117,6 +117,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [photos, setPhotos] = useState<LocalClinicalPhoto[]>([])
   const [editingPhoto, setEditingPhoto] = useState<LocalClinicalPhoto | null>(null)
+  const [isNormalizing, setIsNormalizing] = useState(false)
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -281,13 +282,18 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
 
   // 전체 사진 밝기/색조 통일
   const handleBatchNormalize = async () => {
-    if (photos.length < 2) return
+    if (photos.length < 2 || isNormalizing) return
 
+    setIsNormalizing(true)
     try {
-      // 모든 사진 이미지 로드
+      // 현재 photos 스냅샷 (stale closure 방지)
+      const currentPhotos = photos
+
+      // 모든 사진 이미지 로드 (병렬)
       const loaded = await Promise.all(
-        photos.map(async (p) => ({
+        currentPhotos.map(async (p) => ({
           id: p.id,
+          file: p.file,
           image: await loadImageFromFile(p.file),
         }))
       )
@@ -296,13 +302,12 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
       const { computeBatchNormalization } = await import('./imageUtils')
       const adjustments = computeBatchNormalization(loaded)
 
-      // 각 사진에 보정값 적용
-      for (const [photoId, adj] of adjustments.entries()) {
-        const photo = photos.find((p) => p.id === photoId)
-        if (!photo || (adj.brightness === 0 && adj.contrast === 0)) continue
+      // 각 사진에 보정값 적용 (순차 처리 — 업로드 순서 보장)
+      for (const { id: photoId, image: img } of loaded) {
+        const adj = adjustments.get(photoId)
+        if (!adj || (adj.brightness === 0 && adj.contrast === 0)) continue
 
         try {
-          const img = loaded.find((l) => l.id === photoId)!.image
           const newFile = await applyImageTransforms(img, {
             brightness: adj.brightness,
             contrast: adj.contrast,
@@ -331,10 +336,17 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           )
         } catch (err) {
           console.error(`사진 ${photoId} 정규화 실패:`, err)
+          setPhotos((prev) =>
+            prev.map((p) =>
+              p.id === photoId ? { ...p, uploading: false, uploadError: '정규화 실패' } : p
+            )
+          )
         }
       }
     } catch (err) {
       console.error('일괄 정규화 실패:', err)
+    } finally {
+      setIsNormalizing(false)
     }
   }
 
@@ -595,11 +607,20 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           <button
             type="button"
             onClick={() => handleBatchNormalize()}
-            disabled={isGenerating}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 rounded-xl shadow-sm transition-colors"
+            disabled={isGenerating || isNormalizing}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
           >
-            <SparklesIcon className="h-4 w-4" />
-            밝기/색조 통일 ({totalPhotos}장 일괄 적용)
+            {isNormalizing ? (
+              <>
+                <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="h-4 w-4" />
+                밝기/색조 통일 ({totalPhotos}장 일괄 적용)
+              </>
+            )}
           </button>
         </div>
       )}

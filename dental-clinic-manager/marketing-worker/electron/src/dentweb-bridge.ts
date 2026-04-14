@@ -186,27 +186,54 @@ async function syncPatientsToServer(patients: Record<string, unknown>[], syncTyp
 async function autoRegisterDentweb(): Promise<boolean> {
   try {
     const { dashboardUrl, workerApiKey } = getConfig();
-    if (!workerApiKey) return false;
+    if (!workerApiKey) {
+      log('warn', '[DentWeb] 자동 등록 실패: workerApiKey 가 비어있음');
+      return false;
+    }
 
-    const res = await fetch(`${dashboardUrl}/api/dentweb/worker-config`, {
+    // 통합 워커 API 경로 사용 (verifyWorkerApiKey 헬퍼를 통해 인증).
+    // 이전에 사용하던 /api/dentweb/worker-config 는 존재하지 않는
+    // marketing_worker_control.clinic_id 컬럼을 조회하여 PostgREST 에러로
+    // 항상 401 을 반환함 — /api/marketing/worker-api/dentweb/config 가 정상 경로.
+    const url = `${dashboardUrl}/api/marketing/worker-api/dentweb/config`;
+    log('info', `[DentWeb] 자동 등록 요청: ${url}`);
+    const res = await fetch(url, {
       headers: { 'Authorization': `Bearer ${workerApiKey}` },
       signal: AbortSignal.timeout(10000),
     });
 
-    if (!res.ok) return false;
-    const data = await res.json();
-
-    if (data.clinic_id && data.api_key) {
-      setConfig({
-        dentwebEnabled: true,
-        dentwebClinicId: data.clinic_id,
-        dentwebApiKey: data.api_key,
-        dentwebSyncInterval: data.sync_interval_seconds || 300,
-      });
-      log('info', '[DentWeb] 자동 등록 완료 (enabled=true)');
-      return true;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      log('error', `[DentWeb] 자동 등록 실패: HTTP ${res.status} ${res.statusText} — ${errText.slice(0, 200)}`);
+      return false;
     }
-    return false;
+
+    const data = await res.json();
+    if (!data?.success || !data?.config) {
+      log('error', `[DentWeb] 자동 등록 실패: 응답 형식 오류 ${JSON.stringify(data).slice(0, 200)}`);
+      return false;
+    }
+
+    const config = data.config as {
+      clinic_id?: string;
+      api_key?: string;
+      sync_interval_seconds?: number;
+      is_active?: boolean;
+    };
+
+    if (!config.clinic_id || !config.api_key) {
+      log('error', `[DentWeb] 자동 등록 실패: clinic_id/api_key 누락 (${JSON.stringify(config).slice(0, 200)})`);
+      return false;
+    }
+
+    setConfig({
+      dentwebEnabled: true,
+      dentwebClinicId: config.clinic_id,
+      dentwebApiKey: config.api_key,
+      dentwebSyncInterval: config.sync_interval_seconds || 300,
+    });
+    log('info', `[DentWeb] 자동 등록 완료 (clinic=${config.clinic_id.slice(0, 8)}..., enabled=true)`);
+    return true;
   } catch (err) {
     log('error', `[DentWeb] 자동 등록 실패: ${err instanceof Error ? err.message : String(err)}`);
     return false;
