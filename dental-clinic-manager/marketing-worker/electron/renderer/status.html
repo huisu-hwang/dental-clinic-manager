@@ -30,7 +30,17 @@
       flex-shrink: 0;
     }
 
-    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+    .header h1 .version-badge {
+      font-size: 11px;
+      font-weight: 500;
+      color: #d4d4d8;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0;
+    }
     .header .last-updated { font-size: 11px; color: #a1a1aa; }
 
     .body {
@@ -219,7 +229,10 @@
 </head>
 <body>
   <div class="header">
-    <h1>클리닉 매니저 워커</h1>
+    <h1>
+      클리닉 매니저 워커
+      <span class="version-badge" id="headerVersion">v-</span>
+    </h1>
     <span class="last-updated" id="lastUpdated">불러오는 중...</span>
   </div>
 
@@ -456,7 +469,9 @@
     function refreshVersionInfo() {
       if (!api || !api.getVersionInfo) return;
       api.getVersionInfo().then(function(info) {
-        document.getElementById('currentVersion').textContent = 'v' + (info.currentVersion || '-');
+        var versionText = 'v' + (info.currentVersion || '-');
+        document.getElementById('currentVersion').textContent = versionText;
+        document.getElementById('headerVersion').textContent = versionText;
 
         var latestEl = document.getElementById('latestVersion');
         latestEl.textContent = info.latestVersion ? 'v' + info.latestVersion : '-';
