@@ -52,7 +52,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
   ])
   const [giftRows, setGiftRows] = useState<GiftRowData[]>([
-    { patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }
+    { patient_name: '', gift_type: '없음', quantity: 1, naver_review: '미작성', notes: '' }
   ])
   const [happyCallRows, setHappyCallRows] = useState<HappyCallRowData[]>([
     { patient_name: '', treatment: '', notes: '' }
@@ -82,7 +82,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   // 폼 데이터 리셋
   const resetFormData = useCallback(() => {
     setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
-    setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
+    setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: '미작성', notes: '' }])
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
     setCashRegisterData({
       prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
@@ -186,12 +186,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
               gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
               quantity: loadedQty,
-              naver_review: (log.naver_review as 'O' | 'X') || 'X',
+              naver_review: (log.naver_review as '미작성' | '네이버' | '구글' | '게시판') || '미작성',
               notes: typeof log.notes === 'string' ? log.notes : ''
             }
           }))
         } else {
-          setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
+          setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: '미작성', notes: '' }])
         }
 
         if (happyCallLogs.length > 0) {

@@ -648,7 +648,7 @@ export default function DashboardHome() {
                         <div key={g.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
                           <span className="font-medium text-at-text w-16 truncate tracking-[0.08px]">{g.patient_name}</span>
                           <span className="text-at-text-secondary flex-1 truncate tracking-[0.07px]">{g.gift_type} × {g.quantity}</span>
-                          {g.naver_review === 'O' ? (
+                          {g.naver_review !== '미작성' ? (
                             <span className="text-xs bg-at-warning-bg text-at-warning px-2 py-0.5 rounded-full font-medium">리뷰 ✓</span>
                           ) : (
                             <span className="text-xs text-at-text-weak">리뷰 없음</span>

@@ -69,7 +69,7 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
       patient_name: '',
       gift_type: '없음',
       quantity: 1,
-      naver_review: 'X',
+      naver_review: '미작성',
       notes: ''
     }
     onGiftRowsChange([...giftRows, newRow])
@@ -247,11 +247,13 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       className="w-full px-3 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white appearance-none cursor-pointer"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                       value={row.naver_review}
-                      onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
+                      onChange={(e) => updateRow(index, 'naver_review', e.target.value as '미작성' | '네이버' | '구글' | '게시판')}
                       disabled={isReadOnly}
                     >
-                      <option value="X">X</option>
-                      <option value="O">O</option>
+                      <option value="미작성">리뷰 미작성</option>
+                      <option value="네이버">네이버 리뷰 작성</option>
+                      <option value="구글">구글 리뷰 작성</option>
+                      <option value="게시판">게시판 리뷰 작성</option>
                     </select>
                   </td>
                   <td className="px-4 py-2">
@@ -404,11 +406,13 @@ export default function GiftTable({ giftRows, onGiftRowsChange, giftInventory, g
                       className="w-full px-2 py-2 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white appearance-none cursor-pointer"
                       style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.25rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25em 1.25em', paddingRight: '1.5rem' }}
                       value={row.naver_review}
-                      onChange={(e) => updateRow(index, 'naver_review', e.target.value as 'O' | 'X')}
+                      onChange={(e) => updateRow(index, 'naver_review', e.target.value as '미작성' | '네이버' | '구글' | '게시판')}
                       disabled={isReadOnly}
                     >
-                      <option value="X">X</option>
-                      <option value="O">O</option>
+                      <option value="미작성">미작성</option>
+                      <option value="네이버">네이버</option>
+                      <option value="구글">구글</option>
+                      <option value="게시판">게시판</option>
                     </select>
                   </div>
                   <div>

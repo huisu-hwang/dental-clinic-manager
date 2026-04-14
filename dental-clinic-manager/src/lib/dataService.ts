@@ -716,7 +716,7 @@ export const dataService = {
         recall_booking_names: recallBookingNames.trim() || null,
         consult_proceed: validConsults.filter(c => c.consult_status === 'O').length,
         consult_hold: validConsults.filter(c => c.consult_status === 'X').length,
-        naver_review_count: validGifts.filter(g => g.naver_review === 'O').length,
+        naver_review_count: validGifts.filter(g => g.naver_review !== '미작성').length,
       }
 
       const { error: dailyReportError } = await supabase.from('daily_reports').insert([dailyReport] as any)
@@ -1035,7 +1035,7 @@ export const dataService = {
       const updatedStats = {
         consult_proceed: consultLogs.filter(c => c.consult_status === 'O').length,
         consult_hold: consultLogs.filter(c => c.consult_status === 'X').length,
-        naver_review_count: giftLogs.filter(g => g.naver_review === 'O').length
+        naver_review_count: giftLogs.filter(g => g.naver_review !== '미작성').length
       }
 
       // 일일 보고서 업데이트

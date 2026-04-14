@@ -315,20 +315,38 @@
   "hotPaths": [
     {
       "path": "src/components/Contract/ContractForm.tsx",
-      "accessCount": 21,
-      "lastAccessed": 1776148525931,
+      "accessCount": 26,
+      "lastAccessed": 1776181555477,
+      "type": "file"
+    },
+    {
+      "path": "src/components/marketing/clinical/ClinicalForm.tsx",
+      "accessCount": 16,
+      "lastAccessed": 1776181464709,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/contractService.ts",
+      "accessCount": 15,
+      "lastAccessed": 1776158548068,
       "type": "file"
     },
     {
       "path": "src/components/Contract/ContractDetail.tsx",
-      "accessCount": 12,
-      "lastAccessed": 1776148733406,
+      "accessCount": 14,
+      "lastAccessed": 1776158559138,
       "type": "directory"
     },
     {
       "path": "src/app/dashboard/marketing/page.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1776180411011,
+      "type": "file"
+    },
+    {
+      "path": "src/components/marketing/ImageEditModal.tsx",
       "accessCount": 10,
-      "lastAccessed": 1776151119457,
+      "lastAccessed": 1776182042203,
       "type": "file"
     },
     {
@@ -344,12 +362,6 @@
       "type": "directory"
     },
     {
-      "path": "src/lib/contractService.ts",
-      "accessCount": 6,
-      "lastAccessed": 1776148540647,
-      "type": "file"
-    },
-    {
       "path": "src/types/contract.ts",
       "accessCount": 4,
       "lastAccessed": 1776148496421,
@@ -363,8 +375,32 @@
     },
     {
       "path": "src/components/marketing/clinical/imageUtils.ts",
+      "accessCount": 4,
+      "lastAccessed": 1776181390141,
+      "type": "file"
+    },
+    {
+      "path": "src/components/Contract/ContractList.tsx",
       "accessCount": 2,
-      "lastAccessed": 1776148759570,
+      "lastAccessed": 1776157909426,
+      "type": "file"
+    },
+    {
+      "path": "src/types/marketing.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776181875562,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/regenerate-image/route.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776181924495,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/marketing/image-generator.ts",
+      "accessCount": 2,
+      "lastAccessed": 1776181945627,
       "type": "file"
     },
     {
@@ -386,12 +422,6 @@
       "type": "file"
     },
     {
-      "path": "src/components/Contract/ContractList.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776148503462,
-      "type": "file"
-    },
-    {
       "path": "src/app/dashboard/contracts/page.tsx",
       "accessCount": 1,
       "lastAccessed": 1776148519613,
@@ -407,6 +437,42 @@
       "path": "src/app/dashboard/contracts/new/page.tsx",
       "accessCount": 1,
       "lastAccessed": 1776148519703,
+      "type": "file"
+    },
+    {
+      "path": "src/components/marketing/ContentEditor.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776180403779,
+      "type": "file"
+    },
+    {
+      "path": ".env.local",
+      "accessCount": 1,
+      "lastAccessed": 1776181875301,
+      "type": "file"
+    },
+    {
+      "path": "src/app/api/marketing/generate/route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776181875438,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/marketing/content-generator.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776181881975,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/marketing/seed-prompts.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776181882147,
+      "type": "file"
+    },
+    {
+      "path": "src/lib/marketing/default-prompts.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776181884896,
       "type": "file"
     }
   ],
