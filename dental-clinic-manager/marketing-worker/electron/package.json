@@ -1,6 +1,6 @@
 {
   "name": "hayan-marketing-worker",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "하얀치과 마케팅 워커 - Electron 데스크탑 앱",
   "productName": "클리닉 매니저 워커",
   "private": true,
