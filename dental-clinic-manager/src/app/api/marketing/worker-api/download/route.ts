@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 // GitHub Release URL for Windows installer (fallback)
 const FALLBACK_INSTALLER_URL_WIN = 'https://github.com/huisu-hwang/dental-clinic-manager/releases/download/marketing-worker-v1.0.0/clinic-manager-worker-1.0.0-setup.exe';
 
+type GhAsset = { name?: string; browser_download_url?: string };
+type GhRelease = { tag_name?: string; draft?: boolean; assets?: GhAsset[] };
+
 async function getLatestInstallerUrl(platform: 'windows' | 'mac'): Promise<string | null> {
   try {
     const res = await fetch('https://api.github.com/repos/huisu-hwang/dental-clinic-manager/releases', {
@@ -11,17 +14,31 @@ async function getLatestInstallerUrl(platform: 'windows' | 'mac'): Promise<strin
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-    const releases = await res.json();
+    const releases = (await res.json()) as GhRelease[];
 
-    // worker-v로 시작하는 최신 release 찾기
-    const workerRelease = releases.find((r: any) =>
-      r.tag_name?.startsWith('worker-v') && r.assets?.length > 0
-    );
+    // Electron 워커 릴리즈 식별:
+    // electron-builder 가 생성하는 에셋 파일명 `clinic-manager-worker-<ver>-setup.<ext>`
+    // 를 에셋에 포함한 릴리즈만 워커 릴리즈로 간주.
+    // - 과거 'worker-v*' 태그 형식과 신 'v*' 태그 형식 모두 지원
+    // - draft 릴리즈 제외
+    const ext = platform === 'mac' ? '.dmg' : '.exe';
+    const workerRelease = releases.find((r) => {
+      if (r.draft) return false;
+      return !!r.assets?.some(
+        (a) =>
+          typeof a.name === 'string' &&
+          /^clinic-manager-worker-.+-setup\.(exe|dmg)$/.test(a.name)
+      );
+    });
 
-    if (workerRelease) {
-      const ext = platform === 'mac' ? '.dmg' : '.exe';
-      const asset = workerRelease.assets.find((a: any) => a.name.endsWith(ext));
-      if (asset) return asset.browser_download_url;
+    if (workerRelease?.assets) {
+      const asset = workerRelease.assets.find(
+        (a) =>
+          typeof a.name === 'string' &&
+          a.name.startsWith('clinic-manager-worker-') &&
+          a.name.endsWith(`-setup${ext}`)
+      );
+      if (asset?.browser_download_url) return asset.browser_download_url;
     }
   } catch {
     // 폴백
