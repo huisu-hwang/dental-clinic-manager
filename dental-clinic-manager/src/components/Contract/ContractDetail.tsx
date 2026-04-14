@@ -351,6 +351,119 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
         </div>
       </div>
 
+      {/* Process Steps */}
+      {contract.status !== 'cancelled' ? (
+        <div className="mb-6 print:hidden">
+          {/* Step indicators */}
+          <div className="flex items-center">
+            {[
+              { label: '계약서 작성', completed: true, active: false },
+              {
+                label: '원장 서명',
+                completed: signatureStatus.hasEmployerSignature,
+                active: !signatureStatus.hasEmployerSignature
+              },
+              {
+                label: '직원 서명',
+                completed: signatureStatus.hasEmployeeSignature,
+                active: signatureStatus.hasEmployerSignature && !signatureStatus.hasEmployeeSignature
+              },
+              {
+                label: '계약 완료',
+                completed: contract.status === 'completed',
+                active: contract.status === 'completed'
+              }
+            ].map((step, index, arr) => (
+              <div key={step.label} className="flex items-center flex-1">
+                <div className="flex flex-col items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                    step.completed
+                      ? 'bg-green-500 text-white'
+                      : step.active
+                        ? 'bg-at-accent text-white'
+                        : 'bg-gray-200 text-gray-400'
+                  }`}>
+                    {step.completed ? '✓' : index + 1}
+                  </div>
+                  <span className={`mt-1 text-xs font-medium whitespace-nowrap ${
+                    step.completed ? 'text-green-600' : step.active ? 'text-at-accent' : 'text-gray-400'
+                  }`}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < arr.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-1 mb-4 ${
+                    arr[index + 1].completed || arr[index + 1].active ? 'bg-at-accent' : 'bg-gray-200'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Current action banner */}
+          {(() => {
+            if (contract.status === 'completed') {
+              return (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-green-800">계약이 완료되었습니다 🎉</p>
+                    <p className="text-sm text-green-700 mt-0.5">양측 서명이 모두 완료된 계약서입니다. PDF를 다운로드하거나 프린트하세요.</p>
+                  </div>
+                  <button
+                    onClick={handleDownloadPdf}
+                    disabled={isPdfGenerating}
+                    className="ml-4 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm whitespace-nowrap disabled:opacity-50"
+                  >
+                    {isPdfGenerating ? '생성 중...' : 'PDF 다운로드'}
+                  </button>
+                </div>
+              )
+            }
+            if (!signatureStatus.hasEmployerSignature) {
+              return (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-blue-800">원장 서명이 필요합니다</p>
+                    <p className="text-sm text-blue-700 mt-0.5">원장(사용자)이 먼저 계약서에 서명해주세요. 서명 후 직원에게 서명 요청이 가능합니다.</p>
+                  </div>
+                  {canSign('employer') && (
+                    <button
+                      onClick={() => handleSignClick('employer')}
+                      className="ml-4 px-4 py-2 bg-at-accent text-white rounded-xl hover:bg-at-accent-hover transition-colors text-sm whitespace-nowrap"
+                    >
+                      원장 서명하기
+                    </button>
+                  )}
+                </div>
+              )
+            }
+            if (!signatureStatus.hasEmployeeSignature) {
+              return (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-yellow-800">직원 서명 대기 중</p>
+                    <p className="text-sm text-yellow-700 mt-0.5">{contract.employee?.name}님이 계약서에 서명해야 합니다. 직원에게 로그인 후 서명하도록 안내해주세요.</p>
+                  </div>
+                  {canSign('employee') && (
+                    <button
+                      onClick={() => handleSignClick('employee')}
+                      className="ml-4 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
+                    >
+                      직원 서명하기
+                    </button>
+                  )}
+                </div>
+              )
+            }
+          })()}
+        </div>
+      ) : (
+        <div className="mb-6 print:hidden p-4 bg-red-50 border border-red-200 rounded-xl">
+          <p className="font-semibold text-red-800">취소된 계약서입니다</p>
+          <p className="text-sm text-red-700 mt-0.5">이 계약서는 취소 처리되어 더 이상 유효하지 않습니다.</p>
+        </div>
+      )}
+
       {/* Contract Document */}
       <div ref={contractContentRef} className="contract-print-content bg-white p-8 md:p-12 rounded-xl shadow-lg border border-at-border">
         {/* Title */}
