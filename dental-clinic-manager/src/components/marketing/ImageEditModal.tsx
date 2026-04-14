@@ -8,11 +8,15 @@ import {
   SparklesIcon,
   PhotoIcon,
   ArrowsPointingOutIcon,
+  PencilSquareIcon,
+  ArrowUturnLeftIcon,
 } from '@heroicons/react/24/outline'
 import {
   IMAGE_VISUAL_STYLE_LABELS,
   type ImageVisualStyle,
 } from '@/types/marketing'
+
+type EditMode = 'modify' | 'regenerate'
 
 interface ImageEditModalProps {
   isOpen: boolean
@@ -21,12 +25,28 @@ interface ImageEditModalProps {
   onImageUpdated: (newImage: { fileName: string; prompt: string; path: string }) => void
 }
 
+async function fetchImageAsBase64(url: string): Promise<string> {
+  const response = await fetch(url)
+  const blob = await response.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
 export default function ImageEditModal({
   isOpen,
   onClose,
   image,
   onImageUpdated,
 }: ImageEditModalProps) {
+  const [editMode, setEditMode] = useState<EditMode>('modify')
+  const [modifyInstruction, setModifyInstruction] = useState('')
   const [editedPrompt, setEditedPrompt] = useState(image.prompt)
   const [selectedVisualStyle, setSelectedVisualStyle] = useState<ImageVisualStyle>('realistic')
   const [isRegenerating, setIsRegenerating] = useState(false)
@@ -38,6 +58,8 @@ export default function ImageEditModal({
   // 모달 열릴 때 상태 초기화
   useEffect(() => {
     if (isOpen) {
+      setEditMode('modify')
+      setModifyInstruction('')
       setEditedPrompt(image.prompt)
       setNewImage(null)
       setError('')
@@ -60,7 +82,11 @@ export default function ImageEditModal({
   }, [handleKeyDown])
 
   const handleRegenerate = async () => {
-    if (!editedPrompt.trim()) {
+    if (editMode === 'modify' && !modifyInstruction.trim()) {
+      setError('수정할 내용을 입력해주세요.')
+      return
+    }
+    if (editMode === 'regenerate' && !editedPrompt.trim()) {
       setError('프롬프트를 입력해주세요.')
       return
     }
@@ -69,28 +95,51 @@ export default function ImageEditModal({
     setError('')
 
     try {
+      let prompt: string
+      let referenceImageBase64: string | undefined
+
+      if (editMode === 'modify') {
+        // 수정 모드: 원본 이미지 기반 + 수정 지침
+        prompt = `원본 이미지 설명: ${image.prompt}\n\n수정 요청: ${modifyInstruction.trim()}\n\n위 원본 이미지를 참고하여 수정 요청 사항을 반영한 새 이미지를 생성해주세요.`
+
+        // 원본 이미지가 있으면 base64로 변환하여 참조 이미지로 전달
+        if (image.path && !image.path.startsWith('data:')) {
+          try {
+            referenceImageBase64 = await fetchImageAsBase64(image.path)
+          } catch {
+            // 이미지 로드 실패 시 프롬프트만으로 진행
+          }
+        } else if (image.path?.startsWith('data:')) {
+          referenceImageBase64 = image.path.split(',')[1]
+        }
+      } else {
+        // 완전 재생성 모드: 새 프롬프트로 처음부터 생성
+        prompt = editedPrompt.trim()
+      }
+
       const res = await fetch('/api/marketing/regenerate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: editedPrompt.trim(),
+          prompt,
           imageVisualStyle: selectedVisualStyle,
+          ...(referenceImageBase64 ? { referenceImageBase64 } : {}),
         }),
       })
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || '이미지 재생성에 실패했습니다.')
+        throw new Error(data.error || '이미지 생성에 실패했습니다.')
       }
 
       const data = await res.json()
       setNewImage({
         fileName: data.fileName,
-        prompt: data.prompt,
+        prompt: editMode === 'modify' ? image.prompt : editedPrompt.trim(),
         path: data.path,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : '이미지 재생성 중 오류가 발생했습니다.')
+      setError(err instanceof Error ? err.message : '이미지 생성 중 오류가 발생했습니다.')
     } finally {
       setIsRegenerating(false)
     }
@@ -107,6 +156,10 @@ export default function ImageEditModal({
     setCompareActiveImg('current')
     setCompareOpen(true)
   }
+
+  const canGenerate = editMode === 'modify'
+    ? modifyInstruction.trim().length > 0
+    : editedPrompt.trim().length > 0
 
   if (!isOpen) return null
 
@@ -135,6 +188,41 @@ export default function ImageEditModal({
         </div>
 
         <div className="p-6 space-y-5">
+          {/* 편집 모드 선택 */}
+          <div className="flex rounded-xl border border-at-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => { setEditMode('modify'); setNewImage(null); setError('') }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${
+                editMode === 'modify'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-at-text hover:bg-at-surface-alt'
+              }`}
+            >
+              <PencilSquareIcon className="h-4 w-4" />
+              원본 기반 수정
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEditMode('regenerate'); setNewImage(null); setError('') }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-l border-at-border ${
+                editMode === 'regenerate'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-at-text hover:bg-at-surface-alt'
+              }`}
+            >
+              <ArrowUturnLeftIcon className="h-4 w-4" />
+              완전 재생성
+            </button>
+          </div>
+
+          {/* 모드 설명 */}
+          <p className="text-xs text-at-text bg-at-surface-alt rounded-xl px-4 py-2.5">
+            {editMode === 'modify'
+              ? '기존 이미지를 참고하여 수정 사항만 적용합니다. 원본의 스타일과 구성을 최대한 유지합니다.'
+              : '프롬프트를 새로 작성하여 이미지를 처음부터 다시 생성합니다.'}
+          </p>
+
           {/* 이미지 비교 영역 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* 현재 이미지 */}
@@ -172,7 +260,7 @@ export default function ImageEditModal({
             {/* 새 이미지 (재생성 후) */}
             <div className="space-y-2">
               <span className="text-xs font-medium text-at-text">
-                {newImage ? '새 이미지' : '재생성 미리보기'}
+                {newImage ? '수정된 이미지' : '미리보기'}
               </span>
               <div className="relative aspect-square sm:aspect-[4/3] rounded-xl border border-dashed border-at-border overflow-hidden bg-at-surface-alt">
                 {isRegenerating ? (
@@ -190,7 +278,6 @@ export default function ImageEditModal({
                       alt={newImage.prompt}
                       className="w-full h-full object-cover"
                     />
-                    {/* 호버 오버레이 버튼 */}
                     <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/50 to-transparent">
                       <button
                         type="button"
@@ -205,8 +292,10 @@ export default function ImageEditModal({
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full gap-2 text-at-text">
                     <SparklesIcon className="h-10 w-10" />
-                    <span className="text-xs">프롬프트를 수정하고</span>
-                    <span className="text-xs">재생성 해보세요</span>
+                    <span className="text-xs">
+                      {editMode === 'modify' ? '수정 내용을 입력하고' : '프롬프트를 작성하고'}
+                    </span>
+                    <span className="text-xs">생성 버튼을 눌러보세요</span>
                   </div>
                 )}
               </div>
@@ -218,17 +307,34 @@ export default function ImageEditModal({
             </div>
           </div>
 
-          {/* 프롬프트 편집 */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-at-text">이미지 프롬프트</label>
-            <textarea
-              value={editedPrompt}
-              onChange={(e) => setEditedPrompt(e.target.value)}
-              rows={3}
-              placeholder="생성할 이미지를 설명해주세요..."
-              className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
-            />
-          </div>
+          {/* 수정 모드: 수정 프롬프트 입력 */}
+          {editMode === 'modify' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-at-text">수정 내용</label>
+              <textarea
+                value={modifyInstruction}
+                onChange={(e) => setModifyInstruction(e.target.value)}
+                rows={3}
+                placeholder="예: 배경을 파란 하늘로 바꿔줘, 치아를 더 밝게 해줘, 스타일을 좀 더 밝고 친근하게..."
+                className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
+              />
+              <p className="text-[11px] text-at-text">원본 이미지({image.prompt.slice(0, 40)}{image.prompt.length > 40 ? '...' : ''})를 기반으로 수정합니다.</p>
+            </div>
+          )}
+
+          {/* 재생성 모드: 전체 프롬프트 편집 */}
+          {editMode === 'regenerate' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-at-text">이미지 프롬프트</label>
+              <textarea
+                value={editedPrompt}
+                onChange={(e) => setEditedPrompt(e.target.value)}
+                rows={3}
+                placeholder="생성할 이미지를 설명해주세요..."
+                className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent resize-none"
+              />
+            </div>
+          )}
 
           {/* 시각적 스타일 선택 */}
           <div className="space-y-2">
@@ -268,7 +374,7 @@ export default function ImageEditModal({
           <div className="flex gap-3 pt-2">
             <button
               onClick={handleRegenerate}
-              disabled={isRegenerating || !editedPrompt.trim()}
+              disabled={isRegenerating || !canGenerate}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {isRegenerating ? (
@@ -282,7 +388,9 @@ export default function ImageEditModal({
               ) : (
                 <>
                   <ArrowPathIcon className="h-4 w-4" />
-                  {newImage ? '다시 생성' : '재생성'}
+                  {newImage
+                    ? (editMode === 'modify' ? '다시 수정' : '다시 생성')
+                    : (editMode === 'modify' ? '수정 생성' : '재생성')}
                 </>
               )}
             </button>
@@ -365,7 +473,9 @@ export default function ImageEditModal({
 
             {/* 새 이미지 패널 */}
             <div className="flex-1 flex flex-col gap-3 p-6">
-              <span className="flex-shrink-0 text-xs font-semibold text-indigo-400 uppercase tracking-wider">새 이미지</span>
+              <span className="flex-shrink-0 text-xs font-semibold text-indigo-400 uppercase tracking-wider">
+                {editMode === 'modify' ? '수정된 이미지' : '새 이미지'}
+              </span>
               <div className="flex-1 min-h-0 flex items-center justify-center">
                 <img
                   src={newImage.path}
@@ -384,13 +494,10 @@ export default function ImageEditModal({
             className="md:hidden flex flex-col flex-1 min-h-0 p-4 gap-4"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 탭 버튼 */}
             <div className="flex-shrink-0 flex rounded-xl overflow-hidden border border-white/20">
               <button
                 className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                  compareActiveImg === 'current'
-                    ? 'bg-white text-black'
-                    : 'text-gray-400 hover:text-white'
+                  compareActiveImg === 'current' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'
                 }`}
                 onClick={() => setCompareActiveImg('current')}
               >
@@ -398,25 +505,18 @@ export default function ImageEditModal({
               </button>
               <button
                 className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                  compareActiveImg === 'new'
-                    ? 'bg-indigo-500 text-white'
-                    : 'text-gray-400 hover:text-white'
+                  compareActiveImg === 'new' ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-white'
                 }`}
                 onClick={() => setCompareActiveImg('new')}
               >
-                새 이미지
+                {editMode === 'modify' ? '수정된 이미지' : '새 이미지'}
               </button>
             </div>
 
-            {/* 이미지 */}
             <div className="flex-1 min-h-0 flex items-center justify-center">
               {compareActiveImg === 'current' ? (
                 image.path ? (
-                  <img
-                    src={image.path}
-                    alt={image.prompt}
-                    className="max-w-full max-h-full object-contain rounded-lg"
-                  />
+                  <img src={image.path} alt={image.prompt} className="max-w-full max-h-full object-contain rounded-lg" />
                 ) : (
                   <div className="flex flex-col items-center gap-3 text-gray-600">
                     <PhotoIcon className="h-16 w-16" />
@@ -424,11 +524,7 @@ export default function ImageEditModal({
                   </div>
                 )
               ) : (
-                <img
-                  src={newImage.path}
-                  alt={newImage.prompt}
-                  className="max-w-full max-h-full object-contain rounded-lg"
-                />
+                <img src={newImage.path} alt={newImage.prompt} className="max-w-full max-h-full object-contain rounded-lg" />
               )}
             </div>
           </div>
