@@ -4,12 +4,13 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 // GitHub 최신 워커 릴리즈 버전 캐시 (5분 TTL)
 let cachedLatestVersion: string | null = null;
+let cachedReleaseDate: string | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 5 * 60 * 1000;
 
-async function getLatestWorkerVersion(): Promise<string | null> {
+async function getLatestWorkerInfo(): Promise<{ version: string | null; releaseDate: string | null }> {
   if (cachedLatestVersion && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return cachedLatestVersion;
+    return { version: cachedLatestVersion, releaseDate: cachedReleaseDate };
   }
   try {
     const res = await fetch('https://api.github.com/repos/huisu-hwang/dental-clinic-manager/releases', {
@@ -17,19 +18,20 @@ async function getLatestWorkerVersion(): Promise<string | null> {
       signal: AbortSignal.timeout(5000),
       next: { revalidate: 300 },
     });
-    if (!res.ok) return cachedLatestVersion;
+    if (!res.ok) return { version: cachedLatestVersion, releaseDate: cachedReleaseDate };
     const releases = await res.json();
     const workerRelease = releases.find((r: { tag_name?: string }) =>
       r.tag_name?.startsWith('worker-v')
     );
     if (workerRelease?.tag_name) {
       cachedLatestVersion = workerRelease.tag_name.replace('worker-v', '');
+      cachedReleaseDate = workerRelease.published_at || null;
       cacheTimestamp = Date.now();
     }
   } catch {
     // GitHub API 실패 시 캐시된 값 반환
   }
-  return cachedLatestVersion;
+  return { version: cachedLatestVersion, releaseDate: cachedReleaseDate };
 }
 
 // GET: 워커 상태 조회 (마케팅, 스크래핑, SEO, 이메일)
@@ -54,6 +56,7 @@ export async function GET(request: NextRequest) {
         latestVersion: string | null;
         updateAvailable: boolean;
         updateStatus: string | null;
+        latestReleaseDate: string | null;
       };
       scraping?: { installed: boolean; online: boolean; workerCount: number };
       seo?: { installed: boolean; online: boolean; workerCount: number };
@@ -85,10 +88,10 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const latestVersion = await getLatestWorkerVersion();
+      const { version: latestVersion, releaseDate: latestReleaseDate } = await getLatestWorkerInfo();
       const updateAvailable = !!(currentVersion && latestVersion && currentVersion !== latestVersion);
 
-      result.marketing = { installed, online, currentVersion, latestVersion, updateAvailable, updateStatus };
+      result.marketing = { installed, online, currentVersion, latestVersion, updateAvailable, updateStatus, latestReleaseDate };
     }
 
     // 스크래핑 워커 상태
