@@ -487,7 +487,7 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
           {/* Article 6 - 지급방법 및 시기 */}
           <section className="border-b pb-4">
             <h2 className="text-lg font-bold mb-3">제6조 (지급방법 및 시기)</h2>
-            <p>임금지급은 매월 {data.salary_payment_day || '25'}일에 지급한다. 다만, 그 지급일이 휴일이나 토요일인 때에는 그 전일에 지급한다.</p>
+            <p>임금지급은 매월 {data.salary_payment_day === 0 ? '말일' : `${data.salary_payment_day || '25'}일`}에 지급한다. 다만, 그 지급일이 휴일이나 토요일인 때에는 그 전일에 지급한다.</p>
           </section>
 
           {/* Article 7 - 퇴직금 및 중간정산 */}

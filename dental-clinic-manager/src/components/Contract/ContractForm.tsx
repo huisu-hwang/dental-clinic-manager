@@ -324,6 +324,18 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               />
             </div>
           </div>
+          <div className="mt-2">
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                name="is_permanent"
+                checked={formData.is_permanent || false}
+                onChange={handleInputChange}
+                className="rounded border-at-border text-at-accent focus:ring-at-accent"
+              />
+              <span className="ml-2 text-sm text-at-text-secondary">무기한 계약 (종료일 없음)</span>
+            </label>
+          </div>
           {/* 1년 단위 빠른 선택 */}
           {!formData.is_permanent && (
             <div className="mt-2 flex flex-wrap gap-2">
@@ -347,18 +359,6 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               <span className="text-xs text-at-text-secondary self-center">시작일 기준 자동 계산</span>
             </div>
           )}
-          <div className="mt-2">
-            <label className="inline-flex items-center">
-              <input
-                type="checkbox"
-                name="is_permanent"
-                checked={formData.is_permanent || false}
-                onChange={handleInputChange}
-                className="rounded border-at-border text-at-accent focus:ring-at-accent"
-              />
-              <span className="ml-2 text-sm text-at-text-secondary">무기한 계약 (종료일 없음)</span>
-            </label>
-          </div>
         </div>
 
         {/* Salary Information */}
@@ -410,15 +410,17 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
             </div>
             <div>
               <label className="block text-sm font-medium text-at-text-secondary mb-1">급여 지급일</label>
-              <input
-                type="number"
+              <select
                 name="salary_payment_day"
                 value={formData.salary_payment_day || 25}
                 onChange={handleInputChange}
-                min="1"
-                max="31"
                 className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
-              />
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <option key={day} value={day}>{day}일</option>
+                ))}
+                <option value={0}>월말</option>
+              </select>
             </div>
           </div>
 
