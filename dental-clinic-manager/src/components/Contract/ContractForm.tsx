@@ -324,6 +324,29 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               />
             </div>
           </div>
+          {/* 1년 단위 빠른 선택 */}
+          {!formData.is_permanent && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[1, 2, 3].map(years => (
+                <button
+                  key={years}
+                  type="button"
+                  onClick={() => {
+                    const start = formData.employment_period_start
+                    if (!start) return
+                    const endDate = new Date(start)
+                    endDate.setFullYear(endDate.getFullYear() + years)
+                    endDate.setDate(endDate.getDate() - 1)
+                    setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
+                  }}
+                  className="px-3 py-1 text-xs border border-at-border rounded hover:border-at-accent hover:text-at-accent transition-colors"
+                >
+                  {years}년
+                </button>
+              ))}
+              <span className="text-xs text-at-text-secondary self-center">시작일 기준 자동 계산</span>
+            </div>
+          )}
           <div className="mt-2">
             <label className="inline-flex items-center">
               <input
@@ -346,29 +369,27 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 기본급 (월) <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2 mb-2">
-                <button
-                  type="button"
-                  onClick={() => setSalaryType('gross')}
-                  className={`flex-1 py-1.5 text-sm rounded border transition-colors ${
-                    salaryType === 'gross'
-                      ? 'bg-at-accent text-white border-at-accent font-medium'
-                      : 'bg-white text-at-text-secondary border-at-border hover:border-at-accent'
-                  }`}
-                >
-                  세전 (세금 포함)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSalaryType('net')}
-                  className={`flex-1 py-1.5 text-sm rounded border transition-colors ${
-                    salaryType === 'net'
-                      ? 'bg-at-accent text-white border-at-accent font-medium'
-                      : 'bg-white text-at-text-secondary border-at-border hover:border-at-accent'
-                  }`}
-                >
-                  세후 (실수령액)
-                </button>
+              <div className="flex gap-4 mb-2">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="salaryType"
+                    checked={salaryType === 'gross'}
+                    onChange={() => setSalaryType('gross')}
+                    className="text-at-accent focus:ring-at-accent"
+                  />
+                  <span className="text-sm">세전 (세금 포함)</span>
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="salaryType"
+                    checked={salaryType === 'net'}
+                    onChange={() => setSalaryType('net')}
+                    className="text-at-accent focus:ring-at-accent"
+                  />
+                  <span className="text-sm">세후 (실수령액)</span>
+                </label>
               </div>
               <input
                 type="number"
