@@ -29,6 +29,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null)
+  const [salaryType, setSalaryType] = useState<'gross' | 'net'>('gross')
   const [formData, setFormData] = useState<Partial<ContractData>>({
     employment_period_start: new Date().toISOString().split('T')[0],
     salary_base: 0,
@@ -189,7 +190,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       const contractFormData: ContractFormData = {
         employee_user_id: selectedEmployee.id,
         template_id: undefined, // Will use default template
-        contract_data: formData as ContractData
+        contract_data: { ...formData, salary_base_type: salaryType } as ContractData
       }
 
       const response = await contractService.createContract(contractFormData, currentUser.id)
@@ -345,6 +346,30 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 기본급 (월) <span className="text-red-500">*</span>
               </label>
+              <div className="flex gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setSalaryType('gross')}
+                  className={`flex-1 py-1.5 text-sm rounded border transition-colors ${
+                    salaryType === 'gross'
+                      ? 'bg-at-accent text-white border-at-accent font-medium'
+                      : 'bg-white text-at-text-secondary border-at-border hover:border-at-accent'
+                  }`}
+                >
+                  세전 (세금 포함)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSalaryType('net')}
+                  className={`flex-1 py-1.5 text-sm rounded border transition-colors ${
+                    salaryType === 'net'
+                      ? 'bg-at-accent text-white border-at-accent font-medium'
+                      : 'bg-white text-at-text-secondary border-at-border hover:border-at-accent'
+                  }`}
+                >
+                  세후 (실수령액)
+                </button>
+              </div>
               <input
                 type="number"
                 name="salary_base"
@@ -353,8 +378,14 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 required
                 min="0"
                 step="10000"
+                placeholder={salaryType === 'gross' ? '세전 금액 입력' : '세후 실수령액 입력'}
                 className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
+              <p className="mt-1 text-xs text-at-text-secondary">
+                {salaryType === 'gross'
+                  ? '세전 기본급: 4대보험·소득세 공제 전 금액'
+                  : '세후 실수령액: 공제 후 실제 지급 금액 (계약서에 세후 기준으로 기재됩니다)'}
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-at-text-secondary mb-1">급여 지급일</label>
