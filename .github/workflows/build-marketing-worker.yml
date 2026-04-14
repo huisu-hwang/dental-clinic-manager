@@ -2,7 +2,7 @@ name: Build Marketing Worker Installer
 
 on:
   push:
-    branches: [develop, main]
+    branches: [main]
     paths:
       - 'dental-clinic-manager/marketing-worker/electron/**'
       - 'dental-clinic-manager/marketing-worker/*.ts'

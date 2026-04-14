@@ -145,11 +145,11 @@ async function onAppReady(): Promise<void> {
   startSeoWorker();
   startEmailMonitor();
 
-  // DentWeb 브릿지: 설정되어 있으면 자동 시작
-  const cfg = getConfig();
-  if (cfg.dentwebEnabled) {
-    startDentwebSync();
-  }
+  // DentWeb 브릿지: 항상 시작 (내부에서 auto-register → enable 처리)
+  // 첫 실행 시 clinic 설정이 없더라도 autoRegisterDentweb()이 worker API Key로 설정 조회.
+  startDentwebSync().catch((err) => {
+    log('error', `[Main] DentWeb 시작 실패: ${err instanceof Error ? err.message : String(err)}`);
+  });
 }
 
 function applyAutoStart(): void {

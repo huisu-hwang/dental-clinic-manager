@@ -198,11 +198,12 @@ async function autoRegisterDentweb(): Promise<boolean> {
 
     if (data.clinic_id && data.api_key) {
       setConfig({
+        dentwebEnabled: true,
         dentwebClinicId: data.clinic_id,
         dentwebApiKey: data.api_key,
         dentwebSyncInterval: data.sync_interval_seconds || 300,
       });
-      log('info', '[DentWeb] 자동 등록 완료');
+      log('info', '[DentWeb] 자동 등록 완료 (enabled=true)');
       return true;
     }
     return false;
@@ -270,6 +271,42 @@ async function detectSqlServer(): Promise<boolean> {
 let isSyncing = false;
 let pool: sql.ConnectionPool | null = null;
 let syncTimer: ReturnType<typeof setInterval> | null = null;
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+let lastSyncError: string | null = null;
+
+const HEARTBEAT_INTERVAL_MS = 60 * 1000;
+
+/**
+ * Dashboard에 brid agent가 살아있음을 주기적으로 통지한다.
+ * - sync 성공/실패/스킵과 무관하게 동작한다.
+ * - DB 연결 여부와 마지막 오류를 함께 보고한다.
+ */
+async function sendHeartbeat(): Promise<void> {
+  try {
+    const cfg = getDentwebConfig();
+    if (!cfg.clinicId || !cfg.apiKey) return;
+    const { dashboardUrl } = getConfig();
+    const url = `${dashboardUrl}/api/dentweb/heartbeat`;
+    const dbConnected = !!(pool && pool.connected);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinic_id: cfg.clinicId,
+        api_key: cfg.apiKey,
+        agent_version: '2.0.0-electron',
+        db_connected: dbConnected,
+        last_error: lastSyncError,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) {
+      log('warn', `[DentWeb] heartbeat HTTP ${response.status}`);
+    }
+  } catch (err) {
+    log('warn', `[DentWeb] heartbeat 실패: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
 
 async function runSync(): Promise<void> {
   if (isSyncing) {
@@ -311,7 +348,10 @@ async function runSync(): Promise<void> {
         dentwebLastSyncDate: new Date().toISOString(),
         dentwebLastSyncStatus: 'success',
       });
+      lastSyncError = null;
       setStatus('polling');
+      // 환자 0명이어도 heartbeat로 서버에 alive 통지 (workers/status 오프라인 방지)
+      await sendHeartbeat();
       return;
     }
 
@@ -325,16 +365,20 @@ async function runSync(): Promise<void> {
         dentwebLastSyncStatus: 'success',
         dentwebLastSyncPatientCount: result.total_records || 0,
       });
+      lastSyncError = null;
       setStatus('polling');
     } else {
       log('error', `[DentWeb] 동기화 실패: ${result.error}`);
       setConfig({ dentwebLastSyncStatus: 'error' });
+      lastSyncError = result.error || 'sync failed';
       setStatus('error', result.error);
+      await sendHeartbeat();
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log('error', `[DentWeb] 동기화 오류: ${msg}`);
     setConfig({ dentwebLastSyncStatus: 'error' });
+    lastSyncError = msg;
 
     // Check if DB connection lost
     if (pool && !pool.connected) {
@@ -343,6 +387,8 @@ async function runSync(): Promise<void> {
     } else {
       setStatus('error', msg);
     }
+    // 실패해도 heartbeat로 alive 통지
+    await sendHeartbeat();
   } finally {
     isSyncing = false;
   }
@@ -353,36 +399,42 @@ async function runSync(): Promise<void> {
 /* ------------------------------------------------------------------ */
 
 export async function startDentwebSync(): Promise<void> {
-  const cfg = getDentwebConfig();
+  let cfg = getDentwebConfig();
 
-  if (!cfg.enabled) {
-    log('info', '[DentWeb] 비활성화 상태, 시작하지 않음');
-    return;
-  }
-
-  // Auto-register if no clinic config
+  // Auto-register if no clinic config (enabled 플래그도 함께 설정됨)
   if (!cfg.clinicId || !cfg.apiKey) {
     log('info', '[DentWeb] clinic 설정 없음, 자동 등록 시도...');
     const registered = await autoRegisterDentweb();
     if (!registered) {
       setStatus('error', '자동 등록 실패');
+      // 자동 등록 실패해도 다음 사이클에 재시도할 수 있도록 예외는 던지지 않음
       return;
     }
+    cfg = getDentwebConfig();
   }
 
   // Auto-detect SQL Server if not configured or default
   if (cfg.dbServer === 'localhost' && cfg.dbAuthType === 'windows') {
     await detectSqlServer();
+    cfg = getDentwebConfig();
   }
 
   log('info', `[DentWeb] 동기화 시작 (주기: ${cfg.syncInterval}초)`);
   setStatus('polling');
+
+  // Heartbeat timer 시작 (DB 연결 실패 상황에서도 alive 통지)
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  await sendHeartbeat();
+  heartbeatTimer = setInterval(() => {
+    sendHeartbeat().catch(() => { /* already logged */ });
+  }, HEARTBEAT_INTERVAL_MS);
 
   // Run first sync immediately
   await runSync();
 
   // Start interval
   const interval = (getDentwebConfig().syncInterval || 300) * 1000;
+  if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => {
     runSync().catch(err => {
       log('error', `[DentWeb] 스케줄 동기화 오류: ${err instanceof Error ? err.message : String(err)}`);
@@ -394,6 +446,10 @@ export async function stopDentwebSync(): Promise<void> {
   if (syncTimer) {
     clearInterval(syncTimer);
     syncTimer = null;
+  }
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
   }
   if (pool) {
     try { await pool.close(); } catch { /* ignore */ }
