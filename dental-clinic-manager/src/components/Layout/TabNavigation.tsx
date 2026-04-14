@@ -1455,7 +1455,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
               <div className="px-3 pb-1 flex items-center justify-between text-[11px] text-at-text-weak">
                 <span>v{workerVersionInfo.latestVersion}</span>
                 {workerVersionInfo.latestReleaseDate && (
-                  <span>{new Date(workerVersionInfo.latestReleaseDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} 업데이트</span>
+                  <span>{new Date(workerVersionInfo.latestReleaseDate).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 업데이트</span>
                 )}
               </div>
             )}
