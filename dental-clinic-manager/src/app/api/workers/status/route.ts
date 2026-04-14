@@ -20,13 +20,45 @@ async function getLatestWorkerInfo(): Promise<{ version: string | null; releaseD
     });
     if (!res.ok) return { version: cachedLatestVersion, releaseDate: cachedReleaseDate };
     const releases = await res.json();
-    const workerRelease = releases.find((r: { tag_name?: string }) =>
-      r.tag_name?.startsWith('worker-v')
-    );
-    if (workerRelease?.tag_name) {
-      cachedLatestVersion = workerRelease.tag_name.replace('worker-v', '');
-      cachedReleaseDate = workerRelease.published_at || null;
-      cacheTimestamp = Date.now();
+
+    // Electron 워커 릴리즈 식별:
+    // - electron-builder 가 생성하는 에셋 파일명 패턴 `clinic-manager-worker-<ver>-setup.exe` 를 찾는다.
+    // - 과거 `worker-v*` 태그 형식과 신 `v*` 태그 형식을 모두 지원한다.
+    // - 태그에 버전 정보가 있는 경우 우선 사용하고, 없으면 에셋 파일명에서 추출한다.
+    type GhAsset = { name?: string };
+    type GhRelease = { tag_name?: string; published_at?: string; draft?: boolean; assets?: GhAsset[] };
+
+    const workerRelease = (releases as GhRelease[]).find((r) => {
+      if (r.draft) return false;
+      return !!r.assets?.some(
+        (a) => typeof a.name === 'string' && /^clinic-manager-worker-.+-setup\.exe$/.test(a.name)
+      );
+    });
+
+    if (workerRelease) {
+      // 버전 추출: tag_name 에서 우선 시도 (worker-v1.2.3 / v1.2.3 → 1.2.3)
+      let version: string | null = null;
+      if (workerRelease.tag_name) {
+        const tagMatch = workerRelease.tag_name.match(/^(?:worker-)?v?(.+)$/);
+        if (tagMatch) version = tagMatch[1];
+      }
+      // tag_name 에서 못 얻으면 에셋 파일명에서 파싱
+      if (!version && workerRelease.assets) {
+        for (const a of workerRelease.assets) {
+          if (!a.name) continue;
+          const m = a.name.match(/^clinic-manager-worker-(.+?)-setup\.exe$/);
+          if (m) {
+            version = m[1];
+            break;
+          }
+        }
+      }
+
+      if (version) {
+        cachedLatestVersion = version;
+        cachedReleaseDate = workerRelease.published_at || null;
+        cacheTimestamp = Date.now();
+      }
     }
   } catch {
     // GitHub API 실패 시 캐시된 값 반환
