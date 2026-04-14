@@ -31,6 +31,7 @@ export default function ImageEditModal({
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [newImage, setNewImage] = useState<{ fileName: string; prompt: string; path: string } | null>(null)
   const [error, setError] = useState('')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   // 모달 열릴 때 상태 초기화
   useEffect(() => {
@@ -154,7 +155,9 @@ export default function ImageEditModal({
                   <img
                     src={newImage.path}
                     alt={newImage.prompt}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-zoom-in"
+                    onClick={() => setLightboxOpen(true)}
+                    title="클릭하여 전체 이미지 보기"
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full gap-2 text-at-text">
@@ -253,6 +256,27 @@ export default function ImageEditModal({
           </div>
         </div>
       </div>
+
+      {/* 라이트박스 */}
+      {lightboxOpen && newImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 text-white hover:text-gray-300 transition-colors"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <XMarkIcon className="h-8 w-8" />
+          </button>
+          <img
+            src={newImage.path}
+            alt={newImage.prompt}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }

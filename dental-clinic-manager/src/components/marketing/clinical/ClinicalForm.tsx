@@ -468,22 +468,9 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           <h3 className="text-lg font-semibold text-at-text">
             임상 사진 <span className="text-red-500">*</span>
           </h3>
-          <div className="flex items-center gap-2">
-            {totalPhotos >= 2 && (
-              <button
-                type="button"
-                onClick={() => handleBatchNormalize()}
-                disabled={isGenerating}
-                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors disabled:opacity-40"
-              >
-                <SparklesIcon className="h-3.5 w-3.5" />
-                밝기/색조 통일
-              </button>
-            )}
-            <span className="text-xs text-at-text">
-              {totalPhotos}/{MAX_TOTAL_PHOTOS}장
-            </span>
-          </div>
+          <span className="text-xs text-at-text">
+            {totalPhotos}/{MAX_TOTAL_PHOTOS}장
+          </span>
         </div>
 
         {PHOTO_CATEGORIES.map((catType) => {
@@ -601,6 +588,21 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           )
         })}
       </div>
+
+      {/* 밝기/색조 통일 버튼 */}
+      {totalPhotos >= 2 && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => handleBatchNormalize()}
+            disabled={isGenerating}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 rounded-xl shadow-sm transition-colors"
+          >
+            <SparklesIcon className="h-4 w-4" />
+            밝기/색조 통일 ({totalPhotos}장 일괄 적용)
+          </button>
+        </div>
+      )}
 
       {/* 환자 동의 확인 */}
       <div className={`rounded-xl border-2 p-5 ${

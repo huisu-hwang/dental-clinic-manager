@@ -961,30 +961,26 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       {/* 사이드바 최상단 헤더: 우측에 아이콘 버튼 배치 */}
       <div className="flex items-center justify-end px-2 pt-1 pb-2 border-b border-at-border mb-1 gap-0.5">
         {!isCollapsed && (
-          <Tooltip label={isEditMode ? '편집 완료' : '메뉴 편집'} direction="bottom" wrapperClassName="relative inline-flex">
-            <button
-              onClick={toggleEditMode}
-              className={`
-                p-1 rounded-md transition-all duration-200 flex items-center justify-center
-                ${isEditMode
-                  ? 'bg-at-accent text-white hover:bg-at-accent-hover'
-                  : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover'
-                }
-              `}
-            >
-              {isEditMode ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
-            </button>
-          </Tooltip>
+          <button
+            onClick={toggleEditMode}
+            className={`
+              p-1 rounded-md transition-all duration-200 flex items-center justify-center
+              ${isEditMode
+                ? 'bg-at-accent text-white hover:bg-at-accent-hover'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover'
+              }
+            `}
+          >
+            {isEditMode ? <Check className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+          </button>
         )}
         {onToggleCollapse && (
-          <Tooltip label={isCollapsed ? '메뉴 펼치기' : '메뉴 접기'} direction="bottom" wrapperClassName="relative inline-flex">
-            <button
-              onClick={onToggleCollapse}
-              className="p-1 rounded-md text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover transition-all duration-200 flex items-center justify-center"
-            >
-              {isCollapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}
-            </button>
-          </Tooltip>
+          <button
+            onClick={onToggleCollapse}
+            className="p-1 rounded-md text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-hover transition-all duration-200 flex items-center justify-center"
+          >
+            {isCollapsed ? <ChevronsRight className="w-3.5 h-3.5" /> : <ChevronsLeft className="w-3.5 h-3.5" />}
+          </button>
         )}
       </div>
 
