@@ -3,10 +3,20 @@ import { app, Notification } from 'electron';
 import { log } from './logger';
 import { getConfig, getGithubToken, setUpdateMeta } from './config-store';
 
-const CHECK_INTERVAL = 60 * 60 * 1000; // 1시간마다 체크
+const CHECK_INTERVAL = 30 * 60 * 1000; // 30분마다 체크
 let checkTimer: ReturnType<typeof setInterval> | null = null;
 // 수동 체크 시에만 모든 결과를 알림으로 표시
 let isManualCheck = false;
+
+// Graceful shutdown 콜백 (업데이트 재시작 전 호출)
+const shutdownCallbacks: Array<() => void> = [];
+
+/**
+ * 업데이트 재시작 전 호출할 정리 콜백 등록
+ */
+export function onBeforeUpdateRestart(cb: () => void): void {
+  shutdownCallbacks.push(cb);
+}
 
 function notify(title: string, body: string): void {
   if (Notification.isSupported()) {
@@ -26,6 +36,7 @@ export function initAutoUpdater(): void {
   // 자동 다운로드 활성화
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = true;
 
   // Private repo 토큰 설정
   const ghToken = getGithubToken();
@@ -80,8 +91,22 @@ export function initAutoUpdater(): void {
       updateStatus: 'downloaded',
       lastUpdatedAt: new Date().toISOString(),
     });
-    notify('클리닉 매니저 워커 업데이트', `v${info.version} 다운로드 완료. 다음 재시작 시 자동 설치됩니다.`);
+    notify('클리닉 매니저 워커 업데이트', `v${info.version} 다운로드 완료. 10초 후 자동 재시작됩니다.`);
     isManualCheck = false;
+
+    // 10초 후 자동 재시작 (사용자에게 알림 볼 시간 제공)
+    setTimeout(() => {
+      log('info', '[Updater] 자동 재시작 시작...');
+      try {
+        // graceful shutdown 콜백 실행
+        for (const cb of shutdownCallbacks) {
+          try { cb(); } catch { /* ignore */ }
+        }
+      } catch (err) {
+        log('error', `[Updater] Shutdown 콜백 오류: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      autoUpdater.quitAndInstall(false, true);
+    }, 10000);
   });
 
   autoUpdater.on('error', (err) => {
@@ -123,7 +148,7 @@ export function startAutoCheckIfEnabled(): void {
     });
   }, 30000);
 
-  // 주기적 체크 (1시간마다)
+  // 주기적 체크 (30분마다)
   checkTimer = setInterval(() => {
     if (!getConfig().autoUpdate) return;
     autoUpdater.checkForUpdates().catch((err) => {
