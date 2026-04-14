@@ -113,9 +113,15 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       const response = await contractService.signContract(clientInfo)
 
       if (response.success) {
-        await appAlert('서명이 완료되었습니다.')
         setShowSignatureModal(false)
-        loadContract() // Reload to show updated status
+        if (signerType === 'employer') {
+          await appAlert('원장 서명이 완료되었습니다.\n직원에게 서명을 요청하세요.')
+          // 서명 완료 후 계약서 목록으로 이동
+          router.push('/dashboard/contracts')
+        } else {
+          await appAlert('서명이 완료되었습니다.')
+          loadContract()
+        }
       } else {
         await appAlert(`서명 실패: ${response.error}`)
       }
