@@ -15,6 +15,7 @@ import {
   type ImageTransforms,
   DEFAULT_TRANSFORMS,
   loadImageFromFile,
+  loadImageFromUrl,
   renderPreview,
   applyImageTransforms,
 } from './imageUtils'
@@ -26,7 +27,7 @@ import {
 
 interface PhotoLike {
   id: string
-  file: File
+  file?: File | null
   previewUrl: string
 }
 
@@ -48,10 +49,13 @@ export default function ClinicalPhotoEditor({
   const imageRef = useRef<HTMLImageElement | null>(null)
   const rafRef = useRef<number | null>(null)
 
-  // 원본 이미지 로드
+  // 원본 이미지 로드 (File 또는 URL)
   useEffect(() => {
     let cancelled = false
-    loadImageFromFile(photo.file).then((img) => {
+    const loader = photo.file
+      ? loadImageFromFile(photo.file)
+      : loadImageFromUrl(photo.previewUrl)
+    loader.then((img) => {
       if (!cancelled) {
         imageRef.current = img
         updatePreview()
@@ -59,7 +63,7 @@ export default function ClinicalPhotoEditor({
     })
     return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photo.file])
+  }, [photo.file, photo.previewUrl])
 
   // 변환 변경 시 미리보기 업데이트
   const updatePreview = useCallback(() => {

@@ -37,6 +37,18 @@ export function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   })
 }
 
+// ─── URL → HTMLImageElement 로딩 (CORS 없이 img.src 방식) ───
+
+export function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('이미지 로드 실패'))
+    img.src = url
+  })
+}
+
 // ─── Canvas에 변환 적용 후 렌더링 ───
 
 export function renderToCanvas(

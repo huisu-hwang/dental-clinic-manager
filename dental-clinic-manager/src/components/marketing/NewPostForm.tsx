@@ -89,7 +89,9 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null)
   const [editingImage, setEditingImage] = useState<{ fileName: string; prompt: string; path: string } | null>(null)
   // ── 임상 사진 편집 상태 ──
-  const [editingClinicalImage, setEditingClinicalImage] = useState<{ id: string; file: File; previewUrl: string; imageIndex: number } | null>(null)
+  const [editingClinicalImage, setEditingClinicalImage] = useState<{ id: string; file?: File | null; previewUrl: string; imageIndex: number } | null>(null)
+  // 임상 사진 URL → File 맵 (세션 내 편집용, fetch 없이 File 접근)
+  const clinicalPhotoFileMapRef = useRef<Map<string, File>>(new Map())
 
   // 저장 메시지 3초 후 자동 제거
   useEffect(() => {
@@ -183,16 +185,21 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         return
       }
 
-      // 사진을 base64로 변환
+      // 사진을 base64로 변환 + URL→File 맵 갱신
+      clinicalPhotoFileMapRef.current.clear()
       const photosWithBase64: ClinicalPhotoInput[] = await Promise.all(
-        uploadedPhotos.map(async (photo) => ({
-          photo_type: photo.type,
-          file_path: photo.uploadedUrl!,
-          base64: await fileToBase64(photo.file),
-          media_type: photo.file.type || 'image/jpeg',
-          caption: photo.caption,
-          sort_order: photo.sort_order,
-        }))
+        uploadedPhotos.map(async (photo) => {
+          // URL→File 맵 저장 (이후 편집 시 fetch 없이 사용)
+          clinicalPhotoFileMapRef.current.set(photo.uploadedUrl!, photo.file)
+          return {
+            photo_type: photo.type,
+            file_path: photo.uploadedUrl!,
+            base64: await fileToBase64(photo.file),
+            media_type: photo.file.type || 'image/jpeg',
+            caption: photo.caption,
+            sort_order: photo.sort_order,
+          }
+        })
       )
 
       aiGen.startGeneration({
@@ -353,24 +360,15 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     // 임상글: ClinicalPhotoEditor로 편집
     if (postType === 'clinical' && generatedResult?.generatedImages) {
       const img = generatedResult.generatedImages[imageIndex]
-      if (img?.path && !img.path.startsWith('data:')) {
-        // 임상 사진 URL에서 File을 fetch하여 편집 모달 열기
-        fetch(img.path)
-          .then((res) => res.blob())
-          .then((blob) => {
-            const file = new File([blob], img.fileName || 'clinical.jpg', { type: blob.type || 'image/jpeg' })
-            setEditingClinicalImage({
-              id: `clinical_${imageIndex}`,
-              file,
-              previewUrl: img.path!,
-              imageIndex,
-            })
-          })
-          .catch(() => {
-            // fetch 실패 시 기존 AI 편집 모달 사용
-            setEditingImageIndex(imageIndex)
-            setEditingImage(currentImage)
-          })
+      if (img?.path) {
+        // 세션 내 맵에서 File 조회 (CORS 없이 즉시)
+        const file = clinicalPhotoFileMapRef.current.get(img.path) ?? null
+        setEditingClinicalImage({
+          id: `clinical_${imageIndex}`,
+          file,
+          previewUrl: img.path,
+          imageIndex,
+        })
         return
       }
     }
