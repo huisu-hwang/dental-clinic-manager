@@ -122,7 +122,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="w-14 h-14 bg-at-success-bg rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-7 h-7 text-green-500" />
+            <CheckCircle className="w-7 h-7 text-at-success" />
           </div>
           <h2 className="text-lg font-semibold text-at-text mb-2">가입 완료!</h2>
           <p className="text-sm text-at-text-weak">게시판으로 이동합니다...</p>
@@ -137,12 +137,12 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-at-border shadow-at-card overflow-hidden">
-        {/* 헤더 — sky/blue gradient 유지 (브랜드 색상) */}
-        <div className="bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-8 text-center">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Send className="w-8 h-8 text-white" />
+        {/* 헤더 — 디자인 시스템 통일 */}
+        <div className="bg-at-accent-light border-b border-at-border px-6 py-8 text-center">
+          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 border border-at-border shadow-at-soft">
+            <Send className="w-8 h-8 text-at-accent" />
           </div>
-          <h2 className="text-xl font-bold text-white">텔레그램 모임 초대</h2>
+          <h2 className="text-xl font-bold text-at-text">텔레그램 모임 초대</h2>
         </div>
 
         {/* 그룹 정보 */}
@@ -171,7 +171,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
                   const redirectUrl = `/dashboard/community/telegram/join/${inviteCode}${autoJoin ? '?autoJoin=1' : ''}`
                   router.push(`/?redirect=${encodeURIComponent(redirectUrl)}`)
                 }}
-                className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+                className="w-full"
               >
                 <LogIn className="w-4 h-4 mr-2" />
                 로그인하고 가입하기
@@ -193,7 +193,7 @@ export default function TelegramInviteJoin({ inviteCode }: TelegramInviteJoinPro
             <Button
               onClick={handleJoin}
               disabled={joining}
-              className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+              className="w-full"
             >
               {joining ? (
                 <>
