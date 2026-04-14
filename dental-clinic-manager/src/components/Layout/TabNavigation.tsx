@@ -495,6 +495,39 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   const [workerInstallCommand, setWorkerInstallCommand] = useState('')
   const [copiedWorkerCmd, setCopiedWorkerCmd] = useState(false)
 
+  const [workerVersionInfo, setWorkerVersionInfo] = useState<{
+    currentVersion: string | null
+    latestVersion: string | null
+    latestReleaseDate: string | null
+    online: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    const fetchWorkerVersion = async () => {
+      try {
+        const res = await fetch('/api/workers/status?type=marketing', {
+          signal: AbortSignal.timeout(5000),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.marketing) {
+            setWorkerVersionInfo({
+              currentVersion: data.marketing.currentVersion,
+              latestVersion: data.marketing.latestVersion,
+              latestReleaseDate: data.marketing.latestReleaseDate,
+              online: data.marketing.online,
+            })
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchWorkerVersion()
+    const interval = setInterval(fetchWorkerVersion, 60_000) // 1분마다 갱신
+    return () => clearInterval(interval)
+  }, [])
+
   const handleWorkerDownload = async () => {
     if (isDownloadingWorker) return
     setIsDownloadingWorker(true)
@@ -1401,14 +1434,24 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
             </button>
           </Tooltip>
         ) : (
-          <button
-            onClick={handleWorkerDownload}
-            disabled={isDownloadingWorker}
-            className="group flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 w-full text-at-text-weak hover:bg-at-success-bg hover:text-at-success disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className={`w-5 h-5 flex-shrink-0 text-at-text-weak group-hover:text-at-success ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
-            <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드'}</span>
-          </button>
+          <div>
+            <button
+              onClick={handleWorkerDownload}
+              disabled={isDownloadingWorker}
+              className="group flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 w-full text-at-text-weak hover:bg-at-success-bg hover:text-at-success disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className={`w-5 h-5 flex-shrink-0 text-at-text-weak group-hover:text-at-success ${isDownloadingWorker ? 'animate-bounce' : ''}`} />
+              <span className="truncate">{isDownloadingWorker ? '다운로드 중...' : '통합 워커 다운로드'}</span>
+            </button>
+            {workerVersionInfo?.latestVersion && (
+              <div className="px-3 pb-1 flex items-center justify-between text-[11px] text-at-text-weak">
+                <span>v{workerVersionInfo.latestVersion}</span>
+                {workerVersionInfo.latestReleaseDate && (
+                  <span>{new Date(workerVersionInfo.latestReleaseDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} 업데이트</span>
+                )}
+              </div>
+            )}
+          </div>
         )}
         {bottomFixedMenus.map(tab => {
           const isActive = activeTab === tab.id
