@@ -188,8 +188,9 @@ export async function GET(request: NextRequest) {
         if (syncConfig) {
           installed = true;
           const lastSync = syncConfig.last_sync_at ? new Date(syncConfig.last_sync_at) : null;
-          // 마지막 동기화가 10분 이내면 온라인으로 판단
-          online = !!(syncConfig.is_active && lastSync && (Date.now() - lastSync.getTime() < 10 * 60 * 1000));
+          // 브릿지 에이전트가 60초 주기로 /api/dentweb/heartbeat 를 호출하여 last_sync_at을 갱신한다.
+          // heartbeat 여유를 감안해 3분(180초) 이내면 온라인으로 판단.
+          online = !!(syncConfig.is_active && lastSync && (Date.now() - lastSync.getTime() < 3 * 60 * 1000));
           lastSyncStatus = syncConfig.last_sync_status;
         }
       }
