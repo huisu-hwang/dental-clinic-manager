@@ -29,7 +29,6 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null)
-  const [salaryType, setSalaryType] = useState<'gross' | 'net'>('gross')
   const [formData, setFormData] = useState<Partial<ContractData>>({
     employment_period_start: new Date().toISOString().split('T')[0],
     salary_base: 0,
@@ -190,7 +189,7 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       const contractFormData: ContractFormData = {
         employee_user_id: selectedEmployee.id,
         template_id: undefined, // Will use default template
-        contract_data: { ...formData, salary_base_type: salaryType } as ContractData
+        contract_data: formData as ContractData
       }
 
       const response = await contractService.createContract(contractFormData, currentUser.id)
@@ -336,29 +335,6 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               <span className="ml-2 text-sm text-at-text-secondary">무기한 계약 (종료일 없음)</span>
             </label>
           </div>
-          {/* 1년 단위 빠른 선택 */}
-          {!formData.is_permanent && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {[1, 2, 3].map(years => (
-                <button
-                  key={years}
-                  type="button"
-                  onClick={() => {
-                    const start = formData.employment_period_start
-                    if (!start) return
-                    const endDate = new Date(start)
-                    endDate.setFullYear(endDate.getFullYear() + years)
-                    endDate.setDate(endDate.getDate() - 1)
-                    setFormData(prev => ({ ...prev, employment_period_end: endDate.toISOString().split('T')[0] }))
-                  }}
-                  className="px-3 py-1 text-xs border border-at-border rounded hover:border-at-accent hover:text-at-accent transition-colors"
-                >
-                  {years}년
-                </button>
-              ))}
-              <span className="text-xs text-at-text-secondary self-center">시작일 기준 자동 계산</span>
-            </div>
-          )}
         </div>
 
         {/* Salary Information */}
@@ -369,28 +345,6 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
               <label className="block text-sm font-medium text-at-text-secondary mb-1">
                 기본급 (월) <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-4 mb-2">
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="salaryType"
-                    checked={salaryType === 'gross'}
-                    onChange={() => setSalaryType('gross')}
-                    className="text-at-accent focus:ring-at-accent"
-                  />
-                  <span className="text-sm">세전 (세금 포함)</span>
-                </label>
-                <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="salaryType"
-                    checked={salaryType === 'net'}
-                    onChange={() => setSalaryType('net')}
-                    className="text-at-accent focus:ring-at-accent"
-                  />
-                  <span className="text-sm">세후 (실수령액)</span>
-                </label>
-              </div>
               <input
                 type="number"
                 name="salary_base"
@@ -399,28 +353,20 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 required
                 min="0"
                 step="10000"
-                placeholder={salaryType === 'gross' ? '세전 금액 입력' : '세후 실수령액 입력'}
                 className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
               />
-              <p className="mt-1 text-xs text-at-text-secondary">
-                {salaryType === 'gross'
-                  ? '세전 기본급: 4대보험·소득세 공제 전 금액'
-                  : '세후 실수령액: 공제 후 실제 지급 금액 (계약서에 세후 기준으로 기재됩니다)'}
-              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-at-text-secondary mb-1">급여 지급일</label>
-              <select
+              <input
+                type="number"
                 name="salary_payment_day"
                 value={formData.salary_payment_day || 25}
                 onChange={handleInputChange}
+                min="1"
+                max="31"
                 className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent"
-              >
-                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                  <option key={day} value={day}>{day}일</option>
-                ))}
-                <option value={0}>월말</option>
-              </select>
+              />
             </div>
           </div>
 

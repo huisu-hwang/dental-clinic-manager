@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import {
   DndContext,
   DragEndEvent,
@@ -238,53 +238,44 @@ function SortableMenuItem({ id, children }: { id: string; children: (listeners: 
 // direction: 'right' = 우측 표시 (collapsed 메뉴), 'bottom' = 하방 표시 (상단 버튼)
 function Tooltip({ label, children, direction = 'right' }: { label: string; children: React.ReactNode; direction?: 'right' | 'bottom' }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
-
-  const handleShow = (e: React.MouseEvent<HTMLElement>) => {
-    // 이벤트 발생 대상(버튼) 기준으로 rect 계산
-    const rect = e.currentTarget.getBoundingClientRect()
-    if (direction === 'bottom') {
-      setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 6 })
-    } else {
-      setPos({ x: rect.right + 8, y: rect.top + rect.height / 2 })
-    }
-  }
-
-  // children(button)에 직접 onMouseEnter/Leave 주입
-  const child = React.isValidElement(children)
-    ? React.cloneElement(children as React.ReactElement<React.HTMLAttributes<HTMLElement>>, {
-        onMouseEnter: handleShow,
-        onMouseLeave: () => setPos(null),
-      })
-    : children
-
+  const ref = useRef<HTMLDivElement>(null)
   return (
-    <>
-      {child}
+    <div
+      ref={ref}
+      className="relative w-full"
+      onMouseEnter={() => {
+        // 첫 번째 자식 요소(실제 버튼/아이콘) 기준으로 위치 계산
+        const el = ref.current?.firstElementChild as HTMLElement | null
+        const rect = el ? el.getBoundingClientRect() : ref.current?.getBoundingClientRect()
+        if (!rect) return
+        if (direction === 'bottom') {
+          setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 4 })
+        } else {
+          setPos({ x: rect.right + 8, y: rect.top + rect.height / 2 })
+        }
+      }}
+      onMouseLeave={() => setPos(null)}
+    >
+      {children}
       {pos && direction === 'bottom' && (
         <div
-          className="fixed z-[9999] bg-slate-800 text-white text-xs font-medium rounded-md px-2 py-1 whitespace-nowrap shadow-lg pointer-events-none"
-          style={{ left: pos.x, top: pos.y, transform: 'translateX(-50%)' }}
+          className="fixed z-[9999] bg-slate-800 text-white text-xs font-medium rounded-md px-2 py-1 whitespace-nowrap shadow-lg pointer-events-none -translate-x-1/2"
+          style={{ left: pos.x, top: pos.y }}
         >
           {label}
-          <div
-            className="absolute left-1/2 border-[4px] border-transparent border-b-slate-800"
-            style={{ bottom: '100%', transform: 'translateX(-50%)' }}
-          />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-[3px] border-transparent border-b-slate-800" />
         </div>
       )}
       {pos && direction === 'right' && (
         <div
-          className="fixed z-[9999] bg-slate-800 text-white text-xs font-medium rounded-md px-2 py-1 whitespace-nowrap shadow-lg pointer-events-none"
-          style={{ left: pos.x, top: pos.y, transform: 'translateY(-50%)' }}
+          className="fixed z-[9999] bg-slate-800 text-white text-xs font-medium rounded-md px-2 py-1 whitespace-nowrap shadow-lg pointer-events-none -translate-y-1/2"
+          style={{ left: pos.x, top: pos.y }}
         >
           {label}
-          <div
-            className="absolute top-1/2 border-4 border-transparent border-r-slate-800"
-            style={{ right: '100%', transform: 'translateY(-50%)' }}
-          />
+          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-800" />
         </div>
       )}
-    </>
+    </div>
   )
 }
 
