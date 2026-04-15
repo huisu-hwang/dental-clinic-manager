@@ -20,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const searchParams = useSearchParams()
   const [showProfile, setShowProfile] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [toast, setToast] = useState<{
     show: boolean
     message: string
@@ -81,6 +82,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isMobileMenuOpen])
 
+  // 사이드바 축소 상태 localStorage에서 복원
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved === 'true') setIsSidebarCollapsed(true)
+  }, [])
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('sidebar-collapsed', String(next))
+      return next
+    })
+  }
+
   const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ show: true, message, type })
   }
@@ -97,26 +112,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // 퇴사자/승인대기/거절된 사용자는 대시보드를 렌더링하지 않음
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-page flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
+      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   if (!user || user.status === 'resigned' || user.status === 'pending' || user.status === 'rejected') {
     return (
-      <div className="min-h-screen bg-surface-page flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand"></div>
+      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
   }
 
   return (
     <HometaxSyncProvider>
-    <div className="min-h-screen bg-surface-page">
+    <div className="min-h-screen bg-at-surface">
       {/* Header - 상단 고정, 중앙 정렬 */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-card border-b border-border fixed-header-safe">
-        <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-at-surface border-b border-at-border fixed-header-safe">
+        <div className="h-full flex items-center px-0 w-full">
           <Header
             user={user}
             onLogout={logout}
@@ -140,9 +155,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
       <aside
         className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-card border-r border-border z-20 overflow-y-auto py-3 px-3 fixed-sidebar-safe
-          transition-transform duration-300 ease-in-out
-          lg:left-[max(0px,calc(50%-700px))]
+          fixed top-14 w-64 ${isSidebarCollapsed ? 'lg:w-[68px]' : 'lg:w-48'} h-[calc(100vh-3.5rem)] bg-at-surface border-r border-at-border z-20 overflow-y-auto py-3 ${isSidebarCollapsed ? 'lg:px-1.5' : 'px-0'} fixed-sidebar-safe
+          transition-all duration-300 ease-in-out
+          lg:left-0
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
         `}
       >
@@ -151,15 +166,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onTabChange={handleTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
+          isCollapsed={isSidebarCollapsed && !isMobileMenuOpen}
+          onToggleCollapse={toggleSidebarCollapse}
         />
       </aside>
 
       {/* 메인 콘텐츠 */}
       <div className="pt-14 pt-header-safe">
-        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
-          <div className="max-w-6xl">
-            {children}
-          </div>
+        <main className={`${isSidebarCollapsed ? 'lg:pl-[68px]' : 'lg:pl-48'} px-0 transition-[padding] duration-300`}>
+          {children}
         </main>
       </div>
 

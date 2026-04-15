@@ -156,18 +156,18 @@ export default function UserNotificationDropdown() {
           setIsOpen(!isOpen)
           if (!isOpen) refresh()
         }}
-        className="relative flex items-center justify-center w-10 h-10 rounded-lg hover:bg-accent transition-colors"
+        className="relative flex items-center justify-center w-10 h-10 rounded-xl hover:bg-at-surface-hover transition-colors"
         aria-label="알림"
       >
         {unreadCount > 0 ? (
-          <BellSolidIcon className="w-5 h-5 text-brand" />
+          <BellSolidIcon className="w-5 h-5 text-at-accent" />
         ) : (
-          <BellIcon className="w-5 h-5 text-text-secondary" />
+          <BellIcon className="w-5 h-5 text-at-text-secondary" />
         )}
 
         {/* 배지 */}
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-primary-foreground bg-destructive rounded-full">
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-xs font-bold text-white bg-red-500 rounded-full">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -175,14 +175,14 @@ export default function UserNotificationDropdown() {
 
       {/* 드롭다운 */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-card rounded-xl shadow-[var(--shadow-elevated)] border border-border overflow-hidden z-50">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-at-surface rounded-xl shadow-at-card border border-at-border overflow-hidden z-50">
           {/* 헤더 */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-page">
-            <h3 className="font-semibold text-text-primary">알림</h3>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-at-border bg-at-surface-alt">
+            <h3 className="font-semibold text-at-text">알림</h3>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllAsRead}
-                className="text-xs text-brand hover:text-brand/90 font-medium flex items-center gap-1"
+                className="text-xs text-at-accent hover:text-at-accent-hover font-medium flex items-center gap-1"
               >
                 <CheckIcon className="w-3.5 h-3.5" />
                 모두 읽음
@@ -194,15 +194,15 @@ export default function UserNotificationDropdown() {
           <div className="max-h-[400px] overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-at-accent border-t-transparent rounded-full animate-spin" />
               </div>
             ) : notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-text-tertiary">
+              <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
                 <BellIcon className="w-10 h-10 mb-2" />
                 <p className="text-sm">알림이 없습니다</p>
               </div>
             ) : (
-              <div className="divide-y divide-border/50">
+              <div className="divide-y divide-at-border">
                 {notifications.map((notification) => {
                   const IconComponent = NotificationTypeIcons[notification.type] || BellIcon
                   const colors = USER_NOTIFICATION_TYPE_COLORS[notification.type] || USER_NOTIFICATION_TYPE_COLORS.system
@@ -214,8 +214,8 @@ export default function UserNotificationDropdown() {
                       onClick={() => handleNotificationClick(notification)}
                       className={`
                         flex items-start gap-3 px-4 py-3 cursor-pointer
-                        hover:bg-surface-page transition-colors group
-                        ${!notification.is_read ? 'bg-brand-tint/50' : ''}
+                        hover:bg-at-surface-alt transition-colors group
+                        ${!notification.is_read ? 'bg-at-tag/40' : ''}
                       `}
                     >
                       {/* 아이콘 */}
@@ -226,25 +226,25 @@ export default function UserNotificationDropdown() {
                       {/* 내용 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <p className={`text-sm font-medium truncate ${!notification.is_read ? 'text-text-primary' : 'text-text-secondary'}`}>
+                          <p className={`text-sm font-medium truncate ${!notification.is_read ? 'text-at-text' : 'text-at-text-secondary'}`}>
                             {notification.title}
                           </p>
                           {/* 읽지 않음 표시 */}
                           {!notification.is_read && (
-                            <span className="flex-shrink-0 w-2 h-2 mt-1.5 bg-brand rounded-full" />
+                            <span className="flex-shrink-0 w-2 h-2 mt-1.5 bg-at-accent-light0 rounded-full" />
                           )}
                         </div>
                         {notification.content && (
-                          <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">
+                          <p className="text-xs text-at-text-secondary mt-0.5 line-clamp-2">
                             {notification.content}
                           </p>
                         )}
                         <div className="flex items-center gap-1 mt-1">
-                          <p className="text-xs text-text-tertiary">
+                          <p className="text-xs text-at-text-weak">
                             {getRelativeTime(notification.created_at)}
                           </p>
                           {hasLink && (
-                            <span className="text-xs text-brand opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                            <span className="text-xs text-at-accent opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                               · 바로가기 <ChevronRightIcon className="w-3 h-3" />
                             </span>
                           )}
@@ -254,7 +254,7 @@ export default function UserNotificationDropdown() {
                       {/* 삭제 버튼 */}
                       <button
                         onClick={(e) => handleDelete(e, notification.id)}
-                        className="flex-shrink-0 p-1 rounded hover:bg-surface-muted text-text-tertiary hover:text-destructive transition-colors"
+                        className="flex-shrink-0 p-1 rounded hover:bg-at-surface-hover text-at-text-weak hover:text-red-500 transition-colors"
                         aria-label="삭제"
                       >
                         <TrashIcon className="w-4 h-4" />
@@ -268,13 +268,13 @@ export default function UserNotificationDropdown() {
 
           {/* 더보기 - 향후 전체 알림 페이지 구현 시 활성화 */}
           {/* {notifications.length > 0 && (
-            <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
+            <div className="px-4 py-3 border-t border-at-border bg-at-surface-alt">
               <button
                 onClick={() => {
                   setIsOpen(false)
                   router.push('/notifications')
                 }}
-                className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="w-full text-center text-sm text-at-accent hover:text-at-accent-hover font-medium"
               >
                 모든 알림 보기
               </button>
