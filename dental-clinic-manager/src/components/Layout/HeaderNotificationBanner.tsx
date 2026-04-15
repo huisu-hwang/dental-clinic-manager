@@ -32,7 +32,7 @@ const CategoryIcons: Record<NotificationCategory, React.ComponentType<{ classNam
 
 // 카테고리별 색상 클래스
 const CategoryColors: Record<NotificationCategory, { icon: string; bg: string; text: string }> = {
-  general: { icon: 'text-at-accent', bg: 'bg-at-accent-light', text: 'text-at-accent' },
+  general: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
   insurance: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' },
   event: { icon: 'text-purple-500', bg: 'bg-purple-50', text: 'text-purple-700' },
   birthday: { icon: 'text-pink-500', bg: 'bg-pink-50', text: 'text-pink-700' },
@@ -137,7 +137,7 @@ export default function HeaderNotificationBanner({
         <div
           className={`
             flex items-center gap-2 px-3 py-1.5 rounded-full
-            ${colors.bg} border border-at-border
+            ${colors.bg} border border-border/50
             transition-all duration-200
             hover:shadow-sm cursor-pointer
           `}
@@ -162,7 +162,7 @@ export default function HeaderNotificationBanner({
               className="flex-shrink-0 p-0.5 rounded-full hover:bg-white/50 transition-colors"
               aria-label="이전 알림"
             >
-              <ChevronLeftIcon className="w-3.5 h-3.5 text-at-text-weak" />
+              <ChevronLeftIcon className="w-3.5 h-3.5 text-text-tertiary" />
             </button>
           )}
 
@@ -182,7 +182,7 @@ export default function HeaderNotificationBanner({
             <p className={`text-xs sm:text-sm ${colors.text} truncate`}>
               <span className="font-medium">{currentNotification.title}</span>
               {currentNotification.content && (
-                <span className="text-at-text-secondary font-normal"> - {currentNotification.content}</span>
+                <span className="text-text-secondary font-normal"> - {currentNotification.content}</span>
               )}
             </p>
           </div>
@@ -190,7 +190,7 @@ export default function HeaderNotificationBanner({
           {/* 페이지 인디케이터 */}
           {notificationCount > 1 && (
             <div className="flex-shrink-0 flex items-center gap-1">
-              <span className="text-[10px] text-at-text-weak hidden sm:inline">
+              <span className="text-[10px] text-text-tertiary hidden sm:inline">
                 {currentIndex + 1}/{notificationCount}
               </span>
               {/* 모바일용 도트 인디케이터 */}
@@ -199,7 +199,7 @@ export default function HeaderNotificationBanner({
                   <div
                     key={idx}
                     className={`w-1 h-1 rounded-full transition-colors ${
-                      idx === currentIndex ? 'bg-at-text-secondary' : 'bg-at-border'
+                      idx === currentIndex ? 'bg-text-secondary' : 'bg-text-disabled'
                     }`}
                   />
                 ))}
@@ -217,7 +217,7 @@ export default function HeaderNotificationBanner({
               className="flex-shrink-0 p-0.5 rounded-full hover:bg-white/50 transition-colors"
               aria-label="다음 알림"
             >
-              <ChevronRightIcon className="w-3.5 h-3.5 text-at-text-weak" />
+              <ChevronRightIcon className="w-3.5 h-3.5 text-text-tertiary" />
             </button>
           )}
         </div>

@@ -1,7 +1,6 @@
 'use client'
 
-import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX, ArrowUpCircle } from 'lucide-react'
-import Image from 'next/image'
+import { Shield, LogOut, User, Cog, Crown, Menu, X, UserX } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
@@ -62,58 +61,12 @@ export default function Header({
     setIsAutoLoginEnabled(newState)
   }
 
-  // 워커 업데이트 상태 체크
-  const [workerInstalled, setWorkerInstalled] = useState<boolean | null>(null)
-  const [workerUpdateAvailable, setWorkerUpdateAvailable] = useState(false)
-  const [workerUpdateStatus, setWorkerUpdateStatus] = useState<string | null>(null)
-  const [workerVersions, setWorkerVersions] = useState<{ current: string | null; latest: string | null }>({ current: null, latest: null })
-  const [workerUpdating, setWorkerUpdating] = useState(false)
-
-  useEffect(() => {
-    const checkWorker = async () => {
-      try {
-        const res = await fetch('/api/workers/status?type=marketing', { signal: AbortSignal.timeout(10000) })
-        if (res.ok) {
-          const data = await res.json()
-          setWorkerInstalled(data.marketing?.installed ?? false)
-          setWorkerUpdateAvailable(data.marketing?.updateAvailable ?? false)
-          setWorkerUpdateStatus(data.marketing?.updateStatus ?? null)
-          setWorkerVersions({
-            current: data.marketing?.currentVersion ?? null,
-            latest: data.marketing?.latestVersion ?? null,
-          })
-        }
-      } catch {
-        // 에러 무시
-      }
-    }
-    checkWorker()
-    const interval = setInterval(checkWorker, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleWorkerUpdate = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setWorkerUpdating(true)
-    try {
-      await fetch('/api/master/worker', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update' }),
-      })
-    } catch {
-      // 에러 무시
-    } finally {
-      setTimeout(() => setWorkerUpdating(false), 5000)
-    }
-  }
-
   const getStatusColor = () => {
     switch (dbStatus) {
-      case 'connected': return 'bg-green-500'
-      case 'error': return 'bg-red-500'
-      case 'connecting': return 'bg-yellow-400'
-      default: return 'bg-at-border'
+      case 'connected': return 'bg-success'
+      case 'error': return 'bg-destructive'
+      case 'connecting': return 'bg-warning'
+      default: return 'bg-text-tertiary'
     }
   }
 
@@ -134,30 +87,26 @@ export default function Header({
         {onMenuToggle && (
           <button
             onClick={onMenuToggle}
-            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-xl hover:bg-at-surface-hover transition-colors flex-shrink-0"
+            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-accent transition-colors flex-shrink-0"
             aria-label={isMenuOpen ? '메뉴 닫기' : '메뉴 열기'}
           >
             {isMenuOpen ? (
-              <X className="w-6 h-6 text-at-text-secondary" />
+              <X className="w-6 h-6 text-text-secondary" />
             ) : (
-              <Menu className="w-6 h-6 text-at-text-secondary" />
+              <Menu className="w-6 h-6 text-text-secondary" />
             )}
           </button>
         )}
 
         <Link href="/dashboard" className="group min-w-0">
           <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer transition-transform duration-200 hover:scale-[1.02]">
-            <Image
-              src="/icons/icon-192x192.png"
-              alt="클리닉 매니저 로고"
-              width={40}
-              height={40}
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl shadow-at-soft flex-shrink-0"
-            />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-brand rounded-lg sm:rounded-xl flex items-center justify-center shadow-[var(--shadow-modal)] flex-shrink-0">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+            </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-xl font-bold text-at-text group-hover:text-at-accent transition-colors truncate">클리닉 매니저</h1>
+              <h1 className="text-base sm:text-xl font-bold text-text-primary group-hover:text-brand transition-colors truncate">클리닉 매니저</h1>
               {user && (
-                <p className="text-xs text-at-text-secondary truncate hidden sm:block">
+                <p className="text-xs text-text-secondary truncate hidden sm:block">
                   {user.clinic?.name || user.clinicName}
                 </p>
               )}
@@ -167,36 +116,7 @@ export default function Header({
       </div>
 
       {/* 중앙: 알림 배너 (데스크탑에서만 표시) */}
-      <div className="hidden md:flex flex-1 justify-center min-w-0 items-center gap-2">
-        {workerInstalled && workerUpdateAvailable && (
-          <div className={`
-            flex items-center gap-2 px-3 py-1.5 rounded-full border
-            ${workerUpdateStatus === 'downloaded' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'}
-            transition-all duration-200 shadow-sm whitespace-nowrap flex-shrink-0
-          `}>
-            <ArrowUpCircle className={`w-4 h-4 flex-shrink-0 ${workerUpdateStatus === 'downloaded' ? 'text-green-600' : 'text-amber-600'}`} />
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <span className="font-medium">
-                {workerUpdateStatus === 'downloaded' ? '업데이트 완료' : workerUpdateStatus === 'downloading' ? '업데이트 다운로드 중...' : '워커 업데이트 가능'}
-              </span>
-              <span className={`${workerUpdateStatus === 'downloaded' ? 'text-green-600' : 'text-amber-600'} hidden lg:inline text-xs`}>
-                (v{workerVersions.current} → v{workerVersions.latest})
-              </span>
-            </div>
-            {workerUpdateStatus !== 'downloaded' && workerUpdateStatus !== 'downloading' && (
-              <button
-                onClick={handleWorkerUpdate}
-                disabled={workerUpdating}
-                className="inline-flex items-center px-2 py-0.5 ml-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white text-[10px] sm:text-xs font-medium rounded-md transition-colors"
-              >
-                {workerUpdating ? '요청 중' : '업데이트'}
-              </button>
-            )}
-            {workerUpdateStatus === 'downloaded' && (
-              <span className="text-[10px] sm:text-xs text-green-600 ml-1 hidden lg:inline">앱 재시작 필요</span>
-            )}
-          </div>
-        )}
+      <div className="hidden md:flex flex-1 justify-center min-w-0">
         <HeaderNotificationBanner
           notifications={notifications}
           onDismissNotification={onDismissNotification}
@@ -206,9 +126,9 @@ export default function Header({
       {/* 오른쪽: 상태 및 버튼들 */}
       <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         {/* 연결 상태 - 데스크탑에서만 표시 */}
-        <div className="hidden md:flex items-center space-x-2 text-xs bg-at-surface-alt px-2 sm:px-3 py-1.5 rounded-full">
+        <div className="hidden md:flex items-center space-x-2 text-xs bg-surface-subtle px-2 sm:px-3 py-1.5 rounded-full">
           <div className={`w-2 h-2 rounded-full ${getStatusColor()} ${dbStatus === 'connecting' ? 'animate-pulse' : ''}`}></div>
-          <span className="text-at-text-secondary">{getStatusText()}</span>
+          <span className="text-text-secondary">{getStatusText()}</span>
         </div>
 
         {/* 모바일: 연결 상태 점만 표시 */}
@@ -222,7 +142,7 @@ export default function Header({
             {user.role === 'master_admin' && (
               <Link
                 href="/master"
-                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-at-text-secondary hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all duration-200"
+                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-text-secondary hover:text-brand hover:bg-brand-tint rounded-lg transition-all duration-200"
                 title="마스터 관리"
               >
                 <Crown className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
@@ -234,7 +154,7 @@ export default function Header({
             {showManagementLink && user.role === 'owner' && (
               <Link
                 href="/management"
-                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-at-text-secondary hover:text-at-accent hover:bg-at-accent-light rounded-xl transition-all duration-200"
+                className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-text-secondary hover:text-brand hover:bg-brand-tint rounded-lg transition-all duration-200"
                 title="병원 관리"
               >
                 <Cog className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
@@ -248,7 +168,7 @@ export default function Header({
             {/* 프로필 버튼 */}
             <button
               onClick={onProfileClick || (() => console.log('Profile click - no handler'))}
-              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-at-text-secondary hover:text-at-text hover:bg-at-surface-hover rounded-xl transition-all duration-200"
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-accent rounded-lg transition-all duration-200"
               title="계정 정보"
             >
               <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
@@ -258,13 +178,13 @@ export default function Header({
             {/* 자동 로그인 토글 버튼 */}
             <button
               onClick={handleToggleAutoLogin}
-              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium hover:bg-at-surface-hover rounded-xl transition-all duration-200"
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium hover:bg-accent rounded-lg transition-all duration-200"
               title={isAutoLoginEnabled ? "자동 로그인 켜짐" : "자동 로그인 꺼짐"}
             >
-              <span className="hidden lg:inline text-at-text-secondary text-xs">자동로그인</span>
+              <span className="hidden lg:inline text-text-secondary text-xs">자동로그인</span>
               {/* 토글 스위치 */}
               <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                isAutoLoginEnabled ? 'bg-at-accent' : 'bg-at-border'
+                isAutoLoginEnabled ? 'bg-brand' : 'bg-text-disabled'
               }`}>
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
                   isAutoLoginEnabled ? 'translate-x-4' : 'translate-x-0.5'
@@ -273,13 +193,13 @@ export default function Header({
             </button>
 
             {/* 구분선 */}
-            <div className="hidden sm:block w-px h-5 bg-at-border mx-1" />
+            <div className="hidden sm:block w-px h-5 bg-border mx-1" />
 
             {/* 로그아웃 버튼 */}
             <button
               type="button"
               onClick={onLogout}
-              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-at-text-weak hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200"
+              className="group flex items-center gap-2 px-2.5 sm:px-3 py-2 text-sm font-medium text-text-secondary hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200"
               title="로그아웃"
             >
               <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />

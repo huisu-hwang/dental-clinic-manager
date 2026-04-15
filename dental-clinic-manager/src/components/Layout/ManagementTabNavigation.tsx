@@ -80,7 +80,7 @@ export default function ManagementTabNavigation({
   })
 
   return (
-    <div className="border-b border-at-border mb-6">
+    <div className="border-b border-border mb-6">
       <nav className="-mb-px flex space-x-8">
         {visibleTabs.map((tab) => (
           <button
@@ -88,8 +88,8 @@ export default function ManagementTabNavigation({
             onClick={() => onTabChange(tab.id)}
             className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center ${
               activeTab === tab.id
-                ? 'border-at-accent text-at-accent'
-                : 'border-transparent text-at-text-secondary hover:text-at-text hover:border-at-border'
+                ? 'border-brand text-brand'
+                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border'
             }`}
           >
             <tab.icon className="h-5 w-5 mr-2" />

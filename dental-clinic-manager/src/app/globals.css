@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../styles/theme.css";
 
 /* 스크롤바 유무에 따른 레이아웃 이동 방지 */
 html {
@@ -107,120 +108,33 @@ select:disabled {
   }
 }
 
-:root {
-  --background: #ffffff;
-  --foreground: #181d26;
-
-  /* Airtable Design System — Text */
-  --at-text-primary: #181d26;
-  --at-text-secondary: rgba(4,14,32,0.69);
-  --at-text-weak: rgba(4,14,32,0.5);
-
-  /* Airtable Design System — Accent */
-  --at-accent: #1b61c9;
-  --at-accent-hover: #154ea3;
-  --at-accent-light: #f0f6ff;
-  --at-accent-tag: #e8f0fe;
-
-  /* Airtable Design System — Surface */
-  --at-surface: #ffffff;
-  --at-surface-alt: #f8fafc;
-  --at-surface-hover: #f0f4f8;
-
-  /* Airtable Design System — Border */
-  --at-border: #e0e2e6;
-
-  /* Airtable Design System — Semantic */
-  --at-success: #1b7a3d;
-  --at-success-bg: #e6f4ea;
-  --at-warning: #c4720a;
-  --at-warning-bg: #fef7e0;
-  --at-error: #c5221f;
-  --at-error-bg: #fce8e6;
-  --at-purple: #6b3fa0;
-
-  /* shadcn compatibility tokens */
-  --primary: var(--at-accent);
-  --primary-foreground: #ffffff;
-  --secondary: var(--at-surface-alt);
-  --secondary-foreground: var(--at-text-primary);
-  --muted: var(--at-surface-alt);
-  --muted-foreground: var(--at-text-weak);
-  --accent: var(--at-surface-hover);
-  --accent-foreground: var(--at-text-primary);
-  --destructive: var(--at-error);
-  --destructive-foreground: #ffffff;
-  --card: var(--at-surface);
-  --card-foreground: var(--at-text-primary);
-  --border: var(--at-border);
-  --input: var(--at-border);
-  --ring: var(--at-accent);
-
-  /* Shadows */
-  --shadow-at-card: 0px 0px 1px rgba(0,0,0,0.32), 0px 0px 2px rgba(0,0,0,0.08), 0px 1px 3px rgba(45,127,249,0.28);
-  --shadow-at-soft: 0px 0px 20px rgba(15,48,106,0.05);
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-
-  /* Airtable semantic color utilities */
-  --color-at-text: var(--at-text-primary);
-  --color-at-text-secondary: var(--at-text-secondary);
-  --color-at-text-weak: var(--at-text-weak);
-  --color-at-accent: var(--at-accent);
-  --color-at-accent-hover: var(--at-accent-hover);
-  --color-at-accent-light: var(--at-accent-light);
-  --color-at-tag: var(--at-accent-tag);
-  --color-at-surface: var(--at-surface);
-  --color-at-surface-alt: var(--at-surface-alt);
-  --color-at-surface-hover: var(--at-surface-hover);
-  --color-at-border: var(--at-border);
-  --color-at-success: var(--at-success);
-  --color-at-success-bg: var(--at-success-bg);
-  --color-at-warning: var(--at-warning);
-  --color-at-warning-bg: var(--at-warning-bg);
-  --color-at-error: var(--at-error);
-  --color-at-error-bg: var(--at-error-bg);
-  --color-at-purple: var(--at-purple);
-
-  /* shadcn compatibility utilities */
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  /* Airtable shadows */
-  --shadow-at-card: var(--shadow-at-card);
-  --shadow-at-soft: var(--shadow-at-soft);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* :root, @theme inline, dark mode 변수는 src/styles/theme.css (Toss 스킨)에서 정의 */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  letter-spacing: 0.08px;
+}
+
+/* === StyleSeed Base: Accessibility === */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* === Utility: Touch Target Minimum === */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Tiptap Editor Styles */
@@ -302,12 +216,12 @@ body {
 
 .protocol-table td,
 .protocol-table th {
-  border: 1px solid var(--at-border);
+  border: 1px solid #e2e8f0;
   padding: 0.5rem;
 }
 
 .protocol-table th {
-  background-color: var(--at-surface-alt);
+  background-color: #f7fafc;
   font-weight: 600;
 }
 
@@ -370,7 +284,7 @@ body {
   line-height: 2.5rem;
   margin-top: 1.5rem;
   margin-bottom: 1rem;
-  color: var(--at-text-primary);
+  color: #1e293b;
 }
 
 .protocol-editor-content h2 {
@@ -379,7 +293,7 @@ body {
   line-height: 2rem;
   margin-top: 1.25rem;
   margin-bottom: 0.75rem;
-  color: var(--at-text-primary);
+  color: #334155;
 }
 
 .protocol-editor-content h3 {
@@ -388,7 +302,7 @@ body {
   line-height: 1.75rem;
   margin-top: 1rem;
   margin-bottom: 0.5rem;
-  color: var(--at-text-secondary);
+  color: #475569;
 }
 
 /* Protocol View Mode Headings (prose class) */
@@ -398,7 +312,7 @@ body {
   line-height: 2.5rem !important;
   margin-top: 1.5rem !important;
   margin-bottom: 1rem !important;
-  color: var(--at-text-primary) !important;
+  color: #1e293b !important;
 }
 
 .prose h2 {
@@ -407,7 +321,7 @@ body {
   line-height: 2rem !important;
   margin-top: 1.25rem !important;
   margin-bottom: 0.75rem !important;
-  color: var(--at-text-primary) !important;
+  color: #334155 !important;
 }
 
 .prose h3 {
@@ -416,7 +330,7 @@ body {
   line-height: 1.75rem !important;
   margin-top: 1rem !important;
   margin-bottom: 0.5rem !important;
-  color: var(--at-text-secondary) !important;
+  color: #475569 !important;
 }
 
 /* Nested List Styles for Editor and View Mode */
