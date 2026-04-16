@@ -617,8 +617,11 @@ interface MonthlyRevenue {
 
 /**
  * 덴트웹 DB에서 월별 수입 합계를 조회한다.
- * - TB_수납내역: 환자 수납 (n수납구분=0 → 보험, 나머지 → 비보험)
+ * - TB_수납내역: 환자 수납 (n수납구분=0 → 보험 본인부담금, 나머지 → 비보험)
+ * - TB_EDI요양급여비용청구서: 공단 청구 금액 (n공단부담금)
  * - TB_수입지출장부: 기타 수입 (b수입지출=0)
+ *
+ * 보험수입 = 보험 환자 수납액 + 공단 청구 금액
  */
 async function getMonthlyRevenue(dbPool: sql.ConnectionPool, year: number, month: number): Promise<MonthlyRevenue> {
   const yyyyMM = `${year}${String(month).padStart(2, '0')}`;
@@ -628,7 +631,7 @@ async function getMonthlyRevenue(dbPool: sql.ConnectionPool, year: number, month
     .input('yyyyMM', sql.VarChar, yyyyMM)
     .query(`
       SELECT
-        SUM(CASE WHEN n수납구분 = 0 THEN n카드수납액 + n현금수납액 + n통장수납액 ELSE 0 END) AS insurance_revenue,
+        SUM(CASE WHEN n수납구분 = 0 THEN n카드수납액 + n현금수납액 + n통장수납액 ELSE 0 END) AS insurance_patient_payment,
         SUM(CASE WHEN n수납구분 != 0 THEN n카드수납액 + n현금수납액 + n통장수납액 ELSE 0 END) AS non_insurance_revenue
       FROM TB_수납내역
       WHERE b취소 = 0 AND LEFT(sz수납일, 6) = @yyyyMM
@@ -636,7 +639,24 @@ async function getMonthlyRevenue(dbPool: sql.ConnectionPool, year: number, month
 
   const payRow = paymentResult.recordset[0] || {};
 
-  // 2. 수입지출장부에서 기타 수입 합계 (b수입지출=0 → 수입)
+  // 2. EDI 공단 청구 금액 (진료월 기준, 재청구 시 최신 건만 사용)
+  const claimResult = await dbPool.request()
+    .input('yyyyMM', sql.VarChar, yyyyMM)
+    .query(`
+      SELECT COALESCE(SUM(n공단부담금), 0) AS nhis_claim
+      FROM TB_EDI요양급여비용청구서 c
+      WHERE LEFT(sz청구번호, 6) = @yyyyMM
+        AND sz청구번호 = (
+          SELECT MAX(sz청구번호)
+          FROM TB_EDI요양급여비용청구서 c2
+          WHERE LEFT(c2.sz청구번호, 6) = LEFT(c.sz청구번호, 6)
+            AND c2.n보험구분 = c.n보험구분
+        )
+    `);
+
+  const claimRow = claimResult.recordset[0] || {};
+
+  // 3. 수입지출장부에서 기타 수입 합계 (b수입지출=0 → 수입)
   const ledgerResult = await dbPool.request()
     .input('yyyyMM', sql.VarChar, yyyyMM)
     .query(`
@@ -647,10 +667,13 @@ async function getMonthlyRevenue(dbPool: sql.ConnectionPool, year: number, month
 
   const ledgerRow = ledgerResult.recordset[0] || {};
 
+  // 보험수입 = 환자 본인부담금(수납) + 공단부담금(청구)
+  const insuranceRevenue = (payRow.insurance_patient_payment || 0) + (claimRow.nhis_claim || 0);
+
   return {
     year,
     month,
-    insurance_revenue: payRow.insurance_revenue || 0,
+    insurance_revenue: insuranceRevenue,
     non_insurance_revenue: payRow.non_insurance_revenue || 0,
     other_revenue: ledgerRow.other_revenue || 0,
   };
