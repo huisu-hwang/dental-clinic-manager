@@ -11,6 +11,7 @@ import {
   CalendarRange,
   AlertCircle,
   Loader2,
+  Download,
 } from 'lucide-react'
 import { recurringTaskTemplateService } from '@/lib/bulletinService'
 import type { RecurringTaskTemplate } from '@/types/bulletin'
@@ -45,6 +46,7 @@ export default function RecurringTaskTemplateList() {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<RecurringTaskTemplate | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [seeding, setSeeding] = useState(false)
 
   const fetchTemplates = useCallback(async () => {
     setError(null)
@@ -90,6 +92,34 @@ export default function RecurringTaskTemplateList() {
     fetchTemplates()
   }
 
+  const handleSeedDefaults = async () => {
+    const confirmed = await appConfirm(
+      '치과 운영에 필수적인 반복 업무 39개(주간 5 · 월간 8 · 분기별 16 · 연간 10)를\n' +
+        '기본 템플릿으로 일괄 등록합니다.\n\n' +
+        '모든 템플릿의 담당자는 현재 로그인한 사용자로 설정되며,\n' +
+        '등록 후 각 항목의 담당자를 편집할 수 있습니다.\n\n' +
+        '이미 동일 제목의 템플릿이 있으면 건너뜁니다.\n\n' +
+        '계속하시겠습니까?'
+    )
+    if (!confirmed) return
+
+    setSeeding(true)
+    const { created, skipped, error: seedError } = await recurringTaskTemplateService.seedDefaultTemplates()
+    setSeeding(false)
+
+    if (seedError) {
+      await appAlert(`기본 템플릿 등록에 실패했습니다: ${seedError}`)
+      return
+    }
+
+    const msg =
+      skipped > 0
+        ? `${created}개 등록 완료, ${skipped}개는 이미 존재하여 건너뛰었습니다.`
+        : `${created}개 기본 템플릿을 등록했습니다.`
+    await appAlert(msg)
+    fetchTemplates()
+  }
+
   return (
     <div className="space-y-4">
       {/* 헤더 */}
@@ -103,12 +133,27 @@ export default function RecurringTaskTemplateList() {
         )}
       </div>
 
-      {/* 안내 문구 */}
+      {/* 안내 문구 + 기본 템플릿 불러오기 */}
       <div className="p-3 bg-at-accent-light/40 border border-at-border rounded-xl">
-        <div className="text-xs text-at-text-secondary leading-relaxed">
-          주간·월간·연간 주기로 반복되는 업무를 등록하면, 해당일이 될 때마다 담당자의
-          대시보드에 자동으로 업무가 생성됩니다. 새 템플릿 등록은 <strong>새 업무 할당</strong>{' '}
-          버튼에서 <strong>&ldquo;반복 업무로 지정&rdquo;</strong>을 체크하여 만들 수 있습니다.
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="text-xs text-at-text-secondary leading-relaxed flex-1">
+            주간·월간·연간 주기로 반복되는 업무를 등록하면, 해당일이 될 때마다 담당자의
+            대시보드에 자동으로 업무가 생성됩니다. 새 템플릿 등록은 <strong>새 업무 할당</strong>{' '}
+            버튼에서 <strong>&ldquo;반복 업무로 지정&rdquo;</strong>을 체크하여 만들 수 있습니다.
+          </div>
+          <button
+            type="button"
+            onClick={handleSeedDefaults}
+            disabled={seeding || loading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-at-accent bg-white hover:bg-at-surface-alt border border-at-border rounded-xl transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+          >
+            {seeding ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            기본 템플릿 불러오기
+          </button>
         </div>
       </div>
 

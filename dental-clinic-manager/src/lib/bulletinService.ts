@@ -1304,6 +1304,69 @@ export const recurringTaskTemplateService = {
       return { created: 0, error: extractErrorMessage(error) }
     }
   },
+
+  /**
+   * 치과 기본 반복 업무 템플릿 일괄 등록
+   * 이미 동일 제목의 템플릿이 존재하면 건너뛰고, 신규만 삽입한다.
+   * @returns 신규 등록 건수
+   */
+  async seedDefaultTemplates(): Promise<{ created: number; skipped: number; error: string | null }> {
+    try {
+      const { DEFAULT_RECURRING_TEMPLATES } = await import('@/data/defaultRecurringTemplates')
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      const userId = getCurrentUserId()
+      if (!clinicId) throw new Error('Clinic not found')
+      if (!userId) throw new Error('User not found')
+
+      // 기존 템플릿 제목 목록 조회 (중복 방지)
+      const { data: existing } = await (supabase as any)
+        .from('recurring_task_templates')
+        .select('title')
+        .eq('clinic_id', clinicId)
+
+      const existingTitles = new Set((existing || []).map((t: any) => t.title))
+
+      const toInsert = DEFAULT_RECURRING_TEMPLATES.filter((t) => !existingTitles.has(t.title))
+
+      if (toInsert.length === 0) {
+        return { created: 0, skipped: DEFAULT_RECURRING_TEMPLATES.length, error: null }
+      }
+
+      const rows = toInsert.map((t) => ({
+        clinic_id: clinicId,
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        assignee_id: userId,   // 기본 담당자 = 현재 사용자 (추후 편집)
+        assigner_id: userId,
+        recurrence_type: t.recurrence_type,
+        recurrence_weekday: t.recurrence_weekday ?? null,
+        recurrence_day_of_month: t.recurrence_day_of_month ?? null,
+        recurrence_month: t.recurrence_month ?? null,
+        start_date: new Date().toISOString().split('T')[0],
+        is_active: true,
+      }))
+
+      const { error: insertError } = await (supabase as any)
+        .from('recurring_task_templates')
+        .insert(rows)
+
+      if (insertError) throw insertError
+
+      return {
+        created: toInsert.length,
+        skipped: DEFAULT_RECURRING_TEMPLATES.length - toInsert.length,
+        error: null,
+      }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.seedDefaultTemplates] Error:', error)
+      return { created: 0, skipped: 0, error: extractErrorMessage(error) }
+    }
+  },
 }
 
 // 통합 export
