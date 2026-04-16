@@ -213,6 +213,9 @@ export interface FinancialSummary {
   post_tax_profit: number;
   profit_margin_percent: number;
 
+  // 수입 데이터 출처
+  revenue_source_type?: string | null;
+
   // 홈택스 연동 데이터 (스크래핑 워커에서 수집)
   hometax_sync?: {
     tax_invoice_sales_count: number;
