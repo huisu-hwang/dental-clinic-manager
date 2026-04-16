@@ -298,6 +298,7 @@ export const KNOWN_NON_MENU_ROUTES: string[] = [
   '/test-protocol',      // 테스트 프로토콜
   '/guide',              // 가이드 (별도 라우트, 메뉴는 /dashboard?tab=guide)
   '/dashboard/ai-analysis', // AI 분석 (별도 라우트, 메뉴는 /dashboard?tab=ai-analysis)
+  '/investment',         // 투자 자동거래 (독립 카테고리)
 ]
 
 // ============================================

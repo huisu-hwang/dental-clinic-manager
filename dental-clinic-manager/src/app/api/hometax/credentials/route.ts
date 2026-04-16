@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { hometaxEncryptToJson } from '@/lib/hometaxCrypto';
+import { requireAuth } from '@/lib/auth/requireAuth';
 
 // POST: 홈택스 인증정보 등록/수정
 export async function POST(request: NextRequest) {
   try {
+    // 인증 검증 (owner, vice_director, manager만 허용)
+    const auth = await requireAuth(['owner', 'vice_director', 'manager']);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await request.json();
     const { clinicId, loginId, loginPw, businessNumber, residentNumber } = body;
+
+    // 인증된 사용자의 clinic_id와 요청 clinic_id 일치 확인 (IDOR 방지)
+    if (clinicId !== auth.user!.clinic_id) {
+      return NextResponse.json({ error: '권한이 부족합니다.' }, { status: 403 });
+    }
 
     if (!clinicId || !loginId || !businessNumber) {
       return NextResponse.json(
@@ -93,11 +105,22 @@ export async function POST(request: NextRequest) {
 // GET: 홈택스 인증정보 조회 (비밀번호 제외)
 export async function GET(request: NextRequest) {
   try {
+    // 인증 검증
+    const auth = await requireAuth();
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const { searchParams } = new URL(request.url);
     const clinicId = searchParams.get('clinicId');
 
     if (!clinicId) {
       return NextResponse.json({ error: 'clinicId가 필요합니다.' }, { status: 400 });
+    }
+
+    // 인증된 사용자의 clinic_id 확인 (IDOR 방지)
+    if (clinicId !== auth.user!.clinic_id) {
+      return NextResponse.json({ error: '권한이 부족합니다.' }, { status: 403 });
     }
 
     const supabase = getSupabaseAdmin();
@@ -134,11 +157,22 @@ export async function GET(request: NextRequest) {
 // DELETE: 홈택스 인증정보 삭제
 export async function DELETE(request: NextRequest) {
   try {
+    // 인증 검증 (owner, vice_director, manager만 허용)
+    const auth = await requireAuth(['owner', 'vice_director', 'manager']);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const { searchParams } = new URL(request.url);
     const clinicId = searchParams.get('clinicId');
 
     if (!clinicId) {
       return NextResponse.json({ error: 'clinicId가 필요합니다.' }, { status: 400 });
+    }
+
+    // 인증된 사용자의 clinic_id 확인 (IDOR 방지)
+    if (clinicId !== auth.user!.clinic_id) {
+      return NextResponse.json({ error: '권한이 부족합니다.' }, { status: 403 });
     }
 
     const supabase = getSupabaseAdmin();
