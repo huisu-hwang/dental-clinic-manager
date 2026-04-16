@@ -604,6 +604,115 @@ async function detectSqlServer(): Promise<boolean> {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Monthly revenue queries                                            */
+/* ------------------------------------------------------------------ */
+
+interface MonthlyRevenue {
+  year: number;
+  month: number;
+  insurance_revenue: number;
+  non_insurance_revenue: number;
+  other_revenue: number;
+}
+
+/**
+ * 덴트웹 DB에서 월별 수입 합계를 조회한다.
+ * - TB_수납내역: 환자 수납 (n수납구분=0 → 보험, 나머지 → 비보험)
+ * - TB_수입지출장부: 기타 수입 (b수입지출=0)
+ */
+async function getMonthlyRevenue(dbPool: sql.ConnectionPool, year: number, month: number): Promise<MonthlyRevenue> {
+  const yyyyMM = `${year}${String(month).padStart(2, '0')}`;
+
+  // 1. 수납내역에서 보험/비보험 수납 합계
+  const paymentResult = await dbPool.request()
+    .input('yyyyMM', sql.VarChar, yyyyMM)
+    .query(`
+      SELECT
+        SUM(CASE WHEN n수납구분 = 0 THEN n카드수납액 + n현금수납액 + n통장수납액 ELSE 0 END) AS insurance_revenue,
+        SUM(CASE WHEN n수납구분 != 0 THEN n카드수납액 + n현금수납액 + n통장수납액 ELSE 0 END) AS non_insurance_revenue
+      FROM TB_수납내역
+      WHERE b취소 = 0 AND LEFT(sz수납일, 6) = @yyyyMM
+    `);
+
+  const payRow = paymentResult.recordset[0] || {};
+
+  // 2. 수입지출장부에서 기타 수입 합계 (b수입지출=0 → 수입)
+  const ledgerResult = await dbPool.request()
+    .input('yyyyMM', sql.VarChar, yyyyMM)
+    .query(`
+      SELECT COALESCE(SUM(n총액), 0) AS other_revenue
+      FROM TB_수입지출장부
+      WHERE b수입지출 = 0 AND LEFT(sz작성시각, 6) = @yyyyMM
+    `);
+
+  const ledgerRow = ledgerResult.recordset[0] || {};
+
+  return {
+    year,
+    month,
+    insurance_revenue: payRow.insurance_revenue || 0,
+    non_insurance_revenue: payRow.non_insurance_revenue || 0,
+    other_revenue: ledgerRow.other_revenue || 0,
+  };
+}
+
+/** 당월 + 전월 수입 데이터를 서버에 전송 */
+async function syncRevenueToServer(dbPool: sql.ConnectionPool): Promise<void> {
+  const cfg = getDentwebConfig();
+  const { dashboardUrl } = getConfig();
+
+  if (!cfg.clinicId || !cfg.apiKey) return;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  // 당월과 전월 동기화 (전월 데이터가 늦게 입력될 수 있으므로)
+  const months: Array<{ year: number; month: number }> = [
+    { year: currentYear, month: currentMonth },
+  ];
+  if (currentMonth === 1) {
+    months.push({ year: currentYear - 1, month: 12 });
+  } else {
+    months.push({ year: currentYear, month: currentMonth - 1 });
+  }
+
+  for (const { year, month } of months) {
+    try {
+      const revenue = await getMonthlyRevenue(dbPool, year, month);
+      const total = revenue.insurance_revenue + revenue.non_insurance_revenue + revenue.other_revenue;
+
+      // 수입이 0이면 전송 생략
+      if (total === 0) continue;
+
+      const url = `${dashboardUrl}/api/dentweb/sync-revenue`;
+      const response = await fetchWithRetry(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinic_id: cfg.clinicId,
+          api_key: cfg.apiKey,
+          year: revenue.year,
+          month: revenue.month,
+          insurance_revenue: revenue.insurance_revenue,
+          non_insurance_revenue: revenue.non_insurance_revenue,
+          other_revenue: revenue.other_revenue,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        log('info', `[DentWeb] ${year}-${String(month).padStart(2, '0')} 수입 동기화 완료: 보험=${revenue.insurance_revenue}, 비보험=${revenue.non_insurance_revenue}, 기타=${revenue.other_revenue}`);
+      } else {
+        log('warn', `[DentWeb] ${year}-${String(month).padStart(2, '0')} 수입 동기화 실패: ${result.error}`);
+      }
+    } catch (err) {
+      log('warn', `[DentWeb] ${year}-${String(month).padStart(2, '0')} 수입 동기화 오류: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main sync loop                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -688,8 +797,15 @@ async function runSync(): Promise<void> {
         dentwebLastSyncStatus: 'success',
       });
       lastSyncError = null;
+
+      // 환자가 0명이어도 월별 수입 데이터는 동기화
+      try {
+        await syncRevenueToServer(pool!);
+      } catch (revErr) {
+        log('warn', `[DentWeb] 수입 동기화 오류: ${revErr instanceof Error ? revErr.message : String(revErr)}`);
+      }
+
       setStatus('polling');
-      // 환자 0명이어도 heartbeat로 서버에 alive 통지 (workers/status 오프라인 방지)
       await sendHeartbeat();
       return;
     }
@@ -705,6 +821,14 @@ async function runSync(): Promise<void> {
         dentwebLastSyncPatientCount: result.total_records || 0,
       });
       lastSyncError = null;
+
+      // 환자 동기화 성공 후 월별 수입 데이터도 동기화
+      try {
+        await syncRevenueToServer(pool!);
+      } catch (revErr) {
+        log('warn', `[DentWeb] 수입 동기화 오류 (환자 동기화는 성공): ${revErr instanceof Error ? revErr.message : String(revErr)}`);
+      }
+
       setStatus('polling');
     } else {
       log('error', `[DentWeb] 동기화 실패: ${result.error}`);

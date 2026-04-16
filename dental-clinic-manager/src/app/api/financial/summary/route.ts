@@ -43,9 +43,21 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: '재무 요약 조회에 실패했습니다.' }, { status: 500 });
       }
 
+      // 2. revenue_records에서 source_type 조회
+      const { data: revenueRecord } = await supabase
+        .from('revenue_records')
+        .select('source_type')
+        .eq('clinic_id', clinicId)
+        .eq('year', parseInt(year))
+        .eq('month', parseInt(month))
+        .single();
+
       return NextResponse.json({
         success: true,
-        data: data || {}
+        data: {
+          ...(data || {}),
+          revenue_source_type: revenueRecord?.source_type || null,
+        }
       });
     }
 
