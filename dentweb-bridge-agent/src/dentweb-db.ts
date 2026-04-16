@@ -17,9 +17,17 @@ interface DentwebPatientRow {
 
 // MS SQL Server 연결 설정
 function buildSqlConfig(): sql.config {
+  // Named instance 분리: 'localhost\DENTWEB' → server='localhost', instanceName='DENTWEB'
+  let serverHost = config.dentweb.server
+  let instanceName: string | undefined
+  const backslashIdx = config.dentweb.server.indexOf('\\')
+  if (backslashIdx > 0) {
+    serverHost = config.dentweb.server.substring(0, backslashIdx)
+    instanceName = config.dentweb.server.substring(backslashIdx + 1)
+  }
+
   const baseConfig: sql.config = {
-    server: config.dentweb.server,
-    port: config.dentweb.port,
+    server: serverHost,
     database: config.dentweb.database,
     options: {
       encrypt: false,
@@ -28,6 +36,7 @@ function buildSqlConfig(): sql.config {
       connectTimeout: 10000,
       requestTimeout: 30000,
       trustedConnection: config.dentweb.useWindowsAuth,
+      instanceName,
     },
     pool: {
       min: 0,
@@ -36,8 +45,13 @@ function buildSqlConfig(): sql.config {
     },
   }
 
+  // Named instance인 경우 SQL Browser가 포트를 해결하므로 port를 지정하지 않음
+  if (!instanceName) {
+    baseConfig.port = config.dentweb.port
+  }
+
   if (config.dentweb.useWindowsAuth) {
-    logger.info('Windows 인증 모드로 연결합니다')
+    logger.info(`Windows 인증 모드로 연결합니다 (server=${serverHost}, instance=${instanceName || 'default'})`)
     // Windows 인증: NTLM 사용 (현재 Windows 로그인 계정)
     baseConfig.authentication = {
       type: 'ntlm',
@@ -48,7 +62,7 @@ function buildSqlConfig(): sql.config {
       },
     }
   } else {
-    logger.info(`SQL Server 인증 모드로 연결합니다 (계정: ${config.dentweb.user})`)
+    logger.info(`SQL Server 인증 모드로 연결합니다 (계정: ${config.dentweb.user}, server=${serverHost}, instance=${instanceName || 'default'})`)
     baseConfig.user = config.dentweb.user
     baseConfig.password = config.dentweb.password
   }
@@ -153,75 +167,68 @@ export function generateDemoPatients(count: number): DentwebPatientRow[] {
 }
 
 // ========================================
-// 실제 DB 쿼리
+// 실제 DB 쿼리 (DentWeb 실제 스키마)
 // ========================================
 
-// 전체 환자 목록 조회 (전체 동기화)
-// NOTE: 실제 덴트웹 DB 테이블/컬럼명은 SSMS로 확인 후 수정 필요
-// 아래는 덴트웹의 일반적인 스키마를 기반으로 한 예시 쿼리
+/**
+ * DentWeb 실제 스키마:
+ *   TB_환자정보: n환자ID, sz차트번호, sz이름, sz휴대폰번호, sz생년월일, b성별,
+ *               sz최종내원일(varchar(8)), sz등록시각(varchar(14)), t수정시각(datetime)
+ *   TB_접수목록: sz접수시각(char), n환자ID, sz진료내용
+ *   TB_세부처치내역: n환자ID, sz진료일(char), sz수가코드
+ *   TB_치료수가표: nID, sz이름 (수가 이름)
+ *   TB_예약목록: n환자ID, sz예약시각(char), sz예약내용
+ */
+
+const PATIENT_QUERY_BASE = `
+  SELECT
+    p.n환자ID,
+    p.sz차트번호,
+    p.sz이름,
+    p.sz휴대폰번호,
+    p.sz생년월일,
+    p.b성별,
+    p.sz최종내원일,
+    p.sz등록시각,
+    (SELECT TOP 1 t.sz수가코드
+     FROM TB_세부처치내역 t
+     WHERE t.n환자ID = p.n환자ID AND t.b취소 = 0
+     ORDER BY t.sz진료일 DESC, t.nID DESC) AS last_treatment_type,
+    (SELECT TOP 1 LEFT(a.sz예약시각, 8)
+     FROM TB_예약목록 a
+     WHERE a.n환자ID = p.n환자ID AND a.sz예약시각 >= CONVERT(VARCHAR(8), GETDATE(), 112)
+     ORDER BY a.sz예약시각 ASC) AS next_appointment_date
+  FROM TB_환자정보 p
+  WHERE p.sz이름 IS NOT NULL AND p.sz이름 != ''
+`
+
 export async function getAllPatients(): Promise<DentwebPatientRow[]> {
   const conn = await connectDB()
 
   try {
-    // 덴트웹 DB의 실제 테이블명과 컬럼명은 설치 환경에 따라 다를 수 있음
-    // 일반적인 덴트웹 스키마: PATIENT 테이블
-    const result = await conn.request().query(`
-      SELECT
-        CAST(PT_ID AS VARCHAR) AS dentweb_patient_id,
-        PT_CHARTNO AS chart_number,
-        PT_NAME AS patient_name,
-        PT_HP AS phone_number,
-        PT_BIRTH AS birth_date,
-        PT_SEX AS gender,
-        (SELECT MAX(RCP_DATE) FROM RECEIPT WHERE RCP_PTID = PATIENT.PT_ID) AS last_visit_date,
-        (SELECT TOP 1 TX_NAME FROM TREAT_DETAIL
-         INNER JOIN RECEIPT ON TREAT_DETAIL.TD_RCPID = RECEIPT.RCP_ID
-         WHERE RECEIPT.RCP_PTID = PATIENT.PT_ID
-         ORDER BY RECEIPT.RCP_DATE DESC) AS last_treatment_type,
-        PT_MEMO_DATE AS next_appointment_date,
-        PT_FIRSTDATE AS registration_date
-      FROM PATIENT
-      WHERE PT_NAME IS NOT NULL AND PT_NAME != ''
-      ORDER BY PT_ID
-    `)
-
-    return result.recordset.map(formatPatientRow)
+    const result = await conn.request().query(`${PATIENT_QUERY_BASE} ORDER BY p.n환자ID`)
+    return result.recordset.map(formatDentwebRow)
   } catch (error) {
     logger.error('Failed to query all patients', error)
     throw error
   }
 }
 
-// 변경된 환자만 조회 (증분 동기화)
 export async function getUpdatedPatients(since: Date): Promise<DentwebPatientRow[]> {
   const conn = await connectDB()
+  const sinceStr = since.toISOString().slice(0, 10).replace(/-/g, '')
 
   try {
     const result = await conn.request()
       .input('sinceDate', sql.DateTime, since)
+      .input('sinceDateStr', sql.VarChar, sinceStr)
       .query(`
-        SELECT
-          CAST(PT_ID AS VARCHAR) AS dentweb_patient_id,
-          PT_CHARTNO AS chart_number,
-          PT_NAME AS patient_name,
-          PT_HP AS phone_number,
-          PT_BIRTH AS birth_date,
-          PT_SEX AS gender,
-          (SELECT MAX(RCP_DATE) FROM RECEIPT WHERE RCP_PTID = PATIENT.PT_ID) AS last_visit_date,
-          (SELECT TOP 1 TX_NAME FROM TREAT_DETAIL
-           INNER JOIN RECEIPT ON TREAT_DETAIL.TD_RCPID = RECEIPT.RCP_ID
-           WHERE RECEIPT.RCP_PTID = PATIENT.PT_ID
-           ORDER BY RECEIPT.RCP_DATE DESC) AS last_treatment_type,
-          PT_MEMO_DATE AS next_appointment_date,
-          PT_FIRSTDATE AS registration_date
-        FROM PATIENT
-        WHERE PT_NAME IS NOT NULL AND PT_NAME != ''
-          AND (PT_EDITDATE >= @sinceDate
-               OR PT_ID IN (SELECT RCP_PTID FROM RECEIPT WHERE RCP_DATE >= @sinceDate))
-        ORDER BY PT_ID
+        ${PATIENT_QUERY_BASE}
+          AND (p.t수정시각 >= @sinceDate
+               OR p.n환자ID IN (SELECT n환자ID FROM TB_접수목록 WHERE LEFT(sz접수시각, 8) >= @sinceDateStr))
+        ORDER BY p.n환자ID
       `)
-
-    return result.recordset.map(formatPatientRow)
+    return result.recordset.map(formatDentwebRow)
   } catch (error) {
     logger.error('Failed to query updated patients', error)
     throw error
@@ -266,26 +273,48 @@ export async function listColumns(tableName: string): Promise<Array<{ name: stri
   }
 }
 
+// DentWeb varchar(8) 날짜 '20260416' → Date 객체
+function parseDentwebDate(dateStr: string | null | undefined): Date | null {
+  if (!dateStr || dateStr.length < 8) return null
+  const d = dateStr.replace(/\s/g, '')
+  if (d.length < 8 || !/^\d{8}/.test(d)) return null
+  const year = parseInt(d.slice(0, 4), 10)
+  const month = parseInt(d.slice(4, 6), 10)
+  const day = parseInt(d.slice(6, 8), 10)
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return null
+  const parsed = new Date(year, month - 1, day)
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null
+  return parsed
+}
+
 // 날짜 포맷팅 헬퍼
 function formatDate(date: Date | null): string | null {
   if (!date) return null
   return date.toISOString().split('T')[0]
 }
 
-// 환자 row 포맷팅
-function formatPatientRow(row: Record<string, unknown>): DentwebPatientRow {
+// DentWeb 실제 스키마 → DentwebPatientRow 변환
+function formatDentwebRow(row: Record<string, unknown>): DentwebPatientRow {
+  const genderBit = row['b성별']
+  const gender = genderBit === true || genderBit === 1 ? 'F' : genderBit === false || genderBit === 0 ? 'M' : null
+
   return {
-    dentweb_patient_id: String(row.dentweb_patient_id),
-    chart_number: row.chart_number as string | null,
-    patient_name: String(row.patient_name || ''),
-    phone_number: row.phone_number as string | null,
-    birth_date: row.birth_date as Date | null,
-    gender: row.gender as string | null,
-    last_visit_date: row.last_visit_date as Date | null,
-    last_treatment_type: row.last_treatment_type as string | null,
-    next_appointment_date: row.next_appointment_date as Date | null,
-    registration_date: row.registration_date as Date | null,
+    dentweb_patient_id: String(row['n환자ID']),
+    chart_number: (row['sz차트번호'] as string) || null,
+    patient_name: String(row['sz이름'] || ''),
+    phone_number: (row['sz휴대폰번호'] as string) || null,
+    birth_date: parseDentwebDate(row['sz생년월일'] as string),
+    gender,
+    last_visit_date: parseDentwebDate(row['sz최종내원일'] as string),
+    last_treatment_type: (row['last_treatment_type'] as string) || null,
+    next_appointment_date: parseDentwebDate(row['next_appointment_date'] as string),
+    registration_date: parseDentwebDate((row['sz등록시각'] as string)?.slice(0, 8)),
   }
+}
+
+// 기존 포맷팅 (하위 호환)
+function formatPatientRow(row: Record<string, unknown>): DentwebPatientRow {
+  return formatDentwebRow(row)
 }
 
 // 환자 데이터를 동기화용 JSON으로 변환

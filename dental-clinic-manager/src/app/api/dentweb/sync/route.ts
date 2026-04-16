@@ -19,6 +19,21 @@ interface PatientSyncData {
   raw_data?: Record<string, unknown>
 }
 
+/** 날짜 문자열 유효성 검증 (PostgreSQL date 호환) */
+function sanitizeDate(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const [, y, m, d] = match
+  const year = parseInt(y, 10)
+  const month = parseInt(m, 10)
+  const day = parseInt(d, 10)
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return null
+  const parsed = new Date(year, month - 1, day)
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null
+  return dateStr
+}
+
 // POST: 브릿지 에이전트에서 환자 데이터 동기화 수신
 export async function POST(request: NextRequest) {
   try {
@@ -89,12 +104,12 @@ export async function POST(request: NextRequest) {
           chart_number: p.chart_number || null,
           patient_name: p.patient_name,
           phone_number: p.phone_number || null,
-          birth_date: p.birth_date || null,
+          birth_date: sanitizeDate(p.birth_date),
           gender: p.gender || null,
-          last_visit_date: p.last_visit_date || null,
+          last_visit_date: sanitizeDate(p.last_visit_date),
           last_treatment_type: p.last_treatment_type || null,
-          next_appointment_date: p.next_appointment_date || null,
-          registration_date: p.registration_date || null,
+          next_appointment_date: sanitizeDate(p.next_appointment_date),
+          registration_date: sanitizeDate(p.registration_date),
           is_active: p.is_active !== false,
           raw_data: p.raw_data || null,
           synced_at: new Date().toISOString(),
