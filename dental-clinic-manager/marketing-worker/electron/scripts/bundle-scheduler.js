@@ -40,7 +40,7 @@ esbuild.build({
   format: 'cjs',
   target: 'node20',
   outfile: path.join(__dirname, '..', 'dist', 'scheduler-bundle.js'),
-  external: ['playwright', 'sharp'],
+  external: ['playwright', 'sharp', 'node-cron', '@supabase/supabase-js', 'dotenv'],
   nodePaths: [path.join(workerDir, 'node_modules')],
   plugins: [importMetaPlugin],
   logLevel: 'info',

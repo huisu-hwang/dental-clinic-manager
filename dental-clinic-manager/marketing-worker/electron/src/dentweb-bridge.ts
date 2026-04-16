@@ -30,9 +30,18 @@ export function onDentwebStatusChange(cb: (status: string, message?: string) => 
 
 function buildSqlConfig(): sql.config {
   const cfg = getDentwebConfig();
+
+  // Named instance 분리: 'localhost\DENTWEB' → server='localhost', instanceName='DENTWEB'
+  let serverHost = cfg.dbServer;
+  let instanceName: string | undefined;
+  const backslashIdx = cfg.dbServer.indexOf('\\');
+  if (backslashIdx > 0) {
+    serverHost = cfg.dbServer.substring(0, backslashIdx);
+    instanceName = cfg.dbServer.substring(backslashIdx + 1);
+  }
+
   const baseConfig: sql.config = {
-    server: cfg.dbServer,
-    port: cfg.dbPort,
+    server: serverHost,
     database: cfg.dbDatabase,
     options: {
       encrypt: false,
@@ -40,9 +49,16 @@ function buildSqlConfig(): sql.config {
       enableArithAbort: true,
       connectTimeout: 10000,
       requestTimeout: 30000,
+      instanceName,
     },
     pool: { min: 0, max: 5, idleTimeoutMillis: 30000 },
   };
+
+  // Named instance인 경우 SQL Browser가 포트를 자동 해결하므로 port를 지정하지 않음.
+  // default instance인 경우에만 port 지정.
+  if (!instanceName) {
+    baseConfig.port = cfg.dbPort;
+  }
 
   if (cfg.dbAuthType === 'windows') {
     baseConfig.authentication = {
@@ -60,23 +76,37 @@ function buildSqlConfig(): sql.config {
 /*  Formatting helpers                                                 */
 /* ------------------------------------------------------------------ */
 
-function formatDate(date: Date | null): string | null {
-  if (!date) return null;
-  return date.toISOString().split('T')[0];
+/** DentWeb varchar(8) 날짜 '20260416' → '2026-04-16' */
+function formatDentwebDate(dateStr: string | null | undefined): string | null {
+  if (!dateStr || dateStr.length < 8) return null;
+  const d = dateStr.replace(/\s/g, '');
+  if (d.length < 8 || !/^\d{8}/.test(d)) return null;
+  const year = parseInt(d.slice(0, 4), 10);
+  const month = parseInt(d.slice(4, 6), 10);
+  const day = parseInt(d.slice(6, 8), 10);
+  if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  // JavaScript Date로 실제 유효성 검증 (윤년 등)
+  const parsed = new Date(year, month - 1, day);
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null;
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 }
 
 function formatPatientRow(row: Record<string, unknown>) {
+  // b성별: false(0)=남, true(1)=여
+  const genderBit = row['b성별'];
+  const gender = genderBit === true || genderBit === 1 ? 'F' : genderBit === false || genderBit === 0 ? 'M' : null;
+
   return {
-    dentweb_patient_id: String(row.dentweb_patient_id),
-    chart_number: (row.chart_number as string) || null,
-    patient_name: String(row.patient_name || ''),
-    phone_number: (row.phone_number as string) || null,
-    birth_date: formatDate(row.birth_date as Date | null),
-    gender: (row.gender as string) || null,
-    last_visit_date: formatDate(row.last_visit_date as Date | null),
-    last_treatment_type: (row.last_treatment_type as string) || null,
-    next_appointment_date: formatDate(row.next_appointment_date as Date | null),
-    registration_date: formatDate(row.registration_date as Date | null),
+    dentweb_patient_id: String(row['n환자ID']),
+    chart_number: (row['sz차트번호'] as string) || null,
+    patient_name: String(row['sz이름'] || ''),
+    phone_number: (row['sz휴대폰번호'] as string) || null,
+    birth_date: formatDentwebDate(row['sz생년월일'] as string),
+    gender,
+    last_visit_date: formatDentwebDate(row['sz최종내원일'] as string),
+    last_treatment_type: (row['last_treatment_type'] as string) || null,
+    next_appointment_date: formatDentwebDate(row['next_appointment_date'] as string),
+    registration_date: formatDentwebDate((row['sz등록시각'] as string)?.slice(0, 8)),
     is_active: true,
   };
 }
@@ -85,52 +115,55 @@ function formatPatientRow(row: Record<string, unknown>) {
 /*  Patient queries                                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * DentWeb 실제 스키마:
+ *   TB_환자정보: n환자ID, sz차트번호, sz이름, sz휴대폰번호, sz생년월일, b성별,
+ *               sz최종내원일(varchar(8)), sz등록시각(varchar(14)), t수정시각(datetime)
+ *   TB_접수목록: sz접수시각(char), n환자ID, sz진료내용
+ *   TB_세부처치내역: n환자ID, sz진료일(char), sz수가코드
+ *   TB_치료수가표: nID, sz이름 (수가 이름)
+ *   TB_예약목록: n환자ID, sz예약시각(char), sz예약내용
+ */
+
+const PATIENT_QUERY_BASE = `
+  SELECT
+    p.n환자ID,
+    p.sz차트번호,
+    p.sz이름,
+    p.sz휴대폰번호,
+    p.sz생년월일,
+    p.b성별,
+    p.sz최종내원일,
+    p.sz등록시각,
+    -- 최근 진료 코드 (세부처치내역에서 취소되지 않은 최신 항목)
+    (SELECT TOP 1 t.sz수가코드
+     FROM TB_세부처치내역 t
+     WHERE t.n환자ID = p.n환자ID AND t.b취소 = 0
+     ORDER BY t.sz진료일 DESC, t.nID DESC) AS last_treatment_type,
+    -- 다음 예약 (오늘 이후)
+    (SELECT TOP 1 LEFT(a.sz예약시각, 8)
+     FROM TB_예약목록 a
+     WHERE a.n환자ID = p.n환자ID AND a.sz예약시각 >= CONVERT(VARCHAR(8), GETDATE(), 112)
+     ORDER BY a.sz예약시각 ASC) AS next_appointment_date
+  FROM TB_환자정보 p
+  WHERE p.sz이름 IS NOT NULL AND p.sz이름 != ''
+`;
+
 async function getAllPatients(pool: sql.ConnectionPool) {
-  const result = await pool.request().query(`
-    SELECT
-      CAST(PT_ID AS VARCHAR) AS dentweb_patient_id,
-      PT_CHARTNO AS chart_number,
-      PT_NAME AS patient_name,
-      PT_HP AS phone_number,
-      PT_BIRTH AS birth_date,
-      PT_SEX AS gender,
-      (SELECT MAX(RCP_DATE) FROM RECEIPT WHERE RCP_PTID = PATIENT.PT_ID) AS last_visit_date,
-      (SELECT TOP 1 TX_NAME FROM TREAT_DETAIL
-       INNER JOIN RECEIPT ON TREAT_DETAIL.TD_RCPID = RECEIPT.RCP_ID
-       WHERE RECEIPT.RCP_PTID = PATIENT.PT_ID
-       ORDER BY RECEIPT.RCP_DATE DESC) AS last_treatment_type,
-      PT_MEMO_DATE AS next_appointment_date,
-      PT_FIRSTDATE AS registration_date
-    FROM PATIENT
-    WHERE PT_NAME IS NOT NULL AND PT_NAME != ''
-    ORDER BY PT_ID
-  `);
+  const result = await pool.request().query(`${PATIENT_QUERY_BASE} ORDER BY p.n환자ID`);
   return result.recordset.map(formatPatientRow);
 }
 
 async function getUpdatedPatients(pool: sql.ConnectionPool, since: Date) {
+  const sinceStr = since.toISOString().slice(0, 10).replace(/-/g, ''); // '20260416'
   const result = await pool.request()
     .input('sinceDate', sql.DateTime, since)
+    .input('sinceDateStr', sql.VarChar, sinceStr)
     .query(`
-      SELECT
-        CAST(PT_ID AS VARCHAR) AS dentweb_patient_id,
-        PT_CHARTNO AS chart_number,
-        PT_NAME AS patient_name,
-        PT_HP AS phone_number,
-        PT_BIRTH AS birth_date,
-        PT_SEX AS gender,
-        (SELECT MAX(RCP_DATE) FROM RECEIPT WHERE RCP_PTID = PATIENT.PT_ID) AS last_visit_date,
-        (SELECT TOP 1 TX_NAME FROM TREAT_DETAIL
-         INNER JOIN RECEIPT ON TREAT_DETAIL.TD_RCPID = RECEIPT.RCP_ID
-         WHERE RECEIPT.RCP_PTID = PATIENT.PT_ID
-         ORDER BY RECEIPT.RCP_DATE DESC) AS last_treatment_type,
-        PT_MEMO_DATE AS next_appointment_date,
-        PT_FIRSTDATE AS registration_date
-      FROM PATIENT
-      WHERE PT_NAME IS NOT NULL AND PT_NAME != ''
-        AND (PT_EDITDATE >= @sinceDate
-             OR PT_ID IN (SELECT RCP_PTID FROM RECEIPT WHERE RCP_DATE >= @sinceDate))
-      ORDER BY PT_ID
+      ${PATIENT_QUERY_BASE}
+        AND (p.t수정시각 >= @sinceDate
+             OR p.n환자ID IN (SELECT n환자ID FROM TB_접수목록 WHERE LEFT(sz접수시각, 8) >= @sinceDateStr))
+      ORDER BY p.n환자ID
     `);
   return result.recordset.map(formatPatientRow);
 }
@@ -244,49 +277,328 @@ async function autoRegisterDentweb(): Promise<boolean> {
 /*  SQL Server auto-detection                                          */
 /* ------------------------------------------------------------------ */
 
+const DCM_BRIDGE_PASSWORD = 'Dcm!Bridge2026#';
+
+/**
+ * SYSTEM 권한 스케줄 태스크를 이용하여 전용 SQL Server 읽기 전용 로그인을 생성한다.
+ * SQL Server가 LocalSystem으로 실행 중인 경우에만 동작.
+ */
+async function createDedicatedSqlLogin(): Promise<boolean> {
+  try {
+    const { execSync } = await import('child_process');
+    const fs = await import('fs');
+    const path = await import('path');
+    const os = await import('os');
+
+    const sqlScript = `
+IF NOT EXISTS (SELECT * FROM sys.server_principals WHERE name = 'dcm_bridge')
+  CREATE LOGIN [dcm_bridge] WITH PASSWORD = '${DCM_BRIDGE_PASSWORD}', DEFAULT_DATABASE=[master], CHECK_POLICY=OFF;
+
+DECLARE @dbName NVARCHAR(128);
+DECLARE db_cursor CURSOR FOR
+  SELECT name FROM sys.databases WHERE name IN ('DentWeb','DENTWEBDB');
+OPEN db_cursor;
+FETCH NEXT FROM db_cursor INTO @dbName;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+  DECLARE @sql NVARCHAR(MAX);
+  SET @sql = 'USE [' + @dbName + ']; IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name = ''dcm_bridge'') CREATE USER [dcm_bridge] FOR LOGIN [dcm_bridge]; EXEC sp_addrolemember ''db_datareader'', ''dcm_bridge'';';
+  EXEC sp_executesql @sql;
+  FETCH NEXT FROM db_cursor INTO @dbName;
+END
+CLOSE db_cursor;
+DEALLOCATE db_cursor;
+`;
+
+    const tmpDir = os.tmpdir();
+    const sqlFile = path.join(tmpDir, 'dcm_create_login.sql');
+    const outFile = path.join(tmpDir, 'dcm_create_login.out');
+    fs.writeFileSync(sqlFile, sqlScript, 'utf8');
+
+    // PowerShell로 SYSTEM 스케줄 태스크 생성/실행
+    const psScript = `
+$action = New-ScheduledTaskAction -Execute 'sqlcmd' -Argument '-S localhost\\DENTWEB -E -i "${sqlFile.replace(/\\/g, '\\\\')}" -o "${outFile.replace(/\\/g, '\\\\')}"'
+$principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName 'DcmBridgeLogin' -Action $action -Principal $principal -Force | Out-Null
+Start-ScheduledTask -TaskName 'DcmBridgeLogin'
+Start-Sleep -Seconds 8
+$info = Get-ScheduledTaskInfo -TaskName 'DcmBridgeLogin'
+Unregister-ScheduledTask -TaskName 'DcmBridgeLogin' -Confirm:$false
+Write-Output $info.LastTaskResult
+`;
+
+    const result = execSync(`powershell -Command "${psScript.replace(/"/g, '\\"').replace(/\n/g, ' ')}"`, {
+      encoding: 'utf8',
+      timeout: 20000,
+    }).trim();
+
+    // Clean up
+    try { fs.unlinkSync(sqlFile); } catch { /* ignore */ }
+    try { fs.unlinkSync(outFile); } catch { /* ignore */ }
+
+    if (result === '0') {
+      log('info', '[DentWeb] 전용 SQL 로그인 생성 완료 (dcm_bridge)');
+      return true;
+    }
+    log('warn', `[DentWeb] 전용 SQL 로그인 생성 태스크 결과: ${result}`);
+    return false;
+  } catch (err) {
+    log('error', `[DentWeb] 전용 SQL 로그인 생성 실패: ${err instanceof Error ? err.message : String(err)}`);
+    return false;
+  }
+}
+
+/**
+ * Windows 레지스트리에서 SQL Server 인스턴스의 TCP 포트를 읽어온다.
+ * 실패 시 undefined 반환.
+ */
+async function readSqlPortFromRegistry(instanceId: string): Promise<number | undefined> {
+  try {
+    const { execSync } = await import('child_process');
+    const regPath = `HKLM\\SOFTWARE\\Microsoft\\Microsoft SQL Server\\${instanceId}\\MSSQLServer\\SuperSocketNetLib\\Tcp\\IPAll`;
+    const output = execSync(`reg query "${regPath}" /v TcpPort`, { encoding: 'utf8', timeout: 5000 });
+    const match = output.match(/TcpPort\s+REG_SZ\s+(\d+)/);
+    if (match) return parseInt(match[1], 10);
+  } catch { /* 레지스트리 읽기 실패 — 무시 */ }
+  return undefined;
+}
+
+/**
+ * Windows 레지스트리에서 SQL Server 인스턴스 ID 목록을 찾는다.
+ * 예: MSSQL15.DENTWEB, MSSQL15.MSSQLSERVER 등
+ */
+async function findSqlInstanceIds(): Promise<string[]> {
+  try {
+    const { execSync } = await import('child_process');
+    const output = execSync(
+      'reg query "HKLM\\SOFTWARE\\Microsoft\\Microsoft SQL Server" /v InstalledInstances',
+      { encoding: 'utf8', timeout: 5000 },
+    );
+    // InstalledInstances가 multi-string이므로 직접 서브키 탐색으로 폴백
+    // MSSQL*.* 형태의 서브키 목록 가져오기
+    const subkeysOutput = execSync(
+      'reg query "HKLM\\SOFTWARE\\Microsoft\\Microsoft SQL Server"',
+      { encoding: 'utf8', timeout: 5000 },
+    );
+    const ids: string[] = [];
+    for (const line of subkeysOutput.split('\n')) {
+      const m = line.match(/\\(MSSQL\d+\.\w+)\s*$/);
+      if (m) ids.push(m[1]);
+    }
+    return ids;
+  } catch { return []; }
+}
+
+interface DetectCandidate {
+  server: string;
+  instanceName?: string;
+  port?: number;
+  database: string;
+  authType: 'windows' | 'sql';
+  user?: string;
+  password?: string;
+}
+
 async function detectSqlServer(): Promise<boolean> {
-  const candidates = [
-    { server: 'localhost', database: 'DENTWEBDB' },
-    { server: 'localhost\\SQLEXPRESS', database: 'DENTWEBDB' },
-    { server: 'localhost\\DENTWEB', database: 'DENTWEBDB' },
-    { server: 'localhost', database: 'DentWeb' },
-  ];
+  log('info', '[DentWeb] DB 자동 감지 시작...');
+
+  // 1. 레지스트리에서 DENTWEB 인스턴스 포트 확인
+  const instanceIds = await findSqlInstanceIds();
+  let dentwebPort: number | undefined;
+  let dentwebInstanceId: string | undefined;
+  for (const id of instanceIds) {
+    if (id.toUpperCase().includes('DENTWEB')) {
+      dentwebInstanceId = id;
+      dentwebPort = await readSqlPortFromRegistry(id);
+      if (dentwebPort) {
+        log('info', `[DentWeb] 레지스트리에서 포트 감지: ${id} → TCP ${dentwebPort}`);
+      }
+      break;
+    }
+  }
+
+  // 2. 후보 목록 생성 (우선순위 순)
+  const databases = ['DentWeb', 'DENTWEBDB'];
+  const candidates: DetectCandidate[] = [];
+
+  // 2a. DENTWEB named instance — instanceName 방식 (SQL Browser 사용)
+  for (const db of databases) {
+    candidates.push({ server: 'localhost', instanceName: 'DENTWEB', database: db, authType: 'windows' });
+  }
+
+  // 2b. DENTWEB named instance — 레지스트리에서 읽은 정확한 포트 사용
+  if (dentwebPort) {
+    for (const db of databases) {
+      candidates.push({ server: 'localhost', port: dentwebPort, database: db, authType: 'windows' });
+    }
+  }
+
+  // 2c. 기본 인스턴스 (port 1433)
+  for (const db of databases) {
+    candidates.push({ server: 'localhost', port: 1433, database: db, authType: 'windows' });
+  }
+
+  // 2d. SQLEXPRESS named instance
+  for (const db of databases) {
+    candidates.push({ server: 'localhost', instanceName: 'SQLEXPRESS', database: db, authType: 'windows' });
+  }
+
+  // 2e. dcm_bridge 전용 로그인 (이미 생성된 경우)
+  for (const db of databases) {
+    candidates.push({ server: 'localhost', instanceName: 'DENTWEB', database: db, authType: 'sql', user: 'dcm_bridge', password: DCM_BRIDGE_PASSWORD });
+  }
+  if (dentwebPort) {
+    for (const db of databases) {
+      candidates.push({ server: 'localhost', port: dentwebPort, database: db, authType: 'sql', user: 'dcm_bridge', password: DCM_BRIDGE_PASSWORD });
+    }
+  }
+
+  // 2f. SA 계정 시도 (일반적인 DentWeb 기본 비밀번호들)
+  const saPasswords = ['', 'sa', '1234', 'dentweb', 'DentWeb', 'password'];
+  if (dentwebPort) {
+    for (const db of databases) {
+      for (const pw of saPasswords) {
+        candidates.push({ server: 'localhost', port: dentwebPort, database: db, authType: 'sql', user: 'sa', password: pw });
+      }
+    }
+  }
+  for (const db of databases) {
+    candidates.push({ server: 'localhost', instanceName: 'DENTWEB', database: db, authType: 'sql', user: 'sa', password: '' });
+    candidates.push({ server: 'localhost', instanceName: 'DENTWEB', database: db, authType: 'sql', user: 'sa', password: 'sa' });
+  }
 
   for (const candidate of candidates) {
     try {
       const testConfig: sql.config = {
         server: candidate.server,
         database: candidate.database,
-        port: 1433,
         options: {
           encrypt: false,
           trustServerCertificate: true,
           connectTimeout: 5000,
           requestTimeout: 5000,
+          instanceName: candidate.instanceName,
         },
-        authentication: { type: 'ntlm', options: { domain: '', userName: '', password: '' } },
         pool: { min: 0, max: 1 },
       };
+
+      // Named instance는 port 지정하지 않음 (SQL Browser가 해결)
+      if (!candidate.instanceName && candidate.port) {
+        testConfig.port = candidate.port;
+      }
+
+      if (candidate.authType === 'windows') {
+        testConfig.authentication = { type: 'ntlm', options: { domain: '', userName: '', password: '' } };
+      } else {
+        testConfig.user = candidate.user || 'sa';
+        testConfig.password = candidate.password || '';
+      }
 
       const testPool = await new sql.ConnectionPool(testConfig).connect();
       // Check if PATIENT table exists
       const result = await testPool.request().query(
-        "SELECT TOP 1 TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'PATIENT'"
+        "SELECT TOP 1 TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TB_환자정보'"
       );
       await testPool.close();
 
       if (result.recordset.length > 0) {
-        log('info', `[DentWeb] DB 자동 감지 성공: ${candidate.server}/${candidate.database}`);
-        setConfig({
-          dentwebDbServer: candidate.server,
+        // 서버 주소 형식 복원 (config-store 저장용)
+        const serverAddr = candidate.instanceName
+          ? `${candidate.server}\\${candidate.instanceName}`
+          : candidate.server;
+        log('info', `[DentWeb] DB 자동 감지 성공: ${serverAddr}/${candidate.database} (${candidate.authType} auth, port=${candidate.port || 'auto'})`);
+        const configUpdate: Record<string, unknown> = {
+          dentwebDbServer: serverAddr,
           dentwebDbDatabase: candidate.database,
-        });
+          dentwebDbAuthType: candidate.authType,
+        };
+        if (candidate.port && !candidate.instanceName) {
+          configUpdate.dentwebDbPort = candidate.port;
+        }
+        if (candidate.authType === 'sql') {
+          configUpdate.dentwebDbUser = candidate.user || 'sa';
+          configUpdate.dentwebDbPassword = candidate.password || '';
+        }
+        setConfig(configUpdate as Parameters<typeof setConfig>[0]);
         return true;
       }
-    } catch {
-      // Try next candidate
+    } catch (err) {
+      const label = candidate.instanceName
+        ? `${candidate.server}\\${candidate.instanceName}`
+        : `${candidate.server}:${candidate.port}`;
+      log('debug', `[DentWeb] 후보 실패: ${label}/${candidate.database} (${candidate.authType}) — ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+  // 모든 후보 실패 — 전용 SQL 로그인 자동 생성 시도
+  log('info', '[DentWeb] 기존 인증 방법 실패 — 전용 SQL 로그인(dcm_bridge) 자동 생성 시도...');
+  const loginCreated = await createDedicatedSqlLogin();
+  if (loginCreated) {
+    // 생성된 로그인으로 재시도
+    const dbNames = ['DentWeb', 'DENTWEBDB'];
+    for (const db of dbNames) {
+      try {
+        const testConfig: sql.config = {
+          server: 'localhost',
+          database: db,
+          options: { encrypt: false, trustServerCertificate: true, connectTimeout: 5000, requestTimeout: 5000, instanceName: 'DENTWEB' },
+          user: 'dcm_bridge', password: DCM_BRIDGE_PASSWORD,
+          pool: { min: 0, max: 1 },
+        };
+        const testPool = await new sql.ConnectionPool(testConfig).connect();
+        const result = await testPool.request().query(
+          "SELECT TOP 1 TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TB_환자정보'"
+        );
+        await testPool.close();
+        if (result.recordset.length > 0) {
+          log('info', `[DentWeb] 전용 로그인으로 DB 감지 성공: localhost\\DENTWEB/${db}`);
+          setConfig({
+            dentwebDbServer: 'localhost\\DENTWEB',
+            dentwebDbDatabase: db,
+            dentwebDbAuthType: 'sql',
+            dentwebDbUser: 'dcm_bridge',
+            dentwebDbPassword: DCM_BRIDGE_PASSWORD,
+          } as Parameters<typeof setConfig>[0]);
+          return true;
+        }
+      } catch (err) {
+        log('debug', `[DentWeb] dcm_bridge 로그인 시도 실패 (${db}): ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // instanceName 방식이 안 되면 직접 포트로도 시도
+    if (dentwebPort) {
+      for (const db of dbNames) {
+        try {
+          const testConfig: sql.config = {
+            server: 'localhost',
+            port: dentwebPort,
+            database: db,
+            options: { encrypt: false, trustServerCertificate: true, connectTimeout: 5000, requestTimeout: 5000 },
+            user: 'dcm_bridge', password: DCM_BRIDGE_PASSWORD,
+            pool: { min: 0, max: 1 },
+          };
+          const testPool = await new sql.ConnectionPool(testConfig).connect();
+          const result = await testPool.request().query(
+            "SELECT TOP 1 TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TB_환자정보'"
+          );
+          await testPool.close();
+          if (result.recordset.length > 0) {
+            log('info', `[DentWeb] 전용 로그인으로 DB 감지 성공: localhost:${dentwebPort}/${db}`);
+            setConfig({
+              dentwebDbServer: 'localhost',
+              dentwebDbPort: dentwebPort,
+              dentwebDbDatabase: db,
+              dentwebDbAuthType: 'sql',
+              dentwebDbUser: 'dcm_bridge',
+              dentwebDbPassword: DCM_BRIDGE_PASSWORD,
+            } as Parameters<typeof setConfig>[0]);
+            return true;
+          }
+        } catch { /* next */ }
+      }
+    }
+  }
+
   log('warn', '[DentWeb] DB 자동 감지 실패 — 수동 설정 필요');
   return false;
 }
@@ -440,8 +752,12 @@ export async function startDentwebSync(): Promise<void> {
     cfg = getDentwebConfig();
   }
 
-  // Auto-detect SQL Server if not configured or default
-  if (cfg.dbServer === 'localhost' && cfg.dbAuthType === 'windows') {
+  // Auto-detect SQL Server if not configured, still at defaults, or last sync failed
+  const needsDetection =
+    (cfg.dbServer === 'localhost' && cfg.dbAuthType === 'windows') ||  // 기본값 그대로
+    cfg.lastSyncStatus === 'error' ||                                  // 이전 동기화 실패
+    !cfg.lastSyncDate;                                                 // 성공한 적 없음
+  if (needsDetection) {
     await detectSqlServer();
     cfg = getDentwebConfig();
   }
