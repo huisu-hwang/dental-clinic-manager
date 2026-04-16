@@ -227,7 +227,7 @@ export default function FinancialDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold tracking-wider text-at-text uppercase">총 수입</p>
-                {(summary as Record<string, unknown>)?.revenue_source_type === 'dentweb' && (
+                {summary?.revenue_source_type === 'dentweb' && (
                   <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">덴트웹 연동</span>
                 )}
               </div>
