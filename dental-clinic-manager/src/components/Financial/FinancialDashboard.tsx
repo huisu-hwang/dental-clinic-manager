@@ -225,20 +225,33 @@ export default function FinancialDashboard() {
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                 <TrendingUp className="w-24 h-24 text-emerald-600 transform translate-x-4 -translate-y-4" />
               </div>
-              <p className="text-sm font-semibold tracking-wider text-at-text uppercase">총 수입</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold tracking-wider text-at-text uppercase">총 수입</p>
+                {(summary as Record<string, unknown>)?.revenue_source_type === 'dentweb' && (
+                  <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">덴트웹 연동</span>
+                )}
+              </div>
               <h3 className="text-3xl font-black text-at-text mt-2 mb-4">
                 {formatCurrency(summary?.total_revenue || 0)}
               </h3>
-              <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
-                <div className="flex flex-col">
-                  <span className="text-at-text">보험수입</span>
-                  <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.insurance_revenue || 0)}</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
+                  <div className="flex flex-col">
+                    <span className="text-at-text">보험수입</span>
+                    <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.insurance_revenue || 0)}</span>
+                  </div>
+                  <div className="h-8 w-px bg-at-border"></div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-at-text">비보험수입</span>
+                    <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.non_insurance_revenue || 0)}</span>
+                  </div>
                 </div>
-                <div className="h-8 w-px bg-at-border"></div>
-                <div className="flex flex-col items-end">
-                  <span className="text-at-text">비보험수입</span>
-                  <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.non_insurance_revenue || 0)}</span>
-                </div>
+                {(summary?.other_revenue || 0) > 0 && (
+                  <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
+                    <span className="text-at-text">기타수입</span>
+                    <span className="text-emerald-700 text-sm">{formatCurrency(summary?.other_revenue || 0)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
