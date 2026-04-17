@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Send, Loader2, Inbox, Plus, Globe, Lock } from 'lucide-react'
+import { Send, Loader2, Inbox, Plus, Globe } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { telegramGroupService } from '@/lib/telegramService'
@@ -70,16 +70,8 @@ export default function TelegramBoardListPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-      {/* 페이지 헤더 */}
-      <div className="flex items-center justify-between pb-4 border-b border-at-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
-            <Send className="w-4 h-4 text-at-accent" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-at-text">소모임 게시판</h2>
-          </div>
-        </div>
+      {/* 게시판 신청 버튼 */}
+      <div className="flex justify-end">
         <Button
           size="sm"
           variant="outline"

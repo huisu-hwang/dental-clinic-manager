@@ -64,9 +64,9 @@ export default function MarketingPage() {
 
   return (
     <PremiumGate featureId="marketing">
-      <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-        {/* 탭 네비게이션 — 연차관리 스타일 */}
-        <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+      <div className="bg-white min-h-screen">
+        {/* 탭 네비게이션 — 상단 고정 */}
+        <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex flex-wrap gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -84,7 +84,7 @@ export default function MarketingPage() {
         </div>
 
         {/* 콘텐츠 */}
-        <div className="tab-content">
+        <div className="tab-content p-4 sm:p-6">
           {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
           {activeTab === 'dashboard' && <DashboardContent />}
           {activeTab === 'posts' && <PostsContent viewPostId={viewPostId} onViewPostHandled={() => setViewPostId(null)} />}
