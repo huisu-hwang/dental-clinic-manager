@@ -135,7 +135,7 @@ export default function NewStrategyPage() {
       {step === 'basic' && (
         <div className="space-y-6">
           {/* 프리셋 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
             <h2 className="font-semibold text-at-text mb-3">프리셋 전략</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {PRESET_STRATEGIES.map(preset => (
@@ -152,7 +152,7 @@ export default function NewStrategyPage() {
           </div>
 
           {/* 기본 설정 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-5 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
             <h2 className="font-semibold text-at-text">기본 설정</h2>
             <div>
               <label className="block text-sm text-at-text-secondary mb-1">전략 이름 *</label>

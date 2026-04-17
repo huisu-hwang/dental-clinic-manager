@@ -80,7 +80,7 @@ export default function RiskSettingsPanel({ riskSettings, onChange }: Props) {
   }
 
   return (
-    <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+    <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
       <h2 className="font-semibold text-at-text mb-1">리스크 관리</h2>
       <p className="text-xs text-at-text-secondary mb-4">손실을 제한하고 포트폴리오를 보호하세요</p>
 

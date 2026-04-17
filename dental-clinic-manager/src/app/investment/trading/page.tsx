@@ -93,7 +93,7 @@ export default function TradingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 수동 주문 폼 */}
         <div className="lg:col-span-1">
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-5 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
             <h2 className="font-semibold text-at-text">수동 주문</h2>
 
             <div className="flex gap-2">
@@ -200,7 +200,7 @@ export default function TradingPage() {
         {/* 주문 내역 + 자동매매 현황 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 자동매매 현황 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
             <h2 className="font-semibold text-at-text mb-3">자동매매 현황</h2>
             <div className="flex flex-col items-center justify-center py-6 text-at-text-weak">
               <Activity className="w-10 h-10 mb-2 opacity-30" />
@@ -210,7 +210,7 @@ export default function TradingPage() {
           </div>
 
           {/* 최근 주문 내역 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
             <h2 className="font-semibold text-at-text mb-3">최근 주문 내역</h2>
             {loading ? (
               <div className="flex justify-center py-6">

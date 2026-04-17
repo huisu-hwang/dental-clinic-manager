@@ -85,7 +85,7 @@ export default function InvestmentDashboard() {
   if (!hasCredential) {
     return (
       <div className="max-w-lg mx-auto mt-12">
-        <div className="bg-at-surface rounded-2xl shadow-at-card p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-8 text-center">
           <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-at-accent-light mx-auto mb-4">
             <Link2 className="w-8 h-8 text-at-accent" />
           </div>
@@ -167,7 +167,7 @@ export default function InvestmentDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 활성 전략 */}
-        <div className="bg-at-surface rounded-2xl shadow-at-card p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
           <h3 className="text-base font-semibold text-at-text mb-4">활성 전략</h3>
           {activeStrategies.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
@@ -200,7 +200,7 @@ export default function InvestmentDashboard() {
         </div>
 
         {/* 최근 신호 */}
-        <div className="bg-at-surface rounded-2xl shadow-at-card p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
           <h3 className="text-base font-semibold text-at-text mb-4">최근 신호</h3>
           <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
             <AlertCircle className="w-10 h-10 mb-3 opacity-30" />
@@ -227,7 +227,7 @@ function SummaryCard({
   trend: 'up' | 'down' | null
 }) {
   return (
-    <div className="bg-at-surface rounded-2xl shadow-at-card p-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-at-border p-4">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-at-text-secondary font-medium">{title}</span>
         <Icon className="w-4 h-4 text-at-text-weak" />

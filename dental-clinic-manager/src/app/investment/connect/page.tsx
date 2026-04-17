@@ -137,7 +137,7 @@ export default function ConnectPage() {
 
       {/* 이미 연결된 계좌가 있는 경우 */}
       {credential ? (
-        <div className="bg-at-surface rounded-2xl shadow-at-card p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-at-accent-light">
@@ -236,7 +236,7 @@ export default function ConnectPage() {
         /* 계좌 연결 폼 */
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* API 키 발급 상세 가이드 */}
-          <details open className="bg-at-surface rounded-2xl shadow-at-card overflow-hidden">
+          <details open className="bg-white rounded-2xl shadow-sm border border-at-border overflow-hidden">
             <summary className="flex items-center gap-3 p-5 cursor-pointer select-none hover:bg-at-bg transition-colors">
               <Shield className="w-5 h-5 text-at-accent flex-shrink-0" />
               <span className="font-semibold text-at-text text-sm">API 키 발급 가이드</span>
@@ -336,7 +336,7 @@ export default function ConnectPage() {
           </details>
 
           {/* 모의/실전 선택 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6 space-y-4">
             <h3 className="text-base font-semibold text-at-text">계좌 유형</h3>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -367,7 +367,7 @@ export default function ConnectPage() {
           </div>
 
           {/* API 키 입력 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6 space-y-4">
             <h3 className="text-base font-semibold text-at-text">API 정보 입력</h3>
 
             <div>
@@ -427,7 +427,7 @@ export default function ConnectPage() {
           </div>
 
           {/* 약관 동의 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-6">
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"

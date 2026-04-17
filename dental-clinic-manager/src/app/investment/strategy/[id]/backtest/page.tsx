@@ -191,7 +191,7 @@ export default function BacktestPage() {
       </div>
 
       {/* 종목 추가 영역 */}
-      <div className="bg-at-surface rounded-2xl shadow-at-card p-5 space-y-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
         <h2 className="font-semibold text-at-text">종목 선택</h2>
 
         <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ export default function BacktestPage() {
       </div>
 
       {/* 기간/자금 + 실행 */}
-      <div className="bg-at-surface rounded-2xl shadow-at-card p-5 space-y-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs text-at-text-secondary mb-1">시작일</label>
@@ -322,7 +322,7 @@ export default function BacktestPage() {
 
       {/* 결과 비교 테이블 */}
       {results.length > 0 && (
-        <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="w-5 h-5 text-at-accent" />
             <h2 className="font-semibold text-at-text">백테스트 결과 비교</h2>
@@ -428,7 +428,7 @@ export default function BacktestPage() {
           </div>
 
           {/* 상세 지표 */}
-          <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
             <h3 className="font-semibold text-at-text mb-3">상세 지표</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div><p className="text-at-text-secondary text-xs">Sharpe Ratio</p><p className="font-mono font-semibold text-at-text">{selectedResult.metrics.sharpeRatio.toFixed(2)}</p></div>
@@ -443,7 +443,7 @@ export default function BacktestPage() {
 
           {/* 자산 곡선 */}
           {selectedResult.equityCurve.length > 0 && (
-            <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+            <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
               <h3 className="font-semibold text-at-text mb-3">자산 곡선</h3>
               <div className="flex items-end gap-0.5 h-32 overflow-hidden">
                 {sampleCurve(selectedResult.equityCurve, 80).map((point, i, arr) => {
@@ -471,7 +471,7 @@ export default function BacktestPage() {
 
           {/* 매매 내역 */}
           {selectedResult.trades.length > 0 && (
-            <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+            <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
               <h3 className="font-semibold text-at-text mb-3">매매 내역 ({selectedResult.trades.length}건)</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -519,7 +519,7 @@ function MetricCard({ label, value, positive, icon }: {
   label: string; value: string; positive: boolean; icon: React.ReactNode
 }) {
   return (
-    <div className="bg-at-surface rounded-2xl shadow-at-card p-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-at-border p-4">
       <div className="flex items-center gap-1.5 text-at-text-secondary mb-1">
         {icon}
         <span className="text-xs">{label}</span>

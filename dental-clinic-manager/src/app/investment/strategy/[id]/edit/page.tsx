@@ -15,7 +15,7 @@ export default function EditStrategyPage() {
         </div>
       </div>
 
-      <div className="bg-at-surface rounded-2xl shadow-at-card p-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-at-border p-8">
         <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
           <Edit3 className="w-12 h-12 mb-3 opacity-30" />
           <p className="text-sm font-medium">전략 편집 기능은 다음 업데이트에서 제공됩니다</p>

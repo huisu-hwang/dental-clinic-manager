@@ -136,7 +136,7 @@ export default function IndicatorPanel({ indicators, onChange }: Props) {
   const getTemplate = (type: IndicatorType) => TEMPLATES.find(t => t.type === type)
 
   return (
-    <div className="bg-at-surface rounded-2xl shadow-at-card p-5">
+    <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="font-semibold text-at-text">기술 지표</h2>
