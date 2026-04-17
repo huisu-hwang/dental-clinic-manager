@@ -738,17 +738,19 @@ export default function DashboardPage() {
 
           {/* 상세 기록 */}
           {activeTab === 'logs' && (
-            <LogsSection
-              dailyReports={dailyReports}
-              consultLogs={consultLogs}
-              giftLogs={giftLogs}
-              inventoryLogs={inventoryLogs}
-              cashRegisterLogs={cashRegisterLogs}
-              onDeleteReport={handleDeleteReport}
-              onRecalculateStats={handleRecalculateStats}
-              onUpdateConsultStatus={handleUpdateConsultStatus}
-              canDelete={canDeleteReport}
-            />
+            <div className="p-4 sm:p-6 bg-white min-h-screen">
+              <LogsSection
+                dailyReports={dailyReports}
+                consultLogs={consultLogs}
+                giftLogs={giftLogs}
+                inventoryLogs={inventoryLogs}
+                cashRegisterLogs={cashRegisterLogs}
+                onDeleteReport={handleDeleteReport}
+                onRecalculateStats={handleRecalculateStats}
+                onUpdateConsultStatus={handleUpdateConsultStatus}
+                canDelete={canDeleteReport}
+              />
+            </div>
           )}
 
           {/* 진료 프로토콜 */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X, Banknote } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog, CashRegisterLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
@@ -111,20 +111,20 @@ export default function LogsSection({
   })
 
   return (
-    <div className="p-4 sm:p-6 bg-white min-h-screen">
+    <div className="space-y-6">
       {/* 서브탭 */}
-      <div className="flex gap-1 border-b border-at-border mb-6 overflow-x-auto">
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px
-              ${activeTab === key
-                ? 'border-at-accent text-at-accent'
-                : 'border-transparent text-at-text-secondary hover:text-at-text hover:border-at-border'
-              }`}
+            className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
+              activeTab === key
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+            }`}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-4 h-4 mr-2" />
             {label}
           </button>
         ))}
@@ -514,7 +514,9 @@ export default function LogsSection({
 
       {/* 6. 기타 특이사항 기록 */}
       {activeTab === 'notes' && (
-        <SpecialNotesHistory />
+        <div>
+          <SpecialNotesHistory />
+        </div>
       )}
     </div>
   )
