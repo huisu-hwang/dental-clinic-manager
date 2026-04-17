@@ -77,38 +77,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '동시 백테스트는 최대 10개까지 가능합니다' }, { status: 429 })
   }
 
-  // 기간 확인 (3년 이하만 동기 처리)
-  const daysDiff = Math.ceil(
-    (new Date(endDate as string).getTime() - new Date(startDate as string).getTime()) / (1000 * 60 * 60 * 24)
-  )
-
-  if (daysDiff > 365 * 3) {
-    // 3년 초과: 비동기 처리 (워커에 위임)
-    const { data: run, error } = await supabase
-      .from('backtest_runs')
-      .insert({
-        strategy_id: strategyId,
-        user_id: userId,
-        ticker: ticker as string,
-        market: market as string,
-        start_date: startDate as string,
-        end_date: endDate as string,
-        initial_capital: capital,
-        status: 'pending',
-      })
-      .select('id')
-      .single()
-
-    if (error) {
-      return NextResponse.json({ error: '백테스트 생성 실패' }, { status: 500 })
-    }
-
-    return NextResponse.json({
-      data: { id: run.id, status: 'pending', message: '장기 백테스트는 워커에서 처리됩니다' },
-    }, { status: 202 })
-  }
-
-  // 3년 이하: 동기 처리 (60초 이내)
+  // 동기 처리 (55초 타임아웃, 기간 제한 없음 — 일봉 기준 20년도 수 초 내 처리 가능)
   try {
     // 1. 주가 데이터 조회
     const prices = await fetchPrices(
