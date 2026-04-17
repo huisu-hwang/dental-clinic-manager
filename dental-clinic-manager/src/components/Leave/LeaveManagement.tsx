@@ -752,8 +752,15 @@ function AllEmployeeBalances() {
                     <td className="px-4 py-3 text-center font-medium">{item.total_days}일</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <span className="font-medium text-at-success">{usedDeductTotal}일</span>
-                        <LeaveByTypeCell byType={item.used_by_type} emptyText="" />
+                        <span className="font-medium text-at-success">{item.used_days}일</span>
+                        <LeaveByTypeCell byType={item.used_by_type} filterTypes={DEDUCT_LEAVE_TYPES} emptyText="" />
+                        {Math.round((item.used_days - usedDeductTotal) * 10) / 10 > 0 && (
+                          <div className="flex items-center gap-1 text-xs" style={{ color: '#F97316' }}>
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#F97316' }}></span>
+                            <span>공휴일/휴무일</span>
+                            <span className="font-medium">{Math.round((item.used_days - usedDeductTotal) * 10) / 10}일</span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
