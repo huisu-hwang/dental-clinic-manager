@@ -77,9 +77,9 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
   const yearsOfService = diffDays / 365
 
-  // 1년 미만: 월 1일 (최대 11일) - 기본 계산 (만근 여부 확인 없이)
+  // 1년 미만: 입사일 기준 매월 동일 날짜가 지날 때마다 1일 (최대 11일)
   if (yearsOfService < 1) {
-    const monthsWorked = Math.floor(diffDays / 30)
+    const monthsWorked = countFullMonthsFromHireDate(hireDate, referenceDate)
     return Math.min(monthsWorked, 11)
   }
 
@@ -87,6 +87,35 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
   // 3년 이상부터 1일 추가 시작
   const extraDays = Math.floor((yearsOfService - 1) / 2)
   return Math.min(15 + extraDays, 25)
+}
+
+/**
+ * 입사일 기준으로 완전히 경과한 월 수 계산
+ * 예: 입사일 1/15 → 2/15 이후 1개월, 3/15 이후 2개월...
+ */
+function countFullMonthsFromHireDate(hireDate: Date, referenceDate: Date): number {
+  let months = 0
+  const hire = new Date(hireDate)
+  const ref = new Date(referenceDate)
+
+  // 입사일로부터 1개월씩 더해가며 기준일과 비교
+  let nextDate = new Date(hire)
+  while (months < 11) {
+    // 다음 월 동일 날짜 계산
+    nextDate = new Date(hire.getFullYear(), hire.getMonth() + months + 1, hire.getDate())
+
+    // 만약 해당 월에 입사일 날짜가 없으면 (예: 1/31 입사 → 2/28) 월말로 조정
+    const expectedMonth = (hire.getMonth() + months + 1) % 12
+    if (nextDate.getMonth() !== expectedMonth) {
+      // 해당 월의 마지막 날로 조정
+      nextDate = new Date(hire.getFullYear(), hire.getMonth() + months + 2, 0)
+    }
+
+    if (nextDate > ref) break
+    months++
+  }
+
+  return months
 }
 
 /**
@@ -111,33 +140,57 @@ export function calculateAnnualLeaveDaysWithUnpaidCheck(
     return Math.min(15 + extraDays, 25)
   }
 
-  // 1년 미만: 각 월별로 만근 여부 확인
+  // 1년 미만: 입사일 기준 매월 동일 날짜가 지날 때마다 연차 발생
+  // 해당 기간에 무급휴가를 사용한 달은 연차가 발생하지 않음
   let earnedDays = 0
   const hire = new Date(hireDate)
   const ref = new Date(referenceDate)
 
-  // 입사일부터 현재까지 각 월을 순회
-  let checkDate = new Date(hire)
+  // 입사일부터 매월 동일 날짜를 기준으로 순회
+  for (let monthIdx = 0; monthIdx < 11; monthIdx++) {
+    // 입사일로부터 (monthIdx+1)개월 후 날짜 계산
+    let monthAnniversary = new Date(hire.getFullYear(), hire.getMonth() + monthIdx + 1, hire.getDate())
 
-  while (earnedDays < 11) { // 최대 11일
-    // 해당 월의 마지막 날 계산
-    const monthEnd = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0)
+    // 해당 월에 입사일 날짜가 없으면 (예: 1/31 → 2/28) 월말로 조정
+    const expectedMonth = (hire.getMonth() + monthIdx + 1) % 12
+    if (monthAnniversary.getMonth() !== expectedMonth) {
+      monthAnniversary = new Date(hire.getFullYear(), hire.getMonth() + monthIdx + 2, 0)
+    }
 
-    // 아직 해당 월이 완전히 지나지 않았으면 중단
-    if (monthEnd > ref) {
+    // 아직 해당 월 기념일이 지나지 않았으면 중단
+    if (monthAnniversary > ref) {
       break
     }
 
-    // 해당 월의 키 생성 (YYYY-MM)
-    const monthKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`
-
-    // 해당 월에 무급휴가 사용이 없으면 연차 1일 부여
-    if (!unpaidLeaveByMonth[monthKey] || unpaidLeaveByMonth[monthKey] === 0) {
-      earnedDays++
+    // 해당 기간(monthIdx번째 ~ monthIdx+1번째 월) 중 무급휴가가 있었는지 확인
+    // 기간 시작: 입사일 + monthIdx개월, 기간 종료: monthAnniversary
+    let periodStart: Date
+    if (monthIdx === 0) {
+      periodStart = new Date(hire)
+    } else {
+      periodStart = new Date(hire.getFullYear(), hire.getMonth() + monthIdx, hire.getDate())
+      const expectedStartMonth = (hire.getMonth() + monthIdx) % 12
+      if (periodStart.getMonth() !== expectedStartMonth) {
+        periodStart = new Date(hire.getFullYear(), hire.getMonth() + monthIdx + 1, 0)
+      }
     }
 
-    // 다음 달로 이동
-    checkDate = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 1)
+    // 해당 기간에 포함되는 월 키들을 확인
+    let hasUnpaid = false
+    const checkMonth = new Date(periodStart)
+    while (checkMonth <= monthAnniversary) {
+      const monthKey = `${checkMonth.getFullYear()}-${String(checkMonth.getMonth() + 1).padStart(2, '0')}`
+      if (unpaidLeaveByMonth[monthKey] && unpaidLeaveByMonth[monthKey] > 0) {
+        hasUnpaid = true
+        break
+      }
+      checkMonth.setMonth(checkMonth.getMonth() + 1)
+    }
+
+    // 해당 기간에 무급휴가 사용이 없으면 연차 1일 부여
+    if (!hasUnpaid) {
+      earnedDays++
+    }
   }
 
   return earnedDays
