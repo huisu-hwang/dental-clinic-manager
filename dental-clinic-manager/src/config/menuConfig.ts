@@ -261,6 +261,19 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     premiumFeature: true,  // 프리미엄 기능
   },
 
+  // === 투자 카테고리 ===
+  {
+    id: 'investment',
+    label: '주식 자동 매매',
+    icon: 'TrendingUp',
+    route: '/investment',
+    permissions: [],
+    categoryId: 'investment',
+    order: 16.5,
+    visible: true,
+    ownerOnly: true,  // 대표 원장 전용
+  },
+
   // === 하단 고정 메뉴 ===
   {
     id: 'guide',
@@ -298,7 +311,6 @@ export const KNOWN_NON_MENU_ROUTES: string[] = [
   '/test-protocol',      // 테스트 프로토콜
   '/guide',              // 가이드 (별도 라우트, 메뉴는 /dashboard?tab=guide)
   '/dashboard/ai-analysis', // AI 분석 (별도 라우트, 메뉴는 /dashboard?tab=ai-analysis)
-  '/investment',         // 투자 자동거래 (독립 카테고리)
 ]
 
 // ============================================
