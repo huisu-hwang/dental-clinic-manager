@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -12,20 +12,20 @@ import {
   AlertCircle,
   Link2,
   ArrowRight,
+  OctagonX,
+  Loader2,
 } from 'lucide-react'
 import Link from 'next/link'
+import type { InvestmentStrategy } from '@/types/investment'
 
 export default function InvestmentDashboard() {
   const { user } = useAuth()
   const [hasCredential, setHasCredential] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
+  const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
+  const [emergencyStopping, setEmergencyStopping] = useState(false)
 
-  useEffect(() => {
-    if (!user) return
-    checkCredential()
-  }, [user])
-
-  async function checkCredential() {
+  const loadData = useCallback(async () => {
     try {
       const supabase = createClient()
       const { data } = await supabase
@@ -35,12 +35,43 @@ export default function InvestmentDashboard() {
         .maybeSingle()
 
       setHasCredential(!!data)
+
+      // 전략 목록 로드
+      const res = await fetch('/api/investment/strategies')
+      const json = await res.json()
+      if (json.data) setStrategies(json.data)
     } catch {
       setHasCredential(false)
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    loadData()
+  }, [user, loadData])
+
+  const handleEmergencyStop = async () => {
+    if (!confirm('모든 활성 전략을 비활성화하고 미체결 주문을 취소합니다. 계속하시겠습니까?')) return
+    setEmergencyStopping(true)
+    try {
+      const res = await fetch('/api/investment/emergency-stop', { method: 'POST' })
+      const json = await res.json()
+      if (res.ok) {
+        alert(`긴급 정지 완료\n- 비활성화 전략: ${json.deactivatedStrategies}개\n- 취소 주문: ${json.cancelledOrders}개`)
+        loadData()
+      } else {
+        alert(json.error || '긴급 정지 실패')
+      }
+    } catch {
+      alert('네트워크 오류')
+    } finally {
+      setEmergencyStopping(false)
+    }
   }
+
+  const activeStrategies = strategies.filter(s => s.is_active)
 
   if (loading) {
     return (
@@ -104,35 +135,68 @@ export default function InvestmentDashboard() {
         />
         <SummaryCard
           title="활성 전략"
-          value="0"
+          value={String(activeStrategies.length)}
           unit="개"
           icon={Target}
           trend={null}
         />
         <SummaryCard
-          title="보유 종목"
-          value="0"
-          unit="종목"
+          title="전체 전략"
+          value={String(strategies.length)}
+          unit="개"
           icon={Activity}
           trend={null}
         />
       </div>
 
-      {/* 빈 상태 카드 */}
+      {/* 긴급 정지 버튼 (활성 전략이 있을 때만) */}
+      {activeStrategies.length > 0 && (
+        <button
+          onClick={handleEmergencyStop}
+          disabled={emergencyStopping}
+          className="w-full py-3 bg-red-500 text-white rounded-2xl font-semibold hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {emergencyStopping ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <OctagonX className="w-5 h-5" />
+          )}
+          긴급 전체 정지
+        </button>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 활성 전략 */}
         <div className="bg-at-surface rounded-2xl shadow-at-card p-6">
           <h3 className="text-base font-semibold text-at-text mb-4">활성 전략</h3>
-          <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
-            <Target className="w-10 h-10 mb-3 opacity-30" />
-            <p className="text-sm">아직 활성화된 전략이 없습니다</p>
-            <Link
-              href="/investment/strategy"
-              className="mt-3 text-sm text-at-accent hover:underline"
-            >
-              전략 만들기 →
-            </Link>
-          </div>
+          {activeStrategies.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
+              <Target className="w-10 h-10 mb-3 opacity-30" />
+              <p className="text-sm">아직 활성화된 전략이 없습니다</p>
+              <Link
+                href="/investment/strategy"
+                className="mt-3 text-sm text-at-accent hover:underline"
+              >
+                전략 만들기 →
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeStrategies.map(s => (
+                <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-at-bg">
+                  <div>
+                    <p className="text-sm font-medium text-at-text">{s.name}</p>
+                    <p className="text-xs text-at-text-secondary mt-0.5">
+                      {s.target_market === 'KR' ? '국내' : '미국'} · {s.timeframe} · Level {s.automation_level}
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
+                    활성
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 최근 신호 */}

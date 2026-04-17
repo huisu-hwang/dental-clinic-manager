@@ -1,0 +1,25 @@
+{
+  "name": "trading-worker",
+  "version": "1.0.0",
+  "description": "KIS 자동매매 트레이딩 워커 (Mac mini M4)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "node-cron": "^3.0.3",
+    "@supabase/supabase-js": "^2.49.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/ws": "^8.5.14",
+    "@types/node": "^22.10.0",
+    "@types/node-cron": "^3.0.11"
+  }
+}
