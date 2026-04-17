@@ -83,7 +83,7 @@ class KISWebSocketManager {
       throw new Error(`승인키 발급 실패: ${response.status}`)
     }
 
-    const data = await response.json()
+    const data = await response.json() as { approval_key: string }
     return data.approval_key
   }
 

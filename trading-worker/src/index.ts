@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 /**
  * 트레이딩 워커 진입점
  *

@@ -432,7 +432,7 @@ async function refreshToken(credential: CredentialData): Promise<string> {
     throw new Error(`KIS 토큰 발급 실패: ${response.status}`)
   }
 
-  const data = await response.json()
+  const data = await response.json() as { access_token: string; access_token_token_expired: string }
   const expiresAt = new Date(data.access_token_token_expired).getTime()
 
   tokenCache.set(credential.id, { token: data.access_token, expiresAt })
@@ -498,7 +498,12 @@ async function callKISOrderAPI(params: KISOrderParams): Promise<{ orderId: strin
     body: JSON.stringify(body),
   })
 
-  const data = await response.json()
+  const data = await response.json() as {
+    rt_cd: string
+    msg_cd: string
+    msg1: string
+    output?: { ODNO?: string; KRX_FWDG_ORD_ORGNO?: string }
+  }
 
   if (data.rt_cd !== '0') {
     throw new Error(`KIS 주문 실패: [${data.msg_cd}] ${data.msg1}`)
