@@ -566,15 +566,15 @@ export default function AIChat({ clinicId }: AIChatProps) {
       {/* 메인 채팅 영역 */}
       <div className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-at-border bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Sparkles className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-at-border">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-accent-light text-at-accent">
+              <Sparkles className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-at-text">AI 데이터 분석</h2>
-              <p className="text-sm text-at-text-weak">병원 데이터를 분석하고 인사이트를 제공합니다</p>
-            </div>
+            <h2 className="text-base font-semibold text-at-text">
+              <span className="text-at-accent mr-1">AI</span>
+              데이터 분석
+            </h2>
           </div>
           {messages.length > 0 && (
             <Button
@@ -592,32 +592,26 @@ export default function AIChat({ clinicId }: AIChatProps) {
         {/* 메시지 영역 */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mb-6">
-                <Bot className="w-12 h-12 text-at-accent" />
-              </div>
-              <h3 className="text-xl font-semibold text-at-text mb-2">
-                무엇을 분석해 드릴까요?
-              </h3>
-              <p className="text-at-text-weak mb-8 max-w-md">
-                Supabase에 저장된 모든 데이터에 접근하여 분석할 수 있습니다.
-                <br />
-                날짜 범위를 지정하거나 특정 기간의 데이터를 요청해 보세요.
-              </p>
-
-              {/* 예시 질문들 */}
-              <div className="w-full max-w-2xl">
-                <p className="text-sm font-medium text-at-text-secondary mb-3 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  이런 질문을 해보세요
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="flex flex-col items-center justify-center h-full">
+              {/* 안내 카드 — LeaveBalanceCard 스타일 */}
+              <div className="w-full max-w-2xl bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-at-border mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-at-accent-light rounded-xl">
+                    <Bot className="w-6 h-6 text-at-accent" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-at-text">무엇을 분석해 드릴까요?</h3>
+                    <p className="text-sm text-at-text-weak">날짜 범위를 지정하거나 특정 기간의 데이터를 요청해 보세요</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {exampleQuestions.map((question, index) => (
                     <button
                       key={index}
                       onClick={() => setInputValue(question)}
-                      className="text-left p-3 rounded-xl border border-at-border hover:border-blue-300 hover:bg-at-accent-light transition-colors text-sm text-at-text-secondary"
+                      className="text-left p-3 bg-white rounded-lg shadow-sm border border-transparent hover:border-blue-200 hover:shadow-md transition-all text-sm text-at-text-secondary"
                     >
+                      <Calendar className="w-3.5 h-3.5 inline mr-1.5 text-at-accent" />
                       {question}
                     </button>
                   ))}

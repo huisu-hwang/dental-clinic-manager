@@ -90,10 +90,8 @@ export default function AIAnalysisPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 bg-white min-h-screen">
-      <div className="h-[calc(100vh-120px)]">
-        <AIChat clinicId={user.clinic_id} />
-      </div>
+    <div className="bg-white h-[calc(100vh-56px)] flex flex-col">
+      <AIChat clinicId={user.clinic_id} />
     </div>
   );
 }
