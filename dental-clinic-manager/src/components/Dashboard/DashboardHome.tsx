@@ -25,6 +25,7 @@ import {
   Monitor,
   ArrowUpCircle,
 } from 'lucide-react'
+import MyTasksSection from './MyTasksSection'
 
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
@@ -660,6 +661,9 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
+
+            {/* 내 업무 (일회성 + 반복 업무 인스턴스) */}
+            <MyTasksSection />
 
             {/* 팀 출퇴근 현황 */}
             <div>

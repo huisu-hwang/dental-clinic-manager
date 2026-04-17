@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   CalendarDays,
   Users,
+  Repeat,
 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -25,9 +26,10 @@ import {
 import TaskDetail from './TaskDetail'
 import TaskForm from './TaskForm'
 import TaskCardView from './TaskCardView'
+import RecurringTaskTemplateList from './RecurringTaskTemplateList'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
-type ViewTab = 'active' | 'completed'
+type ViewTab = 'active' | 'completed' | 'recurring'
 type CompletedPeriod = 'all' | '1w' | '1m' | '3m' | '6m'
 
 const COMPLETED_PERIOD_LABELS: Record<CompletedPeriod, string> = {
@@ -379,7 +381,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       )}
 
-      {/* 진행 중 / 완료 탭 */}
+      {/* 진행 중 / 완료 / 반복 템플릿 탭 */}
       <div className="flex items-center gap-1 border-b border-at-border">
         <button
           onClick={() => { setActiveTab('active'); setStatusFilter('') }}
@@ -413,7 +415,25 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
             {completedTasks.length}
           </span>
         </button>
+        {canCreate && (
+          <button
+            onClick={() => { setActiveTab('recurring'); setStatusFilter('') }}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'recurring'
+                ? 'border-at-accent text-at-accent'
+                : 'border-transparent text-at-text-weak hover:text-at-text-secondary'
+            }`}
+          >
+            <Repeat className="w-4 h-4" />
+            반복 템플릿
+          </button>
+        )}
       </div>
+
+      {/* 반복 템플릿 탭: 전용 컴포넌트 렌더링 후 조기 반환 */}
+      {activeTab === 'recurring' && canCreate && (
+        <RecurringTaskTemplateList />
+      )}
 
       {/* 진행 업무 탭: 검색 및 우선순위 필터 */}
       {activeTab === 'active' && !statusFilter && (
@@ -558,8 +578,8 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       )}
 
-      {/* 업무 보드 */}
-      {loading ? (
+      {/* 업무 보드 (반복 템플릿 탭이 아닐 때만) */}
+      {activeTab !== 'recurring' && (loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500" />
         </div>
@@ -587,7 +607,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       ) : (
         <TaskCardView tasks={displayedTasks} onTaskClick={handleTaskClick} />
-      )}
+      ))}
     </div>
   )
 }
