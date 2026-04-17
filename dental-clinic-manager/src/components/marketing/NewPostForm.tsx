@@ -659,11 +659,11 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         <div className="bg-white rounded-xl border border-at-border p-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-at-text">{generationStep}</span>
-            <span className="text-sm font-bold text-indigo-600">{generationProgress}%</span>
+            <span className="text-sm font-bold text-at-accent">{generationProgress}%</span>
           </div>
           <div className="relative h-3 bg-at-surface-alt rounded-full overflow-hidden">
             <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+              className="absolute inset-y-0 left-0 bg-at-accent rounded-full transition-all duration-500 ease-out"
               style={{ width: `${generationProgress}%` }}
             />
           </div>
@@ -681,7 +681,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                   generationProgress >= threshold
                     ? threshold === 100
                       ? 'text-green-500 font-semibold'
-                      : 'text-indigo-500 font-semibold'
+                      : 'text-at-accent font-semibold'
                     : 'text-at-text'
                 }`}
               >
@@ -694,7 +694,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         <button
           onClick={handleGenerate}
           disabled={!topic || !keyword || (postType === 'clinical' && (!clinicalData?.patientConsent || !clinicalData?.procedureType || !clinicalData?.photos.some(p => p.uploadedUrl)))}
-          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
         >
           <SparklesIcon className="h-5 w-5" />
           {postType === 'clinical'
@@ -786,12 +786,12 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               {editedHashtags.map((tag, i) => (
                 <span
                   key={i}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-at-accent-light text-at-accent text-xs rounded-full font-medium"
                 >
                   #{tag}
                   <button
                     onClick={() => removeHashtag(i)}
-                    className="text-indigo-300 hover:text-red-400 transition-colors ml-0.5"
+                    className="text-at-accent/50 hover:text-at-error transition-colors ml-0.5"
                     title="삭제"
                   >
                     <XMarkIcon className="h-3 w-3" />
@@ -801,7 +801,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
 
               {isAddingHashtag ? (
                 <div className="flex items-center gap-1">
-                  <span className="text-indigo-400 text-xs">#</span>
+                  <span className="text-at-accent text-xs">#</span>
                   <input
                     ref={hashtagInputRef}
                     type="text"
@@ -813,13 +813,13 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                     }}
                     onBlur={confirmAddHashtag}
                     placeholder="태그 입력"
-                    className="w-24 text-xs border border-indigo-300 rounded-full px-2 py-1 focus:outline-none focus:ring-1 focus:ring-at-accent"
+                    className="w-24 text-xs border border-at-border rounded-full px-2 py-1 focus:outline-none focus:ring-1 focus:ring-at-accent"
                   />
                 </div>
               ) : (
                 <button
                   onClick={() => setIsAddingHashtag(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 border border-dashed border-indigo-300 text-indigo-400 text-xs rounded-full hover:bg-indigo-50 transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1 border border-dashed border-at-border text-at-text-weak text-xs rounded-full hover:bg-at-surface-alt transition-colors"
                 >
                   <PlusIcon className="h-3 w-3" />
                   추가
@@ -922,7 +922,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               <button
                 onClick={handlePublishNow}
                 disabled={isScheduling || !generatedResult}
-                className="flex-1 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-at-success text-white rounded-xl hover:opacity-90 disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 {isScheduling ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -1114,7 +1114,7 @@ function RenderedBody({
       flushParagraph()
       elements.push(
         <div key={key++} className="flex gap-2 mb-1.5 ml-1">
-          <span className="text-indigo-400 mt-1 text-xs">●</span>
+          <span className="text-at-accent mt-1 text-xs">●</span>
           <span className="text-sm leading-6 text-at-text flex-1">
             {renderInlineFormatting(trimmed.replace(/^[-*]\s+/, ''))}
           </span>
@@ -1128,7 +1128,7 @@ function RenderedBody({
       const num = trimmed.match(/^(\d+)\./)?.[1]
       elements.push(
         <div key={key++} className="flex gap-2 mb-1.5 ml-1">
-          <span className="text-indigo-500 font-semibold text-sm min-w-[1.2rem]">{num}.</span>
+          <span className="text-at-accent font-semibold text-sm min-w-[1.2rem]">{num}.</span>
           <span className="text-sm leading-6 text-at-text flex-1">
             {renderInlineFormatting(trimmed.replace(/^\d+\.\s+/, ''))}
           </span>
