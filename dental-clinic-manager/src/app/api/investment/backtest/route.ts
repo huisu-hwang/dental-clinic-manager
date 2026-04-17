@@ -88,7 +88,9 @@ export async function POST(request: NextRequest) {
     )
 
     if (prices.length < 20) {
-      return NextResponse.json({ error: '데이터가 부족합니다 (최소 20거래일)' }, { status: 400 })
+      return NextResponse.json({
+        error: `${ticker} 데이터가 부족합니다 (${prices.length}거래일, 최소 20거래일 필요). 종목 코드와 기간을 확인해주세요.`
+      }, { status: 400 })
     }
 
     // 2. 백테스트 실행 (60초 타임아웃)
