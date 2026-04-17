@@ -320,7 +320,10 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
       // 각 사진에 보정값 적용 (순차 처리 — 업로드 순서 보장)
       for (const { id: photoId, image: img } of loaded) {
         const adj = adjustments.get(photoId)
-        if (!adj || (adj.brightness === 0 && adj.contrast === 0)) continue
+        if (!adj) continue
+        // 모든 보정값이 무변경이면 스킵
+        const noChange = adj.brightness === 0 && adj.hueRotate === 0 && adj.saturate === 1
+        if (noChange) continue
 
         try {
           const newFile = await applyImageTransforms(img, {
@@ -329,6 +332,8 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
             rotation: 0,
             flipH: false,
             flipV: false,
+            hueRotate: adj.hueRotate,
+            saturate: adj.saturate,
           })
           const newPreviewUrl = URL.createObjectURL(newFile)
 
