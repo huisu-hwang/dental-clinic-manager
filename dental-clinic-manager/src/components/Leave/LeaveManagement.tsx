@@ -513,6 +513,11 @@ function AllEmployeeBalances() {
   const [loading, setLoading] = useState(true)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedUserRequests, setSelectedUserRequests] = useState<any[]>([])
+  const [selectedUserHolidayDetails, setSelectedUserHolidayDetails] = useState<{
+    publicHolidays: Array<{ date: string; name: string }>
+    clinicHolidays: Array<{ holiday_name: string; start_date: string; deduct_days: number }>
+    clinicHolidayAdjustments: Array<{ reason: string; days: number }>
+  } | null>(null)
   const [loadingRequests, setLoadingRequests] = useState(false)
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
   const [editingRequest, setEditingRequest] = useState<EditingRequest | null>(null)
@@ -539,6 +544,7 @@ function AllEmployeeBalances() {
     if (selectedUserId === userId) {
       setSelectedUserId(null)
       setSelectedUserRequests([])
+      setSelectedUserHolidayDetails(null)
       setEditingRequest(null)
       return
     }
@@ -546,9 +552,24 @@ function AllEmployeeBalances() {
     setSelectedUserId(userId)
     setLoadingRequests(true)
     setEditingRequest(null)
+    setSelectedUserHolidayDetails(null)
 
-    const result = await leaveService.getAllRequests({ userId, status: 'approved' })
-    setSelectedUserRequests(result.data || [])
+    const item = balances.find(b => b.user_id === userId)
+
+    const [requestsResult, holidayDetailsResult] = await Promise.all([
+      leaveService.getAllRequests({ userId, status: 'approved' }),
+      item?.leave_period_start && item?.leave_period_end
+        ? leaveService.getHolidayDeductionDetails({
+            userId,
+            periodStart: item.leave_period_start,
+            periodEnd: item.leave_period_end,
+            periodYear: parseInt(item.leave_period_start.substring(0, 4)),
+          })
+        : Promise.resolve({ publicHolidays: [], clinicHolidays: [], clinicHolidayAdjustments: [], error: null }),
+    ])
+
+    setSelectedUserRequests(requestsResult.data || [])
+    setSelectedUserHolidayDetails(holidayDetailsResult)
     setLoadingRequests(false)
   }
 
@@ -997,6 +1018,98 @@ function AllEmployeeBalances() {
                             <p className="text-sm text-at-text-weak text-center py-4">
                               승인된 연차 내역이 없습니다.
                             </p>
+                          )}
+
+                          {/* 법정 공휴일 차감 내역 */}
+                          {!loadingRequests && selectedUserHolidayDetails && selectedUserHolidayDetails.publicHolidays.length > 0 && (
+                            <div className="mt-4 pt-3 border-t border-at-border">
+                              <h5 className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: '#6366F1' }}>
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#6366F1' }}></span>
+                                법정 공휴일 차감 내역 ({selectedUserHolidayDetails.publicHolidays.length}건)
+                              </h5>
+                              <div className="space-y-1">
+                                {selectedUserHolidayDetails.publicHolidays.map(({ date, name }) => (
+                                  <div
+                                    key={date}
+                                    className="flex items-center justify-between rounded-lg px-3 py-2 border"
+                                    style={{ backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span
+                                        className="text-xs px-2 py-0.5 rounded font-medium"
+                                        style={{ backgroundColor: '#C7D2FE', color: '#4338CA' }}
+                                      >
+                                        공휴일
+                                      </span>
+                                      <span className="text-sm text-at-text-secondary">{formatDate(date)}</span>
+                                      <span className="text-sm text-at-text-weak">{name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-semibold" style={{ color: '#6366F1' }}>1일</span>
+                                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-at-success-bg text-at-success">사용 완료</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 병원 지정 휴무일 차감 내역 */}
+                          {!loadingRequests && selectedUserHolidayDetails && (
+                            selectedUserHolidayDetails.clinicHolidays.length > 0 ||
+                            selectedUserHolidayDetails.clinicHolidayAdjustments.length > 0
+                          ) && (
+                            <div className="mt-3">
+                              <h5 className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: '#F97316' }}>
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#F97316' }}></span>
+                                {`병원 지정 휴무일 차감 내역 (${selectedUserHolidayDetails.clinicHolidays.length + selectedUserHolidayDetails.clinicHolidayAdjustments.length}건)`}
+                              </h5>
+                              <div className="space-y-1">
+                                {selectedUserHolidayDetails.clinicHolidays.map((holiday, i) => (
+                                  <div
+                                    key={`ch-${i}`}
+                                    className="flex items-center justify-between rounded-lg px-3 py-2 border"
+                                    style={{ backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span
+                                        className="text-xs px-2 py-0.5 rounded font-medium"
+                                        style={{ backgroundColor: '#FED7AA', color: '#C2410C' }}
+                                      >
+                                        휴무일
+                                      </span>
+                                      <span className="text-sm text-at-text-secondary">{formatDate(holiday.start_date)}</span>
+                                      <span className="text-sm text-at-text-weak">{holiday.holiday_name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-semibold" style={{ color: '#F97316' }}>{holiday.deduct_days}일</span>
+                                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-at-success-bg text-at-success">사용 완료</span>
+                                    </div>
+                                  </div>
+                                ))}
+                                {selectedUserHolidayDetails.clinicHolidayAdjustments.map((adj, i) => (
+                                  <div
+                                    key={`adj-${i}`}
+                                    className="flex items-center justify-between rounded-lg px-3 py-2 border"
+                                    style={{ backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <span
+                                        className="text-xs px-2 py-0.5 rounded font-medium"
+                                        style={{ backgroundColor: '#FED7AA', color: '#C2410C' }}
+                                      >
+                                        휴무일
+                                      </span>
+                                      <span className="text-sm text-at-text-weak">{adj.reason.replace('[병원휴무]', '').trim()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-semibold" style={{ color: '#F97316' }}>{adj.days}일</span>
+                                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-at-success-bg text-at-success">사용 완료</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </td>
