@@ -255,9 +255,9 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
   }
 
   return (
-    <div className="space-y-6">
-      {/* 탭 네비게이션 */}
-      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+    <div>
+      {/* 탭 네비게이션 - 스크롤 시 고정 */}
+      <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 -mx-4 sm:-mx-6 flex flex-wrap gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -278,6 +278,8 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
           </button>
         ))}
       </div>
+
+      <div className="space-y-6 pt-6">
 
       {/* 에러 메시지 */}
       {error && (
@@ -434,6 +436,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
         show={toast.show}
         onClose={() => setToast(prev => ({ ...prev, show: false }))}
       />
+      </div>
     </div>
   )
 }
