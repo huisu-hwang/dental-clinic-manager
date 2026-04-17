@@ -7,13 +7,13 @@ import {
   PhotoIcon,
   CheckCircleIcon,
   PencilIcon,
-  EyeIcon,
   XMarkIcon,
   PlusIcon,
   CloudArrowUpIcon,
-  ArrowLeftIcon,
   CalendarDaysIcon,
-  MagnifyingGlassIcon,
+  AdjustmentsHorizontalIcon,
+  PaintBrushIcon,
+  MegaphoneIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -38,6 +38,33 @@ import ClinicalPhotoEditor from '@/components/marketing/clinical/ClinicalPhotoEd
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
+
+// ── 섹션 헤더 (연차관리 페이지와 동일한 패턴) ──
+function SectionHeader({
+  number,
+  title,
+  icon: Icon,
+  iconColor = 'text-at-accent',
+  iconBg = 'bg-at-accent-light',
+}: {
+  number: number
+  title: string
+  icon: React.ElementType
+  iconColor?: string
+  iconBg?: string
+}) {
+  return (
+    <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+      <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${iconBg} ${iconColor}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <h3 className="text-base font-semibold text-at-text">
+        <span className="text-at-accent mr-1">{number}.</span>
+        {title}
+      </h3>
+    </div>
+  )
+}
 
 interface NewPostFormProps {
   onClose: () => void
@@ -410,72 +437,62 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   }, [editingImageIndex, editingImage, generatedResult, editedBody])
 
   return (
-    <div className="max-w-4xl space-y-6">
-      {/* 뒤로가기 헤더 */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onClose}
-          className="p-2 text-at-text hover:text-at-text transition-colors rounded-xl hover:bg-at-surface-alt"
-        >
-          <ArrowLeftIcon className="h-5 w-5" />
-        </button>
-        <h2 className="text-lg font-bold text-at-text">새 글 작성</h2>
-      </div>
+    <div className="max-w-4xl space-y-8">
 
-      {/* 기본 정보 */}
-      <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-4 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-        <h2 className="text-lg font-semibold text-at-text">기본 정보</h2>
-
-        <div>
-          <label className="block text-sm font-medium text-at-text mb-1">주제 *</label>
-          <input
-            type="text"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="예: 스케일링 후 주의사항"
-            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-at-text mb-1">타겟 키워드 *</label>
-          <input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="예: 스케일링 주의사항"
-            className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-at-text mb-1">글 유형</label>
-            <select
-              value={postType}
-              onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
-              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
-            >
-              {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
+      {/* ── 1. 기본 정보 ── */}
+      <section>
+        <SectionHeader number={1} title="기본 정보" icon={SparklesIcon} />
+        <fieldset disabled={isGenerating} className={`space-y-4 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">주제 <span className="text-at-error">*</span></label>
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="예: 스케일링 후 주의사항"
+                className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">타겟 키워드 <span className="text-at-error">*</span></label>
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="예: 스케일링 주의사항"
+                className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+              />
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-at-text mb-1">어투</label>
-            <select
-              value={tone}
-              onChange={(e) => setTone(e.target.value as ToneType)}
-              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
-            >
-              {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
-                <option key={value} value={value}>{label} - {description}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">글 유형</label>
+              <select
+                value={postType}
+                onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
+                className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+              >
+                {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">어투</label>
+              <select
+                value={tone}
+                onChange={(e) => setTone(e.target.value as ToneType)}
+                className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+              >
+                {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
+                  <option key={value} value={value}>{label} — {description}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
-      </fieldset>
+        </fieldset>
+      </section>
 
       {/* 임상글 폼 (postType === 'clinical' 일 때만 표시) */}
       {postType === 'clinical' && (
@@ -487,210 +504,148 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         </fieldset>
       )}
 
-      {/* 품질 옵션 (임상글이 아닐 때만 - 임상글은 ClinicalForm 내에서 옵션 제공) */}
+      {/* ── 2. 품질 옵션 (임상글이 아닐 때만) ── */}
       {postType !== 'clinical' && (
-      <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-        <h2 className="text-lg font-semibold text-at-text">품질 옵션</h2>
-        <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-          <input
-            type="checkbox"
-            checked={useResearch}
-            onChange={(e) => setUseResearch(e.target.checked)}
-            className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
-          />
-          <div>
-            <span className="text-sm font-medium text-at-text">논문 인용</span>
-            <span className="text-xs text-at-text ml-2">관련 학술 논문을 검색하여 인용</span>
-          </div>
-        </label>
-        <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-          <input
-            type="checkbox"
-            checked={factCheck}
-            onChange={(e) => setFactCheck(e.target.checked)}
-            className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
-          />
-          <div>
-            <span className="text-sm font-medium text-at-text">팩트체크</span>
-            <span className="text-xs text-at-text ml-2">생성된 글의 사실 여부를 검증</span>
-          </div>
-        </label>
-        <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-          <input
-            type="checkbox"
-            checked={useSeoAnalysis}
-            onChange={(e) => setUseSeoAnalysis(e.target.checked)}
-            className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
-          />
-          <div>
-            <span className="text-sm font-medium text-at-text">SEO 키워드 분석</span>
-            <span className="text-xs text-at-text ml-2">통합 워커로 경쟁 글 분석 후 핵심 키워드 자동 반영</span>
-          </div>
-        </label>
-      </fieldset>
+        <section>
+          <SectionHeader number={2} title="품질 옵션" icon={AdjustmentsHorizontalIcon} iconColor="text-amber-600" iconBg="bg-amber-50" />
+          <fieldset disabled={isGenerating} className={`space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label className={`flex items-start gap-3 p-4 rounded-xl border border-at-border hover:bg-at-surface-alt transition-colors ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                <input type="checkbox" checked={useResearch} onChange={(e) => setUseResearch(e.target.checked)} className="mt-0.5 w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed" />
+                <div>
+                  <p className="text-sm font-medium text-at-text">논문 인용</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">관련 학술 논문을 검색하여 인용</p>
+                </div>
+              </label>
+              <label className={`flex items-start gap-3 p-4 rounded-xl border border-at-border hover:bg-at-surface-alt transition-colors ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                <input type="checkbox" checked={factCheck} onChange={(e) => setFactCheck(e.target.checked)} className="mt-0.5 w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed" />
+                <div>
+                  <p className="text-sm font-medium text-at-text">팩트체크</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">생성된 글의 사실 여부를 검증</p>
+                </div>
+              </label>
+              <label className={`flex items-start gap-3 p-4 rounded-xl border border-at-border hover:bg-at-surface-alt transition-colors ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                <input type="checkbox" checked={useSeoAnalysis} onChange={(e) => setUseSeoAnalysis(e.target.checked)} className="mt-0.5 w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed" />
+                <div>
+                  <p className="text-sm font-medium text-at-text">SEO 분석</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">경쟁 글 분석 후 핵심 키워드 자동 반영</p>
+                </div>
+              </label>
+            </div>
+          </fieldset>
+        </section>
       )}
 
-      {/* 이미지 스타일 옵션 (임상글이 아닐 때만 - 임상글은 실제 사진 사용) */}
+      {/* ── 3. 이미지 옵션 (임상글이 아닐 때만) ── */}
       {postType !== 'clinical' && (
-      <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-        <h2 className="text-lg font-semibold text-at-text">이미지 옵션</h2>
-        <p className="text-xs text-at-text">이미지 개수와 스타일을 설정하세요</p>
+        <section>
+          <SectionHeader number={3} title="이미지 옵션" icon={PaintBrushIcon} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
+          <fieldset disabled={isGenerating} className={`space-y-5 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+            <div>
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">이미지 개수</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[0, 1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} type="button" onClick={() => setImageCount(n)}
+                    className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${imageCount === n ? 'bg-at-accent text-white' : 'bg-at-surface-alt text-at-text-secondary border border-at-border hover:bg-at-border'}`}>
+                    {n}
+                  </button>
+                ))}
+                <span className="text-xs text-at-text-weak ml-1">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
+              </div>
+            </div>
 
-        {/* 이미지 개수 */}
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-at-text min-w-[80px]">이미지 개수</label>
-          <div className="flex items-center gap-2">
-            {[0, 1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setImageCount(n)}
-                className={`w-8 h-8 rounded-xl text-sm font-medium transition-colors ${
-                  imageCount === n
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-at-surface-alt text-at-text hover:bg-at-border'
-                }`}
-              >
-                {n}
-              </button>
+            {imageCount > 0 && (
+              <>
+                <div className="border-t border-at-border" />
+                <div className="space-y-2.5">
+                  <label className="block text-sm font-medium text-at-text-secondary">이미지 스타일</label>
+                  {(Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
+                    ([value, { label, description }]) => (
+                      <label key={value} className="flex items-start gap-3 cursor-pointer">
+                        <input type="radio" name="imageStyle" value={value} checked={imageStyle === value}
+                          onChange={() => { setImageStyle(value); if (value !== 'use_own_image') { setReferenceImageBase64(''); setReferenceImagePreview('') } }}
+                          className="mt-0.5 w-4 h-4 text-at-accent border-at-border focus:ring-at-accent" />
+                        <div>
+                          <span className="text-sm font-medium text-at-text">{label}</span>
+                          <span className="text-xs text-at-text-weak ml-2">{description}</span>
+                        </div>
+                      </label>
+                    )
+                  )}
+                </div>
+
+                {imageStyle === 'use_own_image' && (
+                  <div className="ml-7 p-4 bg-at-surface-alt rounded-xl border border-at-border space-y-2">
+                    <label className="block text-xs font-medium text-at-text-secondary">참조 이미지 업로드</label>
+                    <div className="flex items-center gap-3">
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-at-border text-at-text-secondary rounded-lg hover:bg-white transition-colors text-xs font-medium">
+                        <PhotoIcon className="h-4 w-4" />
+                        이미지 선택
+                        <input type="file" accept="image/*" className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 5 * 1024 * 1024) { setError('이미지 파일은 5MB 이하만 업로드 가능합니다.'); return }
+                            const reader = new FileReader()
+                            reader.onload = () => {
+                              const result = reader.result as string
+                              setReferenceImagePreview(result)
+                              setReferenceImageBase64(result.split(',')[1] || '')
+                            }
+                            reader.readAsDataURL(file)
+                          }} />
+                      </label>
+                      {referenceImagePreview && (
+                        <button onClick={() => { setReferenceImageBase64(''); setReferenceImagePreview('') }} className="text-xs text-at-error hover:underline">삭제</button>
+                      )}
+                    </div>
+                    {referenceImagePreview && (
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border border-at-border">
+                        <img src={referenceImagePreview} alt="참조 이미지" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    {!referenceImageBase64 && <p className="text-xs text-at-warning">인물 이미지를 업로드해주세요</p>}
+                  </div>
+                )}
+
+                <div className="border-t border-at-border" />
+                <div>
+                  <label className="block text-sm font-medium text-at-text-secondary mb-2">시각적 스타일</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {(Object.entries(IMAGE_VISUAL_STYLE_LABELS) as [ImageVisualStyle, { label: string; description: string; emoji: string }][]).map(
+                      ([value, { label, description, emoji }]) => (
+                        <button key={value} type="button" onClick={() => setImageVisualStyle(value)}
+                          className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${imageVisualStyle === value ? 'border-at-accent bg-at-accent-light' : 'border-at-border hover:bg-at-surface-alt'}`}>
+                          <span className="text-lg">{emoji}</span>
+                          <span className={`text-xs font-medium ${imageVisualStyle === value ? 'text-at-accent' : 'text-at-text-secondary'}`}>{label}</span>
+                          <span className="text-[10px] text-at-text-weak leading-tight">{description}</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </fieldset>
+        </section>
+      )}
+
+      {/* ── 4. 배포 플랫폼 ── */}
+      <section>
+        <SectionHeader number={4} title="배포 플랫폼" icon={MegaphoneIcon} iconColor="text-purple-600" iconBg="bg-purple-50" />
+        <fieldset disabled={isGenerating} className={`transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (
+              <label key={key} className={`flex items-center gap-2.5 p-3.5 rounded-xl border transition-colors ${platforms[key] ? 'border-at-accent bg-at-accent-light' : 'border-at-border hover:bg-at-surface-alt'} ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                <input type="checkbox" checked={platforms[key]} onChange={(e) => setPlatforms({ ...platforms, [key]: e.target.checked })} className="w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent" />
+                <span className={`text-xs font-medium ${platforms[key] ? 'text-at-accent' : 'text-at-text-secondary'}`}>
+                  {key === 'naverBlog' ? '네이버 블로그' : key === 'instagram' ? '인스타그램' : key === 'facebook' ? '페이스북' : '쓰레드'}
+                </span>
+              </label>
             ))}
           </div>
-          <span className="text-xs text-at-text">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
-        </div>
-
-        {imageCount > 0 && <hr className="border-at-border" />}
-        {imageCount > 0 && (Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
-          ([value, { label, description }]) => (
-            <label key={value} className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="imageStyle"
-                value={value}
-                checked={imageStyle === value}
-                onChange={() => {
-                  setImageStyle(value)
-                  if (value !== 'use_own_image') {
-                    setReferenceImageBase64('')
-                    setReferenceImagePreview('')
-                  }
-                }}
-                className="mt-0.5 w-4 h-4 text-indigo-600 border-at-border focus:ring-at-accent"
-              />
-              <div>
-                <span className="text-sm font-medium text-at-text">{label}</span>
-                <span className="text-xs text-at-text ml-2">{description}</span>
-              </div>
-            </label>
-          )
-        )}
-
-        {/* 참조 이미지 업로드 (본인 이미지 활용 선택 시) */}
-        {imageCount > 0 && imageStyle === 'use_own_image' && (
-          <div className="ml-7 mt-2 space-y-2">
-            <label className="block text-xs font-medium text-at-text">참조 이미지 업로드</label>
-            <div className="flex items-center gap-3">
-              <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors text-xs font-medium">
-                <PhotoIcon className="h-4 w-4" />
-                이미지 선택
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    if (file.size > 5 * 1024 * 1024) {
-                      setError('이미지 파일은 5MB 이하만 업로드 가능합니다.')
-                      return
-                    }
-                    const reader = new FileReader()
-                    reader.onload = () => {
-                      const result = reader.result as string
-                      setReferenceImagePreview(result)
-                      // data:image/...;base64, 접두사 제거하여 순수 base64만 저장
-                      const base64 = result.split(',')[1] || ''
-                      setReferenceImageBase64(base64)
-                    }
-                    reader.readAsDataURL(file)
-                  }}
-                />
-              </label>
-              {referenceImagePreview && (
-                <button
-                  onClick={() => {
-                    setReferenceImageBase64('')
-                    setReferenceImagePreview('')
-                  }}
-                  className="text-xs text-red-400 hover:text-at-error transition-colors"
-                >
-                  삭제
-                </button>
-              )}
-            </div>
-            {referenceImagePreview && (
-              <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-at-border">
-                <img
-                  src={referenceImagePreview}
-                  alt="참조 이미지"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-            {imageStyle === 'use_own_image' && !referenceImageBase64 && (
-              <p className="text-xs text-amber-500">인물 이미지를 업로드해주세요</p>
-            )}
-          </div>
-        )}
-
-        {/* 시각적 스타일 */}
-        {imageCount > 0 && (
-          <>
-            <hr className="border-at-border" />
-            <label className="text-sm font-medium text-at-text">시각적 스타일</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {(Object.entries(IMAGE_VISUAL_STYLE_LABELS) as [ImageVisualStyle, { label: string; description: string; emoji: string }][]).map(
-                ([value, { label, description, emoji }]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setImageVisualStyle(value)}
-                    className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all ${
-                      imageVisualStyle === value
-                        ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
-                        : 'border-at-border hover:border-at-border hover:bg-at-surface-alt'
-                    }`}
-                  >
-                    <span className="text-lg">{emoji}</span>
-                    <span className={`text-sm font-medium ${imageVisualStyle === value ? 'text-indigo-700' : 'text-at-text'}`}>{label}</span>
-                    <span className="text-[11px] text-at-text leading-tight">{description}</span>
-                  </button>
-                )
-              )}
-            </div>
-          </>
-        )}
-      </fieldset>
-      )}
-
-      {/* 배포 플랫폼 */}
-      <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-        <h2 className="text-lg font-semibold text-at-text">배포 플랫폼</h2>
-        {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (
-          <label key={key} className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-            <input
-              type="checkbox"
-              checked={platforms[key]}
-              onChange={(e) => setPlatforms({ ...platforms, [key]: e.target.checked })}
-              className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
-            />
-            <span className="text-sm text-at-text">
-              {key === 'naverBlog' ? '네이버 블로그' :
-               key === 'instagram' ? '인스타그램' :
-               key === 'facebook' ? '페이스북' : '쓰레드'}
-            </span>
-          </label>
-        ))}
-      </fieldset>
+        </fieldset>
+      </section>
 
       {/* 에러 */}
       {error && (
@@ -749,13 +704,19 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         </button>
       )}
 
-      {/* 생성 결과 */}
+      {/* ── 5. 생성 결과 ── */}
       {generatedResult && (
-        <div className="bg-white rounded-xl border border-at-border p-6 space-y-5">
+        <section className="space-y-5">
           {/* 결과 헤더 */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-at-text">생성 결과</h2>
+          <div className="flex items-center justify-between pb-3 mb-4 border-b border-at-border">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600">
+                <DocumentCheckIcon className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-semibold text-at-text">
+                <span className="text-at-accent mr-1">5.</span>
+                생성 결과
+              </h3>
               {savedItemId && !hasUnsavedChanges && (
                 <span className="flex items-center gap-1 text-xs text-at-success bg-at-success-bg px-2 py-0.5 rounded-full">
                   <CheckCircleIcon className="h-3.5 w-3.5" />
@@ -765,13 +726,13 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               {hasUnsavedChanges && (
                 <span className="flex items-center gap-1 text-xs text-at-warning bg-at-warning-bg px-2 py-0.5 rounded-full">
                   <PencilIcon className="h-3.5 w-3.5" />
-                  미저장 변경사항
+                  미저장
                 </span>
               )}
             </div>
-            <div className="flex gap-3 text-xs text-at-text">
-              <span>글자수: {generatedResult.wordCount}자</span>
-              <span>키워드: {generatedResult.keywordCount}회</span>
+            <div className="flex gap-3 text-xs text-at-text-weak">
+              <span>{generatedResult.wordCount}자</span>
+              <span>키워드 {generatedResult.keywordCount}회</span>
             </div>
           </div>
 
@@ -1043,7 +1004,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
               />
             )}
           </div>
-        </div>
+        </section>
       )}
     </div>
   )
