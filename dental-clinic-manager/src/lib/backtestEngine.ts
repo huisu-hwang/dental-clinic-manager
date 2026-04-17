@@ -50,10 +50,17 @@ export interface BacktestParams {
   ticker: string
 }
 
+export interface BuyHoldResult {
+  totalReturn: number
+  annualizedReturn: number
+  equityCurve: EquityCurvePoint[]
+}
+
 export interface BacktestResult {
   metrics: BacktestMetrics
   trades: BacktestTrade[]
   equityCurve: EquityCurvePoint[]
+  buyHold: BuyHoldResult
 }
 
 interface SimPosition {
@@ -214,7 +221,10 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
   // 5. 메트릭 계산
   const metrics = calculateMetrics(trades, equityCurve, initialCapital)
 
-  return { metrics, trades, equityCurve }
+  // 6. Buy & Hold 비교 계산
+  const buyHold = calculateBuyHold(prices, initialCapital, commissionRate)
+
+  return { metrics, trades, equityCurve, buyHold }
 }
 
 // ============================================
@@ -356,6 +366,55 @@ function round4(n: number): number {
   return Math.round(n * 10000) / 10000
 }
 
+/**
+ * Buy & Hold 수익률 계산
+ * 첫날 시가에 전액 매수 → 마지막날 종가에 매도
+ */
+function calculateBuyHold(
+  prices: OHLCV[],
+  initialCapital: number,
+  commissionRate: { buyCommission: number; sellCommission: number; sellTax: number }
+): BuyHoldResult {
+  if (prices.length < 2) {
+    return { totalReturn: 0, annualizedReturn: 0, equityCurve: [] }
+  }
+
+  const entryPrice = prices[0].open
+  const buyFee = initialCapital * commissionRate.buyCommission
+  const quantity = Math.floor((initialCapital - buyFee) / entryPrice)
+
+  if (quantity <= 0) {
+    return { totalReturn: 0, annualizedReturn: 0, equityCurve: [] }
+  }
+
+  const investedAmount = quantity * entryPrice
+  const remainingCash = initialCapital - investedAmount - (investedAmount * commissionRate.buyCommission)
+
+  // 일별 자산곡선
+  const equityCurve: EquityCurvePoint[] = prices.map(bar => ({
+    date: bar.date,
+    value: Math.round(remainingCash + quantity * bar.close),
+  }))
+
+  // 최종 매도
+  const lastPrice = prices[prices.length - 1].close
+  const sellAmount = quantity * lastPrice
+  const sellFee = sellAmount * (commissionRate.sellCommission + commissionRate.sellTax)
+  const finalEquity = remainingCash + sellAmount - sellFee
+
+  const totalReturn = ((finalEquity - initialCapital) / initialCapital) * 100
+  const years = prices.length / 252
+  const annualizedReturn = years > 0
+    ? (Math.pow(finalEquity / initialCapital, 1 / years) - 1) * 100
+    : 0
+
+  return {
+    totalReturn: round4(totalReturn),
+    annualizedReturn: round4(annualizedReturn),
+    equityCurve,
+  }
+}
+
 function emptyResult(): BacktestResult {
   return {
     metrics: {
@@ -374,5 +433,6 @@ function emptyResult(): BacktestResult {
     },
     trades: [],
     equityCurve: [],
+    buyHold: { totalReturn: 0, annualizedReturn: 0, equityCurve: [] },
   }
 }

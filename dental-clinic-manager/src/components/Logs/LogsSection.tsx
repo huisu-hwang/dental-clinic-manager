@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X, Banknote } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog, CashRegisterLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
@@ -18,17 +18,16 @@ interface LogsSectionProps {
   canDelete: boolean
 }
 
-const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
-  <div className="flex items-center space-x-2 sm:space-x-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
-    <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-at-accent-light text-at-accent">
-      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-    </div>
-    <h3 className="text-sm sm:text-base font-semibold text-at-text">
-      <span className="text-at-accent mr-1">{number}.</span>
-      {title}
-    </h3>
-  </div>
-)
+type TabKey = 'daily' | 'consult' | 'gift' | 'inventory' | 'cash' | 'notes'
+
+const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
+  { key: 'daily',     label: '일일 보고',   icon: FileText },
+  { key: 'consult',   label: '상담 기록',   icon: MessageSquare },
+  { key: 'gift',      label: '선물/리뷰',   icon: Gift },
+  { key: 'inventory', label: '재고 기록',   icon: Package },
+  { key: 'cash',      label: '현금 출납',   icon: Banknote },
+  { key: 'notes',     label: '특이사항',    icon: FileText },
+]
 
 export default function LogsSection({
   dailyReports,
@@ -41,48 +40,34 @@ export default function LogsSection({
   onUpdateConsultStatus,
   canDelete
 }: LogsSectionProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>('daily')
   const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete'>('all')
-  const [consultSearch, setConsultSearch] = useState('')  // 환자명 검색
+  const [consultSearch, setConsultSearch] = useState('')
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
-  const [giftSearch, setGiftSearch] = useState('')  // 선물 기록 환자명 검색
+  const [giftSearch, setGiftSearch] = useState('')
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set())
 
-  // 상담 상세 기록 섹션 참조
-  const consultLogsRef = useRef<HTMLDivElement>(null)
-
-  // URL 해시가 #consult-logs인 경우 해당 섹션으로 스크롤
+  // URL 해시가 #consult-logs인 경우 상담 탭으로 전환
   useEffect(() => {
     const handleHashScroll = () => {
       if (typeof window !== 'undefined' && window.location.hash === '#consult-logs') {
-        // 약간의 지연 후 스크롤 (DOM 렌더링 완료 대기)
-        setTimeout(() => {
-          consultLogsRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          })
-          // 스크롤 후 해시 제거 (히스토리에 남지 않도록)
-          window.history.replaceState(null, '', window.location.pathname + window.location.search)
-        }, 100)
+        setActiveTab('consult')
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
       }
     }
-
     handleHashScroll()
-
-    // hashchange 이벤트 리스너 (SPA 내 해시 변경 시)
     window.addEventListener('hashchange', handleHashScroll)
     return () => window.removeEventListener('hashchange', handleHashScroll)
   }, [])
 
   const handleUpdateStatus = async (consultId: number) => {
     if (!onUpdateConsultStatus || updatingId !== null) return
-
     setUpdatingId(consultId)
     try {
       const result = await onUpdateConsultStatus(consultId)
       if (result.success) {
         setRecentlyUpdatedIds(prev => new Set(prev).add(consultId))
-        // 5초 후 체크 아이콘 제거
         setTimeout(() => {
           setRecentlyUpdatedIds(prev => {
             const newSet = new Set(prev)
@@ -93,7 +78,7 @@ export default function LogsSection({
       } else if (result.error) {
         await appAlert(result.error)
       }
-    } catch (error) {
+    } catch {
       await appAlert('상태 변경 중 오류가 발생했습니다.')
     } finally {
       setUpdatingId(null)
@@ -101,128 +86,116 @@ export default function LogsSection({
   }
 
   const filteredConsultLogs = consultLogs.filter(log => {
-    // 환자명 검색 필터
     const searchTerm = consultSearch.trim().toLowerCase()
-    if (searchTerm && !log.patient_name.toLowerCase().includes(searchTerm)) {
-      return false
-    }
-    // 진행 상태 필터
+    if (searchTerm && !log.patient_name.toLowerCase().includes(searchTerm)) return false
     if (consultFilter === 'all') return true
     if (consultFilter === 'completed') return log.consult_status === 'O'
     if (consultFilter === 'incomplete') return log.consult_status === 'X'
     return true
   })
 
-  // 선물 기록 환자명/비고 필터링
   const filteredGiftLogs = giftLogs.filter(log => {
     const searchTerm = giftSearch.trim().toLowerCase()
     if (searchTerm) {
       const matchesPatientName = log.patient_name.toLowerCase().includes(searchTerm)
       const matchesNotes = log.notes?.toLowerCase().includes(searchTerm) || false
-      if (!matchesPatientName && !matchesNotes) {
-        return false
-      }
+      if (!matchesPatientName && !matchesNotes) return false
     }
     return true
   })
 
   const sortedGiftLogs = [...filteredGiftLogs].sort((a, b) => {
-    if (giftSort === 'type') {
-      return a.gift_type.localeCompare(b.gift_type)
-    }
-    if (giftSort === 'date') {
-      return b.date.localeCompare(a.date)
-    }
+    if (giftSort === 'type') return a.gift_type.localeCompare(b.gift_type)
+    if (giftSort === 'date') return b.date.localeCompare(a.date)
     return 0
   })
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between pb-4 border-b border-at-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
-            <FileText className="w-4 h-4 text-at-accent" />
-          </div>
-          <h2 className="text-lg font-bold text-at-text">상세 기록</h2>
-        </div>
+    <div className="space-y-6">
+      {/* 서브탭 */}
+      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+        {tabs.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
+              activeTab === key
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+            }`}
+          >
+            <Icon className="w-4 h-4 mr-2" />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* 콘텐츠 영역 */}
-      <div className="space-y-4 sm:space-y-6">
-        {/* 일일 보고 종합 기록 */}
-        <div>
-          <SectionHeader number={1} title="일일 보고 종합 기록" icon={FileText} />
-          <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
-            <div className="max-h-96 overflow-y-auto">
-              <table className="w-full text-xs sm:text-sm text-left min-w-[600px]">
-                <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
-                  <tr>
-                    <th className="p-2 sm:p-3 font-medium">날짜</th>
-                    <th className="p-2 sm:p-3 font-medium">네이버 리뷰 수</th>
-                    <th className="p-2 sm:p-3 font-medium">상담 진행</th>
-                    <th className="p-2 sm:p-3 font-medium">상담 보류</th>
-                    <th className="p-2 sm:p-3 font-medium">리콜 수</th>
-                    <th className="p-2 sm:p-3 font-medium">예약 수</th>
-                    <th className="p-2 sm:p-3 font-medium">사용</th>
+      {/* 탭 콘텐츠 */}
+
+      {/* 1. 일일 보고 종합 기록 */}
+      {activeTab === 'daily' && (
+        <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
+            <table className="w-full text-xs sm:text-sm text-left min-w-[600px]">
+              <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
+                <tr>
+                  <th className="p-2 sm:p-3 font-medium">날짜</th>
+                  <th className="p-2 sm:p-3 font-medium">네이버 리뷰 수</th>
+                  <th className="p-2 sm:p-3 font-medium">상담 진행</th>
+                  <th className="p-2 sm:p-3 font-medium">상담 보류</th>
+                  <th className="p-2 sm:p-3 font-medium">리콜 수</th>
+                  <th className="p-2 sm:p-3 font-medium">예약 수</th>
+                  <th className="p-2 sm:p-3 font-medium">사용</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyReports.map(report => (
+                  <tr key={report.id} className="border-b border-at-border hover:bg-at-surface-hover">
+                    <td className="p-2 sm:p-3">{report.date}</td>
+                    <td className="p-2 sm:p-3">{report.naver_review_count}</td>
+                    <td className="p-2 sm:p-3">{report.consult_proceed}</td>
+                    <td className="p-2 sm:p-3">{report.consult_hold}</td>
+                    <td className="p-2 sm:p-3">{report.recall_count}</td>
+                    <td className="p-2 sm:p-3">{report.recall_booking_count}</td>
+                    <td className="p-2 sm:p-3">
+                      <div className="flex gap-1">
+                        {onRecalculateStats && (
+                          <button
+                            onClick={() => onRecalculateStats(report.date)}
+                            className="text-at-accent hover:text-at-accent text-xs px-1.5 sm:px-2 py-1 border border-at-accent rounded-lg hover:bg-at-accent-light"
+                            title="상담 통계 재계산"
+                          >
+                            재계산
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={async () => {
+                              if (await appConfirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
+                                onDeleteReport(report.date)
+                              }
+                            }}
+                            className="text-at-error hover:text-at-error text-xs px-1.5 sm:px-2 py-1 border border-at-border rounded-lg hover:bg-at-error-bg"
+                            title="전체 기록 삭제"
+                          >
+                            삭제
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {dailyReports.map(report => (
-                    <tr key={report.id} className="border-b border-at-border hover:bg-at-surface-hover">
-                      <td className="p-2 sm:p-3">{report.date}</td>
-                      <td className="p-2 sm:p-3">{report.naver_review_count}</td>
-                      <td className="p-2 sm:p-3">{report.consult_proceed}</td>
-                      <td className="p-2 sm:p-3">{report.consult_hold}</td>
-                      <td className="p-2 sm:p-3">{report.recall_count}</td>
-                      <td className="p-2 sm:p-3">{report.recall_booking_count}</td>
-                      <td className="p-2 sm:p-3">
-                        <div className="flex gap-1">
-                          {onRecalculateStats && (
-                            <button
-                              onClick={() => onRecalculateStats(report.date)}
-                              className="text-at-accent hover:text-at-accent text-xs px-1.5 sm:px-2 py-1 border border-at-accent rounded-lg hover:bg-at-accent-light"
-                              title="상담 통계 재계산"
-                            >
-                              재계산
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              onClick={async () => {
-                                if (await appConfirm(`${report.date}의 모든 기록을 삭제하시겠습니까? 재고는 복구되지 않습니다.`)) {
-                                  onDeleteReport(report.date)
-                                }
-                              }}
-                              className="text-at-error hover:text-at-error text-xs px-1.5 sm:px-2 py-1 border border-at-border rounded-lg hover:bg-at-error-bg"
-                              title="전체 기록 삭제"
-                            >
-                              삭제
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
 
-        {/* 상담 상세 기록 */}
-        <div ref={consultLogsRef} id="consult-logs" className="scroll-mt-20">
-          <div className="flex flex-col gap-2 sm:gap-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
+      {/* 2. 상담 상세 기록 */}
+      {activeTab === 'consult' && (
+        <div>
+          <div className="flex flex-col gap-2 sm:gap-3 mb-3 sm:mb-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-at-accent-light text-at-accent">
-                  <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-                <h3 className="text-sm sm:text-base font-semibold text-at-text">
-                  <span className="text-at-accent mr-1">2.</span>
-                  상담 상세 기록
-                </h3>
-              </div>
               <div className="flex gap-1 sm:gap-2 flex-wrap">
                 <button
                   onClick={() => setConsultFilter('all')}
@@ -256,7 +229,6 @@ export default function LogsSection({
                 </button>
               </div>
             </div>
-            {/* 환자명 검색 */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1 max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-at-text-weak" />
@@ -285,7 +257,7 @@ export default function LogsSection({
             </div>
           </div>
           <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
               <table className="w-full text-xs sm:text-sm text-left min-w-[700px]">
                 <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
                   <tr>
@@ -355,20 +327,13 @@ export default function LogsSection({
             </div>
           </div>
         </div>
+      )}
 
-        {/* 선물 증정 및 리뷰 상세 기록 */}
+      {/* 3. 선물 증정 및 리뷰 상세 기록 */}
+      {activeTab === 'gift' && (
         <div>
-          <div className="flex flex-col gap-2 sm:gap-3 pb-2 sm:pb-3 mb-3 sm:mb-4 border-b border-at-border">
+          <div className="flex flex-col gap-2 sm:gap-3 mb-3 sm:mb-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-at-accent-light text-at-accent">
-                  <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-                <h3 className="text-sm sm:text-base font-semibold text-at-text">
-                  <span className="text-at-accent mr-1">3.</span>
-                  선물 증정 및 리뷰 상세 기록
-                </h3>
-              </div>
               <div className="flex gap-1 sm:gap-2 flex-wrap">
                 <button
                   onClick={() => setGiftSort('default')}
@@ -402,7 +367,6 @@ export default function LogsSection({
                 </button>
               </div>
             </div>
-            {/* 환자명/비고 검색 */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1 max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-at-text-weak" />
@@ -431,7 +395,7 @@ export default function LogsSection({
             </div>
           </div>
           <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
               <table className="w-full text-xs sm:text-sm text-left min-w-[500px]">
                 <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
                   <tr>
@@ -459,102 +423,101 @@ export default function LogsSection({
             </div>
           </div>
         </div>
+      )}
 
-        {/* 선물 재고 입출고 기록 */}
-        <div>
-          <SectionHeader number={4} title="선물 재고 입출고 기록" icon={Package} />
-          <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
-            <div className="max-h-96 overflow-y-auto">
-              <table className="w-full text-xs sm:text-sm text-left min-w-[500px]">
-                <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
-                  <tr>
-                    <th className="p-2 sm:p-3 font-medium">일시</th>
-                    <th className="p-2 sm:p-3 font-medium">선물명</th>
-                    <th className="p-2 sm:p-3 font-medium">내용</th>
-                    <th className="p-2 sm:p-3 font-medium">수량 변경</th>
-                    <th className="p-2 sm:p-3 font-medium">최종 재고</th>
+      {/* 4. 선물 재고 입출고 기록 */}
+      {activeTab === 'inventory' && (
+        <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
+            <table className="w-full text-xs sm:text-sm text-left min-w-[500px]">
+              <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
+                <tr>
+                  <th className="p-2 sm:p-3 font-medium">일시</th>
+                  <th className="p-2 sm:p-3 font-medium">선물명</th>
+                  <th className="p-2 sm:p-3 font-medium">내용</th>
+                  <th className="p-2 sm:p-3 font-medium">수량 변경</th>
+                  <th className="p-2 sm:p-3 font-medium">최종 재고</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventoryLogs.map(log => (
+                  <tr key={log.id} className="border-b border-at-border hover:bg-at-surface-hover">
+                    <td className="p-2 sm:p-3">
+                      {new Date(log.timestamp).toLocaleString('ko-KR')}
+                    </td>
+                    <td className="p-2 sm:p-3">{log.name}</td>
+                    <td className="p-2 sm:p-3">{log.reason}</td>
+                    <td className="p-2 sm:p-3 font-mono text-center">
+                      <span className={log.change > 0 ? 'text-at-success' : 'text-at-error'}>
+                        {log.change > 0 ? `+${log.change}` : log.change}
+                      </span>
+                    </td>
+                    <td className="p-2 sm:p-3 font-mono text-center">{log.new_stock}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {inventoryLogs.map(log => (
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 5. 현금 출납 기록 */}
+      {activeTab === 'cash' && (
+        <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
+            <table className="w-full text-xs sm:text-sm text-left min-w-[700px]">
+              <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
+                <tr>
+                  <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
+                  <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap bg-orange-50">전일 이월액</th>
+                  <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap bg-at-accent-light">금일 잔액</th>
+                  <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap">차액</th>
+                  <th className="p-2 sm:p-3 font-medium">비고</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cashRegisterLogs.map(log => {
+                  const difference = log.balance_difference
+                  return (
                     <tr key={log.id} className="border-b border-at-border hover:bg-at-surface-hover">
-                      <td className="p-2 sm:p-3">
-                        {new Date(log.timestamp).toLocaleString('ko-KR')}
+                      <td className="p-2 sm:p-3 whitespace-nowrap">{log.date}</td>
+                      <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap bg-orange-50/50">
+                        {new Intl.NumberFormat('ko-KR').format(log.previous_balance || 0)}원
                       </td>
-                      <td className="p-2 sm:p-3">{log.name}</td>
-                      <td className="p-2 sm:p-3">{log.reason}</td>
-                      <td className="p-2 sm:p-3 font-mono text-center">
-                        <span className={log.change > 0 ? 'text-at-success' : 'text-at-error'}>
-                          {log.change > 0 ? `+${log.change}` : log.change}
-                        </span>
+                      <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap bg-at-accent-light/50">
+                        {new Intl.NumberFormat('ko-KR').format(log.current_balance || 0)}원
                       </td>
-                      <td className="p-2 sm:p-3 font-mono text-center">{log.new_stock}</td>
+                      <td className={`p-2 sm:p-3 text-right font-mono whitespace-nowrap ${
+                        difference > 0 ? 'text-at-success' :
+                        difference < 0 ? 'text-at-error' : 'text-at-text-secondary'
+                      }`}>
+                        {difference > 0 ? '+' : ''}{new Intl.NumberFormat('ko-KR').format(difference)}원
+                      </td>
+                      <td className="p-2 sm:p-3 max-w-[200px] truncate" title={log.notes || ''}>
+                        {log.notes || '-'}
+                      </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* 현금 출납 기록 */}
-        <div>
-          <SectionHeader number={5} title="현금 출납 기록" icon={Banknote} />
-          <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
-            <div className="max-h-96 overflow-y-auto">
-              <table className="w-full text-xs sm:text-sm text-left min-w-[700px]">
-                <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
+                  )
+                })}
+                {cashRegisterLogs.length === 0 && (
                   <tr>
-                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
-                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap bg-orange-50">전일 이월액</th>
-                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap bg-at-accent-light">금일 잔액</th>
-                    <th className="p-2 sm:p-3 font-medium text-right whitespace-nowrap">차액</th>
-                    <th className="p-2 sm:p-3 font-medium">비고</th>
+                    <td colSpan={5} className="p-4 text-center text-at-text-weak">
+                      현금 출납 기록이 없습니다.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {cashRegisterLogs.map(log => {
-                    const difference = log.balance_difference
-                    return (
-                      <tr key={log.id} className="border-b border-at-border hover:bg-at-surface-hover">
-                        <td className="p-2 sm:p-3 whitespace-nowrap">{log.date}</td>
-                        <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap bg-orange-50/50">
-                          {new Intl.NumberFormat('ko-KR').format(log.previous_balance || 0)}원
-                        </td>
-                        <td className="p-2 sm:p-3 text-right font-mono whitespace-nowrap bg-at-accent-light/50">
-                          {new Intl.NumberFormat('ko-KR').format(log.current_balance || 0)}원
-                        </td>
-                        <td className={`p-2 sm:p-3 text-right font-mono whitespace-nowrap ${
-                          difference > 0 ? 'text-at-success' :
-                          difference < 0 ? 'text-at-error' : 'text-at-text-secondary'
-                        }`}>
-                          {difference > 0 ? '+' : ''}{new Intl.NumberFormat('ko-KR').format(difference)}원
-                        </td>
-                        <td className="p-2 sm:p-3 max-w-[200px] truncate" title={log.notes || ''}>
-                          {log.notes || '-'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                  {cashRegisterLogs.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="p-4 text-center text-at-text-weak">
-                        현금 출납 기록이 없습니다.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
 
-        {/* 기타 특이사항 기록 */}
+      {/* 6. 기타 특이사항 기록 */}
+      {activeTab === 'notes' && (
         <div>
-          <SectionHeader number={6} title="기타 특이사항 기록" icon={FileText} />
           <SpecialNotesHistory />
         </div>
-      </div>
+      )}
     </div>
   )
 }

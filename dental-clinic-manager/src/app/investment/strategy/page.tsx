@@ -62,7 +62,7 @@ export default function StrategyListPage() {
       </div>
 
       {loading ? (
-        <div className="bg-at-surface rounded-2xl shadow-at-card p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-8">
           <div className="animate-pulse space-y-4">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-20 bg-at-bg rounded-xl" />
@@ -70,7 +70,7 @@ export default function StrategyListPage() {
           </div>
         </div>
       ) : strategies.length === 0 ? (
-        <div className="bg-at-surface rounded-2xl shadow-at-card p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-8">
           <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
             <Target className="w-12 h-12 mb-3 opacity-30" />
             <p className="text-sm font-medium">아직 생성된 전략이 없습니다</p>
@@ -80,7 +80,7 @@ export default function StrategyListPage() {
       ) : (
         <div className="space-y-3">
           {strategies.map(s => (
-            <div key={s.id} className="bg-at-surface rounded-2xl shadow-at-card p-5">
+            <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

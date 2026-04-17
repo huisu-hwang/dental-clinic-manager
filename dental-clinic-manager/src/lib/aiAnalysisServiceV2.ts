@@ -407,7 +407,7 @@ const queryTableParams: Schema = {
     },
     limit: {
       type: Type.NUMBER,
-      description: '조회할 최대 행 수 (기본: 100)',
+      description: '조회할 최대 행 수 (기본: 500, 최대: 1000). 전체 집계가 필요하면 aggregate_data 도구를 사용하세요.',
     },
   },
   required: ['table_name'],
@@ -518,7 +518,7 @@ async function queryTable(
     limit?: number;
   }
 ): Promise<string> {
-  const { table_name, select_columns, filters, date_range, order_by, limit = 100 } = params;
+  const { table_name, select_columns, filters, date_range, order_by, limit = 500 } = params;
 
   const tableSchema = DATABASE_SCHEMA.tables[table_name as keyof typeof DATABASE_SCHEMA.tables];
   if (!tableSchema) {
@@ -590,8 +590,8 @@ async function queryTable(
       query = query.order(tableSchema.dateColumn, { ascending: false });
     }
 
-    // 제한 적용
-    query = query.limit(limit);
+    // 제한 적용 (최대 1000건)
+    query = query.limit(Math.min(limit, 1000));
 
     const { data, error } = await query;
 
@@ -818,6 +818,9 @@ ${tableList}
 - "부원장"은 users 테이블에서 role='vice_director'인 사용자입니다.
 - 지각 데이터는 attendance_records 테이블의 late_minutes 컬럼을 확인하세요.
 - 데이터가 없으면 "해당 기간에 데이터가 없습니다"라고 명확히 알려주세요.
+- **query_table 결과의 count가 limit(500)에 근접하면, aggregate_data 도구로 전체 집계를 추가로 수행하세요.**
+- **반드시 한국어로 최종 답변 텍스트를 생성하세요. 빈 응답을 반환하지 마세요.**
+- 데이터 조회가 완료되면 항상 분석 결과를 텍스트로 요약하여 응답하세요.
 
 ## 직원별 데이터 조회 예시
 원장의 출퇴근 기록을 조회하려면:
@@ -910,8 +913,8 @@ export async function performAnalysisV2(
   console.log(`[AI Analysis V2 Gemini] User message: ${request.message}`);
 
   try {
-    // 최대 10번의 도구 호출 반복 (Gemini는 더 많은 반복이 필요할 수 있음)
-    const maxIterations = 10;
+    // 최대 15번의 도구 호출 반복 (복잡한 분석은 더 많은 반복이 필요할 수 있음)
+    const maxIterations = 15;
     let iteration = 0;
 
     while (iteration < maxIterations) {
@@ -946,8 +949,30 @@ export async function performAnalysisV2(
         const textParts = parts.filter(part => part.text);
         const finalText = textParts.map(p => p.text).join('\n');
         console.log('[AI Analysis V2 Gemini] Final response (no more function calls)');
+
+        if (!finalText) {
+          // 빈 응답 시 결론 요약 재요청
+          console.log('[AI Analysis V2 Gemini] Empty response, retrying with summary prompt');
+          contents.push({
+            role: 'user',
+            parts: [{ text: '지금까지 조회한 데이터를 바탕으로 한국어로 분석 결과를 요약해서 답변해주세요.' }],
+          });
+          const retryResponse = await genAI.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents,
+            config: { systemInstruction: systemPrompt, temperature: 1.0 },
+          });
+          const retryText = retryResponse.candidates?.[0]?.content?.parts
+            ?.filter(p => p.text)
+            .map(p => p.text)
+            .join('\n');
+          return {
+            message: retryText || '데이터를 조회했으나 분석 결과를 생성하지 못했습니다. 질문을 더 구체적으로 작성하여 다시 시도해주세요.',
+          };
+        }
+
         return {
-          message: finalText || '분석을 완료할 수 없습니다.',
+          message: finalText,
         };
       }
 

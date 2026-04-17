@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Settings, Users, Building2, Building, FileText, BarChart3, Cog, Calendar } from 'lucide-react'
+import { Settings, Users, Building2, Building, BarChart3, Cog } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import Header from '@/components/Layout/Header'
@@ -10,22 +10,18 @@ import TabNavigation from '@/components/Layout/TabNavigation'
 import StaffManagement from '@/components/Management/StaffManagement'
 import BranchManagement from '@/components/Management/BranchManagement'
 import ClinicSettings from '@/components/Management/ClinicSettings'
-import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import AccountProfile from '@/components/Management/AccountProfile'
-import LeaveManagement from '@/components/Leave/LeaveManagement'
 import MenuSettings from '@/components/Management/MenuSettings'
 import Toast from '@/components/ui/Toast'
 import { getTabRoute } from '@/utils/tabRouting'
 
-// 서브 탭 설정
+// 서브 탭 설정 (연차 관리, 프로토콜 관리 제외)
 const subTabs = [
-  { id: 'menu', label: '메뉴 설정', icon: Cog, permissions: [] }, // 모든 사용자 접근 가능
-  { id: 'staff', label: '직원 관리', icon: Users, permissions: ['staff_view', 'staff_manage'] },
-  { id: 'leave', label: '연차 관리', icon: Calendar, permissions: ['leave_request_view_own', 'leave_request_view_all', 'leave_balance_view_own'] },
-  { id: 'branches', label: '지점 관리', icon: Building2, permissions: ['clinic_settings'] },
-  { id: 'clinic', label: '병원 설정', icon: Building, permissions: ['clinic_settings'] },
-  { id: 'protocols', label: '프로토콜 관리', icon: FileText, permissions: ['protocol_view', 'protocol_create', 'protocol_edit'] },
-  { id: 'analytics', label: '통계 분석', icon: BarChart3, permissions: ['stats_monthly_view', 'stats_annual_view'] },
+  { id: 'menu',      label: '메뉴 설정',  icon: Cog,      permissions: [] },
+  { id: 'staff',     label: '직원 관리',  icon: Users,     permissions: ['staff_view', 'staff_manage'] },
+  { id: 'branches',  label: '지점 관리',  icon: Building2, permissions: ['clinic_settings'] },
+  { id: 'clinic',    label: '병원 설정',  icon: Building,  permissions: ['clinic_settings'] },
+  { id: 'analytics', label: '통계 분석',  icon: BarChart3, permissions: ['stats_monthly_view', 'stats_annual_view'] },
 ] as const
 
 export default function ManagementPage() {
@@ -36,7 +32,6 @@ export default function ManagementPage() {
 
   // URL 파라미터에서 탭 정보 읽기 (연차 승인 알림 클릭 시 바로 이동을 위해)
   const tabFromUrl = searchParams.get('tab')
-  const subtabFromUrl = searchParams.get('subtab')
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'menu')
   const [showProfile, setShowProfile] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -81,21 +76,13 @@ export default function ManagementPage() {
 
   // 메인 탭 네비게이션 핸들러
   const handleMainTabChange = (tab: string) => {
-    if (tab === 'settings') return // Already on settings/management page
-    // 연차 관리는 관리 페이지 내에서 로컬로 처리
-    if (tab === 'leave') {
-      setActiveTab('leave')
-      setIsMobileMenuOpen(false)
-      return
-    }
+    if (tab === 'settings') return
     router.push(getTabRoute(tab))
   }
 
   // 권한 체크
   const canAccessStaffManagement = ['staff_manage', 'staff_view'].some(p => hasPermission(p as any))
   const canAccessClinicSettings = hasPermission('clinic_settings')
-  const canAccessProtocols = ['protocol_view', 'protocol_create', 'protocol_edit'].some(p => hasPermission(p as any))
-  const canAccessLeave = ['leave_request_view_own', 'leave_request_view_all', 'leave_balance_view_own'].some(p => hasPermission(p as any))
 
   // 권한 로딩 상태 추적
   useEffect(() => {
@@ -116,18 +103,13 @@ export default function ManagementPage() {
       return
     }
 
-    // 메뉴 설정 탭은 모든 사용자 접근 가능하므로 리디렉션 하지 않음
-    // 다른 탭에 권한이 없으면 메뉴 설정 탭으로 이동
+    // 권한 없는 탭 접근 시 메뉴 설정 탭으로 이동
     if (activeTab === 'staff' && !canAccessStaffManagement) {
       setActiveTab('menu')
-    } else if (activeTab === 'clinic' && !canAccessClinicSettings) {
-      setActiveTab('menu')
-    } else if (activeTab === 'protocols' && !canAccessProtocols) {
-      setActiveTab('menu')
-    } else if (activeTab === 'leave' && !canAccessLeave) {
+    } else if ((activeTab === 'clinic' || activeTab === 'branches') && !canAccessClinicSettings) {
       setActiveTab('menu')
     }
-  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, canAccessProtocols, canAccessLeave, activeTab, router])
+  }, [authLoading, permissionsLoaded, user, canAccessStaffManagement, canAccessClinicSettings, activeTab, router])
 
   // 로딩 중이거나 권한이 없는 경우
   if (authLoading || !permissionsLoaded) {
@@ -164,7 +146,7 @@ export default function ManagementPage() {
 
   return (
     <div className="min-h-screen bg-at-surface-alt">
-      {/* Header - 상단 고정, 중앙 정렬 */}
+      {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-at-border">
         <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
           <Header
@@ -186,7 +168,7 @@ export default function ManagementPage() {
         />
       )}
 
-      {/* 좌측 사이드바 - 모바일에서는 슬라이드 메뉴 */}
+      {/* 좌측 사이드바 */}
       <aside
         className={`
           fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-at-border z-20 overflow-y-auto py-3 px-3
@@ -196,7 +178,7 @@ export default function ManagementPage() {
         `}
       >
         <TabNavigation
-          activeTab={activeTab === 'leave' ? 'leave' : 'settings'}
+          activeTab="settings"
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
@@ -206,87 +188,51 @@ export default function ManagementPage() {
       {/* 메인 콘텐츠 */}
       <div className="pt-14">
         <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
-          <div className="max-w-6xl">
-            {/* 블루 그라데이션 헤더 - 스크롤 시 고정 */}
-            <div className="sticky top-14 z-10 bg-gradient-to-r from-blue-600 to-blue-700 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-at-card">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold text-white">병원 관리</h2>
-                    <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Hospital Management</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="max-w-6xl bg-white min-h-screen rounded-xl border border-at-border">
 
             {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-            <div className="sticky top-[calc(3.5rem+52px)] sm:top-[calc(3.5rem+72px)] z-10 border-x border-b border-at-border bg-at-surface-alt">
-              <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
-                {subTabs.map((tab) => {
-                  // 메뉴 설정 탭은 모든 사용자 접근 가능 (permissions가 빈 배열)
-                  const hasTabPermission = tab.permissions.length === 0 || tab.permissions.some(p => hasPermission(p as any))
-                  if (!hasTabPermission) return null
-
-                  const Icon = tab.icon
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
-                        activeTab === tab.id
-                          ? 'bg-white text-at-accent shadow-at-card'
-                          : 'text-at-text-weak hover:text-at-text-secondary hover:bg-white/50'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                      {tab.label}
-                    </button>
-                  )
-                })}
-              </nav>
+            <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 rounded-t-xl flex flex-wrap gap-2">
+              {subTabs.map((tab) => {
+                const hasTabPermission = tab.permissions.length === 0 || tab.permissions.some(p => hasPermission(p as any))
+                if (!hasTabPermission) return null
+                const Icon = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? 'bg-at-accent-light text-at-accent'
+                        : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 mr-2" />
+                    {tab.label}
+                  </button>
+                )
+              })}
             </div>
 
-            {/* 탭 콘텐츠 - 방문한 탭은 display로 숨겨 편집 상태 보존 */}
-            <div className="bg-white border-x border-b border-at-border rounded-b-xl p-3 sm:p-6">
-              {/* Staff Management Tab */}
+            {/* 탭 콘텐츠 */}
+            <div className="p-4 sm:p-6">
               {visitedTabs.has('staff') && canAccessStaffManagement && (
                 <div style={{ display: activeTab === 'staff' ? 'block' : 'none' }}>
                   <StaffManagement currentUser={user} />
                 </div>
               )}
 
-              {/* Branch Management Tab */}
               {visitedTabs.has('branches') && canAccessClinicSettings && (
                 <div style={{ display: activeTab === 'branches' ? 'block' : 'none' }}>
                   <BranchManagement currentUser={user} />
                 </div>
               )}
 
-              {/* Clinic Settings Tab */}
               {visitedTabs.has('clinic') && canAccessClinicSettings && (
                 <div style={{ display: activeTab === 'clinic' ? 'block' : 'none' }}>
                   <ClinicSettings currentUser={user} />
                 </div>
               )}
 
-              {/* Protocol Management Tab */}
-              {visitedTabs.has('protocols') && canAccessProtocols && (
-                <div style={{ display: activeTab === 'protocols' ? 'block' : 'none' }}>
-                  <ProtocolManagement currentUser={user} hideHeader />
-                </div>
-              )}
-
-              {/* Leave Management Tab */}
-              {visitedTabs.has('leave') && canAccessLeave && (
-                <div style={{ display: activeTab === 'leave' ? 'block' : 'none' }}>
-                  <LeaveManagement currentUser={user} initialSubtab={subtabFromUrl} />
-                </div>
-              )}
-
-              {/* Analytics Tab */}
               {visitedTabs.has('analytics') && (
                 <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
                   <div className="text-center py-12">
@@ -296,7 +242,6 @@ export default function ManagementPage() {
                 </div>
               )}
 
-              {/* Menu Settings Tab - 모든 사용자 접근 가능 */}
               {visitedTabs.has('menu') && (
                 <div style={{ display: activeTab === 'menu' ? 'block' : 'none' }}>
                   <MenuSettings />

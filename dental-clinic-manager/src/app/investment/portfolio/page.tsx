@@ -10,7 +10,7 @@ export default function PortfolioPage() {
         <p className="text-sm text-at-text-secondary mt-1">보유 포지션과 투자 성과를 분석하세요</p>
       </div>
 
-      <div className="bg-at-surface rounded-2xl shadow-at-card p-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-at-border p-8">
         <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
           <Briefcase className="w-12 h-12 mb-3 opacity-30" />
           <p className="text-sm font-medium">보유 포지션이 없습니다</p>

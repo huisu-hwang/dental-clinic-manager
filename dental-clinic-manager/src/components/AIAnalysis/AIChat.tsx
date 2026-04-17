@@ -65,6 +65,11 @@ export default function AIChat({ clinicId }: AIChatProps) {
   const [isParsingFile, setIsParsingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 백그라운드 처리 관련 상태
+  const [showBackgroundHint, setShowBackgroundHint] = useState(false);
+  const backgroundHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -101,15 +106,80 @@ export default function AIChat({ clinicId }: AIChatProps) {
     }
   };
 
+  // 백그라운드 폴링 관리
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  const startPolling = (convId: string) => {
+    stopPolling();
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/ai-conversations/${convId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const convMessages = data.conversation.messages || [];
+          const lastMsg = convMessages[convMessages.length - 1];
+          if (lastMsg && !lastMsg.isLoading) {
+            setMessages(convMessages);
+            setIsLoading(false);
+            setShowBackgroundHint(false);
+            stopPolling();
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 5000);
+  };
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      if (backgroundHintTimerRef.current) clearTimeout(backgroundHintTimerRef.current);
+    };
+  }, []);
+
   // 특정 대화 불러오기
   const loadConversation = async (conversationId: string) => {
+    stopPolling();
     try {
       const response = await fetch(`/api/ai-conversations/${conversationId}`);
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.conversation.messages || []);
+        const convMessages = data.conversation.messages || [];
+        setMessages(convMessages);
         setCurrentConversationId(conversationId);
         setError(null);
+
+        // 분석 대기 중인 메시지가 있는지 확인
+        const lastMsg = convMessages[convMessages.length - 1];
+        if (lastMsg?.isLoading) {
+          const pendingTime = new Date(lastMsg.timestamp).getTime();
+          if (Date.now() - pendingTime > 2 * 60 * 1000) {
+            // 시간 초과 처리 (2분)
+            const timeoutMessages = convMessages.map((msg: AIMessage) =>
+              msg.isLoading
+                ? { ...msg, content: '분석 시간이 초과되었습니다. 다시 시도해주세요.', isLoading: false, error: '시간 초과' }
+                : msg
+            );
+            setMessages(timeoutMessages);
+            await fetch(`/api/ai-conversations/${conversationId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messages: timeoutMessages }),
+            });
+          } else {
+            // 아직 분석 중 → 폴링 시작
+            setIsLoading(true);
+            setShowBackgroundHint(true);
+            startPolling(conversationId);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to load conversation:', err);
@@ -214,35 +284,69 @@ export default function AIChat({ clinicId }: AIChatProps) {
     };
 
     const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+
+    // AI 응답 플레이스홀더
+    const assistantMessageId = generateId();
+    const pendingAssistantMessage: AIMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isLoading: true,
+    };
+    const messagesWithPending = [...updatedMessages, pendingAssistantMessage];
+
+    setMessages(messagesWithPending);
     setInputValue('');
     setIsLoading(true);
     setError(null);
 
-    // AI 응답 플레이스홀더 추가
-    const assistantMessageId = generateId();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: '',
-        timestamp: new Date(),
-        isLoading: true,
-      },
-    ]);
+    // 1. 대화를 DB에 먼저 저장 (pending 상태) — 페이지 이탈 시에도 서버가 결과를 저장할 수 있도록
+    let convId = currentConversationId;
+    try {
+      if (convId) {
+        await fetch(`/api/ai-conversations/${convId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: messagesWithPending }),
+        });
+      } else {
+        const autoTitle = messages.length === 0
+          ? (userMessage.content.length > 30 ? userMessage.content.slice(0, 30) + '...' : userMessage.content)
+          : undefined;
+        const saveRes = await fetch('/api/ai-conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: autoTitle, messages: messagesWithPending }),
+        });
+        if (saveRes.ok) {
+          const saveData = await saveRes.json();
+          convId = saveData.conversation.id;
+          setCurrentConversationId(convId);
+          loadConversations();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to pre-save conversation:', err);
+    }
 
+    // 2. 백그라운드 힌트 타이머 (5초 후 표시)
+    if (backgroundHintTimerRef.current) clearTimeout(backgroundHintTimerRef.current);
+    backgroundHintTimerRef.current = setTimeout(() => {
+      setShowBackgroundHint(true);
+    }, 5000);
+
+    // 3. AI 분석 API 호출 (서버에서 완료 시 DB에 자동 저장)
     try {
       const response = await fetch('/api/ai-analysis', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
           conversationHistory: messages,
           clinicId,
           attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
+          conversationId: convId,
         }),
       });
 
@@ -252,7 +356,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
         throw new Error(data.error || 'AI 분석 중 오류가 발생했습니다.');
       }
 
-      // 응답으로 메시지 업데이트
+      // 응답으로 메시지 업데이트 (DB는 API에서 이미 저장됨)
       const finalMessages: AIMessage[] = [
         ...updatedMessages,
         {
@@ -265,43 +369,34 @@ export default function AIChat({ clinicId }: AIChatProps) {
       ];
 
       setMessages(finalMessages);
-
-      // 첨부 파일 초기화 (전송 완료 후)
       setAttachedFiles([]);
-
-      // 대화 자동 저장 (첫 메시지일 경우 제목 자동 생성)
-      const autoTitle = messages.length === 0 ? userMessage.content.slice(0, 30) : undefined;
-      await saveConversation(finalMessages, autoTitle);
-
-      // 목록 새로고침 (업데이트 시간 갱신을 위해)
       loadConversations();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'AI 분석 중 오류가 발생했습니다.';
       setError(errorMessage);
-      // 오류 시 로딩 메시지 제거
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMessageId
-            ? {
-                ...msg,
-                content: errorMessage,
-                isLoading: false,
-                error: errorMessage,
-              }
+            ? { ...msg, content: errorMessage, isLoading: false, error: errorMessage }
             : msg
         )
       );
     } finally {
+      if (backgroundHintTimerRef.current) clearTimeout(backgroundHintTimerRef.current);
+      setShowBackgroundHint(false);
       setIsLoading(false);
     }
   };
 
   const handleNewChat = () => {
+    stopPolling();
     setMessages([]);
     setCurrentConversationId(null);
     setError(null);
     setAttachedFiles([]);
     setFileError(null);
+    setShowBackgroundHint(false);
+    setIsLoading(false);
   };
 
   // 파일 첨부 핸들러
@@ -412,7 +507,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
             <div className="p-4 border-b border-at-border">
               <Button
                 onClick={handleNewChat}
-                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+                className="w-full bg-at-accent hover:bg-at-accent-hover text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 새 대화
@@ -566,58 +661,50 @@ export default function AIChat({ clinicId }: AIChatProps) {
       {/* 메인 채팅 영역 */}
       <div className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-at-border bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Sparkles className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-at-border">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-accent-light text-at-accent">
+              <Sparkles className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-at-text">AI 데이터 분석</h2>
-              <p className="text-sm text-at-text-weak">병원 데이터를 분석하고 인사이트를 제공합니다</p>
-            </div>
+            <h2 className="text-base font-semibold text-at-text">
+              <span className="text-at-accent mr-1">AI</span>
+              데이터 분석
+            </h2>
           </div>
           {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={handleNewChat}
-              className="text-at-text-weak hover:text-at-accent"
+              className="py-1.5 px-3 inline-flex items-center rounded-lg font-medium text-sm transition-all text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus className="w-4 h-4 mr-1.5" />
               새 대화
-            </Button>
+            </button>
           )}
         </div>
 
         {/* 메시지 영역 */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mb-6">
-                <Bot className="w-12 h-12 text-at-accent" />
-              </div>
-              <h3 className="text-xl font-semibold text-at-text mb-2">
-                무엇을 분석해 드릴까요?
-              </h3>
-              <p className="text-at-text-weak mb-8 max-w-md">
-                Supabase에 저장된 모든 데이터에 접근하여 분석할 수 있습니다.
-                <br />
-                날짜 범위를 지정하거나 특정 기간의 데이터를 요청해 보세요.
-              </p>
-
-              {/* 예시 질문들 */}
-              <div className="w-full max-w-2xl">
-                <p className="text-sm font-medium text-at-text-secondary mb-3 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  이런 질문을 해보세요
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="flex flex-col items-center justify-center h-full">
+              {/* 안내 카드 — LeaveBalanceCard 스타일 */}
+              <div className="w-full max-w-2xl bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-at-border mb-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-at-accent-light rounded-xl">
+                    <Bot className="w-6 h-6 text-at-accent" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-at-text">무엇을 분석해 드릴까요?</h3>
+                    <p className="text-sm text-at-text-weak">날짜 범위를 지정하거나 특정 기간의 데이터를 요청해 보세요</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {exampleQuestions.map((question, index) => (
                     <button
                       key={index}
                       onClick={() => setInputValue(question)}
-                      className="text-left p-3 rounded-xl border border-at-border hover:border-blue-300 hover:bg-at-accent-light transition-colors text-sm text-at-text-secondary"
+                      className="text-left p-3 bg-white rounded-lg shadow-sm border border-transparent hover:border-blue-200 hover:shadow-md transition-all text-sm text-at-text-secondary"
                     >
+                      <Calendar className="w-3.5 h-3.5 inline mr-1.5 text-at-accent" />
                       {question}
                     </button>
                   ))}
@@ -626,7 +713,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
             </div>
           ) : (
             messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <MessageBubble key={message.id} message={message} showBackgroundHint={showBackgroundHint && message.isLoading} />
             ))
           )}
           <div ref={messagesEndRef} />
@@ -727,7 +814,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
             <Button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="h-[44px] px-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-[44px] px-4 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -747,7 +834,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
 }
 
 // 메시지 버블 컴포넌트
-function MessageBubble({ message }: { message: AIMessage }) {
+function MessageBubble({ message, showBackgroundHint }: { message: AIMessage; showBackgroundHint?: boolean }) {
   const isUser = message.role === 'user';
   const isError = !!message.error;
   const hasAttachments = message.attachments && message.attachments.length > 0;
@@ -777,16 +864,18 @@ function MessageBubble({ message }: { message: AIMessage }) {
       {/* 아바타 */}
       <div
         className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
+          'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center',
           isUser
-            ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
-            : 'bg-gradient-to-br from-gray-100 to-gray-200'
+            ? 'bg-at-accent'
+            : isError
+              ? 'bg-at-error-bg'
+              : 'bg-at-accent-light'
         )}
       >
         {isUser ? (
           <User className="w-4 h-4 text-white" />
         ) : (
-          <Bot className={cn('w-4 h-4', isError ? 'text-red-500' : 'text-at-text-secondary')} />
+          <Bot className={cn('w-4 h-4', isError ? 'text-at-error' : 'text-at-accent')} />
         )}
       </div>
 
@@ -813,18 +902,25 @@ function MessageBubble({ message }: { message: AIMessage }) {
 
         <div
           className={cn(
-            'rounded-2xl px-4 py-3 inline-block',
+            'rounded-xl px-4 py-3 inline-block',
             isUser
-              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+              ? 'bg-at-accent text-white'
               : isError
                 ? 'bg-at-error-bg border border-red-200 text-at-error'
-                : 'bg-at-surface-alt text-at-text'
+                : 'bg-at-surface-alt border border-at-border text-at-text'
           )}
         >
           {message.isLoading ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">분석 중...</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">분석 중...</span>
+              </div>
+              {showBackgroundHint && (
+                <p className="text-xs text-at-text-weak mt-1">
+                  다른 작업을 하고 오셔도 됩니다. 돌아오시면 결과를 확인할 수 있습니다.
+                </p>
+              )}
             </div>
           ) : (
             <div className="text-sm whitespace-pre-wrap leading-relaxed text-left">

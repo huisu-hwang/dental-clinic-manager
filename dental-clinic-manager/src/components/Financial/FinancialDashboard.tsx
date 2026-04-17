@@ -146,44 +146,10 @@ export default function FinancialDashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-      {/* 헤더 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
-            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-at-accent" />
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-at-text">경영 현황</h2>
-            <p className="text-at-text-weak text-xs sm:text-sm hidden sm:block">Financial Dashboard</p>
-          </div>
-        </div>
-
-        {/* Date Selector */}
-        {activeTab === 'status' && (
-          <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border self-start sm:self-auto">
-            <button
-              onClick={goToPreviousMonth}
-              className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-at-text font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm bg-white rounded-xl border border-at-border">
-              {selectedYear}년 {selectedMonth}월
-            </div>
-            <button
-              onClick={goToNextMonth}
-              className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
-            >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 서브 탭 네비게이션 */}
-      <div className="bg-at-surface-alt rounded-xl border border-at-border">
-        <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+    <div className="bg-white min-h-screen">
+      {/* 서브 탭 네비게이션 (sticky) */}
+      <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between gap-3">
+        <nav className="flex space-x-1 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('status')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
@@ -207,10 +173,31 @@ export default function FinancialDashboard() {
             설정
           </button>
         </nav>
+
+        {/* Date Selector */}
+        {activeTab === 'status' && (
+          <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border flex-shrink-0">
+            <button
+              onClick={goToPreviousMonth}
+              className="p-1.5 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="px-3 py-1 text-at-text font-bold tracking-wide min-w-[100px] text-center text-sm bg-white rounded-xl border border-at-border">
+              {selectedYear}년 {selectedMonth}월
+            </div>
+            <button
+              onClick={goToNextMonth}
+              className="p-1.5 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div>
+      <div className="p-4 sm:p-6 space-y-6">
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />

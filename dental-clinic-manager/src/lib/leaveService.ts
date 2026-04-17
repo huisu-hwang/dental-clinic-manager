@@ -5,7 +5,7 @@
 
 import { ensureConnection } from './supabase/connectionCheck'
 import { userNotificationService } from './userNotificationService'
-import { countKoreanHolidaysInRange } from '@/utils/koreanHolidays'
+import { countKoreanHolidaysInRange, getKoreanHolidays, getKoreanHolidayName, isWeekend } from '@/utils/koreanHolidays'
 import type {
   LeavePolicy,
   LeaveType,
@@ -642,6 +642,13 @@ export const leaveService = {
 
       const today = new Date().toISOString().split('T')[0]
 
+      // 병원 차감 설정 조회 (한 번만)
+      const { data: holidaySettings } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
       // 각 직원별로 현재 연차 기간 데이터만 조회
       const result = await Promise.all(allUsers.map(async (user: any) => {
         const periodYear = userPeriodYears[user.id]
@@ -686,6 +693,42 @@ export const leaveService = {
           }
         }
 
+        // 법정 공휴일 / 병원 지정 휴무일 차감 일수 계산 (구분 표시용)
+        let publicHolidayDeductDays = 0
+        let clinicHolidayDeductDays = 0
+        const calcEndDate = leavePeriod.endDate < today ? leavePeriod.endDate : today
+
+        if (holidaySettings?.deduct_public_holidays) {
+          publicHolidayDeductDays = countKoreanHolidaysInRange(leavePeriod.startDate, calcEndDate)
+        }
+
+        if (holidaySettings?.deduct_clinic_holidays) {
+          // 자동 차감: 아직 수동 적용 안 된 병원 지정 휴무일
+          const { data: unappliedHolidays } = await (supabase as any)
+            .from('clinic_holidays')
+            .select('deduct_days')
+            .eq('clinic_id', clinicId)
+            .eq('is_applied', false)
+            .eq('deduct_from_annual', true)
+            .gte('start_date', leavePeriod.startDate)
+            .lte('start_date', calcEndDate)
+
+          clinicHolidayDeductDays += (unappliedHolidays || [])
+            .reduce((sum: number, h: any) => sum + (h.deduct_days || 0), 0)
+        }
+
+        // 수동 적용된 병원 지정 휴무일 차감 (leave_adjustments에서 [병원휴무] 태그)
+        const { data: clinicHolidayAdjustments } = await (supabase as any)
+          .from('leave_adjustments')
+          .select('days')
+          .eq('user_id', user.id)
+          .eq('year', periodYear)
+          .eq('adjustment_type', 'deduct')
+          .like('reason', '%[병원휴무]%')
+
+        clinicHolidayDeductDays += (clinicHolidayAdjustments || [])
+          .reduce((sum: number, adj: any) => sum + adj.days, 0)
+
         return {
           ...balance,
           user_name: user.name,
@@ -694,6 +737,8 @@ export const leaveService = {
           pending_by_type: pendingByType,
           leave_period_start: leavePeriod.startDate,
           leave_period_end: leavePeriod.endDate,
+          public_holiday_deduct_days: publicHolidayDeductDays,
+          clinic_holiday_deduct_days: clinicHolidayDeductDays,
         }
       }))
 
@@ -706,6 +751,89 @@ export const leaveService = {
     } catch (error) {
       console.error('[leaveService.getAllEmployeeBalances] Error:', error)
       return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 공휴일/병원 휴무일 차감 상세 내역 조회 (직원 클릭 시 상세 표시용)
+   * - 법정 공휴일: 연차 기간 내 평일 공휴일 날짜 + 이름 목록
+   * - 병원 지정 휴무일: 미적용 clinic_holidays + [병원휴무] 조정 내역
+   */
+  async getHolidayDeductionDetails(params: {
+    userId: string
+    periodStart: string
+    periodEnd: string
+    periodYear: number
+  }): Promise<{
+    publicHolidays: Array<{ date: string; name: string }>
+    clinicHolidays: Array<{ holiday_name: string; start_date: string; deduct_days: number }>
+    clinicHolidayAdjustments: Array<{ reason: string; days: number }>
+    error: string | null
+  }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const today = new Date().toISOString().split('T')[0]
+      const calcEndDate = params.periodEnd < today ? params.periodEnd : today
+
+      // 병원 차감 설정 조회
+      const { data: holidaySettings } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
+      const publicHolidays: Array<{ date: string; name: string }> = []
+      const clinicHolidays: Array<{ holiday_name: string; start_date: string; deduct_days: number }> = []
+      const clinicHolidayAdjustments: Array<{ reason: string; days: number }> = []
+
+      // 법정 공휴일 날짜 목록
+      if (holidaySettings?.deduct_public_holidays) {
+        const startYear = parseInt(params.periodStart.substring(0, 4))
+        const endYear = parseInt(calcEndDate.substring(0, 4))
+        for (let year = startYear; year <= endYear; year++) {
+          const holidays = getKoreanHolidays(year)
+          for (const holidayDate of holidays) {
+            if (holidayDate >= params.periodStart && holidayDate <= calcEndDate && !isWeekend(holidayDate)) {
+              publicHolidays.push({ date: holidayDate, name: getKoreanHolidayName(holidayDate) })
+            }
+          }
+        }
+      }
+
+      // 병원 지정 휴무일 (미적용, 자동 차감분)
+      if (holidaySettings?.deduct_clinic_holidays) {
+        const { data: unappliedHolidays } = await (supabase as any)
+          .from('clinic_holidays')
+          .select('holiday_name, start_date, deduct_days')
+          .eq('clinic_id', clinicId)
+          .eq('is_applied', false)
+          .eq('deduct_from_annual', true)
+          .gte('start_date', params.periodStart)
+          .lte('start_date', calcEndDate)
+
+        clinicHolidays.push(...(unappliedHolidays || []))
+      }
+
+      // 수동 적용된 병원 지정 휴무일 조정 내역 (설정 무관하게 항상 조회)
+      const { data: adjustments } = await (supabase as any)
+        .from('leave_adjustments')
+        .select('reason, days')
+        .eq('user_id', params.userId)
+        .eq('year', params.periodYear)
+        .eq('adjustment_type', 'deduct')
+        .like('reason', '%[병원휴무]%')
+
+      clinicHolidayAdjustments.push(...(adjustments || []))
+
+      return { publicHolidays, clinicHolidays, clinicHolidayAdjustments, error: null }
+    } catch (error) {
+      console.error('[leaveService.getHolidayDeductionDetails] Error:', error)
+      return { publicHolidays: [], clinicHolidays: [], clinicHolidayAdjustments: [], error: extractErrorMessage(error) }
     }
   },
 

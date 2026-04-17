@@ -33,25 +33,32 @@ export async function fetchPrices(
   // 1. DB 캐시에서 조회
   const cached = await getCachedPrices(ticker, market, startDate, endDate)
   if (cached.length > 0) {
-    // 캐시가 요청 기간을 충분히 커버하는지 확인
     const requestDays = daysBetween(startDate, endDate)
-    // 주말/휴일 제외하면 실제 거래일은 약 70%
-    const minExpectedDays = Math.floor(requestDays * 0.6)
+    const minExpectedDays = Math.floor(requestDays * 0.5) // 주말/휴일 감안 50%
     if (cached.length >= minExpectedDays) {
       return cached
     }
   }
 
-  // 2. 외부 API에서 가져오기
-  let prices: OHLCV[]
-  try {
-    prices = await fetchFromYahooFinance(ticker, market, startDate, endDate)
-  } catch (error) {
-    console.warn(`yahoo-finance2 실패 (${ticker}), KIS fallback 시도:`, error)
-    // KIS API는 국내만 지원하고 서버 사이드에서 credential 필요
-    // 여기서는 빈 배열 반환 (API Route에서 KIS 직접 호출 가능)
+  // 2. 외부 API에서 가져오기 (최대 2회 재시도)
+  let prices: OHLCV[] = []
+  let lastError: unknown = null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      prices = await fetchFromYahooFinance(ticker, market, startDate, endDate)
+      if (prices.length > 0) break
+    } catch (error) {
+      lastError = error
+      console.warn(`yahoo-finance2 시도 ${attempt + 1} 실패 (${ticker}):`, error)
+      if (attempt < 1) await new Promise(r => setTimeout(r, 1000)) // 1초 대기 후 재시도
+    }
+  }
+
+  if (prices.length === 0) {
+    // yahoo 실패 시 캐시라도 반환
     if (cached.length > 0) return cached
-    throw new Error(`주가 데이터를 가져올 수 없습니다: ${ticker}`)
+    const errMsg = lastError instanceof Error ? lastError.message : '알 수 없는 오류'
+    throw new Error(`${ticker} 주가 데이터를 가져올 수 없습니다: ${errMsg}`)
   }
 
   // 3. DB 캐시에 저장
