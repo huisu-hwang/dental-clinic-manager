@@ -4,18 +4,20 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeftIcon,
   SparklesIcon,
   DocumentCheckIcon,
   PhotoIcon,
   CheckCircleIcon,
   PencilIcon,
-  EyeIcon,
   XMarkIcon,
   PlusIcon,
   CloudArrowUpIcon,
   CalendarDaysIcon,
   ClockIcon,
+  HashtagIcon,
+  AdjustmentsHorizontalIcon,
+  MegaphoneIcon,
+  PaintBrushIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -26,7 +28,6 @@ import {
   type PostType,
   type ToneType,
   type PlatformOptions,
-  type GeneratedContent,
   type ImageStyleOption,
   type ImageVisualStyle,
 } from '@/types/marketing'
@@ -41,7 +42,6 @@ export default function NewMarketingPostPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const aiGen = useAIGeneration()
-  // 마케팅 프리미엄 활성화 여부 — 비활성화 사용자는 워커 체크 수행하지 않음
   const { hasPremiumFeature } = usePremiumFeatures()
 
   // ── 입력 폼 상태 ──
@@ -76,7 +76,6 @@ export default function NewMarketingPostPage() {
   const [editedTitle, setEditedTitle] = useState('')
   const [editedBody, setEditedBody] = useState('')
   const [editedHashtags, setEditedHashtags] = useState<string[]>([])
-  const [isEditingBody, setIsEditingBody] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [newHashtagInput, setNewHashtagInput] = useState('')
   const [isAddingHashtag, setIsAddingHashtag] = useState(false)
@@ -108,7 +107,6 @@ export default function NewMarketingPostPage() {
     setEditedBody(result.body)
     setEditedHashtags(result.hashtags || [])
 
-    // 자동 DB 저장
     try {
       if (savedItemId) {
         await fetch(`/api/marketing/posts/${savedItemId}`, {
@@ -145,29 +143,20 @@ export default function NewMarketingPostPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedItemId, topic, keyword, postType, tone, useResearch, factCheck, platforms])
 
-  // 결과 콜백 등록
   useEffect(() => {
     aiGen.onResultCallback.current = handleResult
-    return () => {
-      aiGen.onResultCallback.current = null
-    }
+    return () => { aiGen.onResultCallback.current = null }
   }, [aiGen.onResultCallback, handleResult])
 
-  // 컨텍스트 에러 반영
   useEffect(() => {
-    if (aiGen.generationError) {
-      setError(aiGen.generationError)
-    }
+    if (aiGen.generationError) setError(aiGen.generationError)
   }, [aiGen.generationError])
 
-  // 이미 컨텍스트에 결과가 있으면 반영 (페이지 복귀 시)
   useEffect(() => {
-    if (aiGen.generatedResult && !generatedResult) {
-      handleResult(aiGen.generatedResult)
-    }
+    if (aiGen.generatedResult && !generatedResult) handleResult(aiGen.generatedResult)
   }, [aiGen.generatedResult, generatedResult, handleResult])
 
-  // ── AI 글 생성 (컨텍스트 통해 SSE 스트리밍) ──
+  // ── AI 글 생성 ──
   const handleGenerate = async () => {
     if (!hasPremiumFeature('marketing')) {
       setError('마케팅 자동화 프리미엄 기능이 활성화되어 있지 않습니다.')
@@ -178,11 +167,8 @@ export default function NewMarketingPostPage() {
       setError('주제와 키워드를 입력해주세요.')
       return
     }
-
     setError('')
-    setIsEditingBody(false)
     setHasUnsavedChanges(false)
-
     aiGen.startGeneration({
       topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis: false, platforms,
       imageStyle, imageVisualStyle, imageCount,
@@ -216,7 +202,7 @@ export default function NewMarketingPostPage() {
     }
   }
 
-  // ── 발행 처리 (공통) ──
+  // ── 발행 처리 ──
   const handlePublish = async (targetDate: string, targetTime: string, isImmediate: boolean) => {
     if (!generatedResult) return
     if (!hasPremiumFeature('marketing')) {
@@ -251,17 +237,8 @@ export default function NewMarketingPostPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: editedTitle,
-            topic,
-            keyword,
-            postType,
-            tone,
-            useResearch,
-            factCheck,
-            platforms,
-            publishDate: targetDate,
-            publishTime: targetTime,
-            generatedContent: updatedContent,
+            title: editedTitle, topic, keyword, postType, tone, useResearch, factCheck,
+            platforms, publishDate: targetDate, publishTime: targetTime, generatedContent: updatedContent,
           }),
         })
         if (!saveRes.ok) throw new Error('저장 실패')
@@ -274,12 +251,7 @@ export default function NewMarketingPostPage() {
         if (!patchRes.ok) throw new Error('예약 실패')
       }
 
-      // 마케팅 워커에 즉시 발행 트리거 (실패해도 진행)
-      try {
-        await fetch('/api/marketing/publish/trigger', { method: 'POST' })
-      } catch {
-        // 워커 미실행 시 5분 내 자동 처리
-      }
+      try { await fetch('/api/marketing/publish/trigger', { method: 'POST' }) } catch { /* 무시 */ }
 
       const msg = isImmediate
         ? '바로 발행이 시작됩니다! 마케팅 워커가 곧 발행합니다.'
@@ -322,223 +294,234 @@ export default function NewMarketingPostPage() {
     setIsAddingHashtag(false)
   }
 
-  if (loading || !user) {
-    return null
-  }
+  if (loading || !user) return null
+
+  const isFormDisabled = isGenerating
 
   return (
-    <div className="p-4 sm:p-6 bg-white min-h-screen">
-      {/* 페이지 헤더 */}
-      <div className="flex items-center gap-3 mb-6">
+    <div className="bg-white min-h-screen">
+      {/* 뒤로가기 헤더 */}
+      <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 py-3 flex items-center gap-3">
         <button
           onClick={() => router.push('/dashboard/marketing')}
-          className="p-2 text-at-text-weak hover:text-at-text-secondary transition-colors rounded-lg hover:bg-at-surface-alt"
+          className="p-1.5 text-at-text-weak hover:text-at-text-secondary transition-colors rounded-lg hover:bg-at-surface-alt"
         >
-          <ArrowLeftIcon className="h-5 w-5" />
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
         </button>
-        <h1 className="text-xl font-bold text-at-text">새 글 작성</h1>
+        <h1 className="text-sm font-semibold text-at-text">AI 글쓰기</h1>
+        <span className="text-at-border">·</span>
+        <span className="text-xs text-at-text-weak">마케팅</span>
       </div>
 
-      <div className="max-w-4xl space-y-6">
-            {/* 기본 정보 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-4 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-at-text">기본 정보</h2>
+      <div className="p-4 sm:p-6 space-y-4 max-w-3xl">
 
+        {/* ── 기본 정보 ── */}
+        <section className={`bg-white rounded-xl border border-at-border overflow-hidden transition-opacity ${isFormDisabled ? 'opacity-60' : ''}`}>
+          <div className="px-5 py-3.5 border-b border-at-border bg-at-surface-alt flex items-center gap-2">
+            <SparklesIcon className="h-4 w-4 text-at-accent" />
+            <h2 className="text-sm font-semibold text-at-text">기본 정보</h2>
+          </div>
+          <fieldset disabled={isFormDisabled} className="p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-at-text-secondary mb-1">주제 *</label>
+                <label className="block text-xs font-medium text-at-text-secondary mb-1.5">주제 <span className="text-at-error">*</span></label>
                 <input
                   type="text"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="예: 스케일링 후 주의사항"
-                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm bg-white disabled:bg-at-surface-alt disabled:cursor-not-allowed"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-at-text-secondary mb-1">타겟 키워드 *</label>
+                <label className="block text-xs font-medium text-at-text-secondary mb-1.5">타겟 키워드 <span className="text-at-error">*</span></label>
                 <input
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="예: 스케일링 주의사항"
-                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm bg-white disabled:bg-at-surface-alt disabled:cursor-not-allowed"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-at-text-secondary mb-1">글 유형</label>
-                  <select
-                    value={postType}
-                    onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
-                    className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
-                  >
-                    {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-at-text-secondary mb-1">어투</label>
-                  <select
-                    value={tone}
-                    onChange={(e) => setTone(e.target.value as ToneType)}
-                    className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm disabled:bg-at-surface-alt disabled:cursor-not-allowed"
-                  >
-                    {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
-                      <option key={value} value={value}>{label} - {description}</option>
-                    ))}
-                  </select>
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-at-text-secondary mb-1.5">글 유형</label>
+                <select
+                  value={postType}
+                  onChange={(e) => handlePostTypeChange(e.target.value as PostType)}
+                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm bg-white disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+                >
+                  {Object.entries(POST_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
               </div>
-            </fieldset>
+              <div>
+                <label className="block text-xs font-medium text-at-text-secondary mb-1.5">어투</label>
+                <select
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value as ToneType)}
+                  className="w-full px-3 py-2 border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent text-sm bg-white disabled:bg-at-surface-alt disabled:cursor-not-allowed"
+                >
+                  {Object.entries(TONE_LABELS).map(([value, { label, description }]) => (
+                    <option key={value} value={value}>{label} — {description}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </fieldset>
+        </section>
 
-            {/* 품질 옵션 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-at-text">품질 옵션</h2>
-              <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+        {/* ── 품질 옵션 ── */}
+        <section className={`bg-white rounded-xl border border-at-border overflow-hidden transition-opacity ${isFormDisabled ? 'opacity-60' : ''}`}>
+          <div className="px-5 py-3.5 border-b border-at-border bg-at-surface-alt flex items-center gap-2">
+            <AdjustmentsHorizontalIcon className="h-4 w-4 text-at-warning" />
+            <h2 className="text-sm font-semibold text-at-text">품질 옵션</h2>
+          </div>
+          <fieldset disabled={isFormDisabled} className="p-5">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <label className={`flex items-start gap-3 flex-1 cursor-pointer p-3 rounded-lg border border-at-border hover:bg-at-surface-alt transition-colors ${isFormDisabled ? 'cursor-not-allowed' : ''}`}>
                 <input
                   type="checkbox"
                   checked={useResearch}
                   onChange={(e) => setUseResearch(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
+                  className="mt-0.5 w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent"
                 />
                 <div>
-                  <span className="text-sm font-medium text-at-text-secondary">논문 인용</span>
-                  <span className="text-xs text-at-text-weak ml-2">관련 학술 논문을 검색하여 인용</span>
+                  <p className="text-sm font-medium text-at-text">논문 인용</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">관련 학술 논문을 검색하여 인용</p>
                 </div>
               </label>
-              <label className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+              <label className={`flex items-start gap-3 flex-1 cursor-pointer p-3 rounded-lg border border-at-border hover:bg-at-surface-alt transition-colors ${isFormDisabled ? 'cursor-not-allowed' : ''}`}>
                 <input
                   type="checkbox"
                   checked={factCheck}
                   onChange={(e) => setFactCheck(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
+                  className="mt-0.5 w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent"
                 />
                 <div>
-                  <span className="text-sm font-medium text-at-text-secondary">팩트체크</span>
-                  <span className="text-xs text-at-text-weak ml-2">생성된 글의 사실 여부를 검증</span>
+                  <p className="text-sm font-medium text-at-text">팩트체크</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">생성된 글의 사실 여부를 검증</p>
                 </div>
               </label>
-            </fieldset>
+            </div>
+          </fieldset>
+        </section>
 
-            {/* 이미지 옵션 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-at-text">이미지 옵션</h2>
-              <p className="text-xs text-at-text-weak">이미지 개수와 스타일을 설정하세요</p>
-
-              {/* 이미지 개수 */}
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-at-text-secondary min-w-[80px]">이미지 개수</label>
-                <div className="flex items-center gap-2">
-                  {[0, 1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setImageCount(n)}
-                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                        imageCount === n
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-border'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-xs text-at-text-weak">{imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}</span>
+        {/* ── 이미지 옵션 ── */}
+        <section className={`bg-white rounded-xl border border-at-border overflow-hidden transition-opacity ${isFormDisabled ? 'opacity-60' : ''}`}>
+          <div className="px-5 py-3.5 border-b border-at-border bg-at-surface-alt flex items-center gap-2">
+            <PaintBrushIcon className="h-4 w-4 text-at-success" />
+            <h2 className="text-sm font-semibold text-at-text">이미지 옵션</h2>
+          </div>
+          <fieldset disabled={isFormDisabled} className="p-5 space-y-5">
+            {/* 이미지 개수 */}
+            <div>
+              <label className="block text-xs font-medium text-at-text-secondary mb-2">이미지 개수</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[0, 1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setImageCount(n)}
+                    className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
+                      imageCount === n
+                        ? 'bg-at-accent text-white'
+                        : 'bg-at-surface-alt text-at-text-secondary border border-at-border hover:bg-at-border'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <span className="text-xs text-at-text-weak ml-1">
+                  {imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}
+                </span>
               </div>
+            </div>
 
-              {imageCount > 0 && <hr className="border-at-border" />}
-              {imageCount > 0 && (Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
-                ([value, { label, description }]) => (
-                  <label key={value} className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="imageStyle"
-                      value={value}
-                      checked={imageStyle === value}
-                      onChange={() => {
-                        setImageStyle(value)
-                        if (value !== 'use_own_image') {
-                          setReferenceImageBase64('')
-                          setReferenceImagePreview('')
-                        }
-                      }}
-                      className="mt-0.5 w-4 h-4 text-indigo-600 border-at-border focus:ring-at-accent"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-at-text-secondary">{label}</span>
-                      <span className="text-xs text-at-text-weak ml-2">{description}</span>
+            {/* 이미지 스타일 */}
+            {imageCount > 0 && (
+              <>
+                <div className="border-t border-at-border" />
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-at-text-secondary">이미지 스타일</label>
+                  {(Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
+                    ([value, { label, description }]) => (
+                      <label key={value} className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="imageStyle"
+                          value={value}
+                          checked={imageStyle === value}
+                          onChange={() => {
+                            setImageStyle(value)
+                            if (value !== 'use_own_image') {
+                              setReferenceImageBase64('')
+                              setReferenceImagePreview('')
+                            }
+                          }}
+                          className="mt-0.5 w-4 h-4 text-at-accent border-at-border focus:ring-at-accent"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-at-text">{label}</span>
+                          <span className="text-xs text-at-text-weak ml-2">{description}</span>
+                        </div>
+                      </label>
+                    )
+                  )}
+                </div>
+
+                {/* 참조 이미지 업로드 */}
+                {imageStyle === 'use_own_image' && (
+                  <div className="ml-7 p-3 bg-at-surface-alt rounded-lg space-y-2">
+                    <label className="block text-xs font-medium text-at-text-secondary">참조 이미지 업로드</label>
+                    <div className="flex items-center gap-3">
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-at-border text-at-text-secondary rounded-lg hover:bg-white transition-colors text-xs font-medium">
+                        <PhotoIcon className="h-4 w-4" />
+                        이미지 선택
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 5 * 1024 * 1024) { setError('이미지 파일은 5MB 이하만 업로드 가능합니다.'); return }
+                            const reader = new FileReader()
+                            reader.onload = () => {
+                              const result = reader.result as string
+                              setReferenceImagePreview(result)
+                              setReferenceImageBase64(result.split(',')[1] || '')
+                            }
+                            reader.readAsDataURL(file)
+                          }}
+                        />
+                      </label>
+                      {referenceImagePreview && (
+                        <button onClick={() => { setReferenceImageBase64(''); setReferenceImagePreview('') }} className="text-xs text-at-error hover:underline">
+                          삭제
+                        </button>
+                      )}
                     </div>
-                  </label>
-                )
-              )}
-
-              {/* 참조 이미지 업로드 (본인 이미지 활용 선택 시) */}
-              {imageCount > 0 && imageStyle === 'use_own_image' && (
-                <div className="ml-7 mt-2 space-y-2">
-                  <label className="block text-xs font-medium text-at-text-secondary">참조 이미지 업로드</label>
-                  <div className="flex items-center gap-3">
-                    <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors text-xs font-medium">
-                      <PhotoIcon className="h-4 w-4" />
-                      이미지 선택
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          if (file.size > 5 * 1024 * 1024) {
-                            setError('이미지 파일은 5MB 이하만 업로드 가능합니다.')
-                            return
-                          }
-                          const reader = new FileReader()
-                          reader.onload = () => {
-                            const result = reader.result as string
-                            setReferenceImagePreview(result)
-                            const base64 = result.split(',')[1] || ''
-                            setReferenceImageBase64(base64)
-                          }
-                          reader.readAsDataURL(file)
-                        }}
-                      />
-                    </label>
                     {referenceImagePreview && (
-                      <button
-                        onClick={() => {
-                          setReferenceImageBase64('')
-                          setReferenceImagePreview('')
-                        }}
-                        className="text-xs text-red-400 hover:text-at-error transition-colors"
-                      >
-                        삭제
-                      </button>
+                      <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-at-border">
+                        <img src={referenceImagePreview} alt="참조 이미지" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    {!referenceImageBase64 && (
+                      <p className="text-xs text-at-warning">인물 이미지를 업로드해주세요</p>
                     )}
                   </div>
-                  {referenceImagePreview && (
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-at-border">
-                      <img
-                        src={referenceImagePreview}
-                        alt="참조 이미지"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  {!referenceImageBase64 && (
-                    <p className="text-xs text-amber-500">인물 이미지를 업로드해주세요</p>
-                  )}
-                </div>
-              )}
+                )}
 
-              {/* 시각적 스타일 */}
-              {imageCount > 0 && (
-                <>
-                  <hr className="border-at-border" />
-                  <label className="text-sm font-medium text-at-text-secondary">시각적 스타일</label>
+                {/* 시각적 스타일 */}
+                <div className="border-t border-at-border" />
+                <div>
+                  <label className="block text-xs font-medium text-at-text-secondary mb-2">시각적 스타일</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {(Object.entries(IMAGE_VISUAL_STYLE_LABELS) as [ImageVisualStyle, { label: string; description: string; emoji: string }][]).map(
                       ([value, { label, description, emoji }]) => (
@@ -548,470 +531,304 @@ export default function NewMarketingPostPage() {
                           onClick={() => setImageVisualStyle(value)}
                           className={`flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-all ${
                             imageVisualStyle === value
-                              ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
-                              : 'border-at-border hover:border-at-border hover:bg-at-surface-alt'
+                              ? 'border-at-accent bg-at-accent-light'
+                              : 'border-at-border hover:bg-at-surface-alt'
                           }`}
                         >
                           <span className="text-lg">{emoji}</span>
-                          <span className={`text-sm font-medium ${imageVisualStyle === value ? 'text-indigo-700' : 'text-at-text-secondary'}`}>{label}</span>
-                          <span className="text-[11px] text-at-text-weak leading-tight">{description}</span>
+                          <span className={`text-xs font-medium ${imageVisualStyle === value ? 'text-at-accent' : 'text-at-text-secondary'}`}>{label}</span>
+                          <span className="text-[10px] text-at-text-weak leading-tight">{description}</span>
                         </button>
                       )
                     )}
                   </div>
-                </>
-              )}
-            </fieldset>
+                </div>
+              </>
+            )}
+          </fieldset>
+        </section>
 
-            {/* 배포 플랫폼 */}
-            <fieldset disabled={isGenerating} className={`bg-white rounded-xl border border-at-border p-6 space-y-3 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
-              <h2 className="text-lg font-semibold text-at-text">배포 플랫폼</h2>
+        {/* ── 배포 플랫폼 ── */}
+        <section className={`bg-white rounded-xl border border-at-border overflow-hidden transition-opacity ${isFormDisabled ? 'opacity-60' : ''}`}>
+          <div className="px-5 py-3.5 border-b border-at-border bg-at-surface-alt flex items-center gap-2">
+            <MegaphoneIcon className="h-4 w-4 text-purple-500" />
+            <h2 className="text-sm font-semibold text-at-text">배포 플랫폼</h2>
+          </div>
+          <fieldset disabled={isFormDisabled} className="p-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (
-                <label key={key} className={`flex items-center gap-3 ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                <label key={key} className={`flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  platforms[key] ? 'border-at-accent bg-at-accent-light' : 'border-at-border hover:bg-at-surface-alt'
+                } ${isFormDisabled ? 'cursor-not-allowed' : ''}`}>
                   <input
                     type="checkbox"
                     checked={platforms[key]}
                     onChange={(e) => setPlatforms({ ...platforms, [key]: e.target.checked })}
-                    className="w-4 h-4 text-indigo-600 border-at-border rounded focus:ring-at-accent disabled:cursor-not-allowed"
+                    className="w-4 h-4 text-at-accent border-at-border rounded focus:ring-at-accent"
                   />
-                  <span className="text-sm text-at-text-secondary">
-                    {key === 'naverBlog' ? '네이버 블로그' :
-                     key === 'instagram' ? '인스타그램' :
-                     key === 'facebook' ? '페이스북' : '쓰레드'}
+                  <span className={`text-xs font-medium ${platforms[key] ? 'text-at-accent' : 'text-at-text-secondary'}`}>
+                    {key === 'naverBlog' ? '네이버 블로그' : key === 'instagram' ? '인스타그램' : key === 'facebook' ? '페이스북' : '쓰레드'}
                   </span>
                 </label>
               ))}
-            </fieldset>
+            </div>
+          </fieldset>
+        </section>
 
-            {/* 에러 */}
-            {error && (
-              <div className="bg-at-error-bg border border-red-200 rounded-xl p-4 text-sm text-at-error">
-                {error}
+        {/* 에러 */}
+        {error && (
+          <div className="flex items-center gap-2 bg-at-error-bg border border-red-200 rounded-xl px-4 py-3 text-sm text-at-error">
+            <XMarkIcon className="h-4 w-4 flex-shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError('')} className="text-red-400 hover:text-at-error flex-shrink-0">×</button>
+          </div>
+        )}
+
+        {/* ── 생성 버튼 / 진행 상태 ── */}
+        {isGenerating ? (
+          <div className="bg-white rounded-xl border border-at-border p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-at-text-secondary">{generationStep}</span>
+              <span className="text-sm font-bold text-at-accent">{generationProgress}%</span>
+            </div>
+            <div className="relative h-2.5 bg-at-surface-alt rounded-full overflow-hidden">
+              <div
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-at-accent to-purple-500 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${generationProgress}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs">
+              {[
+                { label: '글 작성', threshold: 5 },
+                { label: '이미지 생성', threshold: 55 },
+                { label: '저장', threshold: 95 },
+                { label: '완료', threshold: 100 },
+              ].map(({ label, threshold }) => (
+                <span key={label} className={`transition-colors duration-300 ${
+                  generationProgress >= threshold
+                    ? threshold === 100 ? 'text-at-success font-semibold' : 'text-at-accent font-semibold'
+                    : 'text-at-text-weak'
+                }`}>
+                  {generationProgress >= threshold ? '✓ ' : ''}{label}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleGenerate}
+            disabled={!topic || !keyword}
+            className="w-full py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            <SparklesIcon className="h-5 w-5" />
+            {generatedResult ? '다시 생성' : 'AI 글 생성하기'}
+          </button>
+        )}
+
+        {/* ── 생성 결과 ── */}
+        {generatedResult && (
+          <section className="bg-white rounded-xl border border-at-border overflow-hidden">
+            {/* 결과 헤더 */}
+            <div className="px-5 py-3.5 border-b border-at-border bg-at-surface-alt flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DocumentCheckIcon className="h-4 w-4 text-at-success" />
+                <h2 className="text-sm font-semibold text-at-text">생성 결과</h2>
+                {savedItemId && !hasUnsavedChanges && (
+                  <span className="flex items-center gap-1 text-[11px] text-at-success bg-at-success-bg px-2 py-0.5 rounded-full">
+                    <CheckCircleIcon className="h-3 w-3" />
+                    저장됨
+                  </span>
+                )}
+                {hasUnsavedChanges && (
+                  <span className="flex items-center gap-1 text-[11px] text-at-warning bg-at-warning-bg px-2 py-0.5 rounded-full">
+                    <PencilIcon className="h-3 w-3" />
+                    미저장
+                  </span>
+                )}
               </div>
-            )}
+              <div className="flex gap-3 text-xs text-at-text-weak">
+                <span>{generatedResult.wordCount}자</span>
+                <span>키워드 {generatedResult.keywordCount}회</span>
+              </div>
+            </div>
 
-            {/* 생성 버튼 / 진행 상태 바 (둘 중 하나만 표시) */}
-            {isGenerating ? (
-              <div className="bg-white rounded-xl border border-at-border p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-at-text-secondary">{generationStep}</span>
-                  <span className="text-sm font-bold text-indigo-600">{generationProgress}%</span>
+            <div className="p-5 space-y-5">
+              {/* 저장 메시지 */}
+              {saveMessage && (
+                <div className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm ${
+                  saveMessage.type === 'success' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'
+                }`}>
+                  {saveMessage.type === 'success'
+                    ? <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
+                    : <XMarkIcon className="h-4 w-4 flex-shrink-0" />
+                  }
+                  {saveMessage.text}
                 </div>
-                <div className="relative h-3 bg-at-surface-alt rounded-full overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${generationProgress}%` }}
-                  />
+              )}
+
+              {/* 제목 */}
+              <div>
+                <label className="block text-xs font-medium text-at-text-secondary mb-1.5">제목</label>
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => { setEditedTitle(e.target.value); setHasUnsavedChanges(true) }}
+                  className="w-full text-base font-bold text-at-text border border-at-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-at-surface-alt/40"
+                />
+              </div>
+
+              {/* 본문 */}
+              <div>
+                <label className="block text-xs font-medium text-at-text-secondary mb-1.5">본문</label>
+                <ContentEditor
+                  body={editedBody}
+                  images={generatedResult.generatedImages}
+                  onChange={(newBody) => { setEditedBody(newBody); setHasUnsavedChanges(true) }}
+                />
+              </div>
+
+              {/* 해시태그 */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <HashtagIcon className="h-3.5 w-3.5 text-at-text-weak" />
+                  <label className="text-xs font-medium text-at-text-secondary">해시태그</label>
                 </div>
-                <div className="flex justify-between text-xs">
-                  {[
-                    { label: '글 작성', threshold: 5 },
-                    { label: '이미지 생성', threshold: 55 },
-                    { label: '저장', threshold: 95 },
-                    { label: '완료', threshold: 100 },
-                  ].map(({ label, threshold }) => (
-                    <span
-                      key={label}
-                      className={`transition-colors duration-300 ${
-                        generationProgress >= threshold
-                          ? threshold === 100
-                            ? 'text-green-500 font-semibold'
-                            : 'text-indigo-500 font-semibold'
-                          : 'text-at-text-weak'
-                      }`}
-                    >
-                      {generationProgress >= threshold ? '✓ ' : ''}{label}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {editedHashtags.map((tag, i) => (
+                    <span key={i} className="flex items-center gap-1 px-2.5 py-1 bg-at-accent-light text-at-accent text-xs rounded-full font-medium">
+                      #{tag}
+                      <button onClick={() => removeHashtag(i)} className="text-at-accent/50 hover:text-at-error transition-colors ml-0.5">
+                        <XMarkIcon className="h-3 w-3" />
+                      </button>
                     </span>
                   ))}
+                  {isAddingHashtag ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-at-text-weak text-xs">#</span>
+                      <input
+                        ref={hashtagInputRef}
+                        type="text"
+                        value={newHashtagInput}
+                        onChange={(e) => setNewHashtagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); confirmAddHashtag() }
+                          if (e.key === 'Escape') { setIsAddingHashtag(false); setNewHashtagInput('') }
+                        }}
+                        onBlur={confirmAddHashtag}
+                        placeholder="태그 입력"
+                        className="w-24 text-xs border border-at-border rounded-full px-2 py-1 focus:outline-none focus:ring-1 focus:ring-at-accent"
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsAddingHashtag(true)}
+                      className="flex items-center gap-1 px-2.5 py-1 border border-dashed border-at-border text-at-text-weak text-xs rounded-full hover:bg-at-surface-alt transition-colors"
+                    >
+                      <PlusIcon className="h-3 w-3" />
+                      추가
+                    </button>
+                  )}
                 </div>
               </div>
-            ) : (
-              <button
-                onClick={handleGenerate}
-                disabled={!topic || !keyword}
-                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                <SparklesIcon className="h-5 w-5" />
-                {generatedResult ? '다시 생성' : 'AI 글 생성'}
-              </button>
-            )}
 
-            {/* 생성 결과 */}
-            {generatedResult && (
-              <div className="bg-white rounded-xl border border-at-border p-6 space-y-5">
-                {/* 결과 헤더 */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-semibold text-at-text">생성 결과</h2>
-                    {savedItemId && !hasUnsavedChanges && (
-                      <span className="flex items-center gap-1 text-xs text-at-success bg-at-success-bg px-2 py-0.5 rounded-full">
-                        <CheckCircleIcon className="h-3.5 w-3.5" />
-                        저장됨
-                      </span>
-                    )}
-                    {hasUnsavedChanges && (
-                      <span className="flex items-center gap-1 text-xs text-at-warning bg-at-warning-bg px-2 py-0.5 rounded-full">
-                        <PencilIcon className="h-3.5 w-3.5" />
-                        미저장 변경사항
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-3 text-xs text-at-text-weak">
-                    <span>글자수: {generatedResult.wordCount}자</span>
-                    <span>키워드: {generatedResult.keywordCount}회</span>
-                  </div>
-                </div>
-
-                {/* 저장 메시지 */}
-                {saveMessage && (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                    saveMessage.type === 'success'
-                      ? 'bg-at-success-bg text-at-success'
-                      : 'bg-at-error-bg text-at-error'
-                  }`}>
-                    {saveMessage.type === 'success'
-                      ? <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
-                      : <XMarkIcon className="h-4 w-4 flex-shrink-0" />
-                    }
-                    {saveMessage.text}
-                  </div>
+              {/* 액션 버튼 */}
+              <div className="space-y-3 pt-1 border-t border-at-border">
+                {savedItemId && hasUnsavedChanges && (
+                  <button
+                    onClick={handleSaveDraft}
+                    disabled={isSavingDraft}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2 border border-at-border text-at-text-secondary rounded-lg hover:bg-at-surface-alt transition-colors text-sm font-medium disabled:opacity-60 mt-3"
+                  >
+                    {isSavingDraft ? (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : <CloudArrowUpIcon className="h-4 w-4" />}
+                    임시 저장
+                  </button>
                 )}
 
-                {/* 제목 (편집 가능) */}
-                <div>
-                  <label className="block text-sm font-medium text-at-text-weak mb-1.5">제목</label>
-                  <input
-                    type="text"
-                    value={editedTitle}
-                    onChange={(e) => {
-                      setEditedTitle(e.target.value)
-                      setHasUnsavedChanges(true)
+                <div className={`flex gap-3 ${savedItemId && hasUnsavedChanges ? '' : 'mt-3'}`}>
+                  <button
+                    onClick={handlePublishNow}
+                    disabled={isScheduling || !generatedResult}
+                    className="flex-1 py-2.5 bg-at-success text-white rounded-lg hover:opacity-90 disabled:bg-at-border disabled:cursor-not-allowed transition-opacity text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    {isScheduling && !showSchedulePicker ? (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : <DocumentCheckIcon className="h-4 w-4" />}
+                    바로 발행
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSchedulePicker(!showSchedulePicker)
+                      if (!scheduleDate) {
+                        const tomorrow = new Date()
+                        tomorrow.setDate(tomorrow.getDate() + 1)
+                        setScheduleDate(tomorrow.toISOString().split('T')[0])
+                      }
                     }}
-                    className="w-full text-lg font-bold text-at-text border border-at-border rounded-lg px-3 py-2 focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-at-surface-alt/50"
-                  />
+                    disabled={isScheduling || !generatedResult}
+                    className={`flex-1 py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
+                      showSchedulePicker ? 'bg-at-accent text-white' : 'bg-at-accent-light text-at-accent hover:bg-at-tag'
+                    } disabled:bg-at-border disabled:cursor-not-allowed`}
+                  >
+                    <CalendarDaysIcon className="h-4 w-4" />
+                    예약 발행
+                  </button>
                 </div>
 
-                {/* 본문 (WYSIWYG 에디터) */}
-                <div>
-                  <label className="block text-sm font-medium text-at-text-weak mb-2">본문</label>
-                  <ContentEditor
-                    body={editedBody}
-                    images={generatedResult.generatedImages}
-                    onChange={(newBody) => {
-                      setEditedBody(newBody)
-                      setHasUnsavedChanges(true)
-                    }}
-                  />
-                </div>
-
-                {/* 해시태그 (편집 가능) */}
-                <div>
-                  <label className="block text-sm font-medium text-at-text-weak mb-2">해시태그</label>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {editedHashtags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium"
-                      >
-                        #{tag}
-                        <button
-                          onClick={() => removeHashtag(i)}
-                          className="text-indigo-300 hover:text-red-400 transition-colors ml-0.5"
-                          title="삭제"
-                        >
-                          <XMarkIcon className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-
-                    {isAddingHashtag ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-indigo-400 text-xs">#</span>
+                {showSchedulePicker && (
+                  <div className="bg-at-accent-light rounded-xl border border-at-border p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-at-accent">
+                      <ClockIcon className="h-4 w-4" />
+                      발행 일시 설정
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-at-accent mb-1">날짜</label>
                         <input
-                          ref={hashtagInputRef}
-                          type="text"
-                          value={newHashtagInput}
-                          onChange={(e) => setNewHashtagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { e.preventDefault(); confirmAddHashtag() }
-                            if (e.key === 'Escape') { setIsAddingHashtag(false); setNewHashtagInput('') }
-                          }}
-                          onBlur={confirmAddHashtag}
-                          placeholder="태그 입력"
-                          className="w-24 text-xs border border-indigo-300 rounded-full px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          type="date"
+                          value={scheduleDate}
+                          min={new Date().toISOString().split('T')[0]}
+                          onChange={(e) => setScheduleDate(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
                         />
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setIsAddingHashtag(true)}
-                        className="flex items-center gap-1 px-2.5 py-1 border border-dashed border-indigo-300 text-indigo-400 text-xs rounded-full hover:bg-indigo-50 transition-colors"
-                      >
-                        <PlusIcon className="h-3 w-3" />
-                        추가
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* 액션 버튼 */}
-                <div className="space-y-3 pt-2">
-                  {savedItemId && hasUnsavedChanges && (
-                    <button
-                      onClick={handleSaveDraft}
-                      disabled={isSavingDraft}
-                      className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-300 text-at-accent rounded-lg hover:bg-at-accent-light transition-colors text-sm font-medium disabled:opacity-60 w-full"
-                    >
-                      {isSavingDraft ? (
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                      ) : (
-                        <CloudArrowUpIcon className="h-4 w-4" />
-                      )}
-                      임시 저장
-                    </button>
-                  )}
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handlePublishNow}
-                      disabled={isScheduling || !generatedResult}
-                      className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                    >
-                      {isScheduling && !showSchedulePicker ? (
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                      ) : (
-                        <DocumentCheckIcon className="h-4 w-4" />
-                      )}
-                      바로 발행
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowSchedulePicker(!showSchedulePicker)
-                        if (!scheduleDate) {
-                          const tomorrow = new Date()
-                          tomorrow.setDate(tomorrow.getDate() + 1)
-                          setScheduleDate(tomorrow.toISOString().split('T')[0])
-                        }
-                      }}
-                      disabled={isScheduling || !generatedResult}
-                      className={`flex-1 py-2.5 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 ${
-                        showSchedulePicker
-                          ? 'bg-blue-700 text-white'
-                          : 'bg-at-accent text-white hover:bg-at-accent-hover'
-                      } disabled:bg-at-border disabled:cursor-not-allowed`}
-                    >
-                      <CalendarDaysIcon className="h-4 w-4" />
-                      예약 발행
-                    </button>
-                  </div>
-
-                  {showSchedulePicker && (
-                    <div className="bg-at-accent-light rounded-xl border border-at-border p-4 space-y-3 animate-in fade-in duration-200">
-                      <div className="flex items-center gap-2 text-sm font-medium text-at-accent">
-                        <ClockIcon className="h-4 w-4" />
-                        발행 일시 설정
+                      <div>
+                        <label className="block text-xs font-medium text-at-accent mb-1">시간</label>
+                        <input
+                          type="time"
+                          value={scheduleTime}
+                          onChange={(e) => setScheduleTime(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
+                        />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-at-accent mb-1">날짜</label>
-                          <input
-                            type="date"
-                            value={scheduleDate}
-                            min={new Date().toISOString().split('T')[0]}
-                            onChange={(e) => setScheduleDate(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-at-accent mb-1">시간</label>
-                          <input
-                            type="time"
-                            value={scheduleTime}
-                            onChange={(e) => setScheduleTime(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleScheduleConfirm}
-                        disabled={isScheduling || !scheduleDate || !scheduleTime}
-                        className="w-full py-2 bg-at-accent text-white rounded-lg hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                      >
-                        {isScheduling ? (
-                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                        ) : (
-                          <CalendarDaysIcon className="h-4 w-4" />
-                        )}
-                        {scheduleDate} {scheduleTime} 예약 확인
-                      </button>
                     </div>
-                  )}
-                </div>
+                    <button
+                      onClick={handleScheduleConfirm}
+                      disabled={isScheduling || !scheduleDate || !scheduleTime}
+                      className="w-full py-2 bg-at-accent text-white rounded-lg hover:bg-at-accent-hover disabled:bg-at-border disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      {isScheduling ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      ) : <CalendarDaysIcon className="h-4 w-4" />}
+                      {scheduleDate} {scheduleTime} 예약 확인
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   )
-}
-
-// ─── 본문 렌더러 ───
-
-function RenderedBody({
-  body,
-  images,
-}: {
-  body: string
-  images?: { fileName: string; prompt: string; path?: string }[]
-}) {
-  const lines = body.split('\n')
-  const elements: React.ReactNode[] = []
-  let paragraphBuffer: string[] = []
-  let key = 0
-  // 프롬프트 텍스트로 이미지 매칭 (순차 인덱스 폴백)
-  const usedImageIndices = new Set<number>()
-  let fallbackIndex = 0
-
-  const findImage = (prompt: string) => {
-    if (!images || images.length === 0) return undefined
-    // 1차: 프롬프트 텍스트로 정확 매칭
-    const exactIdx = images.findIndex((img, i) => !usedImageIndices.has(i) && img.prompt === prompt)
-    if (exactIdx >= 0) { usedImageIndices.add(exactIdx); return images[exactIdx] }
-    // 2차: 부분 매칭
-    const partialIdx = images.findIndex((img, i) => !usedImageIndices.has(i) && (img.prompt.includes(prompt.slice(0, 10)) || prompt.includes(img.prompt.slice(0, 10))))
-    if (partialIdx >= 0) { usedImageIndices.add(partialIdx); return images[partialIdx] }
-    // 3차: 순차 폴백
-    while (fallbackIndex < images.length && usedImageIndices.has(fallbackIndex)) fallbackIndex++
-    if (fallbackIndex < images.length) { usedImageIndices.add(fallbackIndex); return images[fallbackIndex++] }
-    return undefined
-  }
-
-  const flushParagraph = () => {
-    if (paragraphBuffer.length > 0) {
-      const text = paragraphBuffer.join('\n').trim()
-      if (text) {
-        elements.push(
-          <p key={key++} className="text-sm leading-7 text-at-text-secondary mb-3">
-            {renderInlineFormatting(text)}
-          </p>
-        )
-      }
-      paragraphBuffer = []
-    }
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const trimmed = line.trim()
-
-    if (/\[IMAGE:\s*.+?\]/.test(trimmed)) {
-      flushParagraph()
-      const match = trimmed.match(/\[IMAGE:\s*(.+?)\]/)
-      const prompt = match ? match[1] : ''
-      const currentImage = findImage(prompt)
-
-      if (currentImage?.path) {
-        elements.push(
-          <div key={key++} className="my-4">
-            <img
-              src={currentImage.path}
-              alt={currentImage.prompt || prompt}
-              className="w-full rounded-xl border border-at-border shadow-sm"
-            />
-            <p className="text-xs text-at-text-weak mt-1.5 text-center">{currentImage.fileName || prompt}</p>
-          </div>
-        )
-      } else {
-        elements.push(
-          <div key={key++} className="my-4 rounded-xl border-2 border-dashed border-at-border bg-at-surface-alt p-6 flex flex-col items-center justify-center gap-2">
-            <PhotoIcon className="h-10 w-10 text-at-text-weak" />
-            <span className="text-xs text-at-text-weak text-center">{prompt}</span>
-            <span className="text-[10px] text-at-text-weak">이미지 생성에 실패했습니다</span>
-          </div>
-        )
-      }
-      continue
-    }
-
-    if (trimmed.startsWith('### ')) {
-      flushParagraph()
-      elements.push(
-        <h4 key={key++} className="text-base font-semibold text-at-text mt-5 mb-2">
-          {trimmed.replace(/^###\s+/, '')}
-        </h4>
-      )
-      continue
-    }
-
-    if (trimmed.startsWith('## ')) {
-      flushParagraph()
-      elements.push(
-        <h3 key={key++} className="text-lg font-bold text-at-text mt-6 mb-3 pb-2 border-b border-at-border">
-          {trimmed.replace(/^##\s+/, '')}
-        </h3>
-      )
-      continue
-    }
-
-    if (/^[-─━]{3,}$/.test(trimmed)) {
-      flushParagraph()
-      elements.push(<hr key={key++} className="my-4 border-at-border" />)
-      continue
-    }
-
-    if (/^[-*]\s+/.test(trimmed)) {
-      flushParagraph()
-      elements.push(
-        <div key={key++} className="flex gap-2 mb-1.5 ml-1">
-          <span className="text-indigo-400 mt-1 text-xs">●</span>
-          <span className="text-sm leading-6 text-at-text-secondary flex-1">
-            {renderInlineFormatting(trimmed.replace(/^[-*]\s+/, ''))}
-          </span>
-        </div>
-      )
-      continue
-    }
-
-    if (/^\d+\.\s+/.test(trimmed)) {
-      flushParagraph()
-      const num = trimmed.match(/^(\d+)\./)?.[1]
-      elements.push(
-        <div key={key++} className="flex gap-2 mb-1.5 ml-1">
-          <span className="text-indigo-500 font-semibold text-sm min-w-[1.2rem]">{num}.</span>
-          <span className="text-sm leading-6 text-at-text-secondary flex-1">
-            {renderInlineFormatting(trimmed.replace(/^\d+\.\s+/, ''))}
-          </span>
-        </div>
-      )
-      continue
-    }
-
-    if (!trimmed) {
-      flushParagraph()
-      continue
-    }
-
-    paragraphBuffer.push(line)
-  }
-
-  flushParagraph()
-
-  return <div>{elements}</div>
-}
-
-function renderInlineFormatting(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g)
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-semibold text-at-text">{part.slice(2, -2)}</strong>
-    }
-    return part
-  })
 }
