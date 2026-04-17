@@ -412,7 +412,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
             <div className="p-4 border-b border-at-border">
               <Button
                 onClick={handleNewChat}
-                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
+                className="w-full bg-at-accent hover:bg-at-accent-hover text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 새 대화
@@ -577,15 +577,13 @@ export default function AIChat({ clinicId }: AIChatProps) {
             </h2>
           </div>
           {messages.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={handleNewChat}
-              className="text-at-text-weak hover:text-at-accent"
+              className="py-1.5 px-3 inline-flex items-center rounded-lg font-medium text-sm transition-all text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus className="w-4 h-4 mr-1.5" />
               새 대화
-            </Button>
+            </button>
           )}
         </div>
 
@@ -721,7 +719,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
             <Button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="h-[44px] px-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-[44px] px-4 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -771,16 +769,18 @@ function MessageBubble({ message }: { message: AIMessage }) {
       {/* 아바타 */}
       <div
         className={cn(
-          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
+          'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center',
           isUser
-            ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
-            : 'bg-gradient-to-br from-gray-100 to-gray-200'
+            ? 'bg-at-accent'
+            : isError
+              ? 'bg-at-error-bg'
+              : 'bg-at-accent-light'
         )}
       >
         {isUser ? (
           <User className="w-4 h-4 text-white" />
         ) : (
-          <Bot className={cn('w-4 h-4', isError ? 'text-red-500' : 'text-at-text-secondary')} />
+          <Bot className={cn('w-4 h-4', isError ? 'text-at-error' : 'text-at-accent')} />
         )}
       </div>
 
@@ -807,12 +807,12 @@ function MessageBubble({ message }: { message: AIMessage }) {
 
         <div
           className={cn(
-            'rounded-2xl px-4 py-3 inline-block',
+            'rounded-xl px-4 py-3 inline-block',
             isUser
-              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+              ? 'bg-at-accent text-white'
               : isError
                 ? 'bg-at-error-bg border border-red-200 text-at-error'
-                : 'bg-at-surface-alt text-at-text'
+                : 'bg-at-surface-alt border border-at-border text-at-text'
           )}
         >
           {message.isLoading ? (
