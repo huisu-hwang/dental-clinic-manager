@@ -516,7 +516,9 @@ export default function DashboardPage() {
 
           {/* 연차 관리 */}
           {activeTab === 'leave' && user && (
-            <LeaveManagement currentUser={user} />
+            <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
+              <LeaveManagement currentUser={user} />
+            </div>
           )}
 
           {/* 통계 */}
