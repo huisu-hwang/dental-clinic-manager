@@ -327,12 +327,12 @@ export default function NewMarketingPostPage() {
   }
 
   return (
-    <>
+    <div className="p-4 sm:p-6 bg-white min-h-screen">
       {/* 페이지 헤더 */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.push('/dashboard/marketing')}
-          className="p-2 text-at-text-weak hover:text-at-text-secondary transition-colors rounded-lg hover:bg-white"
+          className="p-2 text-at-text-weak hover:text-at-text-secondary transition-colors rounded-lg hover:bg-at-surface-alt"
         >
           <ArrowLeftIcon className="h-5 w-5" />
         </button>
@@ -858,7 +858,7 @@ export default function NewMarketingPostPage() {
               </div>
             )}
           </div>
-    </>
+    </div>
   )
 }
 
