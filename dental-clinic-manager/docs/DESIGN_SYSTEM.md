@@ -107,7 +107,7 @@
 
 | 역할 | 클래스 | 사용 위치 |
 |------|--------|---------|
-| 페이지 제목 | `text-lg font-bold text-at-text` | 페이지 헤더 H2 |
+| 페이지 제목 | `text-lg font-bold text-at-text` | 페이지 헤더 H2 — 서브탭 없는 페이지에만 사용 |
 | 섹션 제목 | `text-sm sm:text-base font-semibold text-at-text` | SectionHeader H3 |
 | 레이블 | `text-sm font-medium text-at-text` | 폼 레이블, 카드 헤딩 |
 | 본문 | `text-sm text-at-text` | 일반 데이터, 리스트 항목 |
@@ -128,10 +128,13 @@
 
 ### 페이지 구조 (필수 준수)
 
+페이지 유형에 따라 두 가지 패턴을 사용한다.
+
+#### 패턴 A — 일반 콘텐츠 페이지 (서브탭 없음)
+
 ```tsx
-// ✅ 모든 콘텐츠 페이지의 최외곽 래퍼 — 반드시 이 패턴 사용
+// ✅ 서브탭이 없는 단일 콘텐츠 페이지
 <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-  {/* 페이지 헤더 */}
   {/* 콘텐츠 섹션들 */}
 </div>
 ```
@@ -142,6 +145,72 @@
 | `space-y-6` | 섹션 간 24px 간격 | 게슈탈트 근접성: 섹션 분리 명확화 |
 | `bg-white` | 흰 배경 | 서피스 계층 구분 (sidebar는 at-surface) |
 | `min-h-screen` | 최소 전체 높이 | 짧은 콘텐츠에서 배경 끊김 방지 |
+
+#### 패턴 B — 서브탭 네비게이션 페이지 (필수 준수)
+
+서브탭이 있는 페이지는 **페이지 제목 헤더를 표시하지 않는다.**
+탭 자체가 현재 섹션을 명확히 나타내므로 제목 헤더는 중복이며 불필요한 공간을 차지한다.
+
+```tsx
+// ✅ 서브탭 페이지의 표준 구조
+<div className="bg-white min-h-screen">
+  {/* 서브탭 네비게이션 — sticky 고정 */}
+  <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex flex-wrap gap-2">
+    {tabs.map((tab) => (
+      <button
+        key={tab.id}
+        onClick={() => setActiveTab(tab.id)}
+        className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
+          activeTab === tab.id
+            ? 'bg-at-accent-light text-at-accent'
+            : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+        }`}
+      >
+        <tab.icon className="w-4 h-4 mr-2" />
+        {tab.label}
+      </button>
+    ))}
+  </div>
+
+  {/* 탭 콘텐츠 */}
+  <div className="p-4 sm:p-6">
+    {/* 활성 탭 콘텐츠 */}
+  </div>
+</div>
+```
+
+| 속성 | 값 | 이유 |
+|------|-----|------|
+| `sticky top-14` | 헤더(56px) 바로 아래 고정 | 스크롤해도 탭 항상 접근 가능 |
+| `z-10` | 콘텐츠 위에 렌더링 | 스크롤 중 콘텐츠가 탭을 덮지 않도록 |
+| `bg-white` | 흰 배경 | sticky 시 콘텐츠가 비치지 않도록 차단 |
+| `border-b border-at-border` | 하단 구분선 | 탭 영역과 콘텐츠 시각적 분리 |
+| `px-4 sm:px-6 pt-4 pb-3` | 콘텐츠와 동일한 좌우 패딩, 상하 여백 | 탭이 콘텐츠와 정렬되어 보임 |
+| 탭 콘텐츠 `p-4 sm:p-6` | 패턴 A와 동일한 패딩 | 전체 페이지 여백 일관성 유지 |
+
+**적용 페이지**: 출근 관리, 게시판, 마케팅, 통계 등 서브탭이 2개 이상인 모든 페이지.
+
+#### ❌ 금지 패턴: 서브탭 페이지에 페이지 제목 헤더 사용
+
+```tsx
+// ❌ 서브탭이 있는 페이지에 페이지 제목 헤더 추가 — 금지
+<div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+  {/* ❌ 서브탭 페이지에서 이 헤더는 중복이며 제거해야 함 */}
+  <div className="flex items-center gap-3 pb-4 border-b border-at-border">
+    <div className="w-8 h-8 bg-at-accent-light rounded-lg ...">
+      <Icon className="w-4 h-4 text-at-accent" />
+    </div>
+    <h2 className="text-lg font-bold text-at-text">페이지 제목</h2>
+  </div>
+
+  {/* 서브탭 네비게이션 */}
+  <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+    ...
+  </div>
+</div>
+```
+
+**이유**: 서브탭 자체가 현재 컨텍스트를 나타내므로 제목이 중복된다. 스크롤 없이 더 많은 콘텐츠를 보여주고 페이지 구조를 단순화한다.
 
 ### 간격 스케일
 
@@ -173,7 +242,8 @@
 
 ### 5.1 페이지 헤더
 
-모든 콘텐츠 페이지 최상단에 위치. 페이지 제목 + 우측 액션 버튼 구성.
+**서브탭이 없는 단일 콘텐츠 페이지**의 최상단에 위치. 페이지 제목 + 우측 액션 버튼 구성.  
+> ⚠️ **서브탭이 있는 페이지에는 사용하지 않는다.** → 4장 패턴 B 참조
 
 ```tsx
 <div className="flex items-center justify-between pb-4 border-b border-at-border">
@@ -709,9 +779,8 @@ className="focus:outline-none"
 
 ### 새 페이지 체크리스트
 
-- [ ] 최외곽 래퍼: `p-4 sm:p-6 space-y-6 bg-white min-h-screen`
-- [ ] 페이지 헤더: 아이콘 배지 + 제목 + 구분선
-- [ ] 섹션 헤더: 번호 + 아이콘 + 제목
+**공통**
+- [ ] 서브탭 유무에 따라 패턴 A / B 선택 (4장 참조)
 - [ ] 인풋: `border-at-border rounded-xl focus:ring-2 focus:ring-at-accent`
 - [ ] Primary 버튼: `bg-at-accent hover:bg-at-accent-hover`
 - [ ] 로딩 상태 처리
@@ -719,6 +788,18 @@ className="focus:outline-none"
 - [ ] 모바일 반응형 확인 (`sm:` 접두사)
 - [ ] 아이콘 버튼 `aria-label` / `title` 포함
 - [ ] 삭제/위험 작업 확인 다이얼로그
+
+**패턴 A (서브탭 없음)**
+- [ ] 최외곽 래퍼: `p-4 sm:p-6 space-y-6 bg-white min-h-screen`
+- [ ] 페이지 헤더: 아이콘 배지 + 제목 + 구분선
+- [ ] 섹션 헤더: 번호 + 아이콘 + 제목
+
+**패턴 B (서브탭 있음)**
+- [ ] 최외곽 래퍼: `bg-white min-h-screen` (패딩 없음)
+- [ ] 서브탭: `sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3`
+- [ ] 탭 버튼: 활성 `bg-at-accent-light text-at-accent`, 비활성 `text-at-text-weak hover:bg-at-surface-alt`
+- [ ] 탭 콘텐츠 래퍼: `p-4 sm:p-6`
+- [ ] ❌ 페이지 제목 헤더 없음
 
 ### 자주 쓰는 스니펫
 
