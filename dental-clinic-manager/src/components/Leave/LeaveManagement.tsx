@@ -754,11 +754,18 @@ function AllEmployeeBalances() {
                       <div className="flex flex-col items-center gap-1">
                         <span className="font-medium text-at-success">{item.used_days}일</span>
                         <LeaveByTypeCell byType={item.used_by_type} filterTypes={DEDUCT_LEAVE_TYPES} emptyText="" />
-                        {Math.round((item.used_days - usedDeductTotal) * 10) / 10 > 0 && (
+                        {(item.public_holiday_deduct_days ?? 0) > 0 && (
+                          <div className="flex items-center gap-1 text-xs" style={{ color: '#6366F1' }}>
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#6366F1' }}></span>
+                            <span>법정 공휴일</span>
+                            <span className="font-medium">{item.public_holiday_deduct_days}일</span>
+                          </div>
+                        )}
+                        {(item.clinic_holiday_deduct_days ?? 0) > 0 && (
                           <div className="flex items-center gap-1 text-xs" style={{ color: '#F97316' }}>
                             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#F97316' }}></span>
-                            <span>공휴일/휴무일</span>
-                            <span className="font-medium">{Math.round((item.used_days - usedDeductTotal) * 10) / 10}일</span>
+                            <span>병원 지정 휴무일</span>
+                            <span className="font-medium">{item.clinic_holiday_deduct_days}일</span>
                           </div>
                         )}
                       </div>

@@ -642,6 +642,13 @@ export const leaveService = {
 
       const today = new Date().toISOString().split('T')[0]
 
+      // 병원 차감 설정 조회 (한 번만)
+      const { data: holidaySettings } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
       // 각 직원별로 현재 연차 기간 데이터만 조회
       const result = await Promise.all(allUsers.map(async (user: any) => {
         const periodYear = userPeriodYears[user.id]
@@ -686,6 +693,42 @@ export const leaveService = {
           }
         }
 
+        // 법정 공휴일 / 병원 지정 휴무일 차감 일수 계산 (구분 표시용)
+        let publicHolidayDeductDays = 0
+        let clinicHolidayDeductDays = 0
+        const calcEndDate = leavePeriod.endDate < today ? leavePeriod.endDate : today
+
+        if (holidaySettings?.deduct_public_holidays) {
+          publicHolidayDeductDays = countKoreanHolidaysInRange(leavePeriod.startDate, calcEndDate)
+        }
+
+        if (holidaySettings?.deduct_clinic_holidays) {
+          // 자동 차감: 아직 수동 적용 안 된 병원 지정 휴무일
+          const { data: unappliedHolidays } = await (supabase as any)
+            .from('clinic_holidays')
+            .select('deduct_days')
+            .eq('clinic_id', clinicId)
+            .eq('is_applied', false)
+            .eq('deduct_from_annual', true)
+            .gte('start_date', leavePeriod.startDate)
+            .lte('start_date', calcEndDate)
+
+          clinicHolidayDeductDays += (unappliedHolidays || [])
+            .reduce((sum: number, h: any) => sum + (h.deduct_days || 0), 0)
+        }
+
+        // 수동 적용된 병원 지정 휴무일 차감 (leave_adjustments에서 [병원휴무] 태그)
+        const { data: clinicHolidayAdjustments } = await (supabase as any)
+          .from('leave_adjustments')
+          .select('days')
+          .eq('user_id', user.id)
+          .eq('year', periodYear)
+          .eq('adjustment_type', 'deduct')
+          .like('reason', '%[병원휴무]%')
+
+        clinicHolidayDeductDays += (clinicHolidayAdjustments || [])
+          .reduce((sum: number, adj: any) => sum + adj.days, 0)
+
         return {
           ...balance,
           user_name: user.name,
@@ -694,6 +737,8 @@ export const leaveService = {
           pending_by_type: pendingByType,
           leave_period_start: leavePeriod.startDate,
           leave_period_end: leavePeriod.endDate,
+          public_holiday_deduct_days: publicHolidayDeductDays,
+          clinic_holiday_deduct_days: clinicHolidayDeductDays,
         }
       }))
 
