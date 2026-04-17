@@ -31,6 +31,7 @@ import { RecallManagement } from '@/components/Recall'
 import AIChat from '@/components/AIAnalysis/AIChat'
 import PremiumGate from '@/components/Premium/PremiumGate'
 import TaskChecklistManagement from '@/components/TaskChecklist/TaskChecklistManagement'
+import InvestmentTab from '@/components/Investment/InvestmentTab'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
@@ -872,6 +873,11 @@ export default function DashboardPage() {
                  </div>
               </footer>
             </div>
+          )}
+
+          {/* 투자 자동매매 */}
+          {activeTab === 'investment' && (
+            <InvestmentTab />
           )}
 
           {/* 메뉴 설정 */}
