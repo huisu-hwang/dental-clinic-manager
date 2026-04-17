@@ -65,6 +65,11 @@ export default function AIChat({ clinicId }: AIChatProps) {
   const [isParsingFile, setIsParsingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 백그라운드 처리 관련 상태
+  const [showBackgroundHint, setShowBackgroundHint] = useState(false);
+  const backgroundHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -101,15 +106,80 @@ export default function AIChat({ clinicId }: AIChatProps) {
     }
   };
 
+  // 백그라운드 폴링 관리
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  const startPolling = (convId: string) => {
+    stopPolling();
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/ai-conversations/${convId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const convMessages = data.conversation.messages || [];
+          const lastMsg = convMessages[convMessages.length - 1];
+          if (lastMsg && !lastMsg.isLoading) {
+            setMessages(convMessages);
+            setIsLoading(false);
+            setShowBackgroundHint(false);
+            stopPolling();
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 5000);
+  };
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      if (backgroundHintTimerRef.current) clearTimeout(backgroundHintTimerRef.current);
+    };
+  }, []);
+
   // 특정 대화 불러오기
   const loadConversation = async (conversationId: string) => {
+    stopPolling();
     try {
       const response = await fetch(`/api/ai-conversations/${conversationId}`);
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.conversation.messages || []);
+        const convMessages = data.conversation.messages || [];
+        setMessages(convMessages);
         setCurrentConversationId(conversationId);
         setError(null);
+
+        // 분석 대기 중인 메시지가 있는지 확인
+        const lastMsg = convMessages[convMessages.length - 1];
+        if (lastMsg?.isLoading) {
+          const pendingTime = new Date(lastMsg.timestamp).getTime();
+          if (Date.now() - pendingTime > 2 * 60 * 1000) {
+            // 시간 초과 처리 (2분)
+            const timeoutMessages = convMessages.map((msg: AIMessage) =>
+              msg.isLoading
+                ? { ...msg, content: '분석 시간이 초과되었습니다. 다시 시도해주세요.', isLoading: false, error: '시간 초과' }
+                : msg
+            );
+            setMessages(timeoutMessages);
+            await fetch(`/api/ai-conversations/${conversationId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messages: timeoutMessages }),
+            });
+          } else {
+            // 아직 분석 중 → 폴링 시작
+            setIsLoading(true);
+            setShowBackgroundHint(true);
+            startPolling(conversationId);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to load conversation:', err);
@@ -214,35 +284,69 @@ export default function AIChat({ clinicId }: AIChatProps) {
     };
 
     const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+
+    // AI 응답 플레이스홀더
+    const assistantMessageId = generateId();
+    const pendingAssistantMessage: AIMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isLoading: true,
+    };
+    const messagesWithPending = [...updatedMessages, pendingAssistantMessage];
+
+    setMessages(messagesWithPending);
     setInputValue('');
     setIsLoading(true);
     setError(null);
 
-    // AI 응답 플레이스홀더 추가
-    const assistantMessageId = generateId();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: '',
-        timestamp: new Date(),
-        isLoading: true,
-      },
-    ]);
+    // 1. 대화를 DB에 먼저 저장 (pending 상태) — 페이지 이탈 시에도 서버가 결과를 저장할 수 있도록
+    let convId = currentConversationId;
+    try {
+      if (convId) {
+        await fetch(`/api/ai-conversations/${convId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: messagesWithPending }),
+        });
+      } else {
+        const autoTitle = messages.length === 0
+          ? (userMessage.content.length > 30 ? userMessage.content.slice(0, 30) + '...' : userMessage.content)
+          : undefined;
+        const saveRes = await fetch('/api/ai-conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: autoTitle, messages: messagesWithPending }),
+        });
+        if (saveRes.ok) {
+          const saveData = await saveRes.json();
+          convId = saveData.conversation.id;
+          setCurrentConversationId(convId);
+          loadConversations();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to pre-save conversation:', err);
+    }
 
+    // 2. 백그라운드 힌트 타이머 (5초 후 표시)
+    if (backgroundHintTimerRef.current) clearTimeout(backgroundHintTimerRef.current);
+    backgroundHintTimerRef.current = setTimeout(() => {
+      setShowBackgroundHint(true);
+    }, 5000);
+
+    // 3. AI 분석 API 호출 (서버에서 완료 시 DB에 자동 저장)
     try {
       const response = await fetch('/api/ai-analysis', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
           conversationHistory: messages,
           clinicId,
           attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
+          conversationId: convId,
         }),
       });
 
@@ -252,7 +356,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
         throw new Error(data.error || 'AI 분석 중 오류가 발생했습니다.');
       }
 
-      // 응답으로 메시지 업데이트
+      // 응답으로 메시지 업데이트 (DB는 API에서 이미 저장됨)
       const finalMessages: AIMessage[] = [
         ...updatedMessages,
         {
@@ -265,43 +369,34 @@ export default function AIChat({ clinicId }: AIChatProps) {
       ];
 
       setMessages(finalMessages);
-
-      // 첨부 파일 초기화 (전송 완료 후)
       setAttachedFiles([]);
-
-      // 대화 자동 저장 (첫 메시지일 경우 제목 자동 생성)
-      const autoTitle = messages.length === 0 ? userMessage.content.slice(0, 30) : undefined;
-      await saveConversation(finalMessages, autoTitle);
-
-      // 목록 새로고침 (업데이트 시간 갱신을 위해)
       loadConversations();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'AI 분석 중 오류가 발생했습니다.';
       setError(errorMessage);
-      // 오류 시 로딩 메시지 제거
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMessageId
-            ? {
-                ...msg,
-                content: errorMessage,
-                isLoading: false,
-                error: errorMessage,
-              }
+            ? { ...msg, content: errorMessage, isLoading: false, error: errorMessage }
             : msg
         )
       );
     } finally {
+      if (backgroundHintTimerRef.current) clearTimeout(backgroundHintTimerRef.current);
+      setShowBackgroundHint(false);
       setIsLoading(false);
     }
   };
 
   const handleNewChat = () => {
+    stopPolling();
     setMessages([]);
     setCurrentConversationId(null);
     setError(null);
     setAttachedFiles([]);
     setFileError(null);
+    setShowBackgroundHint(false);
+    setIsLoading(false);
   };
 
   // 파일 첨부 핸들러
@@ -618,7 +713,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
             </div>
           ) : (
             messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <MessageBubble key={message.id} message={message} showBackgroundHint={showBackgroundHint && message.isLoading} />
             ))
           )}
           <div ref={messagesEndRef} />
@@ -739,7 +834,7 @@ export default function AIChat({ clinicId }: AIChatProps) {
 }
 
 // 메시지 버블 컴포넌트
-function MessageBubble({ message }: { message: AIMessage }) {
+function MessageBubble({ message, showBackgroundHint }: { message: AIMessage; showBackgroundHint?: boolean }) {
   const isUser = message.role === 'user';
   const isError = !!message.error;
   const hasAttachments = message.attachments && message.attachments.length > 0;
@@ -816,9 +911,16 @@ function MessageBubble({ message }: { message: AIMessage }) {
           )}
         >
           {message.isLoading ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">분석 중...</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">분석 중...</span>
+              </div>
+              {showBackgroundHint && (
+                <p className="text-xs text-at-text-weak mt-1">
+                  다른 작업을 하고 오셔도 됩니다. 돌아오시면 결과를 확인할 수 있습니다.
+                </p>
+              )}
             </div>
           ) : (
             <div className="text-sm whitespace-pre-wrap leading-relaxed text-left">
