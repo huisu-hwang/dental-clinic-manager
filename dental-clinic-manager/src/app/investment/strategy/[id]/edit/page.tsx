@@ -7,7 +7,7 @@ export default function EditStrategyPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/investment/strategy" className="p-2 rounded-lg hover:bg-at-bg transition-colors">
+        <Link href="/dashboard?tab=investment" className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors">
           <ArrowLeft className="w-5 h-5 text-at-text-secondary" />
         </Link>
         <div>

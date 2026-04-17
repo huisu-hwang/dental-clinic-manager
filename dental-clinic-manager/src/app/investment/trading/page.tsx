@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, Send, ArrowUpCircle, ArrowDownCircle, Clock, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Activity, Send, ArrowUpCircle, ArrowDownCircle, Clock, Loader2, ArrowLeft } from 'lucide-react'
 import type { TradeOrder, Market, OrderType, OrderMethod } from '@/types/investment'
 
 export default function TradingPage() {
@@ -83,11 +84,18 @@ export default function TradingPage() {
     failed: { label: '실패', color: 'text-red-600 bg-red-50 dark:bg-red-900/20' },
   }
 
+  const router = useRouter()
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-at-text">자동매매 현황</h1>
-        <p className="text-sm text-at-text-secondary mt-1">실시간 매매 상태와 수동 주문을 관리하세요</p>
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <button onClick={() => router.push('/dashboard?tab=investment')} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors">
+          <ArrowLeft className="w-5 h-5 text-at-text-secondary" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold text-at-text">자동매매 현황</h1>
+          <p className="text-sm text-at-text-secondary mt-0.5">실시간 매매 상태와 수동 주문을 관리하세요</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

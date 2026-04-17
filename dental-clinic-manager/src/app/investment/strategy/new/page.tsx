@@ -100,7 +100,7 @@ export default function NewStrategyPage() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center gap-3">
-        <Link href="/investment/strategy" className="p-2 rounded-lg hover:bg-at-bg transition-colors">
+        <Link href="/dashboard?tab=investment" className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors">
           <ArrowLeft className="w-5 h-5 text-at-text-secondary" />
         </Link>
         <div>
@@ -245,7 +245,7 @@ export default function NewStrategyPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep('basic')}
-              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-bg transition-colors"
+              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-surface-alt transition-colors"
             >
               이전
             </button>
@@ -276,7 +276,7 @@ export default function NewStrategyPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep('indicators')}
-              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-bg transition-colors"
+              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-surface-alt transition-colors"
             >
               이전
             </button>
@@ -296,7 +296,7 @@ export default function NewStrategyPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep('conditions')}
-              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-bg transition-colors"
+              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-surface-alt transition-colors"
             >
               이전
             </button>

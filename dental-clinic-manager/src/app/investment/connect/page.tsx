@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   Link2,
@@ -16,6 +17,7 @@ import type { BrokerCredentialSafe } from '@/types/investment'
 
 export default function ConnectPage() {
   const { user } = useAuth()
+  const router = useRouter()
   const [credential, setCredential] = useState<BrokerCredentialSafe | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -79,6 +81,8 @@ export default function ConnectPage() {
       setAppSecret('')
       setAccountNumber('')
       setLabel('')
+      // 2초 후 대시보드 투자 탭으로 이동
+      setTimeout(() => router.push('/dashboard?tab=investment'), 2000)
     } catch {
       setError('서버 연결에 실패했습니다.')
     } finally {
@@ -101,6 +105,7 @@ export default function ConnectPage() {
 
       setCredential(null)
       setSuccess('계좌 연결이 해제되었습니다.')
+      setTimeout(() => router.push('/dashboard?tab=investment'), 2000)
     } catch {
       setError('서버 연결에 실패했습니다.')
     }
@@ -115,10 +120,18 @@ export default function ConnectPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-at-text">계좌 연결</h1>
-        <p className="text-sm text-at-text-secondary mt-1">한국투자증권(KIS) Open API 계좌를 연결하세요</p>
+    <div className="max-w-2xl mx-auto space-y-6 p-4 sm:p-6">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push('/dashboard?tab=investment')}
+          className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors"
+        >
+          <svg className="w-5 h-5 text-at-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        </button>
+        <div>
+          <h1 className="text-xl font-bold text-at-text">계좌 연결</h1>
+          <p className="text-sm text-at-text-secondary mt-0.5">한국투자증권(KIS) Open API 계좌를 연결하세요</p>
+        </div>
       </div>
 
       {/* 에러/성공 메시지 */}

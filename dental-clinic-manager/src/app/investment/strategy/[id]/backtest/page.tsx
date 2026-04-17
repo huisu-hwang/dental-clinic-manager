@@ -168,7 +168,7 @@ export default function BacktestPage() {
     return (
       <div className="text-center py-20 text-at-text-weak">
         <p>전략을 찾을 수 없습니다</p>
-        <Link href="/investment/strategy" className="text-at-accent text-sm mt-2 inline-block">
+        <Link href="/dashboard?tab=investment" className="text-at-accent text-sm mt-2 inline-block">
           전략 목록으로 돌아가기
         </Link>
       </div>
@@ -181,7 +181,7 @@ export default function BacktestPage() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center gap-3">
-        <Link href="/investment/strategy" className="p-2 rounded-lg hover:bg-at-bg transition-colors">
+        <Link href="/dashboard?tab=investment" className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors">
           <ArrowLeft className="w-5 h-5 text-at-text-secondary" />
         </Link>
         <div>
@@ -489,7 +489,7 @@ export default function BacktestPage() {
                   </thead>
                   <tbody>
                     {selectedResult.trades.map((t, i) => (
-                      <tr key={i} className="border-b border-at-border/50 hover:bg-at-bg transition-colors">
+                      <tr key={i} className="border-b border-at-border/50 hover:bg-at-surface-alt transition-colors">
                         <td className="py-2 px-2 font-mono">{t.entryDate}</td>
                         <td className="py-2 px-2 font-mono">{t.exitDate}</td>
                         <td className="py-2 px-2 text-right font-mono">{t.entryPrice.toLocaleString()}</td>
