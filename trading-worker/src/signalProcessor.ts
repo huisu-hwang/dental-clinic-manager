@@ -15,6 +15,7 @@ import { logger } from './logger'
 import { getSupabase } from './supabaseClient'
 import { kisWebSocket } from './kisWebSocket'
 import { sendSignalAlert } from './telegramNotifier'
+import { executeAutoOrder } from './orderExecutor'
 
 let pendingBacktestJob: cron.ScheduledTask | null = null
 
@@ -139,7 +140,19 @@ async function evaluateStrategy(
           currentPrice,
         })
 
-        // Level 2: 자동 매도 주문 (TODO: Phase 4에서 구현)
+        // Level 2: 자동 손절 매도 주문
+        if (strategy.automation_level === 2) {
+          await executeAutoOrder({
+            userId: strategy.user_id as string,
+            strategyId: strategy.id as string,
+            ticker,
+            market: market as 'KR' | 'US',
+            orderType: 'sell',
+            quantity: pos.quantity,
+            price: 0, // 시장가
+            signalData: { type: 'stop_loss', pnlPercent, triggerPrice: currentPrice },
+          })
+        }
       }
 
       // 익절 체크
@@ -162,6 +175,20 @@ async function evaluateStrategy(
           pnlPercent: pnlPercent.toFixed(2),
           currentPrice,
         })
+
+        // Level 2: 자동 익절 매도 주문
+        if (strategy.automation_level === 2) {
+          await executeAutoOrder({
+            userId: strategy.user_id as string,
+            strategyId: strategy.id as string,
+            ticker,
+            market: market as 'KR' | 'US',
+            orderType: 'sell',
+            quantity: pos.quantity,
+            price: 0, // 시장가
+            signalData: { type: 'take_profit', pnlPercent, triggerPrice: currentPrice },
+          })
+        }
       }
     }
   }

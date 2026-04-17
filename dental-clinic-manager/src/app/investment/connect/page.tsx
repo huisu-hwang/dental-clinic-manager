@@ -10,6 +10,7 @@ import {
   Loader2,
   Trash2,
   ExternalLink,
+  Zap,
 } from 'lucide-react'
 import type { BrokerCredentialSafe } from '@/types/investment'
 
@@ -20,6 +21,8 @@ export default function ConnectPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [switchConfirmText, setSwitchConfirmText] = useState('')
+  const [switching, setSwitching] = useState(false)
 
   // 폼 상태
   const [appKey, setAppKey] = useState('')
@@ -157,6 +160,64 @@ export default function ConnectPage() {
               {credential.isPaperTrading ? '모의투자' : '실전투자'}
             </span>
           </div>
+
+          {/* 모의투자 → 실전 전환 */}
+          {credential.isPaperTrading && (
+            <div className="mt-4 pt-4 border-t border-at-border">
+              <div className="flex items-start gap-3 mb-3">
+                <Zap className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-at-text">실전 투자로 전환</p>
+                  <p className="text-xs text-at-text-secondary mt-0.5">
+                    실전 계좌로 전환하면 실제 돈으로 주문이 실행됩니다.
+                    전환 후에도 전략을 수동으로 활성화해야 자동매매가 시작됩니다.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={switchConfirmText}
+                  onChange={e => setSwitchConfirmText(e.target.value)}
+                  placeholder='"실전 전환"을 입력하세요'
+                  className="flex-1 px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-amber-500"
+                />
+                <button
+                  onClick={async () => {
+                    if (switchConfirmText !== '실전 전환') {
+                      setError('"실전 전환"을 정확히 입력해주세요')
+                      return
+                    }
+                    setSwitching(true)
+                    setError('')
+                    try {
+                      const res = await fetch('/api/investment/credentials/switch-live', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ confirmText: switchConfirmText }),
+                      })
+                      const json = await res.json()
+                      if (res.ok) {
+                        setSuccess(json.message)
+                        setSwitchConfirmText('')
+                        fetchCredential()
+                      } else {
+                        setError(json.error)
+                      }
+                    } catch {
+                      setError('네트워크 오류')
+                    } finally {
+                      setSwitching(false)
+                    }
+                  }}
+                  disabled={switching || switchConfirmText !== '실전 전환'}
+                  className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {switching ? '전환 중...' : '전환'}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-4 border-t border-at-border">
             <p className="text-xs text-at-text-weak">
