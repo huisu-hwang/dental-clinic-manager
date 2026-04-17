@@ -39,9 +39,9 @@ export default function AttendancePage() {
   if (!user) return null
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-      {/* 탭 네비게이션 — 연차관리 스타일 */}
-      <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+    <div className="bg-white min-h-screen">
+      {/* 탭 네비게이션 — 상단 고정 */}
+      <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex flex-wrap gap-2">
         {subTabs.map((tab) => {
           const hasTabPermission =
             (tab.id === 'checkin' && canCheckIn) ||
@@ -72,7 +72,7 @@ export default function AttendancePage() {
       </div>
 
       {/* 탭 콘텐츠 */}
-      <div key={activeTab} className="tab-content">
+      <div key={activeTab} className="tab-content p-4 sm:p-6">
         {activeTab === 'checkin' && canCheckIn && <CheckInOut />}
         {activeTab === 'history' && canViewHistory && <AttendanceHistory />}
         {activeTab === 'stats' && canViewStats && <AttendanceStats />}
