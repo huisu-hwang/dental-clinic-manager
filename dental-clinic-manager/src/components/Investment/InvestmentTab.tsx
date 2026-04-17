@@ -9,6 +9,8 @@ import {
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
 } from 'lucide-react'
 import Link from 'next/link'
+import ConnectContent from './ConnectContent'
+import TradingContent from './TradingContent'
 import type { InvestmentStrategy } from '@/types/investment'
 
 type SubTab = 'dashboard' | 'connect' | 'strategy' | 'trading' | 'portfolio'
@@ -114,39 +116,13 @@ export default function InvestmentTab() {
           />
         )}
         {subTab === 'connect' && (
-          <div className="max-w-md mx-auto text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-at-accent-light flex items-center justify-center mx-auto mb-4">
-              <Link2 className="w-8 h-8 text-at-accent" />
-            </div>
-            <h3 className="text-lg font-bold text-at-text mb-2">계좌 연결</h3>
-            <p className="text-sm text-at-text-secondary mb-6">KIS 계좌를 연결하고 API 키를 등록하세요</p>
-            <Link
-              href="/investment/connect"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover transition-colors"
-            >
-              계좌 연결 페이지 열기
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          <ConnectContent onCredentialChange={loadData} />
         )}
         {subTab === 'strategy' && (
           <StrategySubTab strategies={strategies} onRefresh={loadData} />
         )}
         {subTab === 'trading' && (
-          <div className="max-w-md mx-auto text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-at-accent-light flex items-center justify-center mx-auto mb-4">
-              <TrendingUp className="w-8 h-8 text-at-accent" />
-            </div>
-            <h3 className="text-lg font-bold text-at-text mb-2">자동매매</h3>
-            <p className="text-sm text-at-text-secondary mb-6">실시간 매매 현황과 수동 주문을 관리하세요</p>
-            <Link
-              href="/investment/trading"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover transition-colors"
-            >
-              자동매매 페이지 열기
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          <TradingContent />
         )}
         {subTab === 'portfolio' && (
           <div className="max-w-md mx-auto text-center py-12">
