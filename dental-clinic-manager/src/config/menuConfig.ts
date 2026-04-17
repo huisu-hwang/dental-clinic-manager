@@ -261,6 +261,19 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     premiumFeature: true,  // 프리미엄 기능
   },
 
+  // === 투자 카테고리 ===
+  {
+    id: 'investment',
+    label: '주식 자동 매매',
+    icon: 'TrendingUp',
+    route: '/investment',
+    permissions: [],
+    categoryId: 'investment',
+    order: 16.5,
+    visible: true,
+    ownerOnly: true,  // 대표 원장 전용
+  },
+
   // === 하단 고정 메뉴 ===
   {
     id: 'guide',

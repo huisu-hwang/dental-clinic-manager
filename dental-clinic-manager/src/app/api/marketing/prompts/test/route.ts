@@ -49,13 +49,21 @@ export async function POST(request: NextRequest) {
     if (category === 'image') {
       const prompt = imagePrompt || '치과 치아 건강 관리 이미지';
       try {
-        const { imageBase64, fileName } = await generateBlogImage(
-          prompt,
-          undefined, // imageStyle
-          undefined, // referenceImageBase64
-          userData.clinic_id,
-          customSystemPrompt || undefined,
-        );
+        // 60초 타임아웃으로 이미지 생성 (Vercel 함수 타임아웃 전에 제어)
+        const imageResult = await Promise.race([
+          generateBlogImage(
+            prompt,
+            undefined, // imageStyle
+            undefined, // referenceImageBase64
+            userData.clinic_id,
+            customSystemPrompt || undefined,
+          ),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('이미지 생성 시간이 초과되었습니다. 다시 시도해주세요.')), 60000)
+          ),
+        ]);
+
+        const { imageBase64, fileName } = imageResult;
         const admin = getSupabaseAdmin();
 
         let imagePath = '';
@@ -87,7 +95,8 @@ export async function POST(request: NextRequest) {
             images: imagePath ? [{ fileName, prompt, path: imagePath }] : [],
           },
         });
-      } catch (imgError) {
+      } catch (imgError: unknown) {
+        console.error('[API] 이미지 테스트 실패:', imgError);
         const msg = imgError instanceof Error ? imgError.message : '이미지 생성 실패';
         return NextResponse.json({ error: msg }, { status: 500 });
       }

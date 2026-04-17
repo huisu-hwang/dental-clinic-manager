@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { MessageCircle, Shield } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { communityProfileService } from '@/lib/communityService'
 import type { CommunityProfile, CommunityPost } from '@/types/community'
@@ -118,15 +118,8 @@ export default function CommunityPage() {
       <div className="flex gap-6">
         {/* 메인 영역 */}
         <div className="flex-1">
-          {/* 페이지 헤더 */}
-          <div className="flex items-center justify-between pb-4 border-b border-at-border mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-at-accent" />
-              </div>
-              <h2 className="text-lg font-bold text-at-text">자유게시판</h2>
-            </div>
-            {user?.role === 'master_admin' && (
+          {user?.role === 'master_admin' && (
+            <div className="flex justify-end mb-4">
               <button
                 onClick={() => router.push('/dashboard/community/admin')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-at-surface-alt hover:bg-at-border text-at-text-secondary text-xs font-medium transition-colors"
@@ -134,8 +127,8 @@ export default function CommunityPage() {
                 <Shield className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">관리</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* 차단 알림 */}
           {isBanned && profile && <BanNotice profile={profile} />}

@@ -103,6 +103,7 @@ export interface Task {
   completed_at?: string        // 완료일
   progress: number             // 진행률 (0-100)
   comments_count: number       // 댓글 수
+  recurring_template_id?: string | null  // 반복 업무 템플릿 참조 (있으면 반복 생성된 인스턴스)
   created_at: string
   updated_at: string
 }
@@ -196,4 +197,94 @@ export const TASK_PRIORITY_COLORS: Record<TaskPriority, string> = {
   medium: 'bg-blue-100 text-blue-600',
   high: 'bg-orange-100 text-orange-600',
   urgent: 'bg-red-100 text-red-600'
+}
+
+// =====================================================
+// 반복 업무 템플릿
+// =====================================================
+
+// 반복 주기 유형
+export type RecurrenceType = 'weekly' | 'monthly' | 'yearly'
+
+// 반복 업무 템플릿
+export interface RecurringTaskTemplate {
+  id: string
+  clinic_id: string
+  title: string
+  description?: string | null
+  priority: TaskPriority
+  assignee_id: string
+  assignee_name?: string
+  assigner_id: string
+  assigner_name?: string
+  recurrence_type: RecurrenceType
+  recurrence_weekday?: number | null       // weekly: 0(일) ~ 6(토)
+  recurrence_day_of_month?: number | null  // monthly/yearly: 1~31
+  recurrence_month?: number | null         // yearly: 1~12
+  start_date: string                       // YYYY-MM-DD
+  end_date?: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// 반복 업무 템플릿 생성 DTO
+export interface CreateRecurringTaskTemplateDto {
+  title: string
+  description?: string
+  priority?: TaskPriority
+  assignee_id: string
+  recurrence_type: RecurrenceType
+  recurrence_weekday?: number
+  recurrence_day_of_month?: number
+  recurrence_month?: number
+  start_date?: string
+  end_date?: string
+}
+
+// 반복 업무 템플릿 수정 DTO
+export interface UpdateRecurringTaskTemplateDto {
+  title?: string
+  description?: string
+  priority?: TaskPriority
+  assignee_id?: string
+  recurrence_type?: RecurrenceType
+  recurrence_weekday?: number | null
+  recurrence_day_of_month?: number | null
+  recurrence_month?: number | null
+  start_date?: string
+  end_date?: string | null
+  is_active?: boolean
+}
+
+// 요일 라벨 (0=일 ~ 6=토, Date.getDay()와 동일)
+export const WEEKDAY_LABELS: Record<number, string> = {
+  0: '일',
+  1: '월',
+  2: '화',
+  3: '수',
+  4: '목',
+  5: '금',
+  6: '토',
+}
+
+// 반복 주기 라벨
+export const RECURRENCE_TYPE_LABELS: Record<RecurrenceType, string> = {
+  weekly: '주간',
+  monthly: '월간',
+  yearly: '연간',
+}
+
+// 반복 설정을 사람이 읽을 수 있는 문구로 변환
+export const formatRecurrenceRule = (template: Pick<RecurringTaskTemplate, 'recurrence_type' | 'recurrence_weekday' | 'recurrence_day_of_month' | 'recurrence_month'>): string => {
+  switch (template.recurrence_type) {
+    case 'weekly':
+      return `매주 ${WEEKDAY_LABELS[template.recurrence_weekday ?? 0]}요일`
+    case 'monthly':
+      return `매월 ${template.recurrence_day_of_month ?? 1}일`
+    case 'yearly':
+      return `매년 ${template.recurrence_month ?? 1}월 ${template.recurrence_day_of_month ?? 1}일`
+    default:
+      return '반복'
+  }
 }

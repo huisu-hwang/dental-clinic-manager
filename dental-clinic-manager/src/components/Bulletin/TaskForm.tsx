@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Save, User } from 'lucide-react'
+import { ArrowLeft, Save } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { taskService } from '@/lib/bulletinService'
+import { taskService, recurringTaskTemplateService } from '@/lib/bulletinService'
 import { ensureConnection } from '@/lib/supabase/connectionCheck'
 import type { Task, TaskPriority, CreateTaskDto } from '@/types/bulletin'
 import { TASK_PRIORITY_LABELS } from '@/types/bulletin'
 import EnhancedTiptapEditor from '@/components/Protocol/EnhancedTiptapEditor'
+import RecurrenceFields, { validateRecurrence, type RecurrenceFieldsValue } from './RecurrenceFields'
 
 interface TaskFormProps {
   task?: Task | null
@@ -33,6 +34,13 @@ export default function TaskForm({
     priority: task?.priority || 'medium',
     assignee_id: task?.assignee_id || '',
     due_date: task?.due_date || '',
+  })
+  const todayStr = new Date().toISOString().split('T')[0]
+  const [recurrence, setRecurrence] = useState<RecurrenceFieldsValue>({
+    enabled: false,
+    recurrence_type: 'weekly',
+    recurrence_weekday: new Date().getDay(),
+    start_date: todayStr,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +90,15 @@ export default function TaskForm({
       return
     }
 
+    // 반복 설정 유효성 검증 (신규 생성 모드에서만)
+    if (!isEditing && recurrence.enabled) {
+      const recurrenceError = validateRecurrence(recurrence)
+      if (recurrenceError) {
+        setError(recurrenceError)
+        return
+      }
+    }
+
     setLoading(true)
     setError(null)
 
@@ -89,6 +106,24 @@ export default function TaskForm({
       if (isEditing) {
         const { error: updateError } = await taskService.updateTask(task.id, formData)
         if (updateError) throw new Error(updateError)
+      } else if (recurrence.enabled) {
+        // 반복 업무 템플릿 생성
+        const { error: createError } = await recurringTaskTemplateService.createTemplate({
+          title: formData.title,
+          description: formData.description,
+          priority: formData.priority,
+          assignee_id: formData.assignee_id,
+          recurrence_type: recurrence.recurrence_type,
+          recurrence_weekday: recurrence.recurrence_weekday,
+          recurrence_day_of_month: recurrence.recurrence_day_of_month,
+          recurrence_month: recurrence.recurrence_month,
+          start_date: recurrence.start_date,
+          end_date: recurrence.end_date,
+        })
+        if (createError) throw new Error(createError)
+
+        // 오늘 해당 패턴과 일치하면 즉시 첫 인스턴스 생성
+        await recurringTaskTemplateService.materializeDueInstances()
       } else {
         const { error: createError } = await taskService.createTask(formData)
         if (createError) throw new Error(createError)
@@ -189,17 +224,24 @@ export default function TaskForm({
           </select>
         </div>
 
-        {/* 마감일 */}
-        <div>
-          <label className="block text-sm font-medium text-at-text-secondary mb-2">
-            마감일
-          </label>
-          <Input
-            type="date"
-            value={formData.due_date || ''}
-            onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-          />
-        </div>
+        {/* 마감일 (일회성 업무용) */}
+        {(!recurrence.enabled || isEditing) && (
+          <div>
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">
+              마감일
+            </label>
+            <Input
+              type="date"
+              value={formData.due_date || ''}
+              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+            />
+          </div>
+        )}
+
+        {/* 반복 업무 설정 (신규 생성 모드에서만 노출 — 기존 업무 편집 시 숨김) */}
+        {!isEditing && (
+          <RecurrenceFields value={recurrence} onChange={setRecurrence} />
+        )}
 
         {/* 상세 내용 */}
         <div>
@@ -220,7 +262,13 @@ export default function TaskForm({
           </Button>
           <Button type="submit" disabled={loading || loadingStaff} className="flex items-center gap-2">
             <Save className="w-4 h-4" />
-            {loading ? '저장 중...' : (isEditing ? '수정' : '할당')}
+            {loading
+              ? '저장 중...'
+              : isEditing
+                ? '수정'
+                : recurrence.enabled
+                  ? '반복 등록'
+                  : '할당'}
           </Button>
         </div>
       </form>
