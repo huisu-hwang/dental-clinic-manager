@@ -266,7 +266,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     id: 'investment',
     label: '주식 자동 매매',
     icon: 'TrendingUp',
-    route: '/investment',
+    route: '/dashboard?tab=investment',
     permissions: [],
     categoryId: 'investment',
     order: 16.5,

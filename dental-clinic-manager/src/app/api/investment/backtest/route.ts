@@ -66,15 +66,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '전략을 찾을 수 없습니다' }, { status: 404 })
   }
 
-  // 동시 백테스트 제한 (사용자당 1개)
+  // 동시 백테스트 제한 (사용자당 최대 10개)
   const { count } = await supabase
     .from('backtest_runs')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .in('status', ['pending', 'running'])
 
-  if ((count ?? 0) > 0) {
-    return NextResponse.json({ error: '이미 실행 중인 백테스트가 있습니다' }, { status: 429 })
+  if ((count ?? 0) >= 10) {
+    return NextResponse.json({ error: '동시 백테스트는 최대 10개까지 가능합니다' }, { status: 429 })
   }
 
   // 기간 확인 (3년 이하만 동기 처리)

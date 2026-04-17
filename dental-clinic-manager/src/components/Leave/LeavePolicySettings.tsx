@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Settings, Save, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { Settings, Save, AlertCircle, CheckCircle, Info, Building2, Globe } from 'lucide-react'
 import { leaveService } from '@/lib/leaveService'
 import type { LeavePolicy, YearlyLeaveRule, ManagerApprovalByRank } from '@/types/leave'
 import { appConfirm } from '@/components/ui/AppDialog'
@@ -50,8 +50,15 @@ export default function LeavePolicySettings() {
     days_per_year: DEFAULT_KOREA_LABOR_RULES,
   })
 
+  // 휴무일/공휴일 차감 설정
+  const [holidaySettings, setHolidaySettings] = useState({
+    deduct_public_holidays: false,
+    deduct_clinic_holidays: false,
+  })
+
   useEffect(() => {
     loadPolicy()
+    loadHolidaySettings()
   }, [])
 
   // 기존 boolean 값을 직급별 객체로 변환하는 헬퍼 함수
@@ -100,6 +107,20 @@ export default function LeavePolicySettings() {
     }
   }
 
+  const loadHolidaySettings = async () => {
+    try {
+      const result = await leaveService.getClinicHolidaySettings()
+      if (result.data) {
+        setHolidaySettings({
+          deduct_public_holidays: result.data.deduct_public_holidays,
+          deduct_clinic_holidays: result.data.deduct_clinic_holidays,
+        })
+      }
+    } catch (err) {
+      console.error('Error loading holiday settings:', err)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -122,10 +143,13 @@ export default function LeavePolicySettings() {
         is_default: true,
       }
 
-      const result = await leaveService.upsertPolicy(policyData)
+      const [result, holidayResult] = await Promise.all([
+        leaveService.upsertPolicy(policyData),
+        leaveService.upsertClinicHolidaySettings(holidaySettings),
+      ])
 
-      if (result.error) {
-        setError(result.error)
+      if (result.error || holidayResult.error) {
+        setError(result.error || holidayResult.error || '저장 중 오류가 발생했습니다.')
       } else {
         setSuccess('연차 정책이 저장되었습니다.')
         setPolicy(result.data)
@@ -487,6 +511,64 @@ export default function LeavePolicySettings() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 연차 차감 정책 */}
+        <div className="border border-at-border rounded-xl p-4 space-y-4">
+          <h4 className="font-medium text-at-text">연차 차감 정책</h4>
+          <p className="text-xs text-at-text">
+            아래 설정이 켜진 경우, 해당 날짜를 직원의 연차에서 자동으로 차감합니다.
+          </p>
+
+          <div className="space-y-3">
+            {/* 법정 공휴일 차감 */}
+            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-at-surface-alt rounded-xl hover:bg-at-surface-alt transition-colors">
+              <input
+                type="checkbox"
+                checked={holidaySettings.deduct_public_holidays}
+                onChange={(e) => setHolidaySettings({ ...holidaySettings, deduct_public_holidays: e.target.checked })}
+                className="w-4 h-4 mt-0.5 text-at-accent rounded"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-at-accent" />
+                  <span className="text-sm font-medium text-at-text">법정 공휴일 연차 차감</span>
+                </div>
+                <p className="text-xs text-at-text mt-1">
+                  신정, 설날, 삼일절, 어린이날, 현충일, 광복절, 추석, 개천절, 한글날, 성탄절 등 법정 공휴일을 연차에서 차감합니다.
+                  (주말과 겹치는 날 제외)
+                </p>
+              </div>
+            </label>
+
+            {/* 병원 지정 휴무일 차감 */}
+            <label className="flex items-start space-x-3 cursor-pointer p-3 bg-at-surface-alt rounded-xl hover:bg-at-surface-alt transition-colors">
+              <input
+                type="checkbox"
+                checked={holidaySettings.deduct_clinic_holidays}
+                onChange={(e) => setHolidaySettings({ ...holidaySettings, deduct_clinic_holidays: e.target.checked })}
+                className="w-4 h-4 mt-0.5 text-at-accent rounded"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-at-accent" />
+                  <span className="text-sm font-medium text-at-text">병원 지정 휴무일 연차 차감</span>
+                </div>
+                <p className="text-xs text-at-text mt-1">
+                  휴무일 관리에서 등록한 병원 지정 휴무일(여름휴가, 겨울휴가 등) 중 연차 차감으로 설정된 날을 자동으로 차감합니다.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {(holidaySettings.deduct_public_holidays || holidaySettings.deduct_clinic_holidays) && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-xs text-amber-700">
+                <span className="font-medium">적용 안내:</span> 차감 설정은 연차 현황 조회 시 실시간으로 반영됩니다.
+                설정 저장 후 직원별 연차 잔여 일수가 자동으로 재계산됩니다.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 저장 버튼 및 결과 메시지 */}

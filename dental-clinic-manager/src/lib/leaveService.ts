@@ -5,6 +5,7 @@
 
 import { ensureConnection } from './supabase/connectionCheck'
 import { userNotificationService } from './userNotificationService'
+import { countKoreanHolidaysInRange } from '@/utils/koreanHolidays'
 import type {
   LeavePolicy,
   LeaveType,
@@ -807,11 +808,47 @@ export const leaveService = {
         return sum
       }, 0)
 
-      // 차감된 연차 (used_days에 더함)
-      const deductedDays = (adjustments || []).reduce((sum: number, adj: any) => {
+      // 수동 차감된 연차 (leave_adjustments 기반)
+      const manualDeductedDays = (adjustments || []).reduce((sum: number, adj: any) => {
         if (adj.adjustment_type === 'deduct') return sum + adj.days
         return sum
       }, 0)
+
+      // 병원 휴무일/법정 공휴일 자동 차감 계산
+      let publicHolidayDeductDays = 0
+      let clinicHolidayAutoDeductDays = 0
+
+      const { data: holidaySettings } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (holidaySettings?.deduct_public_holidays) {
+        // 연차 기간 내 이미 지난 날짜까지의 법정 공휴일 수 (주말 제외)
+        const calcEndDate = periodEndDate < today ? periodEndDate : today
+        publicHolidayDeductDays = countKoreanHolidaysInRange(periodStartDate, calcEndDate)
+      }
+
+      if (holidaySettings?.deduct_clinic_holidays) {
+        // 아직 수동 적용(is_applied=false)되지 않은 병원 지정 휴무일 중
+        // deduct_from_annual=true인 항목을 자동으로 차감
+        const calcEndDate = periodEndDate < today ? periodEndDate : today
+        const { data: unappliedHolidays } = await (supabase as any)
+          .from('clinic_holidays')
+          .select('deduct_days')
+          .eq('clinic_id', clinicId)
+          .eq('is_applied', false)
+          .eq('deduct_from_annual', true)
+          .gte('start_date', periodStartDate)
+          .lte('start_date', calcEndDate)
+
+        clinicHolidayAutoDeductDays = (unappliedHolidays || [])
+          .reduce((sum: number, h: any) => sum + (h.deduct_days || 0), 0)
+      }
+
+      // 총 차감 = 수동 차감 + 법정 공휴일 자동 차감 + 병원 휴무일 자동 차감
+      const deductedDays = manualDeductedDays + publicHolidayDeductDays + clinicHolidayAutoDeductDays
 
       // 승인됐지만 아직 시작 날짜가 지나지 않은 연차 (사용 예정으로 표시)
       // 주의: 승인 대기(status='pending')는 대기에 포함하지 않음
@@ -2035,6 +2072,77 @@ export const leaveService = {
     } catch (error) {
       console.error('[leaveService.getHolidayApplications] Error:', error)
       return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  // ============================================
+  // 병원 휴무일/공휴일 차감 정책 설정
+  // ============================================
+
+  /**
+   * 병원의 휴무일/공휴일 차감 설정 조회
+   */
+  async getClinicHolidaySettings(): Promise<{
+    data: { deduct_public_holidays: boolean; deduct_clinic_holidays: boolean } | null
+    error: string | null
+  }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { data, error } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+
+      return {
+        data: data || { deduct_public_holidays: false, deduct_clinic_holidays: false },
+        error: null,
+      }
+    } catch (error) {
+      console.error('[leaveService.getClinicHolidaySettings] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원의 휴무일/공휴일 차감 설정 저장 (upsert)
+   */
+  async upsertClinicHolidaySettings(settings: {
+    deduct_public_holidays: boolean
+    deduct_clinic_holidays: boolean
+  }): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { error } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .upsert(
+          {
+            clinic_id: clinicId,
+            deduct_public_holidays: settings.deduct_public_holidays,
+            deduct_clinic_holidays: settings.deduct_clinic_holidays,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'clinic_id' }
+        )
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.upsertClinicHolidaySettings] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
     }
   },
 }
