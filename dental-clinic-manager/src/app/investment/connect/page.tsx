@@ -235,30 +235,105 @@ export default function ConnectPage() {
       ) : (
         /* 계좌 연결 폼 */
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 안내 */}
-          <div className="bg-at-accent-light rounded-2xl p-4">
-            <div className="flex items-start gap-3">
-              <Shield className="w-5 h-5 text-at-accent mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-at-accent">
-                <p className="font-medium mb-1">API 키 발급 방법</p>
-                <ol className="list-decimal list-inside space-y-1 text-xs">
-                  <li>한국투자증권 홈페이지 접속</li>
-                  <li>KIS Developers 메뉴 → API 신청</li>
-                  <li>AppKey, AppSecret 발급</li>
-                  <li>모의투자 신청 (처음이라면 모의투자부터 시작 권장)</li>
-                </ol>
-                <a
-                  href="https://apiportal.koreainvestment.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 text-xs underline"
-                >
-                  KIS Developers 바로가기
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+          {/* API 키 발급 상세 가이드 */}
+          <details open className="bg-at-surface rounded-2xl shadow-at-card overflow-hidden">
+            <summary className="flex items-center gap-3 p-5 cursor-pointer select-none hover:bg-at-bg transition-colors">
+              <Shield className="w-5 h-5 text-at-accent flex-shrink-0" />
+              <span className="font-semibold text-at-text text-sm">API 키 발급 가이드</span>
+              <span className="text-xs text-at-text-weak ml-auto">클릭하여 접기/펼치기</span>
+            </summary>
+            <div className="px-5 pb-5 space-y-4">
+              {/* Step 1 */}
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                <div>
+                  <p className="text-sm font-medium text-at-text">한국투자증권 계좌 개설</p>
+                  <p className="text-xs text-at-text-secondary mt-1">
+                    이미 계좌가 있다면 이 단계를 건너뛰세요.<br />
+                    한국투자증권 앱(한국투자) 또는 홈페이지에서 비대면 계좌 개설이 가능합니다.<br />
+                    개설 후 <strong>계좌번호 8자리 + 상품코드 2자리</strong>를 확인하세요.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                <div>
+                  <p className="text-sm font-medium text-at-text">KIS Developers 포털 가입</p>
+                  <p className="text-xs text-at-text-secondary mt-1">
+                    아래 링크에서 한국투자증권 계정으로 로그인합니다.<br />
+                    첫 방문 시 이용약관 동의가 필요합니다.
+                  </p>
+                  <a
+                    href="https://apiportal.koreainvestment.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-1.5 text-xs text-at-accent underline"
+                  >
+                    KIS Developers 바로가기
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+                <div>
+                  <p className="text-sm font-medium text-at-text">모의투자 신청 (권장)</p>
+                  <p className="text-xs text-at-text-secondary mt-1">
+                    KIS Developers → <strong>&quot;모의투자 신청&quot;</strong> 메뉴에서 신청합니다.<br />
+                    모의투자 계좌가 자동 생성되며 가상 자금 1억원이 제공됩니다.<br />
+                    모의투자용 AppKey/AppSecret은 실전과 별도로 발급됩니다.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent text-white text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+                <div>
+                  <p className="text-sm font-medium text-at-text">API 앱 등록 및 키 발급</p>
+                  <p className="text-xs text-at-text-secondary mt-1">
+                    KIS Developers → <strong>&quot;API 신청&quot;</strong> → <strong>&quot;앱 등록&quot;</strong>을 클릭합니다.<br />
+                    앱 이름을 입력하세요 (자유롭게, 예: &quot;자동매매&quot;).<br />
+                    등록이 완료되면 <strong>AppKey</strong>와 <strong>AppSecret</strong>이 화면에 표시됩니다.
+                  </p>
+                  <div className="flex items-start gap-2 mt-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                      <strong>AppSecret은 반드시 바로 복사해두세요!</strong> 이후 다시 확인할 수 없습니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 5 */}
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent text-white text-xs font-bold flex items-center justify-center mt-0.5">5</span>
+                <div>
+                  <p className="text-sm font-medium text-at-text">이 화면에서 입력</p>
+                  <p className="text-xs text-at-text-secondary mt-1">
+                    위에서 발급받은 AppKey, AppSecret, 계좌번호를 아래 폼에 입력합니다.<br />
+                    모의투자 / 실전투자 유형을 선택하고 <strong>&quot;계좌 연결하기&quot;</strong>를 클릭하세요.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 6 */}
+              <div className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">6</span>
+                <div>
+                  <p className="text-sm font-medium text-at-text">연결 확인</p>
+                  <p className="text-xs text-at-text-secondary mt-1">
+                    연결 성공 시 계좌 정보가 표시됩니다.<br />
+                    이후 <strong>전략 관리</strong>에서 자동매매를 설정할 수 있습니다.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          </details>
 
           {/* 모의/실전 선택 */}
           <div className="bg-at-surface rounded-2xl shadow-at-card p-6 space-y-4">
