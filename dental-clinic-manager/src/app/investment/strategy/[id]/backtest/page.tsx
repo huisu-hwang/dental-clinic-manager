@@ -10,6 +10,12 @@ import Link from 'next/link'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import type { InvestmentStrategy, BacktestMetrics, BacktestTrade, EquityCurvePoint, Market } from '@/types/investment'
 
+interface BuyHoldData {
+  totalReturn: number
+  annualizedReturn: number
+  equityCurve: EquityCurvePoint[]
+}
+
 interface BacktestResultData {
   ticker: string
   tickerName?: string
@@ -17,6 +23,7 @@ interface BacktestResultData {
   metrics: BacktestMetrics
   trades: BacktestTrade[]
   equityCurve: EquityCurvePoint[]
+  buyHold?: BuyHoldData
 }
 
 interface TickerEntry {
@@ -122,6 +129,7 @@ export default function BacktestPage() {
           metrics: data.metrics || data.full_metrics,
           trades: data.trades || [],
           equityCurve: data.equityCurve || data.equity_curve || [],
+          buyHold: data.buyHold || data.buy_hold || undefined,
         }
       } catch {
         return { ticker: entry.ticker, error: '네트워크 오류' }
@@ -335,8 +343,9 @@ export default function BacktestPage() {
                   <th className="text-left py-2 px-2">#</th>
                   <th className="text-left py-2 px-2">종목</th>
                   <th className="text-center py-2 px-2">시장</th>
-                  <th className="text-right py-2 px-2">총수익률</th>
-                  <th className="text-right py-2 px-2">연환산</th>
+                  <th className="text-right py-2 px-2">전략 수익률</th>
+                  <th className="text-right py-2 px-2">단순보유</th>
+                  <th className="text-right py-2 px-2">초과수익</th>
                   <th className="text-right py-2 px-2">MDD</th>
                   <th className="text-right py-2 px-2">Sharpe</th>
                   <th className="text-right py-2 px-2">승률</th>
@@ -377,10 +386,20 @@ export default function BacktestPage() {
                       {r.metrics.totalReturn > 0 ? '+' : ''}{r.metrics.totalReturn.toFixed(2)}%
                     </td>
                     <td className={`py-2.5 px-2 text-right font-mono ${
-                      r.metrics.annualizedReturn >= 0 ? 'text-red-500' : 'text-blue-500'
+                      (r.buyHold?.totalReturn ?? 0) >= 0 ? 'text-red-500' : 'text-blue-500'
                     }`}>
-                      {r.metrics.annualizedReturn > 0 ? '+' : ''}{r.metrics.annualizedReturn.toFixed(2)}%
+                      {(r.buyHold?.totalReturn ?? 0) > 0 ? '+' : ''}{(r.buyHold?.totalReturn ?? 0).toFixed(2)}%
                     </td>
+                    {(() => {
+                      const excess = r.metrics.totalReturn - (r.buyHold?.totalReturn ?? 0)
+                      return (
+                        <td className={`py-2.5 px-2 text-right font-mono font-bold ${
+                          excess >= 0 ? 'text-green-600' : 'text-orange-500'
+                        }`}>
+                          {excess > 0 ? '+' : ''}{excess.toFixed(2)}%p
+                        </td>
+                      )
+                    })()}
                     <td className="py-2.5 px-2 text-right font-mono text-blue-500">
                       -{r.metrics.maxDrawdown.toFixed(2)}%
                     </td>
@@ -409,19 +428,30 @@ export default function BacktestPage() {
           </div>
 
           {/* 핵심 지표 카드 */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <MetricCard
-              label="총 수익률"
+              label="전략 수익률"
               value={`${selectedResult.metrics.totalReturn > 0 ? '+' : ''}${selectedResult.metrics.totalReturn.toFixed(2)}%`}
               positive={selectedResult.metrics.totalReturn > 0}
               icon={selectedResult.metrics.totalReturn >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
             />
             <MetricCard
-              label="연환산 수익률"
-              value={`${selectedResult.metrics.annualizedReturn > 0 ? '+' : ''}${selectedResult.metrics.annualizedReturn.toFixed(2)}%`}
-              positive={selectedResult.metrics.annualizedReturn > 0}
+              label="단순 보유"
+              value={`${(selectedResult.buyHold?.totalReturn ?? 0) > 0 ? '+' : ''}${(selectedResult.buyHold?.totalReturn ?? 0).toFixed(2)}%`}
+              positive={(selectedResult.buyHold?.totalReturn ?? 0) > 0}
               icon={<BarChart3 className="w-4 h-4" />}
             />
+            {(() => {
+              const excess = selectedResult.metrics.totalReturn - (selectedResult.buyHold?.totalReturn ?? 0)
+              return (
+                <MetricCard
+                  label="초과 수익"
+                  value={`${excess > 0 ? '+' : ''}${excess.toFixed(2)}%p`}
+                  positive={excess > 0}
+                  icon={<Award className="w-4 h-4" />}
+                />
+              )
+            })()}
             <MetricCard label="MDD" value={`-${selectedResult.metrics.maxDrawdown.toFixed(2)}%`} positive={false} icon={<TrendingDown className="w-4 h-4" />} />
             <MetricCard label="승률" value={`${selectedResult.metrics.winRate.toFixed(1)}%`} positive={selectedResult.metrics.winRate >= 50} icon={<Award className="w-4 h-4" />} />
             <MetricCard label="총 매매" value={`${selectedResult.metrics.totalTrades}회`} positive={true} icon={<Clock className="w-4 h-4" />} />
@@ -441,26 +471,61 @@ export default function BacktestPage() {
             </div>
           </div>
 
-          {/* 자산 곡선 */}
+          {/* 자산 곡선 (전략 vs Buy & Hold) */}
           {selectedResult.equityCurve.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
-              <h3 className="font-semibold text-at-text mb-3">자산 곡선</h3>
-              <div className="flex items-end gap-0.5 h-32 overflow-hidden">
-                {sampleCurve(selectedResult.equityCurve, 80).map((point, i, arr) => {
-                  const min = Math.min(...arr.map(p => p.value))
-                  const max = Math.max(...arr.map(p => p.value))
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-at-text">자산 곡선</h3>
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-at-accent inline-block" /> 전략</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-1.5 rounded bg-amber-400 inline-block" /> 단순 보유</span>
+                </div>
+              </div>
+              <div className="relative h-36 overflow-hidden">
+                {/* 전략 곡선 */}
+                {(() => {
+                  const stratSample = sampleCurve(selectedResult.equityCurve, 80)
+                  const bhSample = selectedResult.buyHold?.equityCurve
+                    ? sampleCurve(selectedResult.buyHold.equityCurve, 80)
+                    : []
+                  const allValues = [...stratSample.map(p => p.value), ...bhSample.map(p => p.value)]
+                  const min = Math.min(...allValues)
+                  const max = Math.max(...allValues)
                   const range = max - min || 1
-                  const height = ((point.value - min) / range) * 100
-                  const isProfit = point.value >= initialCapital
+
                   return (
-                    <div
-                      key={i}
-                      className={`flex-1 rounded-t ${isProfit ? 'bg-green-400 dark:bg-green-600' : 'bg-red-400 dark:bg-red-600'}`}
-                      style={{ height: `${Math.max(2, height)}%` }}
-                      title={`${point.date}: ${point.value.toLocaleString()}원`}
-                    />
+                    <>
+                      {/* Buy & Hold 바 (뒤쪽, 반투명) */}
+                      <div className="absolute inset-0 flex items-end gap-0.5">
+                        {bhSample.map((point, i) => {
+                          const height = ((point.value - min) / range) * 100
+                          return (
+                            <div
+                              key={`bh-${i}`}
+                              className="flex-1 rounded-t bg-amber-300/40"
+                              style={{ height: `${Math.max(1, height)}%` }}
+                              title={`단순 보유 ${point.date}: ${point.value.toLocaleString()}원`}
+                            />
+                          )
+                        })}
+                      </div>
+                      {/* 전략 바 (앞쪽) */}
+                      <div className="absolute inset-0 flex items-end gap-0.5">
+                        {stratSample.map((point, i) => {
+                          const height = ((point.value - min) / range) * 100
+                          return (
+                            <div
+                              key={`st-${i}`}
+                              className="flex-1 rounded-t bg-at-accent/70"
+                              style={{ height: `${Math.max(1, height)}%` }}
+                              title={`전략 ${point.date}: ${point.value.toLocaleString()}원`}
+                            />
+                          )
+                        })}
+                      </div>
+                    </>
                   )
-                })}
+                })()}
               </div>
               <div className="flex justify-between mt-1 text-[10px] text-at-text-weak">
                 <span>{selectedResult.equityCurve[0]?.date}</span>
