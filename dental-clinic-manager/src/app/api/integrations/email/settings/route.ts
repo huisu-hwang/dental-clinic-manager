@@ -108,20 +108,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: true, message: '연동이 해제되었습니다.' });
     }
 
-    // 기존 레코드 확인 (OAuth 미연동이어도 설정은 저장 가능하도록 upsert)
+    // 기존 레코드 확인 (OAuth 미연동이어도 발신자 목록은 저장 가능)
     const { data: existing } = await admin
       .from('clinic_email_integrations')
       .select('id, provider, email_address')
       .eq('clinic_id', clinicId)
       .maybeSingle();
 
-    // 모니터링 활성화는 OAuth 연동이 완료된 경우에만 허용
-    if (isActive === true && (!existing || !existing.email_address)) {
-      return NextResponse.json(
-        { error: '모니터링을 활성화하려면 먼저 Gmail/네이버 메일 연동을 완료해주세요.' },
-        { status: 400 }
-      );
-    }
+    const oauthConnected = !!existing?.email_address;
+    // OAuth 미연동 상태라면 모니터링 활성화는 자동으로 false로 강제
+    const effectiveIsActive = oauthConnected ? isActive : false;
+    const monitoringBlocked = isActive === true && !oauthConnected;
 
     if (existing) {
       const updatePayload: Record<string, unknown> = {
@@ -129,7 +126,7 @@ export async function PUT(request: NextRequest) {
       };
       if (labSenderEmails !== undefined) updatePayload.lab_sender_emails = labSenderEmails;
       if (taxOfficeSenderEmails !== undefined) updatePayload.tax_office_sender_emails = taxOfficeSenderEmails;
-      if (isActive !== undefined) updatePayload.is_active = isActive;
+      if (effectiveIsActive !== undefined) updatePayload.is_active = effectiveIsActive;
 
       const { error } = await admin
         .from('clinic_email_integrations')
@@ -161,7 +158,13 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, message: '설정이 저장되었습니다.' });
+    return NextResponse.json({
+      success: true,
+      message: monitoringBlocked
+        ? '설정이 저장되었습니다. (모니터링은 Gmail/네이버 메일 연동 완료 후 활성화됩니다)'
+        : '설정이 저장되었습니다.',
+      monitoringBlocked,
+    });
   } catch (err) {
     console.error('[email/settings PUT]', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
