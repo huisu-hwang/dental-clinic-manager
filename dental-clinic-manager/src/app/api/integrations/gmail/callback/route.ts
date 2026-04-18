@@ -65,9 +65,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI?.trim();
 
     if (!clientId || !clientSecret || !redirectUri) {
       console.error('[gmail/callback] Google OAuth 환경변수 누락');

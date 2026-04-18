@@ -68,6 +68,9 @@ export default function EmailIntegrationSettings() {
         setMonitoringActive(d.isActive ?? false)
         if (d.provider === 'gmail' && d.emailAddress) {
           setGmailEmail(d.emailAddress)
+        } else {
+          const saved = typeof window !== 'undefined' ? localStorage.getItem(`gmailEmail:${clinicId}`) : null
+          if (saved) setGmailEmail(saved)
         }
         if (d.provider === 'naver' && d.emailAddress) {
           setNaverEmail(d.emailAddress)
@@ -79,6 +82,15 @@ export default function EmailIntegrationSettings() {
       setIsLoading(false)
     }
   }, [clinicId])
+
+  useEffect(() => {
+    if (!clinicId || !gmailEmail) return
+    try {
+      localStorage.setItem(`gmailEmail:${clinicId}`, gmailEmail)
+    } catch {
+      // silent
+    }
+  }, [clinicId, gmailEmail])
 
   useEffect(() => {
     loadSettings()
