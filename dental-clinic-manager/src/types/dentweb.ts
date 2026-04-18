@@ -115,6 +115,8 @@ export interface DentwebPatientFilters {
 export interface DentwebImportResult {
   success: boolean
   importedCount: number
-  skippedCount: number  // 이미 등록된 환자
+  updatedCount: number    // 기존 환자 정보 갱신
+  skippedCount: number    // 변경 없음
+  totalProcessed: number  // 전체 처리 건수
   error?: string
 }

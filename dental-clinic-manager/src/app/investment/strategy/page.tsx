@@ -4,10 +4,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { Target, Plus, Play, Pause, Trash2, BarChart3, Edit3 } from 'lucide-react'
 import Link from 'next/link'
 import type { InvestmentStrategy } from '@/types/investment'
+import BacktestPanel from '@/components/Investment/BacktestPanel'
 
 export default function StrategyListPage() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loading, setLoading] = useState(true)
+  const [backtestStrategyId, setBacktestStrategyId] = useState<string | null>(null)
 
   const loadStrategies = useCallback(async () => {
     try {
@@ -44,6 +46,16 @@ export default function StrategyListPage() {
 
   const MARKET_LABELS: Record<string, string> = { KR: '국내', US: '미국' }
   const LEVEL_LABELS: Record<number, string> = { 1: '알림만', 2: '완전자동' }
+
+  // 백테스트 뷰가 선택된 경우 인라인으로 렌더링
+  if (backtestStrategyId) {
+    return (
+      <BacktestPanel
+        strategyId={backtestStrategyId}
+        onBack={() => setBacktestStrategyId(null)}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -106,13 +118,13 @@ export default function StrategyListPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Link
-                    href={`/investment/strategy/${s.id}/backtest`}
+                  <button
+                    onClick={() => setBacktestStrategyId(s.id)}
                     className="p-2 rounded-lg hover:bg-at-bg transition-colors text-at-text-secondary"
                     title="백테스트"
                   >
                     <BarChart3 className="w-4 h-4" />
-                  </Link>
+                  </button>
                   <Link
                     href={`/investment/strategy/${s.id}/edit`}
                     className="p-2 rounded-lg hover:bg-at-bg transition-colors text-at-text-secondary"

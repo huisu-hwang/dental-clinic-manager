@@ -185,17 +185,23 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   return [h * 360, s * 100, l * 100] // [Hue 0-360, Sat 0-100, Lit 0-100]
 }
 
-// ─── 치은(잇몸) 픽셀 판별 ───
-// 치은은 분홍~적색 계열: HSL 기준으로 필터링
-// Hue: 340°~360° 또는 0°~25° (분홍/적색, 0° 래핑)
-// Saturation: 12%~75% (회색도 아니고 과도하게 선명하지도 않은 범위)
-// Lightness: 20%~75% (너무 어둡거나 밝지 않은 범위)
+// ─── 치은(잇몸) 픽셀 판별 (RGB 채널 비교 방식) ───
+// HSL 범위 기반 감지 대신 RGB 상대 비교를 사용.
+// 밝기/대비 편집 후에도 "빨간 채널이 지배적"인 속성은 유지됨.
+//
+// 조건:
+// 1. 순흑/순백 제외 (lum 25~245)
+// 2. 빨간 채널이 초록·파랑보다 커야 함
+// 3. 빨간 채널 우세량이 충분해야 함 (너무 회색이면 제외)
+// 4. 파랑 채널이 초록보다 지나치게 낮으면 주황(retractor 등)으로 간주하여 제외
 
-function isGingivaPixel(h: number, s: number, l: number): boolean {
-  const hueMatch = h >= 340 || h <= 25
-  const satMatch = s >= 12 && s <= 75
-  const litMatch = l >= 20 && l <= 75
-  return hueMatch && satMatch && litMatch
+function isGingivaPixel(r: number, g: number, b: number): boolean {
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b
+  if (lum < 25 || lum > 245) return false   // 순흑·순백 제외
+  if (r <= g || r <= b) return false         // 빨간 채널이 지배적이어야 함
+  if (r - g < 8 || r - b < 6) return false  // 최소 붉은 기 요구
+  if (b < g - 25) return false               // 너무 주황색 (치아 색조 등) 제외
+  return true
 }
 
 // ─── 치은 색 통계 추출 ───
@@ -230,8 +236,9 @@ export function extractGingivaStats(
   let count = 0
 
   for (let i = 0; i < data.length; i += 4) {
-    const [h, s, l] = rgbToHsl(data[i], data[i + 1], data[i + 2])
-    if (isGingivaPixel(h, s, l)) {
+    const r = data[i], g = data[i + 1], b = data[i + 2]
+    if (isGingivaPixel(r, g, b)) {
+      const [h, s, l] = rgbToHsl(r, g, b)
       const hRad = (h * Math.PI) / 180
       totalHSin += Math.sin(hRad)
       totalHCos += Math.cos(hRad)

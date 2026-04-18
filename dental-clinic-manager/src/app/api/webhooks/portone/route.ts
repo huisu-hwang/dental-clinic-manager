@@ -1,0 +1,143 @@
+// POST /api/webhooks/portone
+// 포트원 v2 웹훅 수신 및 처리
+// 보안: @portone/server-sdk Webhook.verify() 로 서명 검증
+
+import { NextResponse } from 'next/server'
+import { verify as portoneVerify } from '@portone/server-sdk/webhook'
+import type { Webhook } from '@portone/server-sdk/webhook'
+import { createClient } from '@/lib/supabase/server'
+import { getPayment } from '@/lib/portone'
+import { handlePaymentSuccess, handlePaymentFailure } from '@/lib/subscriptionService'
+
+export async function POST(request: Request) {
+  // raw body 필요 (서명 검증용)
+  const rawBody = await request.text()
+  const headers = Object.fromEntries(request.headers.entries())
+
+  const webhookSecret = process.env.PORTONE_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error('PORTONE_WEBHOOK_SECRET 환경 변수가 설정되지 않았습니다')
+    return NextResponse.json({ error: 'server configuration error' }, { status: 500 })
+  }
+
+  // 웹훅 서명 검증
+  let webhook: Webhook
+  try {
+    webhook = await portoneVerify(webhookSecret, rawBody, headers)
+  } catch (e) {
+    console.error('포트원 웹훅 서명 검증 실패:', e)
+    return NextResponse.json({ error: 'invalid webhook signature' }, { status: 401 })
+  }
+
+  try {
+    switch (webhook.type) {
+      case 'Transaction.Paid': {
+        const { paymentId } = webhook.data
+        await handleTransactionPaid(paymentId)
+        break
+      }
+      case 'Transaction.Failed': {
+        const { paymentId } = webhook.data
+        await handleTransactionFailed(paymentId)
+        break
+      }
+      case 'Transaction.Cancelled': {
+        // WebhookTransactionCancelledCancelled.data.paymentId
+        const data = webhook.data as { paymentId?: string }
+        if (data.paymentId) await handleTransactionCancelled(data.paymentId)
+        break
+      }
+      case 'BillingKey.Deleted': {
+        // 빌링키가 외부에서 삭제된 경우 구독 일시 정지
+        const { billingKey } = webhook.data
+        await handleBillingKeyDeleted(billingKey)
+        break
+      }
+      default:
+        // 처리하지 않는 이벤트는 무시
+        break
+    }
+  } catch (err) {
+    console.error('웹훅 처리 오류:', err)
+    // 500 반환 시 포트원이 재전송함 (최대 5회)
+    return NextResponse.json({ error: 'internal server error' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}
+
+// 결제 성공 처리
+async function handleTransactionPaid(paymentId: string) {
+  // 포트원에서 실제 결제 정보 재조회 (위변조 방지)
+  const payment = await getPayment(paymentId)
+  if (payment.status !== 'PAID') return
+
+  // paymentId에서 clinicId 추출
+  // paymentId 형식: payment-{clinicId}-{timestamp} 또는 payment-scheduled-{clinicId}-{timestamp}
+  const clinicId = extractClinicIdFromPaymentId(paymentId)
+  if (!clinicId) {
+    console.error('paymentId에서 clinicId를 추출할 수 없습니다:', paymentId)
+    return
+  }
+
+  await handlePaymentSuccess({
+    clinicId,
+    portonePaymentId: paymentId,
+    portoneTransactionId: payment.transactionId ?? '',
+    amount: payment.amount.total,
+    orderName: paymentId,
+    paidAt: payment.paidAt ?? new Date().toISOString(),
+  })
+}
+
+// 결제 실패 처리
+async function handleTransactionFailed(paymentId: string) {
+  const payment = await getPayment(paymentId)
+
+  const clinicId = extractClinicIdFromPaymentId(paymentId)
+  if (!clinicId) return
+
+  await handlePaymentFailure({
+    clinicId,
+    portonePaymentId: paymentId,
+    failReason: payment.failReason,
+  })
+}
+
+// 결제 취소 처리
+async function handleTransactionCancelled(paymentId: string) {
+  const supabase = await createClient()
+  await supabase
+    .from('subscription_payments')
+    .update({ status: 'cancelled' })
+    .eq('portone_payment_id', paymentId)
+}
+
+// 빌링키 삭제 처리
+async function handleBillingKeyDeleted(billingKey: string) {
+  const supabase = await createClient()
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('billing_key', billingKey)
+    .single()
+
+  if (sub) {
+    await supabase
+      .from('subscriptions')
+      .update({ status: 'suspended', billing_key: null, updated_at: new Date().toISOString() })
+      .eq('id', sub.id)
+  }
+}
+
+// paymentId에서 clinicId 추출 헬퍼
+// 형식: payment-{clinicId}-{timestamp}
+//       payment-scheduled-{clinicId}-{timestamp}
+//       payment-upgrade-{clinicId}-{timestamp}
+//       payment-retry-{clinicId}-{retryNum}-{timestamp}
+function extractClinicIdFromPaymentId(paymentId: string): string | null {
+  // UUID 패턴 추출 (8-4-4-4-12)
+  const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  const match = paymentId.match(uuidPattern)
+  return match ? match[0] : null
+}

@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import type { InvestmentTab } from '@/types/investment'
+import Footer from '@/components/Layout/Footer'
 
 interface NavItem {
   id: InvestmentTab | string
@@ -164,6 +165,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
         <div className="p-4 sm:p-6">
           {children}
         </div>
+        <Footer />
       </main>
     </div>
   )

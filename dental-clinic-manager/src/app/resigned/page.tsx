@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { getSupabase } from '@/lib/supabase'
 import { dataService } from '@/lib/dataService'
 import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
+import Footer from '@/components/Layout/Footer'
 
 type ViewMode = 'main' | 'create-clinic' | 'join-clinic'
 
@@ -260,7 +261,7 @@ export default function ResignedPage() {
   // 새 병원 생성 화면
   if (viewMode === 'create-clinic') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+      <><div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <button
@@ -364,14 +365,14 @@ export default function ResignedPage() {
             </form>
           </div>
         </div>
-      </div>
+      </div><Footer /></>
     )
   }
 
   // 기존 병원 가입 화면
   if (viewMode === 'join-clinic') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+      <><div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <button
@@ -523,13 +524,13 @@ export default function ResignedPage() {
             </form>
           </div>
         </div>
-      </div>
+      </div><Footer /></>
     )
   }
 
   // 메인 화면
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+    <><div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
@@ -624,6 +625,6 @@ export default function ResignedPage() {
           </p>
         </div>
       </div>
-    </div>
+    </div><Footer /></>
   )
 }

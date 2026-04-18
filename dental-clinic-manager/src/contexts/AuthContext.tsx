@@ -266,6 +266,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   console.log('[AuthContext] SIGNED_IN 무시 - /update-password 페이지')
                   return
                 }
+                // 회원가입 진행 중에는 SIGNED_IN 이벤트 무시
+                // (signUp이 세션을 생성해도 자동 리디렉션 방지)
+                if (typeof window !== 'undefined' && sessionStorage.getItem('dental_signing_up') === 'true') {
+                  console.log('[AuthContext] SIGNED_IN 무시 - 회원가입 진행 중')
+                  return
+                }
                 // 주의: onAuthStateChange 콜백은 Supabase 내부 세션 잠금(lock)이
                 // 유지된 상태에서 실행됩니다. 콜백 내에서 Supabase DB 쿼리나
                 // getUserProfileById() 등을 직접 await하면, 해당 쿼리가 내부적으로

@@ -82,6 +82,14 @@ export async function POST(request: Request) {
       )
     }
 
+    // auth.users 삭제 - 거절된 사용자가 동일 이메일로 재가입할 수 있도록
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
+    if (authDeleteError) {
+      console.warn('[Admin API - Reject User] Could not delete auth user (non-fatal):', authDeleteError.message)
+    } else {
+      console.log('[Admin API - Reject User] Auth user deleted successfully')
+    }
+
     console.log('[Admin API - Reject User] User rejected successfully')
     return NextResponse.json({ success: true })
 
