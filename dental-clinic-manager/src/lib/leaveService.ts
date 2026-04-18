@@ -6,6 +6,7 @@
 import { ensureConnection } from './supabase/connectionCheck'
 import { userNotificationService } from './userNotificationService'
 import { countKoreanHolidaysInRange, getKoreanHolidays, getKoreanHolidayName, isWeekend } from '@/utils/koreanHolidays'
+import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
 import type {
   LeavePolicy,
   LeaveType,
@@ -2276,7 +2277,8 @@ export const leaveService = {
 }
 
 /**
- * 주말 제외 근무일 계산
+ * 병원 근무일 기준 일수 계산 (DEFAULT_WORK_SCHEDULE 기준)
+ * 토요일 근무 병원은 토요일도 근무일로 포함
  */
 function calculateWorkingDays(startDate: Date, endDate: Date): number {
   let days = 0
@@ -2284,7 +2286,8 @@ function calculateWorkingDays(startDate: Date, endDate: Date): number {
 
   while (current <= endDate) {
     const dayOfWeek = current.getDay()
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+    if (DEFAULT_WORK_SCHEDULE[dayName]?.isWorking) {
       days++
     }
     current.setDate(current.getDate() + 1)
