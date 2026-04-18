@@ -2,16 +2,16 @@
 
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
-import { TERMS_OF_SERVICE, PRIVACY_COLLECTION } from '@/constants/termsContent'
+import { TERMS_OF_SERVICE, PRIVACY_COLLECTION, REFUND_POLICY } from '@/constants/termsContent'
 
 interface FooterTermsModalProps {
-  type: 'terms' | 'privacy'
+  type: 'terms' | 'privacy' | 'refund'
   onClose: () => void
   triggerRef: React.RefObject<HTMLButtonElement | null>
 }
 
 export default function FooterTermsModal({ type, onClose, triggerRef }: FooterTermsModalProps) {
-  const item = type === 'terms' ? TERMS_OF_SERVICE : PRIVACY_COLLECTION
+  const item = type === 'terms' ? TERMS_OF_SERVICE : type === 'privacy' ? PRIVACY_COLLECTION : REFUND_POLICY
   const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

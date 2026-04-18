@@ -4,14 +4,15 @@ import { useState, useRef } from 'react'
 import { COMPANY } from '@/constants/company'
 import FooterTermsModal from './FooterTermsModal'
 
-type ModalType = 'terms' | 'privacy' | null
+type ModalType = 'terms' | 'privacy' | 'refund' | null
 
 export default function Footer() {
   const [modal, setModal] = useState<ModalType>(null)
   const termsButtonRef = useRef<HTMLButtonElement>(null)
   const privacyButtonRef = useRef<HTMLButtonElement>(null)
+  const refundButtonRef = useRef<HTMLButtonElement>(null)
 
-  const activeTriggerRef = modal === 'terms' ? termsButtonRef : privacyButtonRef
+  const activeTriggerRef = modal === 'terms' ? termsButtonRef : modal === 'refund' ? refundButtonRef : privacyButtonRef
 
   return (
     <>
@@ -50,6 +51,13 @@ export default function Footer() {
             className="underline underline-offset-2 hover:text-at-text transition-colors font-semibold"
           >
             개인정보처리방침
+          </button>
+          <button
+            ref={refundButtonRef}
+            onClick={() => setModal('refund')}
+            className="underline underline-offset-2 hover:text-at-text transition-colors"
+          >
+            환불/취소 정책
           </button>
         </div>
       </footer>
