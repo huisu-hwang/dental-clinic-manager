@@ -80,6 +80,37 @@ export interface AuditLog {
   createdAt: Date
 }
 
+// 약관 동의 관련 타입 (개인정보보호법 준수)
+export type ConsentType =
+  | 'terms_of_service'    // 서비스 이용약관 (필수)
+  | 'privacy_collection'  // 개인정보 수집·이용 동의 (필수)
+  | 'sensitive_info'      // 민감정보(주민등록번호) 수집 동의 (필수)
+  | 'marketing_email'     // 마케팅 정보 수신 동의 - 이메일 (선택)
+  | 'marketing_sms'       // 마케팅 정보 수신 동의 - SMS (선택)
+
+export interface UserConsent {
+  id: string
+  user_id: string
+  consent_type: ConsentType
+  is_agreed: boolean
+  agreed_at?: string
+  revoked_at?: string
+  consent_version: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ConsentItem {
+  id: ConsentType
+  title: string
+  required: boolean
+  summary: string
+  version: string
+  content: string
+}
+
+export type ConsentState = Record<ConsentType, boolean>
+
 // 사용자 활동 기록 타입
 export type ActivityType = 'login' | 'logout' | 'page_view' | 'action' | 'access'
 
