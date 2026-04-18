@@ -17,6 +17,7 @@ const FEATURE_ICONS: Record<PremiumFeatureId, React.ElementType> = {
   'ai-analysis': Sparkles,
   'financial': BarChart3,
   'marketing': Megaphone,
+  'investment': BarChart3,
 }
 
 export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpdated }: PremiumFeatureModalProps) {
