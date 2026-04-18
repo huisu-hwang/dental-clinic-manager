@@ -313,6 +313,20 @@ export default function SignupForm({
       } else {
         // 시나리오 B: 기존 병원에 가입 신청
         console.log('[Signup] Creating user profile for existing clinic...');
+
+        // 동일 이메일의 거절된 기존 레코드 정리 (재가입 허용 - email UNIQUE 제약 해결)
+        const { data: existingRejected } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', formData.userId.toLowerCase().trim())
+          .eq('status', 'rejected')
+          .maybeSingle();
+
+        if (existingRejected) {
+          console.log('[Signup] Cleaning up existing rejected record for re-registration:', existingRejected.id);
+          await supabase.from('users').delete().eq('id', existingRejected.id);
+        }
+
         const { error: userProfileError } = await (supabase.from('users') as any).insert({
           id: newUserId,
           clinic_id: selectedClinicId,
@@ -375,7 +389,18 @@ export default function SignupForm({
       // Supabase Auth 에러 메시지를 사용자 친화적 메시지로 변환
       let errorMessage = rawMessage;
       if (rawMessage.includes('User already registered') || rawMessage.includes('already been registered')) {
-        errorMessage = '이미 등록된 이메일 주소입니다. 로그인 페이지에서 로그인하거나 다른 이메일을 사용해주세요.';
+        // 거절된 계정인지 확인 (수정 이전에 거절된 경우 auth 사용자가 남아있을 수 있음)
+        const { data: rejectedRecord } = await supabase
+          .from('users')
+          .select('status')
+          .eq('email', formData.userId.toLowerCase().trim())
+          .eq('status', 'rejected')
+          .maybeSingle();
+        if (rejectedRecord) {
+          errorMessage = '이전에 거절된 가입 신청이 있습니다. 관리자(hiclinic.inc@gmail.com)에게 문의하거나 다른 이메일 주소를 사용해주세요.';
+        } else {
+          errorMessage = '이미 등록된 이메일 주소입니다. 로그인 페이지에서 로그인하거나 다른 이메일을 사용해주세요.';
+        }
       } else if (rawMessage.includes('Password should be at least')) {
         errorMessage = '비밀번호는 6글자 이상이어야 합니다.';
       } else if (rawMessage.includes('Unable to validate email address') || rawMessage.includes('invalid email')) {
