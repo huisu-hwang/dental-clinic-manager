@@ -11,6 +11,7 @@ import {
 import Link from 'next/link'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
+import BacktestPanel from './BacktestPanel'
 import type { InvestmentStrategy } from '@/types/investment'
 
 type SubTab = 'dashboard' | 'connect' | 'strategy' | 'trading' | 'portfolio'
@@ -30,6 +31,7 @@ export default function InvestmentTab() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loading, setLoading] = useState(true)
   const [emergencyStopping, setEmergencyStopping] = useState(false)
+  const [backtestStrategyId, setBacktestStrategyId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -78,6 +80,20 @@ export default function InvestmentTab() {
     )
   }
 
+  // 백테스트 인라인 표시
+  if (backtestStrategyId) {
+    return (
+      <div className="bg-white min-h-screen">
+        <div className="p-4 sm:p-6">
+          <BacktestPanel
+            strategyId={backtestStrategyId}
+            onBack={() => setBacktestStrategyId(null)}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white min-h-screen">
       {/* 서브메뉴 탭 - 근태/마케팅 페이지와 동일 패턴 */}
@@ -119,7 +135,7 @@ export default function InvestmentTab() {
           <ConnectContent onCredentialChange={loadData} />
         )}
         {subTab === 'strategy' && (
-          <StrategySubTab strategies={strategies} onRefresh={loadData} />
+          <StrategySubTab strategies={strategies} onRefresh={loadData} onBacktest={setBacktestStrategyId} />
         )}
         {subTab === 'trading' && (
           <TradingContent />
@@ -251,7 +267,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
   )
 }
 
-function StrategySubTab({ strategies, onRefresh }: { strategies: InvestmentStrategy[]; onRefresh: () => void }) {
+function StrategySubTab({ strategies, onRefresh, onBacktest }: { strategies: InvestmentStrategy[]; onRefresh: () => void; onBacktest: (id: string) => void }) {
   const toggleActive = async (id: string, isActive: boolean) => {
     await fetch('/api/investment/strategies', {
       method: 'PATCH',
@@ -317,9 +333,9 @@ function StrategySubTab({ strategies, onRefresh }: { strategies: InvestmentStrat
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Link href={`/investment/strategy/${s.id}/backtest`} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary" title="백테스트">
+                  <button onClick={() => onBacktest(s.id)} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary" title="백테스트">
                     <BarChart3 className="w-4 h-4" />
-                  </Link>
+                  </button>
                   <button onClick={() => toggleActive(s.id, s.is_active)} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary" title={s.is_active ? '비활성화' : '활성화'}>
                     {s.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
