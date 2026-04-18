@@ -1,5 +1,5 @@
-import { createClient } from './supabase/client'
 import { ensureConnection } from './supabase/connectionCheck'
+import { recallExcludeRulesService } from './recallService'
 import type {
   DentwebSyncConfig,
   DentwebPatient,
@@ -277,10 +277,10 @@ export const dentwebPatientService = {
   ): Promise<DentwebImportResult> {
     try {
       const supabase = await ensureConnection()
-      if (!supabase) return { success: false, importedCount: 0, skippedCount: 0, error: 'Database connection not available' }
+      if (!supabase) return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: 'Database connection not available' }
 
       const clinicId = await getCurrentClinicId()
-      if (!clinicId) return { success: false, importedCount: 0, skippedCount: 0, error: 'Clinic ID not found' }
+      if (!clinicId) return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: 'Clinic ID not found' }
 
       // 선택된 덴트웹 환자 데이터 조회
       const { data: dentwebPatients, error: fetchError } = await supabase
@@ -289,9 +289,9 @@ export const dentwebPatientService = {
         .eq('clinic_id', clinicId)
         .in('id', patientIds)
 
-      if (fetchError) return { success: false, importedCount: 0, skippedCount: 0, error: fetchError.message }
+      if (fetchError) return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: fetchError.message }
       if (!dentwebPatients || dentwebPatients.length === 0) {
-        return { success: false, importedCount: 0, skippedCount: 0, error: 'No patients found' }
+        return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: 'No patients found' }
       }
 
       let importedCount = 0
@@ -341,9 +341,261 @@ export const dentwebPatientService = {
         }
       }
 
-      return { success: true, importedCount, skippedCount }
+      return { success: true, importedCount, updatedCount: 0, skippedCount, totalProcessed: dentwebPatients.length }
     } catch (error) {
-      return { success: false, importedCount: 0, skippedCount: 0, error: extractErrorMessage(error) }
+      return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  // 덴트웹 전체 환자를 리콜 환자로 동기화 (모달 없이 즉시 실행)
+  async syncToRecall(): Promise<DentwebImportResult> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: 'Database connection not available' }
+
+      const clinicId = await getCurrentClinicId()
+      if (!clinicId) return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: 'Clinic ID not found' }
+
+      const BATCH_SIZE = 500
+      const MAX_CONCURRENT = 5
+
+      // 병렬 배치 실행 헬퍼
+      const runBatchesParallel = async <T, R>(
+        items: T[],
+        batchSize: number,
+        fn: (batch: T[]) => Promise<R>
+      ): Promise<R[]> => {
+        const batches: T[][] = []
+        for (let i = 0; i < items.length; i += batchSize) {
+          batches.push(items.slice(i, i + batchSize))
+        }
+        const results: R[] = []
+        for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
+          const concurrent = batches.slice(i, i + MAX_CONCURRENT)
+          const batchResults = await Promise.all(concurrent.map(fn))
+          results.push(...batchResults)
+        }
+        return results
+      }
+
+      // 전화번호 정규화
+      const normalizePhone = (phone: string | null | undefined): string => {
+        if (!phone) return ''
+        const digits = phone.toString().replace(/[^0-9]/g, '')
+        if (digits.length === 10 && !digits.startsWith('0')) {
+          return '0' + digits
+        }
+        return digits
+      }
+
+      // 1. 덴트웹 활성 환자 전체 조회 (배치)
+      const allDentwebPatients: DentwebPatient[] = []
+      let offset = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('dentweb_patients')
+          .select('*')
+          .eq('clinic_id', clinicId)
+          .eq('is_active', true)
+          .range(offset, offset + BATCH_SIZE - 1)
+
+        if (error) return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: error.message }
+        if (!data || data.length === 0) break
+        allDentwebPatients.push(...data)
+        if (data.length < BATCH_SIZE) break
+        offset += BATCH_SIZE
+      }
+
+      if (allDentwebPatients.length === 0) {
+        return { success: true, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0 }
+      }
+
+      // 2. 기존 recall_patients 전체 조회 (배치)
+      type RecallPatientRow = {
+        id: string
+        chart_number: string | null
+        phone_number: string
+        patient_name: string
+        last_visit_date: string | null
+        treatment_type: string | null
+        birth_date: string | null
+        exclude_reason: string | null
+      }
+      const allRecallPatients: RecallPatientRow[] = []
+      let recallOffset = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('recall_patients')
+          .select('id, chart_number, phone_number, patient_name, last_visit_date, treatment_type, birth_date, exclude_reason')
+          .eq('clinic_id', clinicId)
+          .range(recallOffset, recallOffset + BATCH_SIZE - 1)
+
+        if (error) return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: error.message }
+        if (!data || data.length === 0) break
+        allRecallPatients.push(...data)
+        if (data.length < BATCH_SIZE) break
+        recallOffset += BATCH_SIZE
+      }
+
+      // 3. 매칭 Map 생성
+      // chartMap: chart_number → recall_patient (exclude_reason null 우선)
+      const chartMap = new Map<string, RecallPatientRow>()
+      for (const rp of allRecallPatients) {
+        if (rp.chart_number) {
+          const key = rp.chart_number.trim()
+          const existing = chartMap.get(key)
+          if (!existing || (existing.exclude_reason !== null && rp.exclude_reason === null)) {
+            chartMap.set(key, rp)
+          }
+        }
+      }
+
+      // phoneMap: normalized_phone → recall_patient[] (fallback)
+      const phoneMap = new Map<string, RecallPatientRow[]>()
+      for (const rp of allRecallPatients) {
+        const normalizedPhone = normalizePhone(rp.phone_number)
+        if (normalizedPhone) {
+          const list = phoneMap.get(normalizedPhone) || []
+          list.push(rp)
+          phoneMap.set(normalizedPhone, list)
+        }
+      }
+
+      // 4. 덴트웹 환자별 매칭 및 분류
+      const newPatients: DentwebPatient[] = []
+      const updateTargets: { id: string; data: DentwebPatient }[] = []
+      let skippedCount = 0
+      const matchedRecallIds = new Set<string>() // 동일 recall_patient에 중복 매칭 방지
+
+      // 성별 매핑
+      const mapGender = (g: string | null): string | null => {
+        if (!g) return null
+        if (g === '남' || g === 'M') return 'male'
+        if (g === '여' || g === 'F') return 'female'
+        return null
+      }
+
+      for (const dp of allDentwebPatients) {
+        let matched: RecallPatientRow | null = null
+
+        // 1순위: chart_number 매칭
+        if (dp.chart_number) {
+          const chartKey = dp.chart_number.trim()
+          const candidate = chartMap.get(chartKey)
+          if (candidate && !matchedRecallIds.has(candidate.id)) {
+            matched = candidate
+          }
+        }
+
+        // 2순위: phone_number 매칭 (chart_number 매칭 실패 시)
+        if (!matched && dp.phone_number) {
+          const normalizedPhone = normalizePhone(dp.phone_number)
+          if (normalizedPhone) {
+            const candidates = phoneMap.get(normalizedPhone) || []
+            // 단일 매칭만 허용 (오매칭 방지)
+            const unmatched = candidates.filter(c => !matchedRecallIds.has(c.id))
+            if (unmatched.length === 1) {
+              matched = unmatched[0]
+            }
+          }
+        }
+
+        if (matched) {
+          matchedRecallIds.add(matched.id)
+
+          // 변경 여부 비교
+          const hasChanged =
+            (dp.last_visit_date && dp.last_visit_date !== matched.last_visit_date) ||
+            (dp.last_treatment_type && dp.last_treatment_type !== matched.treatment_type) ||
+            (dp.phone_number && normalizePhone(dp.phone_number) !== normalizePhone(matched.phone_number)) ||
+            (dp.birth_date && !matched.birth_date) ||
+            (dp.chart_number && !matched.chart_number)
+
+          if (hasChanged) {
+            updateTargets.push({ id: matched.id, data: dp })
+          } else {
+            skippedCount++
+          }
+        } else {
+          newPatients.push(dp)
+        }
+      }
+
+      // 5. 신규 환자 일괄 삽입
+      let importedCount = 0
+      const newPatientIds: string[] = []
+
+      if (newPatients.length > 0) {
+        const newRecords = newPatients.map(dp => ({
+          clinic_id: clinicId,
+          patient_name: dp.patient_name,
+          phone_number: dp.phone_number || '',
+          chart_number: dp.chart_number,
+          birth_date: dp.birth_date,
+          gender: mapGender(dp.gender),
+          last_visit_date: dp.last_visit_date,
+          treatment_type: dp.last_treatment_type,
+          status: 'pending' as const,
+          contact_count: 0
+        }))
+
+        const insertResults = await runBatchesParallel(newRecords, BATCH_SIZE, async (batch) => {
+          const { data, error: insertError } = await supabase
+            .from('recall_patients')
+            .insert(batch)
+            .select('id')
+
+          if (insertError) throw insertError
+          if (data) data.forEach((p: { id: string }) => newPatientIds.push(p.id))
+          return batch.length
+        })
+        importedCount = insertResults.reduce((sum, n) => sum + n, 0)
+      }
+
+      // 5-1. 신규 환자에 제외 규칙 자동 적용
+      if (newPatientIds.length > 0) {
+        await recallExcludeRulesService.applyRulesToPatients(newPatientIds)
+      }
+
+      // 6. 기존 환자 정보 배치 업데이트
+      let updatedCount = 0
+
+      if (updateTargets.length > 0) {
+        const updateResults = await runBatchesParallel(updateTargets, BATCH_SIZE, async (batch) => {
+          let batchUpdated = 0
+          for (const target of batch) {
+            const dp = target.data
+            const updateData: Record<string, unknown> = {}
+
+            if (dp.last_visit_date) updateData.last_visit_date = dp.last_visit_date
+            if (dp.last_treatment_type) updateData.treatment_type = dp.last_treatment_type
+            if (dp.phone_number) updateData.phone_number = dp.phone_number
+            if (dp.birth_date) updateData.birth_date = dp.birth_date
+            if (dp.chart_number) updateData.chart_number = dp.chart_number
+
+            if (Object.keys(updateData).length > 0) {
+              const { error: updateError } = await supabase
+                .from('recall_patients')
+                .update(updateData)
+                .eq('id', target.id)
+
+              if (!updateError) batchUpdated++
+            }
+          }
+          return batchUpdated
+        })
+        updatedCount = updateResults.reduce((sum, n) => sum + n, 0)
+      }
+
+      return {
+        success: true,
+        importedCount,
+        updatedCount,
+        skippedCount,
+        totalProcessed: allDentwebPatients.length
+      }
+    } catch (error) {
+      return { success: false, importedCount: 0, updatedCount: 0, skippedCount: 0, totalProcessed: 0, error: extractErrorMessage(error) }
     }
   }
 }

@@ -19,6 +19,8 @@ import ClinicHoursSettings from './ClinicHoursSettings'
 import NotificationSettings from './NotificationSettings'
 import PhoneDialSettingsInline from './PhoneDialSettingsInline'
 import HolidaySettings from './HolidaySettings'
+import SubscriptionStatus from '@/components/Subscription/SubscriptionStatus'
+import PaymentHistory from '@/components/Subscription/PaymentHistory'
 
 // QR 위치 검증 모드 타입
 type QRLocationVerificationMode = 'required' | 'optional'
@@ -48,7 +50,7 @@ interface ClinicSettingsProps {
 }
 
 export default function ClinicSettings({ currentUser }: ClinicSettingsProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'holidays' | 'notifications' | 'phone' | 'attendance'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'hours' | 'holidays' | 'notifications' | 'phone' | 'attendance' | 'subscription'>('info')
   const [clinic, setClinic] = useState<Clinic | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -284,6 +286,19 @@ const [formData, setFormData] = useState<ClinicFormData>({
             <QrCodeIcon className="h-5 w-5" />
             출퇴근 설정
           </button>
+          {isOwner && (
+            <button
+              onClick={() => setActiveTab('subscription')}
+              className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition-colors ${
+                activeTab === 'subscription'
+                  ? 'border-at-accent text-at-accent'
+                  : 'border-transparent text-at-text-secondary hover:text-at-text'
+              }`}
+            >
+              <CreditCardIcon className="h-5 w-5" />
+              구독 관리
+            </button>
+          )}
         </div>
       </div>
 
@@ -701,6 +716,22 @@ const [formData, setFormData] = useState<ClinicFormData>({
                   {success}
                 </div>
               )}
+            </div>
+          </div>
+        </>
+      ) : activeTab === 'subscription' ? (
+        <>
+          {/* 구독 관리 탭 */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-at-text mb-1">구독 현황</h3>
+              <p className="text-sm text-at-text-secondary mb-4">현재 구독 플랜과 결제 수단을 관리합니다.</p>
+              <SubscriptionStatus />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-at-text mb-1">결제 내역</h3>
+              <p className="text-sm text-at-text-secondary mb-4">최근 12개월 구독 결제 내역입니다.</p>
+              <PaymentHistory />
             </div>
           </div>
         </>
