@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Header from '@/components/Layout/Header'
+import Footer from '@/components/Layout/Footer'
 import TabNavigation from '@/components/Layout/TabNavigation'
 import AccountProfile from '@/components/Management/AccountProfile'
 import Toast from '@/components/ui/Toast'
@@ -175,6 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="pt-14 pt-header-safe">
         <main className={`${isSidebarCollapsed ? 'lg:pl-[68px]' : 'lg:pl-48'} px-0 transition-[padding] duration-300`}>
           {children}
+          <Footer />
         </main>
       </div>
 

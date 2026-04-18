@@ -7,6 +7,7 @@ import LandingPage from '@/components/Landing/LandingPage'
 import LoginForm from '@/components/Auth/LoginForm'
 import SignupForm from '@/components/Auth/SignupForm'
 import ForgotPasswordForm from '@/components/Auth/ForgotPasswordForm'
+import Footer from '@/components/Layout/Footer'
 
 type AppState = 'landing' | 'login' | 'signup' | 'forgotPassword'
 
@@ -58,44 +59,45 @@ export default function AuthApp() {
   }
 
   // 인증되지 않은 경우 앱 상태에 따라 화면 표시
-  switch (appState) {
-    case 'login':
-      return (
-        <LoginForm
-          onBackToLanding={() => setAppState('landing')}
-          onShowSignup={() => setAppState('signup')}
-          onShowForgotPassword={() => setAppState('forgotPassword')}
-          onLoginSuccess={() => {
-            // 상태 업데이트 완료를 위한 약간의 지연 후 reload
-            setTimeout(() => {
-              window.location.reload()
-            }, 150)
-          }}
-        />
-      )
-    case 'signup':
-      return (
-        <SignupForm
-          onBackToLanding={() => setAppState('landing')}
-          onShowLogin={() => setAppState('login')}
-          onSignupSuccess={() => {
-            // 회원가입 성공 후 로그인 페이지로 이동 또는 자동 로그인
-            setAppState('login')
-          }}
-        />
-      )
-    case 'forgotPassword':
-      return (
-        <ForgotPasswordForm
-          onBackToLogin={() => setAppState('login')}
-        />
-      )
-    default:
-      return (
-        <LandingPage
-          onShowSignup={() => setAppState('signup')}
-          onShowLogin={() => setAppState('login')}
-        />
-      )
-  }
+  const content = (() => {
+    switch (appState) {
+      case 'login':
+        return (
+          <LoginForm
+            onBackToLanding={() => setAppState('landing')}
+            onShowSignup={() => setAppState('signup')}
+            onShowForgotPassword={() => setAppState('forgotPassword')}
+            onLoginSuccess={() => {
+              setTimeout(() => { window.location.reload() }, 150)
+            }}
+          />
+        )
+      case 'signup':
+        return (
+          <SignupForm
+            onBackToLanding={() => setAppState('landing')}
+            onShowLogin={() => setAppState('login')}
+            onSignupSuccess={() => { setAppState('login') }}
+          />
+        )
+      case 'forgotPassword':
+        return (
+          <ForgotPasswordForm onBackToLogin={() => setAppState('login')} />
+        )
+      default:
+        return (
+          <LandingPage
+            onShowSignup={() => setAppState('signup')}
+            onShowLogin={() => setAppState('login')}
+          />
+        )
+    }
+  })()
+
+  return (
+    <>
+      {content}
+      <Footer />
+    </>
+  )
 }

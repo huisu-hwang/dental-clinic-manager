@@ -7,6 +7,7 @@ import { ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/out
 import { getSupabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { appAlert } from '@/components/ui/AppDialog'
+import Footer from '@/components/Layout/Footer'
 
 export default function PendingApprovalPage() {
   const router = useRouter()
@@ -250,6 +251,7 @@ export default function PendingApprovalPage() {
           </p>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }
