@@ -557,32 +557,32 @@ export const dentwebPatientService = {
         await recallExcludeRulesService.applyRulesToPatients(newPatientIds)
       }
 
-      // 6. 기존 환자 정보 배치 업데이트
+      // 6. 기존 환자 정보 배치 upsert (개별 update 대신 일괄 처리)
       let updatedCount = 0
 
       if (updateTargets.length > 0) {
-        const updateResults = await runBatchesParallel(updateTargets, BATCH_SIZE, async (batch) => {
-          let batchUpdated = 0
-          for (const target of batch) {
-            const dp = target.data
-            const updateData: Record<string, unknown> = {}
-
-            if (dp.last_visit_date) updateData.last_visit_date = dp.last_visit_date
-            if (dp.last_treatment_type) updateData.treatment_type = dp.last_treatment_type
-            if (dp.phone_number) updateData.phone_number = dp.phone_number
-            if (dp.birth_date) updateData.birth_date = dp.birth_date
-            if (dp.chart_number) updateData.chart_number = dp.chart_number
-
-            if (Object.keys(updateData).length > 0) {
-              const { error: updateError } = await supabase
-                .from('recall_patients')
-                .update(updateData)
-                .eq('id', target.id)
-
-              if (!updateError) batchUpdated++
-            }
+        const upsertRecords = updateTargets.map(target => {
+          const dp = target.data
+          const record: Record<string, unknown> = {
+            id: target.id,
+            clinic_id: clinicId,
+            patient_name: dp.patient_name,
+            phone_number: dp.phone_number || '',
           }
-          return batchUpdated
+          if (dp.last_visit_date) record.last_visit_date = dp.last_visit_date
+          if (dp.last_treatment_type) record.treatment_type = dp.last_treatment_type
+          if (dp.birth_date) record.birth_date = dp.birth_date
+          if (dp.chart_number) record.chart_number = dp.chart_number
+          return record
+        })
+
+        const updateResults = await runBatchesParallel(upsertRecords, BATCH_SIZE, async (batch) => {
+          const { error: upsertError } = await supabase
+            .from('recall_patients')
+            .upsert(batch, { onConflict: 'id', ignoreDuplicates: false })
+
+          if (upsertError) throw upsertError
+          return batch.length
         })
         updatedCount = updateResults.reduce((sum, n) => sum + n, 0)
       }
