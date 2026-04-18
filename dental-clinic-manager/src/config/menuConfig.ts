@@ -12,7 +12,7 @@
 import type { Permission } from '@/types/permissions'
 
 // 프리미엄 기능 ID 상수
-export const PREMIUM_FEATURE_IDS = ['ai-analysis', 'financial', 'marketing'] as const
+export const PREMIUM_FEATURE_IDS = ['ai-analysis', 'financial', 'marketing', 'investment'] as const
 export type PremiumFeatureId = typeof PREMIUM_FEATURE_IDS[number]
 
 // 프리미엄 기능 라벨 맵
@@ -20,6 +20,45 @@ export const PREMIUM_FEATURE_LABELS: Record<PremiumFeatureId, string> = {
   'ai-analysis': 'AI 데이터 분석',
   'financial': '경영 현황',
   'marketing': '마케팅 자동화',
+  'investment': '주식 자동매매',
+}
+
+// 프리미엄 기능 상세 설명 (데모 오버레이에서 사용)
+export const PREMIUM_FEATURE_INFO: Record<PremiumFeatureId, {
+  title: string
+  description: string
+  highlights: string[]
+  planName: string
+  priceLabel: string
+}> = {
+  'ai-analysis': {
+    title: 'AI 데이터 분석',
+    description: 'AI가 병원 데이터를 분석하여 경영 인사이트를 제공합니다.',
+    highlights: ['매출/환자 추이 자동 분석', '맞춤형 경영 인사이트', 'AI 채팅으로 질문하기'],
+    planName: '프리미엄',
+    priceLabel: '월 499,000원',
+  },
+  'financial': {
+    title: '경영 현황',
+    description: '수입/지출을 체계적으로 관리하고 손익을 분석합니다.',
+    highlights: ['수입/지출 관리', '손익 분석 리포트', '세금 계산 자동화'],
+    planName: '프리미엄',
+    priceLabel: '월 499,000원',
+  },
+  'marketing': {
+    title: '마케팅 자동화',
+    description: '네이버 블로그 임상글을 AI로 자동 생성하고 관리합니다.',
+    highlights: ['AI 임상글 자동 생성', 'SEO 최적화 분석', '게시물 일괄 관리'],
+    planName: '프리미엄',
+    priceLabel: '월 499,000원',
+  },
+  'investment': {
+    title: '주식 자동매매',
+    description: 'AI 기반 자동매매 전략으로 자산을 운용합니다.',
+    highlights: ['AI 자동매매 전략', '실시간 포트폴리오 관리', '백테스트로 전략 검증'],
+    planName: '주식 자동매매',
+    priceLabel: '수익의 5%',
+  },
 }
 
 // 메뉴 설정 타입
@@ -272,6 +311,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     order: 16.5,
     visible: true,
     ownerOnly: true,  // 대표 원장 전용
+    premiumFeature: true,  // 프리미엄 기능
   },
 
   // === 하단 고정 메뉴 ===

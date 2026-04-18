@@ -879,7 +879,9 @@ export default function DashboardPage() {
 
           {/* 투자 자동매매 */}
           {activeTab === 'investment' && (
-            <InvestmentTab />
+            <PremiumGate featureId="investment">
+              <InvestmentTab />
+            </PremiumGate>
           )}
 
           {/* 메뉴 설정 */}
