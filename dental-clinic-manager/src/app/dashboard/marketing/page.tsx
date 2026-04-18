@@ -29,6 +29,7 @@ import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 const ClinicalPhotoEditor = dynamic(() => import('@/components/marketing/clinical/ClinicalPhotoEditor'), { ssr: false })
+const ContentCalendarView = dynamic(() => import('@/components/marketing/ContentCalendarView'), { ssr: false })
 import ImageEditModal from '@/components/marketing/ImageEditModal'
 
 type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
@@ -759,13 +760,7 @@ function PostEditModal({
 
 // ─── 캘린더 ───
 function CalendarContent() {
-  return (
-    <div className="text-center py-12 text-at-text-weak">
-      <CalendarDaysIcon className="h-12 w-12 mx-auto mb-3" />
-      <p className="text-lg font-medium">콘텐츠 캘린더</p>
-      <p className="text-sm mt-1">Phase 3에서 구현 예정</p>
-    </div>
-  )
+  return <ContentCalendarView />
 }
 
 // ─── 플랫폼 설정 필드 정의 ───

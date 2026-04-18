@@ -24,6 +24,22 @@ export type PromptCategory = 'content' | 'image' | 'transform' | 'quality';
 
 export type CalendarStatus = 'draft' | 'pending_approval' | 'approved' | 'in_progress' | 'completed';
 
+// 주제 6축 카테고리 (의료광고법 준수 고려)
+export type TopicCategory =
+  | 'info'          // 건강 생활정보 (심의 제외)
+  | 'symptom'       // 증상/질환 정보성
+  | 'treatment'     // 치료법/시술 설명
+  | 'cost'          // 비용/보험
+  | 'review'        // 후기/사례 (의료광고 심의 고위험)
+  | 'clinic_news';  // 원내 소식/의료진
+
+// 환자 여정 단계
+export type JourneyStage =
+  | 'awareness'       // 인지 (건강정보)
+  | 'consideration'   // 검색/검토 (증상·시술)
+  | 'decision'        // 결정 (비용·의료진)
+  | 'retention';      // 유지 (관리법)
+
 export type CalendarItemStatus =
   | 'proposed'
   | 'approved'
@@ -142,6 +158,12 @@ export interface ContentCalendarItem {
   generated_images: GeneratedImageMeta[] | null;
   published_urls: Partial<Record<string, string>> | null;
   fail_reason: string | null;
+  // 주제 기획 v2 필드
+  topic_category: TopicCategory | null;
+  journey_stage: JourneyStage | null;
+  needs_medical_review: boolean;
+  planning_rationale: string | null;
+  estimated_search_volume: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -266,8 +288,44 @@ export interface PlatformContent {
 export interface NaverBlogContent {
   title: string;
   body: string;
+  bodyHtml: string;          // 네이버 블로그 에디터 호환 HTML
+  summary: string;           // 글 요약 (검색 스니펫/메타)
+  tags: string[];            // 네이버 블로그 태그 (10개 이내)
+  category?: string;         // 네이버 블로그 카테고리명
+  disclaimer: string;        // 의료광고 면책 문구 (본문 하단)
+  wordCount: number;         // 순수 텍스트 글자 수
+  keywordCount: number;      // 핵심 키워드 본문 내 빈도
   images: GeneratedImageMeta[];
   hashtags: string[];
+  warnings: string[];        // 검증 경고 (글자수 부족, 키워드 밀도 이상 등)
+}
+
+// 네이버 검색광고 API 키워드 인사이트
+export interface NaverKeywordInsight {
+  keyword: string;
+  monthlyPcQc: number;
+  monthlyMobileQc: number;
+  compIdx: '낮음' | '중간' | '높음' | string;
+  relKeywords: string[];
+}
+
+// 환자 여정 × 카테고리 매트릭스 슬롯
+export interface TopicSlot {
+  journeyStage: JourneyStage;
+  topicCategory: TopicCategory;
+}
+
+// AI 주제 제안 (calendar-generator v2)
+export interface TopicProposal {
+  title: string;
+  topic: string;
+  keyword: string;
+  tone: ToneType;
+  topicCategory: TopicCategory;
+  journeyStage: JourneyStage;
+  needsMedicalReview: boolean;
+  planningRationale: string;
+  estimatedSearchVolume: number;
 }
 
 export interface InstagramContent {
@@ -363,6 +421,39 @@ export const POST_TYPE_LABELS: Record<PostType, string> = {
   promotional: '홍보성',
   notice: '공지글',
   clinical: '임상글',
+};
+
+export const TOPIC_CATEGORY_LABELS: Record<TopicCategory, { label: string; color: string; reviewRisk: 'low' | 'medium' | 'high' }> = {
+  info:         { label: '건강정보',  color: 'emerald', reviewRisk: 'low' },
+  symptom:      { label: '증상/질환',  color: 'sky',     reviewRisk: 'low' },
+  treatment:    { label: '치료/시술',  color: 'violet',  reviewRisk: 'medium' },
+  cost:         { label: '비용/보험',  color: 'amber',   reviewRisk: 'medium' },
+  review:       { label: '후기/사례',  color: 'rose',    reviewRisk: 'high' },
+  clinic_news:  { label: '원내소식',   color: 'slate',   reviewRisk: 'low' },
+};
+
+export const JOURNEY_STAGE_LABELS: Record<JourneyStage, { label: string; description: string }> = {
+  awareness:     { label: '인지',  description: '건강정보 — 잠재 환자 유입' },
+  consideration: { label: '검색',  description: '증상·시술 — 정보 탐색 단계' },
+  decision:      { label: '결정',  description: '비용·의료진 — 방문 결정 단계' },
+  retention:     { label: '유지',  description: '관리법 — 기존 환자 유지' },
+};
+
+// 환자 여정 × 월 20개 슬롯 기본 배분 (주 5회 × 4주)
+// 총 20 = 인지 8 + 검색 6 + 결정 4 + 유지 2 (40% / 30% / 20% / 10%)
+export const DEFAULT_JOURNEY_DISTRIBUTION: Record<JourneyStage, number> = {
+  awareness: 40,
+  consideration: 30,
+  decision: 20,
+  retention: 10,
+};
+
+// 각 여정 단계에서 선호되는 주제 카테고리
+export const JOURNEY_CATEGORY_MAP: Record<JourneyStage, TopicCategory[]> = {
+  awareness:     ['info', 'symptom'],
+  consideration: ['symptom', 'treatment'],
+  decision:      ['cost', 'clinic_news', 'review'],
+  retention:     ['info'],
 };
 
 export const CLINICAL_PHOTO_TYPE_LABELS: Record<ClinicalPhotoType, string> = {

@@ -90,6 +90,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: '전체 승인 완료' });
     }
 
+    if (action === 'approve_non_review') {
+      // 심의 필요 제외 일괄 승인
+      await supabase
+        .from('content_calendar_items')
+        .update({ status: 'approved' })
+        .eq('calendar_id', calendarId)
+        .in('status', ['proposed', 'modified'])
+        .eq('needs_medical_review', false);
+
+      // 승인 건이 하나라도 있으면 캘린더도 approved로 이동
+      const { count } = await supabase
+        .from('content_calendar_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('calendar_id', calendarId)
+        .eq('status', 'approved');
+
+      if ((count ?? 0) > 0) {
+        await supabase
+          .from('content_calendars')
+          .update({
+            status: 'approved',
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+          })
+          .eq('id', calendarId);
+      }
+
+      return NextResponse.json({ message: '심의 필요 제외 승인 완료', approvedCount: count ?? 0 });
+    }
+
     if (action === 'reject_all') {
       await supabase
         .from('content_calendar_items')
