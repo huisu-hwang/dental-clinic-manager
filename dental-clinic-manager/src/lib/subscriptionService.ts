@@ -496,3 +496,30 @@ export async function getSubscriptionStatus(clinicId: string): Promise<Subscript
     daysUntilExpiry,
   }
 }
+
+// 해당 병원의 승인된(active) 직원 수 조회 — 인원 상한 체크용
+export async function countActiveEmployees(clinicId: string): Promise<number> {
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('clinic_id', clinicId)
+    .eq('status', 'active')
+  if (error) throw new Error(`countActiveEmployees: ${error.message}`)
+  return count ?? 0
+}
+
+// 현재 구독의 가장 최근 성공 결제 조회 (부분 환불 기준 계산용)
+export async function getLatestPaidPayment(clinicId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('subscription_payments')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('status', 'paid')
+    .order('paid_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`getLatestPaidPayment: ${error.message}`)
+  return data
+}
