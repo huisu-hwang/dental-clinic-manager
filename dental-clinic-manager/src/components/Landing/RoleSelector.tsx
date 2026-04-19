@@ -32,16 +32,23 @@ interface RoleCardProps {
 function RoleCard({ role, emoji, label, title, tagline, tags, accent, onSelect }: RoleCardProps) {
   const cardRef = useRef<HTMLButtonElement>(null)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const [spot, setSpot] = useState({ x: 50, y: 50 })
+  const [hovering, setHovering] = useState(false)
 
-  // 3D 틸트 호버 (커서가 카드 위에 있을 때만 적용)
+  // 3D 틸트 + spotlight 좌표
   const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!cardRef.current) return
     const rect = cardRef.current.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width - 0.5
-    const y = (e.clientY - rect.top) / rect.height - 0.5
-    setTilt({ x: -y * 6, y: x * 6 })
+    const xPct = ((e.clientX - rect.left) / rect.width) * 100
+    const yPct = ((e.clientY - rect.top) / rect.height) * 100
+    setSpot({ x: xPct, y: yPct })
+    setTilt({ x: -((yPct / 100) - 0.5) * 4, y: ((xPct / 100) - 0.5) * 4 })
   }
-  const handleMouseLeave = () => setTilt({ x: 0, y: 0 })
+  const handleMouseEnter = () => setHovering(true)
+  const handleMouseLeave = () => {
+    setHovering(false)
+    setTilt({ x: 0, y: 0 })
+  }
 
   const accentGradient = accent === 'owner'
     ? 'from-indigo-500 via-violet-500 to-purple-600'
@@ -49,37 +56,57 @@ function RoleCard({ role, emoji, label, title, tagline, tags, accent, onSelect }
   const accentSoftBg = accent === 'owner'
     ? 'from-indigo-50/90 via-white to-violet-50/60'
     : 'from-rose-50/90 via-white to-cyan-50/60'
-  const accentRing = accent === 'owner' ? 'ring-indigo-200/60' : 'ring-rose-200/60'
-  const accentGlow = accent === 'owner'
-    ? 'from-indigo-400/30 via-violet-400/30 to-transparent'
-    : 'from-rose-400/30 via-pink-400/30 to-transparent'
+  const accentRing = accent === 'owner'
+    ? 'ring-indigo-200/60 hover:ring-indigo-300/80'
+    : 'ring-rose-200/60 hover:ring-rose-300/80'
   const labelColor = accent === 'owner' ? 'text-indigo-600' : 'text-rose-600'
   const ctaGradient = accent === 'owner'
     ? 'from-indigo-600 to-violet-600'
     : 'from-rose-500 to-cyan-500'
+  const spotlightColor = accent === 'owner'
+    ? 'rgba(165, 180, 252, 0.35)' // indigo-300
+    : 'rgba(253, 164, 175, 0.35)' // rose-300
+  const borderGlowColor = accent === 'owner'
+    ? 'rgba(99, 102, 241, 0.5)' // indigo-500
+    : 'rgba(244, 63, 94, 0.5)' // rose-500
 
   return (
     <button
       ref={cardRef}
       onClick={() => onSelect(role)}
       onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-        transition: 'transform 200ms ease-out',
+        transform: `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+        transition: 'transform 220ms ease-out, box-shadow 400ms ease-out',
       }}
       className={`group relative text-left rounded-[2rem] p-8 sm:p-10 ring-1 ${accentRing}
         bg-gradient-to-br ${accentSoftBg}
         backdrop-blur-xl shadow-xl shadow-slate-200/40
-        hover:shadow-2xl hover:shadow-slate-900/10 hover:-translate-y-1
-        transition-[box-shadow,transform] duration-500 overflow-hidden`}
+        hover:shadow-2xl hover:-translate-y-1
+        transition-[transform] duration-500 overflow-hidden`}
     >
-      {/* 은은한 그라데이션 glow — 호버 시 확장 */}
+      {/* 마우스 따라다니는 밝은 spotlight (어두워지지 않음) */}
       <div
-        className={`pointer-events-none absolute -inset-24 bg-gradient-radial ${accentGlow}
-          opacity-0 group-hover:opacity-100 blur-3xl transition-opacity duration-700`}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-[2rem] transition-opacity duration-500"
         style={{
-          backgroundImage: `radial-gradient(circle at 50% 30%, currentColor 0%, transparent 60%)`,
+          opacity: hovering ? 1 : 0,
+          background: `radial-gradient(420px circle at ${spot.x}% ${spot.y}%, ${spotlightColor}, transparent 55%)`,
+        }}
+      />
+
+      {/* 외곽 border glow — 호버 시 은은한 accent 링 (마우스 위치 방향으로 포커스) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-px rounded-[2rem] transition-opacity duration-500"
+        style={{
+          opacity: hovering ? 1 : 0,
+          background: `radial-gradient(600px circle at ${spot.x}% ${spot.y}%, ${borderGlowColor}, transparent 40%)`,
+          WebkitMaskImage: 'linear-gradient(black, black)',
+          maskImage: 'linear-gradient(black, black)',
+          filter: 'blur(18px)',
         }}
       />
 
