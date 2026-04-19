@@ -58,8 +58,12 @@ export default function ContentCalendarView() {
     setGenerating(true)
     setError(null)
     try {
+      // offsetMonths=0(이번 달): 오늘부터 1달, offsetMonths>0: 그 달 1일부터
       const today = new Date()
-      const target = new Date(today.getFullYear(), today.getMonth() + offsetMonths, 1)
+      const target =
+        offsetMonths === 0
+          ? today
+          : new Date(today.getFullYear(), today.getMonth() + offsetMonths, 1)
       const startDate = target.toISOString().split('T')[0]
 
       const res = await fetch('/api/marketing/calendar', {
@@ -171,20 +175,37 @@ export default function ContentCalendarView() {
   }, [selected])
 
   // ─── 월간 그리드 (날짜별 항목) ───
+  // 선택된 캘린더 항목 + 같은 기간에 걸친 다른 캘린더의 항목(이미 생성/발행된 글)도 함께 표시
   const grid = useMemo(() => {
     if (!selected) return null
-    const items = (selected.content_calendar_items || []).slice().sort((a, b) =>
+
+    const start = new Date(selected.period_start)
+    const end = new Date(selected.period_end)
+    const startStr = selected.period_start
+    const endStr = selected.period_end
+
+    type GridItem = ContentCalendarItem & { _foreign?: boolean }
+    const collected: GridItem[] = []
+    const seenIds = new Set<string>()
+    for (const cal of calendars) {
+      const isSelf = cal.id === selected.id
+      for (const it of cal.content_calendar_items || []) {
+        if (it.publish_date < startStr || it.publish_date > endStr) continue
+        if (seenIds.has(it.id)) continue
+        seenIds.add(it.id)
+        collected.push(isSelf ? it : { ...it, _foreign: true })
+      }
+    }
+    collected.sort((a, b) =>
       a.publish_date.localeCompare(b.publish_date) || a.publish_time.localeCompare(b.publish_time)
     )
-    const byDate = new Map<string, ContentCalendarItem[]>()
-    for (const it of items) {
+
+    const byDate = new Map<string, GridItem[]>()
+    for (const it of collected) {
       const list = byDate.get(it.publish_date) || []
       list.push(it)
       byDate.set(it.publish_date, list)
     }
-
-    const start = new Date(selected.period_start)
-    const end = new Date(selected.period_end)
     // 시작주 일요일로 보정
     const firstSunday = new Date(start)
     firstSunday.setDate(firstSunday.getDate() - firstSunday.getDay())
@@ -192,7 +213,7 @@ export default function ContentCalendarView() {
     const lastSaturday = new Date(end)
     lastSaturday.setDate(lastSaturday.getDate() + (6 - lastSaturday.getDay()))
 
-    const cells: { date: string; inMonth: boolean; items: ContentCalendarItem[] }[] = []
+    const cells: { date: string; inMonth: boolean; items: GridItem[] }[] = []
     const cur = new Date(firstSunday)
     while (cur <= lastSaturday) {
       const ds = cur.toISOString().split('T')[0]
@@ -204,7 +225,7 @@ export default function ContentCalendarView() {
       cur.setDate(cur.getDate() + 1)
     }
     return cells
-  }, [selected])
+  }, [selected, calendars])
 
   return (
     <div className="space-y-4">
@@ -372,16 +393,25 @@ export default function ContentCalendarView() {
                     {day}
                   </div>
                   <div className="space-y-1">
-                    {cell.items.map((item) => (
-                      <CalendarItemCard
-                        key={item.id}
-                        item={item}
-                        onApprove={() => handleApprove(item.id)}
-                        onReject={() => handleReject(item.id)}
-                        onUpdate={(patch) => handleItemUpdate(item.id, patch)}
-                        onRegenerate={() => handleRegenerate(item.id)}
-                      />
-                    ))}
+                    {cell.items.map((item) => {
+                      const isForeign = (item as ContentCalendarItem & { _foreign?: boolean })._foreign
+                      const noop = () => {}
+                      return (
+                        <div
+                          key={item.id}
+                          className={isForeign ? 'opacity-60' : ''}
+                          title={isForeign ? '다른 캘린더의 항목 (읽기 전용)' : undefined}
+                        >
+                          <CalendarItemCard
+                            item={item}
+                            onApprove={isForeign ? noop : () => handleApprove(item.id)}
+                            onReject={isForeign ? noop : () => handleReject(item.id)}
+                            onUpdate={isForeign ? noop : (patch) => handleItemUpdate(item.id, patch)}
+                            onRegenerate={isForeign ? noop : () => handleRegenerate(item.id)}
+                          />
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )

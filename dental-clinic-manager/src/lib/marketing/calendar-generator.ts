@@ -464,21 +464,36 @@ ${focusKeywords.length ? `\n## 집중 키워드 (있으면 최소 1개 포함)\n
 - 후기(review)·결과 보장 언급 시 needsMedicalReview=true 설정
 - estimatedSearchVolume은 시드 검색량에서 추정`;
 
+  // 슬롯 수 × 한글 JSON 토큰 ≈ 22 × ~400 = ~8800 — 6144로는 잘림(stop_reason=max_tokens)이 발생해
+  // 모든 슬롯이 fallback으로 채워지는 회귀가 있었음. 16384로 확장.
   const aiResponse = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 6144,
+    max_tokens: 16384,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const text = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '[]';
+  const text = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '';
+  const stopReason = aiResponse.stop_reason;
+  console.log(
+    `[CalendarGen v2] AI 응답: len=${text.length} stop=${stopReason} usage=${JSON.stringify(aiResponse.usage)}`
+  );
 
   let parsed: TopicProposal[] = [];
   try {
-    const match = text.match(/\[[\s\S]*\]/);
-    if (match) parsed = JSON.parse(match[0]) as TopicProposal[];
+    parsed = parseTopicProposals(text);
   } catch (e) {
-    console.error('[CalendarGen v2] AI 응답 파싱 실패:', e);
+    console.error('[CalendarGen v2] AI 응답 파싱 실패:', e, '— 응답 앞 200자:', text.slice(0, 200));
     parsed = [];
+  }
+  if (parsed.length === 0) {
+    console.warn(
+      `[CalendarGen v2] 파싱 결과 0건 — totalSlots=${totalSlots} stop=${stopReason} 응답 끝 200자:`,
+      text.slice(-200)
+    );
+  } else if (parsed.length < totalSlots) {
+    console.warn(
+      `[CalendarGen v2] 부분 파싱 — parsed=${parsed.length}/${totalSlots} stop=${stopReason}`
+    );
   }
 
   // 길이 보정 (부족/초과 모두 대응)
@@ -508,6 +523,50 @@ ${focusKeywords.length ? `\n## 집중 키워드 (있으면 최소 1개 포함)\n
   }
 
   return parsed;
+}
+
+// 응답 텍스트가 잘리거나 코드블록으로 감싸져도 가능한 만큼 객체를 추출.
+// 1) 정상: '[' … ']' 전체 JSON.parse
+// 2) 잘림: 마지막 완결된 '}' 위치까지 잘라 ']'로 닫고 파싱
+// 3) 그래도 실패: 객체 단위 정규식으로 한 개씩 시도
+function parseTopicProposals(text: string): TopicProposal[] {
+  if (!text) return [];
+
+  const start = text.indexOf('[');
+  if (start < 0) return [];
+
+  const end = text.lastIndexOf(']');
+  if (end > start) {
+    try {
+      return JSON.parse(text.slice(start, end + 1)) as TopicProposal[];
+    } catch {
+      // 다음 단계로
+    }
+  }
+
+  // 잘린 응답 복구: 마지막 완결 객체 '}'까지만 사용해 배열 닫음
+  const lastBrace = text.lastIndexOf('}');
+  if (lastBrace > start) {
+    const candidate = text.slice(start, lastBrace + 1) + ']';
+    try {
+      return JSON.parse(candidate) as TopicProposal[];
+    } catch {
+      // 다음 단계로
+    }
+  }
+
+  // 마지막 수단: 객체 하나씩 추출 (필드 충실도가 떨어질 수 있음)
+  const objects: TopicProposal[] = [];
+  const objectRe = /\{[^{}]*"title"[\s\S]*?\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = objectRe.exec(text)) !== null) {
+    try {
+      objects.push(JSON.parse(m[0]) as TopicProposal);
+    } catch {
+      // 개별 객체 파싱 실패는 무시
+    }
+  }
+  return objects;
 }
 
 function fallbackProposal(index: number, slot: JourneySlot | undefined): TopicProposal {

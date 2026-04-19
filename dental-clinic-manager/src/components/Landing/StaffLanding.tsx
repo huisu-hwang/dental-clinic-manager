@@ -12,6 +12,8 @@ import {
   ChatBubbleLeftRightIcon,
   SparklesIcon,
   QrCodeIcon,
+  PaperAirplaneIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import LandingHeader from './shared/LandingHeader'
 import { useScrollAnimation } from './shared/useScrollAnimation'
@@ -92,10 +94,67 @@ const staffFaqs = [
 export default function StaffLanding() {
   const { onShowLogin, onShowSignup } = useAuthFlow()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+
+  // 토스트 자동 닫힘
+  const showToast = (msg: string) => {
+    setToast(msg)
+    window.setTimeout(() => setToast(null), 3500)
+  }
+
+  // 원장에게 추천하기 — Web Share API 우선, 미지원 환경은 클립보드 복사
+  const handleRecommendToOwner = async () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const url = `${origin}/owner`
+    const shareData = {
+      title: '클리닉 매니저 · 원장용 소개',
+      text: '원장님, 실장·직원 업무를 자동화해주는 치과 관리 서비스예요. 한번 보시겠어요?',
+      url,
+    }
+    try {
+      const nav = typeof navigator !== 'undefined' ? navigator : null
+      if (nav && typeof nav.share === 'function') {
+        await nav.share(shareData)
+        return
+      }
+    } catch {
+      // 사용자 취소 등은 조용히 무시하고 복사 fallback으로 넘어감
+    }
+    try {
+      if (navigator.clipboard && url) {
+        await navigator.clipboard.writeText(url)
+        showToast('원장님께 공유할 링크가 복사되었어요 ✨')
+        return
+      }
+    } catch {
+      // clipboard 접근 실패
+    }
+    showToast('이 환경에서는 공유를 지원하지 않아요. 직접 주소를 알려주세요.')
+  }
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       <LandingHeader variant="light" onShowLogin={onShowLogin} onShowSignup={onShowSignup} />
+
+      {/* 상단 토스트 (원장에게 추천 링크 복사 등 피드백) */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 rounded-full bg-slate-900 text-white px-5 py-2.5 shadow-lg shadow-slate-900/20 text-sm font-medium"
+        >
+          <CheckCircleIcon className="h-5 w-5 text-emerald-400" />
+          <span>{toast}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            aria-label="알림 닫기"
+            className="-mr-1 p-1 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* HERO */}
       <section className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden">
@@ -247,24 +306,29 @@ export default function StaffLanding() {
             오늘 퇴근은 정시에 🕕
           </h2>
           <p className="text-xl text-white/90 mb-10">
-            앱 하나로 오늘 업무를 깔끔하게 끝내세요.
+            혼자서는 못 바꿔요. 원장님께도 같이 보여드려요.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={onShowSignup}
+              type="button"
+              onClick={handleRecommendToOwner}
               className="group px-10 py-4 bg-white text-slate-900 font-bold text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2 justify-center"
             >
-              지금 바로 시작
-              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <PaperAirplaneIcon className="w-5 h-5 -rotate-45" />
+              원장에게 추천하기
             </button>
             <button
+              type="button"
               onClick={onShowLogin}
               className="px-10 py-4 border-2 border-white/40 text-white hover:bg-white/10 font-semibold text-lg rounded-2xl transition-all backdrop-blur-sm"
             >
               로그인
             </button>
           </div>
+          <p className="mt-5 text-sm text-white/70">
+            버튼을 누르면 원장님용 소개 링크를 공유(또는 복사)할 수 있어요.
+          </p>
         </div>
       </section>
 
@@ -306,6 +370,21 @@ export default function StaffLanding() {
               )
             })}
           </div>
+        </div>
+      </section>
+
+      {/* 역할 다시 선택 — 실수로 이 페이지로 온 경우 */}
+      <section className="py-10 bg-white border-t border-slate-100">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-sm text-slate-600">
+            대표원장이신가요?{' '}
+            <a
+              href="/?clear=1"
+              className="font-semibold text-rose-600 underline decoration-rose-300 underline-offset-4 hover:decoration-rose-500 transition-colors"
+            >
+              역할 다시 선택
+            </a>
+          </p>
         </div>
       </section>
     </div>
