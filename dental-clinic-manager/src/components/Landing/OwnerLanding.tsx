@@ -139,11 +139,11 @@ export default function OwnerLanding() {
             <span className="block bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent pb-2">
               반복 업무에
             </span>
-            <span className="block">낭비하지 마세요</span>
+            <span className="block">지치게 하지 마세요</span>
           </h1>
 
           <p className="text-slate-300 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
-            잡무는 시스템에 맡기고,{' '}
+            업무는 시스템에 맡기고,{' '}
             <span className="text-white font-medium">실장은 매출에만 집중</span>하게 하세요.
           </p>
 
@@ -197,7 +197,7 @@ export default function OwnerLanding() {
 
             <p className="text-2xl sm:text-3xl lg:text-4xl font-medium text-white leading-relaxed mb-10">
               능력있는 실장이 매일 처리하는{' '}
-              <span className="text-amber-400">반복 잡무</span>들.
+              <span className="text-amber-400">반복 업무</span>들.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-3 mb-10">
@@ -232,7 +232,7 @@ export default function OwnerLanding() {
               </div>
               <div>
                 <span className="text-at-accent font-semibold text-sm tracking-wider uppercase">The Solution</span>
-                <h2 className="text-2xl font-bold text-at-text">잡무는 시스템에게, 실장은 매출에 집중</h2>
+                <h2 className="text-2xl font-bold text-at-text">업무는 시스템에게, 실장은 매출에 집중</h2>
               </div>
             </div>
 
@@ -249,7 +249,7 @@ export default function OwnerLanding() {
                 <div className="text-4xl mb-4">✨</div>
                 <h3 className="font-bold text-at-text mb-2">After</h3>
                 <p className="text-at-text-secondary">
-                  잡무는 시스템이 처리하고, 실장은{' '}
+                  업무는 시스템이 처리하고, 실장은{' '}
                   <span className="text-at-accent font-semibold">상담·해피콜·매출 관리</span>에 집중합니다.
                 </p>
               </div>

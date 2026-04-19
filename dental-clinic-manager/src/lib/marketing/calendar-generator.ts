@@ -393,14 +393,6 @@ async function proposeTopicsWithAi(opts: {
 }): Promise<TopicProposal[]> {
   const { totalSlots, journeySlots, seedProfiles, excludeList, recentTitles, focusKeywords, month, year } = opts;
 
-  // 슬롯 지시서
-  const slotLines = journeySlots
-    .map((s, i) => {
-      const catLabel = TOPIC_CATEGORY_LABELS[s.topicCategory].label;
-      return `  ${i + 1}. 여정=${s.journeyStage} / 카테고리=${s.topicCategory}(${catLabel})`;
-    })
-    .join('\n');
-
   // 시드 풀 프리브리프 (시즌 점수 높은 순으로 정렬해 우선 노출)
   const sortedSeeds = [...seedProfiles].sort((a, b) => b.seasonalScore - a.seasonalScore);
   const topSeeds = sortedSeeds
@@ -418,7 +410,23 @@ async function proposeTopicsWithAi(opts: {
     .map((s) => `${s.keyword}(${s.seasonalScore}점)`)
     .join(', ');
 
-  const prompt = `당신은 치과 전문 네이버 블로그 SEO 기획자입니다. 아래 조건으로 **정확히 ${totalSlots}개**의 글 주제를 기획해주세요.
+  // 한 번 호출당 슬롯 수가 너무 많으면 응답 시간이 길어져 Vercel 함수(120s)를 초과한다.
+  // 12개 단위로 잘라 병렬 호출 → wall-clock 단축 + 응답 잘림 위험 감소.
+  const BATCH_SIZE = 12;
+  const batches: { offset: number; slots: JourneySlot[] }[] = [];
+  for (let i = 0; i < totalSlots; i += BATCH_SIZE) {
+    batches.push({ offset: i, slots: journeySlots.slice(i, i + BATCH_SIZE) });
+  }
+
+  const buildPrompt = (slots: JourneySlot[], offset: number, count: number) => {
+    const slotLines = slots
+      .map((s, i) => {
+        const catLabel = TOPIC_CATEGORY_LABELS[s.topicCategory].label;
+        return `  ${offset + i + 1}. 여정=${s.journeyStage} / 카테고리=${s.topicCategory}(${catLabel})`;
+      })
+      .join('\n');
+
+    return `당신은 치과 전문 네이버 블로그 SEO 기획자입니다. 아래 조건으로 **정확히 ${count}개**의 글 주제를 기획해주세요.
 
 ## 기본 원칙 (반드시 준수)
 1) 네이버 C-Rank: 치과 주제 집중. 벗어난 주제 금지.
@@ -432,7 +440,7 @@ async function proposeTopicsWithAi(opts: {
 - 시즌성·이벤트 키워드 적극 반영 (예: 6/9 치아의날, 여름방학 교정, 연말 보험 소진)
 ${seasonalTop ? `- **이번 달 시즌 상위 (네이버 데이터랩 트렌드)**: ${seasonalTop}\n  → 시즌점수 70+ 키워드는 가급적 1~2개 슬롯에 직접 활용` : ''}
 
-## ${totalSlots}개 슬롯 (여정 단계와 카테고리는 고정)
+## ${count}개 슬롯 (여정 단계와 카테고리는 고정)
 ${slotLines}
 
 ## 시드 키워드 풀 (시즌점수 높은 순, 검색량·경쟁도·연관어 포함)
@@ -443,7 +451,7 @@ ${focusKeywords.length ? `\n## 집중 키워드 (있으면 최소 1개 포함)\n
 키워드: ${excludeList.slice(0, 30).join(', ') || '없음'}
 제목: ${recentTitles.slice(0, 15).join(' | ') || '없음'}
 
-## 출력 (JSON 배열만. 코드블록 없이)
+## 출력 (JSON 배열만. 코드블록·머리말 없이 곧바로 '['로 시작)
 [
   {
     "title": "45자 이내 자연스러운 검색어형 제목",
@@ -453,50 +461,70 @@ ${focusKeywords.length ? `\n## 집중 키워드 (있으면 최소 1개 포함)\n
     "topicCategory": "info|symptom|treatment|cost|review|clinic_news",
     "journeyStage": "awareness|consideration|decision|retention",
     "needsMedicalReview": false,
-    "planningRationale": "이 주제를 선정한 한줄 근거 (시즌/검색량/여정)",
+    "planningRationale": "이 주제를 선정한 한줄 근거 (시즌/검색량/여정, 40자 이내)",
     "estimatedSearchVolume": 1500
   }
 ]
 
 제약:
-- 각 슬롯의 journeyStage, topicCategory는 위 ${totalSlots}개 슬롯 지시를 **순서대로** 따를 것
+- 각 슬롯의 journeyStage, topicCategory는 위 ${count}개 슬롯 지시를 **순서대로** 따를 것
 - 같은 키워드/유사 제목 사용 금지
 - 후기(review)·결과 보장 언급 시 needsMedicalReview=true 설정
-- estimatedSearchVolume은 시드 검색량에서 추정`;
+- estimatedSearchVolume은 시드 검색량에서 추정
+- 모든 텍스트 필드는 가능한 한 간결하게 (planningRationale 40자 이내)`;
+  };
 
-  // 슬롯 수 × 한글 JSON 토큰 ≈ 22 × ~400 = ~8800 — 6144로는 잘림(stop_reason=max_tokens)이 발생해
-  // 모든 슬롯이 fallback으로 채워지는 회귀가 있었음. 16384로 확장.
-  const aiResponse = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 16384,
-    messages: [{ role: 'user', content: prompt }],
-  });
+  const runBatch = async (slots: JourneySlot[], offset: number): Promise<TopicProposal[]> => {
+    const count = slots.length;
+    const prompt = buildPrompt(slots, offset, count);
 
-  const text = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '';
-  const stopReason = aiResponse.stop_reason;
-  console.log(
-    `[CalendarGen v2] AI 응답: len=${text.length} stop=${stopReason} usage=${JSON.stringify(aiResponse.usage)}`
-  );
+    // 12슬롯 × ~250토큰(JSON, 한글) ≈ 3000 → 6144면 잘림 없이 충분.
+    const aiResponse = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 6144,
+      messages: [
+        { role: 'user', content: prompt },
+        // 프리필로 머리말/코드블록 없이 바로 JSON 배열 시작 → 토큰·시간 절감
+        { role: 'assistant', content: '[' },
+      ],
+    });
 
-  let parsed: TopicProposal[] = [];
-  try {
-    parsed = parseTopicProposals(text);
-  } catch (e) {
-    console.error('[CalendarGen v2] AI 응답 파싱 실패:', e, '— 응답 앞 200자:', text.slice(0, 200));
-    parsed = [];
-  }
-  if (parsed.length === 0) {
-    console.warn(
-      `[CalendarGen v2] 파싱 결과 0건 — totalSlots=${totalSlots} stop=${stopReason} 응답 끝 200자:`,
-      text.slice(-200)
+    const raw = aiResponse.content[0]?.type === 'text' ? aiResponse.content[0].text : '';
+    const text = raw.trimStart().startsWith('[') ? raw : `[${raw}`;
+    const stopReason = aiResponse.stop_reason;
+    console.log(
+      `[CalendarGen v2] batch offset=${offset} slots=${count} len=${text.length} stop=${stopReason} usage=${JSON.stringify(aiResponse.usage)}`
     );
-  } else if (parsed.length < totalSlots) {
-    console.warn(
-      `[CalendarGen v2] 부분 파싱 — parsed=${parsed.length}/${totalSlots} stop=${stopReason}`
-    );
-  }
 
-  // 길이 보정 (부족/초과 모두 대응)
+    let parsed: TopicProposal[] = [];
+    try {
+      parsed = parseTopicProposals(text);
+    } catch (e) {
+      console.error(`[CalendarGen v2] batch offset=${offset} 파싱 실패:`, e, '— 응답 앞 200자:', text.slice(0, 200));
+    }
+    if (parsed.length === 0) {
+      console.warn(
+        `[CalendarGen v2] batch offset=${offset} 파싱 0건 — stop=${stopReason} 응답 끝 200자:`,
+        text.slice(-200)
+      );
+    }
+
+    // 슬롯 수에 맞춰 보정
+    if (parsed.length < count) {
+      for (let i = parsed.length; i < count; i++) {
+        parsed.push(fallbackProposal(offset + i, slots[i]));
+      }
+    } else if (parsed.length > count) {
+      parsed = parsed.slice(0, count);
+    }
+    return parsed;
+  };
+
+  // 배치 병렬 실행 → wall-clock = max(batch latencies)
+  const batchResults = await Promise.all(batches.map((b) => runBatch(b.slots, b.offset)));
+  let parsed: TopicProposal[] = batchResults.flat();
+
+  // 안전망: 배치 결과가 totalSlots와 어긋나도 길이 정렬
   if (parsed.length < totalSlots) {
     for (let i = parsed.length; i < totalSlots; i++) {
       parsed.push(fallbackProposal(i, journeySlots[i]));
