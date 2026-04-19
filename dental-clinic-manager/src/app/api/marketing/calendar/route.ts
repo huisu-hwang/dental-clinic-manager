@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateCalendar, type CalendarRequest } from '@/lib/marketing/calendar-generator';
 
+// Vercel 서버리스 함수 타임아웃 확장
+// 월간 캘린더 생성은 Anthropic Claude(6144 tokens) + 네이버 SearchAd/DataLab + Gemini 임베딩을
+// 직렬로 호출하므로 기본 60초로는 부족하여 504(Gateway Timeout) 발생
+export const maxDuration = 120;
+
 // 캘린더 목록 조회
 export async function GET(request: NextRequest) {
   try {

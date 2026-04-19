@@ -6,6 +6,9 @@ import { checkMedicalLaw } from '@/lib/marketing/medical-law-checker';
 import { titleSimilarity } from '@/lib/marketing/keyword-researcher';
 import type { TopicProposal } from '@/types/marketing';
 
+// Vercel 서버리스 함수 타임아웃 확장 (Anthropic API 응답 대기 대응)
+export const maxDuration = 120;
+
 // 개별 캘린더 항목 AI 재생성
 // - 같은 journey_stage / topic_category 유지
 // - 기존 제목·키워드와는 다른 주제 제안
