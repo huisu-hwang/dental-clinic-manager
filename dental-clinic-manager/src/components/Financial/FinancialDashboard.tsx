@@ -14,6 +14,7 @@ import ExpenseForm from './ExpenseForm'
 import HometaxSyncPanel from './HometaxSyncPanel'
 import HometaxDataView from './HometaxDataView'
 import HometaxCredentialsSettings from './HometaxCredentialsSettings'
+import TaxSettingsForm from './TaxSettingsForm'
 import {
   TrendingUp,
   TrendingDown,
@@ -58,8 +59,12 @@ export default function FinancialDashboard() {
   const [showRevenueForm, setShowRevenueForm] = useState(false)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
 
-  // 탭 상태
-  const [activeTab, setActiveTab] = useState<'status' | 'settings'>('status')
+  // 탭 상태 (URL ?tab=settings 로 진입 시 설정 탭 자동 활성화)
+  const [activeTab, setActiveTab] = useState<'status' | 'settings'>(() => {
+    if (typeof window === 'undefined') return 'status'
+    const params = new URLSearchParams(window.location.search)
+    return params.get('tab') === 'settings' ? 'settings' : 'status'
+  })
 
   // 데이터 로드
   const loadData = async () => {
@@ -276,13 +281,16 @@ export default function FinancialDashboard() {
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <PiggyBank className="w-24 h-24 text-white transform translate-x-4 -translate-y-4" />
               </div>
-              <p className="text-sm font-semibold tracking-wider text-purple-200 uppercase">세후 순이익</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold tracking-wider text-purple-200 uppercase">예상 세후 순이익</p>
+                <span className="bg-white/20 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">올해 누적</span>
+              </div>
               <h3 className="text-3xl font-black mt-2 mb-4">
-                {formatCurrency(summary?.post_tax_profit || 0)}
+                {formatCurrency(summary?.estimated_post_tax_profit ?? summary?.post_tax_profit ?? 0)}
               </h3>
               <div className="flex items-center justify-between text-xs font-medium bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-                <span>예상 납부세액</span>
-                <span className="text-base">{formatCurrency(summary?.actual_tax_paid || 0)}</span>
+                <span>예상 세금 ({summary?.estimated_elapsed_months || selectedMonth}개월 누적)</span>
+                <span className="text-base">{formatCurrency(summary?.estimated_total_tax ?? 0)}</span>
               </div>
             </div>
           </div>
@@ -365,14 +373,23 @@ export default function FinancialDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-at-border">
-                        {expenses.map(expense => (
+                        {expenses.map(expense => {
+                          const isPayroll = expense.source === 'payroll'
+                          return (
                           <tr key={expense.id} className="hover:bg-at-surface-alt/80 transition-colors group">
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-at-surface-alt text-at-text">
-                                {expense.category?.name ||
-                                  EXPENSE_CATEGORY_LABELS[expense.category?.type as ExpenseCategoryType] ||
-                                  '기타'}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-at-surface-alt text-at-text">
+                                  {expense.category?.name ||
+                                    EXPENSE_CATEGORY_LABELS[expense.category?.type as ExpenseCategoryType] ||
+                                    '기타'}
+                                </span>
+                                {isPayroll && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700" title="급여 명세서에서 자동 생성됨">
+                                    급여 자동
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               <p className="font-medium text-at-text">{expense.description || '-'}</p>
@@ -396,15 +413,22 @@ export default function FinancialDashboard() {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <button
-                                onClick={() => handleDeleteExpense(expense.id)}
-                                className="w-8 h-8 inline-flex items-center justify-center text-at-text hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {isPayroll ? (
+                                <span className="text-[10px] text-at-text-weak" title="급여 명세서에서 관리됩니다">
+                                  급여에서 관리
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleDeleteExpense(expense.id)}
+                                  className="w-8 h-8 inline-flex items-center justify-center text-at-text hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </td>
                           </tr>
-                        ))}
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -448,33 +472,40 @@ export default function FinancialDashboard() {
                 </div>
               )}
 
-              {/* Tax Information */}
-              {summary && (summary.income_tax > 0 || summary.total_tax > 0) && (
+              {/* Estimated Tax Information (올해 누적 기준) */}
+              {summary && (
                 <div className="bg-slate-800 rounded-3xl shadow-sm border border-at-border p-6 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-5">
                     <Calculator className="w-32 h-32" />
                   </div>
-                  <h2 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10">
+                  <h2 className="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
                     <Calculator className="w-5 h-5 text-at-accent" />
-                    예상 세금 정보
+                    예상 세금 (올해 누적)
                   </h2>
+                  <p className="text-xs text-slate-300 mb-6 relative z-10">
+                    1월~{summary?.estimated_elapsed_months || selectedMonth}월 누적 순이익 기준 추정. 설정 탭에서 세무 설정을 업데이트하면 정확도가 높아집니다.
+                  </p>
                   <div className="space-y-4 relative z-10">
                     <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
-                      <span className="text-sm text-at-text">종합소득세</span>
-                      <span className="font-medium text-at-text">{formatCurrency(summary.income_tax)}</span>
+                      <span className="text-sm text-slate-200">누적 순이익</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.ytd_net_income ?? 0)}</span>
                     </div>
                     <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
-                      <span className="text-sm text-at-text">지방소득세</span>
-                      <span className="font-medium text-at-text">{formatCurrency(summary.local_income_tax)}</span>
+                      <span className="text-sm text-slate-200">과세표준 (공제 반영)</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.estimated_taxable_income ?? 0)}</span>
                     </div>
-                    <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
-                      <span className="text-sm text-emerald-300 font-medium">정부 지원</span>
-                      <span className="font-bold text-emerald-400">-{formatCurrency(summary.government_support)}</span>
+                    <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
+                      <span className="text-sm text-slate-200">예상 종합소득세</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.estimated_income_tax ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
+                      <span className="text-sm text-slate-200">예상 지방소득세</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.estimated_local_tax ?? 0)}</span>
                     </div>
                     <div className="w-full h-px bg-slate-700 my-2"></div>
                     <div className="flex justify-between items-center px-1">
-                      <span className="text-sm text-rose-300 font-medium">실납부 세금</span>
-                      <span className="text-xl font-black text-white">{formatCurrency(summary.actual_tax_paid)}</span>
+                      <span className="text-sm text-rose-300 font-medium">예상 세금 합계</span>
+                      <span className="text-xl font-black text-white">{formatCurrency(summary.estimated_total_tax ?? 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -508,6 +539,9 @@ export default function FinancialDashboard() {
               현황 조회 탭에서 선택한 월({selectedYear}년 {selectedMonth}월)에 추가됩니다. 다른 월에 입력하려면 현황 조회 탭에서 월을 변경한 뒤 다시 시도하세요.
             </div>
           </div>
+
+          {/* 세무 설정 (예상 세금 계산용) */}
+          <TaxSettingsForm clinicId={clinicId} onSaved={loadData} />
 
           {/* 홈택스 인증정보 설정 */}
           <HometaxCredentialsSettings clinicId={clinicId} />

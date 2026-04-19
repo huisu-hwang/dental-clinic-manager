@@ -1,16 +1,47 @@
 // ============================================
 // 재무 요약 API
-// GET: 월별/연간 재무 요약 조회
+// GET: 월별/연간 재무 요약 조회 + 올해 누적 예상 세금 계산
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { estimateTax } from '@/utils/taxCalculator';
+import type { ClinicTaxSettings } from '@/types/financial';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function getServiceClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// clinic_tax_settings 조회 (없으면 null → 기본값으로 동작)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function loadTaxSettings(supabase: any, clinicId: string): Promise<ClinicTaxSettings | null> {
+  const { data } = await supabase
+    .from('clinic_tax_settings')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .maybeSingle();
+  return (data as ClinicTaxSettings | null) ?? null;
+}
+
+// 올해 1월 ~ asOfMonth까지 누적 순이익(수입 - 지출) 계산 via financial_summary_view
+async function loadYtdMonths(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  clinicId: string,
+  year: number,
+  asOfMonth: number
+) {
+  const { data } = await supabase
+    .from('financial_summary_view')
+    .select('month, total_revenue, total_expense, pre_tax_profit')
+    .eq('clinic_id', clinicId)
+    .eq('year', year)
+    .lte('month', asOfMonth)
+    .order('month', { ascending: true });
+  return (data ?? []) as Array<{ month: number; total_revenue: number | null; total_expense: number | null; pre_tax_profit: number | null }>;
 }
 
 // GET: 재무 요약 조회
@@ -26,16 +57,19 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getServiceClient();
+    const yearNum = parseInt(year);
 
     // 월별 조회
     if (month) {
+      const monthNum = parseInt(month);
+
       // 1. 재무 요약 조회
       const { data, error } = await supabase
         .from('financial_summary_view')
         .select('*')
         .eq('clinic_id', clinicId)
-        .eq('year', parseInt(year))
-        .eq('month', parseInt(month))
+        .eq('year', yearNum)
+        .eq('month', monthNum)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -48,15 +82,34 @@ export async function GET(request: NextRequest) {
         .from('revenue_records')
         .select('source_type')
         .eq('clinic_id', clinicId)
-        .eq('year', parseInt(year))
-        .eq('month', parseInt(month))
+        .eq('year', yearNum)
+        .eq('month', monthNum)
         .single();
+
+      // 3. 올해 누적 순이익 + 예상 세금 계산
+      const ytdMonths = await loadYtdMonths(supabase, clinicId, yearNum, monthNum);
+      const ytdNetIncome = ytdMonths.reduce(
+        (sum, m) => sum + ((m.total_revenue || 0) - (m.total_expense || 0)),
+        0
+      );
+      const settings = await loadTaxSettings(supabase, clinicId);
+      const elapsed = ytdMonths.length > 0
+        ? Math.max(...ytdMonths.map(m => m.month))
+        : monthNum;
+      const est = estimateTax(ytdNetIncome, settings, elapsed);
 
       return NextResponse.json({
         success: true,
         data: {
           ...(data || {}),
           revenue_source_type: revenueRecord?.source_type || null,
+          ytd_net_income: est.ytd_net_income,
+          estimated_taxable_income: est.estimated_taxable_income,
+          estimated_income_tax: est.estimated_income_tax,
+          estimated_local_tax: est.estimated_local_tax,
+          estimated_total_tax: est.estimated_total_tax,
+          estimated_post_tax_profit: est.estimated_post_tax_profit,
+          estimated_elapsed_months: est.elapsed_months,
         }
       });
     }
@@ -66,7 +119,7 @@ export async function GET(request: NextRequest) {
       .from('financial_summary_view')
       .select('*')
       .eq('clinic_id', clinicId)
-      .eq('year', parseInt(year))
+      .eq('year', yearNum)
       .order('month', { ascending: true });
 
     if (error) {
@@ -74,8 +127,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '연간 재무 요약 조회에 실패했습니다.' }, { status: 500 });
     }
 
-    // 연간 합계 계산
     const months = data || [];
+
+    // 연간 합계 계산
     const initialTotals = {
       total_revenue: 0,
       total_expense: 0,
@@ -96,12 +150,20 @@ export async function GET(request: NextRequest) {
     );
 
     const monthCount = months.length || 1;
+    const ytdNetIncome = totals.total_revenue - totals.total_expense;
+
+    // 연간 기준 예상 세금 계산 (경과월 = 데이터가 있는 월 수 또는 현재 달)
+    const settings = await loadTaxSettings(supabase, clinicId);
+    const elapsed = months.length > 0
+      ? Math.max(...months.map((m: Record<string, number>) => m.month))
+      : Math.min(12, new Date().getMonth() + 1);
+    const est = estimateTax(ytdNetIncome, settings, elapsed);
 
     return NextResponse.json({
       success: true,
       data: {
         clinic_id: clinicId,
-        year: parseInt(year),
+        year: yearNum,
         months,
         totals: {
           ...totals,
@@ -111,6 +173,13 @@ export async function GET(request: NextRequest) {
             totals.total_revenue > 0
               ? Math.round(((totals.pre_tax_profit / totals.total_revenue) * 100) * 100) / 100
               : 0,
+          ytd_net_income: est.ytd_net_income,
+          estimated_taxable_income: est.estimated_taxable_income,
+          estimated_income_tax: est.estimated_income_tax,
+          estimated_local_tax: est.estimated_local_tax,
+          estimated_total_tax: est.estimated_total_tax,
+          estimated_post_tax_profit: est.estimated_post_tax_profit,
+          estimated_elapsed_months: est.elapsed_months,
         },
       },
     });
