@@ -1733,11 +1733,12 @@ export const dataService = {
 
   // 사용자 승인 (직원 관리)
   // Database Trigger가 자동으로 승인 이메일을 발송합니다.
-  async approveUser(userId: string, clinicId: string, permissions?: string[]) {
+  // clinic_id가 null인 사용자(예: 시스템 관리자 후보)도 처리한다.
+  async approveUser(userId: string, clinicId: string | null, permissions?: string[]) {
     try {
       const supabase = await ensureConnection()
 
-      console.log('[approveUser] Approving user:', userId)
+      console.log('[approveUser] Approving user:', userId, 'clinicId:', clinicId ?? 'null')
 
       // 업데이트 데이터 준비
       const updateData: any = {
@@ -1753,11 +1754,14 @@ export const dataService = {
       // 사용자 상태를 'active'로 업데이트
       // Database Trigger (users_approval_notification_trigger)가
       // 자동으로 Edge Function을 호출하여 승인 이메일을 발송합니다.
-      const { error } = await supabase
+      const updateQuery = supabase
         .from('users')
         .update(updateData)
         .eq('id', userId)
-        .eq('clinic_id', clinicId)
+
+      const { error } = await (
+        clinicId ? updateQuery.eq('clinic_id', clinicId) : updateQuery.is('clinic_id', null)
+      )
 
       if (error) {
         console.error('[approveUser] Database error:', error)
@@ -1774,7 +1778,8 @@ export const dataService = {
   },
 
   // 사용자 거절 (직원 관리)
-  async rejectUser(userId: string, clinicId: string, reason: string) {
+  // clinic_id가 null인 사용자도 처리할 수 있도록 옵셔널로 받는다.
+  async rejectUser(userId: string, clinicId: string | null, reason: string) {
     try {
       console.log('[rejectUser] Calling Admin API to reject user:', userId)
 
