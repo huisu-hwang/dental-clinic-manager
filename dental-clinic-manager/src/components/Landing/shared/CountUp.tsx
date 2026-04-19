@@ -17,15 +17,18 @@ export default function CountUp({ end, suffix = '', duration = 2000 }: CountUpPr
     if (!isVisible) return
 
     let startTime: number
+    let animationId = 0
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime
       const progress = Math.min((currentTime - startTime) / duration, 1)
       setCount(Math.floor(progress * end))
       if (progress < 1) {
-        requestAnimationFrame(animate)
+        animationId = requestAnimationFrame(animate)
       }
     }
-    requestAnimationFrame(animate)
+    animationId = requestAnimationFrame(animate)
+
+    return () => cancelAnimationFrame(animationId)
   }, [isVisible, end, duration])
 
   return <span ref={ref}>{count}{suffix}</span>
