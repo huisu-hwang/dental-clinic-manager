@@ -164,8 +164,19 @@ export interface ContentCalendarItem {
   needs_medical_review: boolean;
   planning_rationale: string | null;
   estimated_search_volume: number | null;
+  // 발행 후 KPI (calendar API GET 시 enrich됨)
+  metrics?: PostMetricsSnapshot[];
   created_at: string;
   updated_at: string;
+}
+
+export interface PostMetricsSnapshot {
+  platform: string;
+  views: number | null;
+  comments: number | null;
+  likes: number | null;
+  scraps: number | null;
+  measured_at: string;
 }
 
 export type ClinicalPhotoType = 'before' | 'during' | 'after';

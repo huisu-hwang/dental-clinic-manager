@@ -111,7 +111,14 @@ export async function GET(request: NextRequest) {
           .single();
 
         if (controlData) {
-          installed = true;
+          // 주의: marketing_worker_control 테이블은 마이그레이션 시점에 id='main' seed row가
+          // 자동 삽입되므로 "row 존재 여부"만으로는 설치 여부를 판정할 수 없다.
+          // 실제 워커가 한 번이라도 실행되면 worker_version이 기록되거나
+          // watchdog_online=true 로 heartbeat가 올라오므로 이를 설치의 증거로 사용한다.
+          const hasVersion = !!controlData.worker_version;
+          const hasHeartbeat = !!controlData.watchdog_online;
+          installed = hasVersion || hasHeartbeat;
+
           const lastUpdated = controlData.last_updated ? new Date(controlData.last_updated) : null;
           const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
           online = !!(controlData.watchdog_online && isRecent);
@@ -190,11 +197,15 @@ export async function GET(request: NextRequest) {
         if (admin) {
           const { data: controlData } = await admin
             .from('marketing_worker_control')
-            .select('watchdog_online, last_updated')
+            .select('watchdog_online, last_updated, worker_version')
             .eq('id', 'main')
             .single();
           if (controlData) {
-            marketingInstalled = true;
+            // seed row로 인한 오탐 방지: worker_version 또는 watchdog_online 으로 설치 판정
+            const hasVersion = !!controlData.worker_version;
+            const hasHeartbeat = !!controlData.watchdog_online;
+            marketingInstalled = hasVersion || hasHeartbeat;
+
             const lastUpdated = controlData.last_updated ? new Date(controlData.last_updated) : null;
             const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
             marketingOnline = !!(controlData.watchdog_online && isRecent);
