@@ -33,11 +33,13 @@ import PremiumGate from '@/components/Premium/PremiumGate'
 import TaskChecklistManagement from '@/components/TaskChecklist/TaskChecklistManagement'
 import InvestmentTab from '@/components/Investment/InvestmentTab'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
+import { useUserNotifications } from '@/hooks/useUserNotifications'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData, ConsultLog, GiftInventory, GiftCategory } from '@/types'
+import PostPaymentApprovalModal from '@/components/Subscription/PostPaymentApprovalModal'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -126,6 +128,28 @@ export default function DashboardPage() {
     silentRefetch,
     refetchInventory
   } = useSupabaseData(user?.clinic_id ?? null)
+
+  // 결제 성공 알림 감지 → 대기 직원 승인 모달
+  const { notifications, markAsRead } = useUserNotifications({ limit: 20, autoRefresh: true, refreshInterval: 30_000 })
+  const [paymentSuccessModal, setPaymentSuccessModal] = useState<{
+    id: string
+    pendingCount: number
+    newLimit: number
+    newPlanName: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (paymentSuccessModal) return // 이미 표시 중이면 건너뜀
+    const n = notifications.find((x) => x.type === 'subscription_payment_succeeded' && !x.is_read)
+    if (!n) return
+    const md = (n.metadata ?? {}) as { pendingCount?: number; newLimit?: number; newPlanName?: string }
+    setPaymentSuccessModal({
+      id: n.id,
+      pendingCount: Number(md.pendingCount ?? 0),
+      newLimit: Number(md.newLimit ?? 0),
+      newPlanName: String(md.newPlanName ?? ''),
+    })
+  }, [notifications, paymentSuccessModal])
 
   // giftLogs 기반 선물별 총 사용량 계산 (모든 날짜 포함)
   const baseUsageByGift = useMemo(() => {
@@ -372,6 +396,20 @@ export default function DashboardPage() {
 
   return (
     <>
+          {/* 결제 완료 후 대기 직원 자동/개별 승인 모달 */}
+          {paymentSuccessModal && (
+            <PostPaymentApprovalModal
+              open
+              onClose={async () => {
+                if (paymentSuccessModal.id) await markAsRead(paymentSuccessModal.id)
+                setPaymentSuccessModal(null)
+              }}
+              pendingCount={paymentSuccessModal.pendingCount}
+              newLimit={paymentSuccessModal.newLimit}
+              newPlanName={paymentSuccessModal.newPlanName}
+            />
+          )}
+
           {/* 대시보드 홈 */}
           {activeTab === 'home' && (
             <DashboardHome />
