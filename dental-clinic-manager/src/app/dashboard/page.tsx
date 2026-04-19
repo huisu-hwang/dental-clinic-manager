@@ -40,6 +40,7 @@ import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData, ConsultLog, GiftInventory, GiftCategory } from '@/types'
 import PostPaymentApprovalModal from '@/components/Subscription/PostPaymentApprovalModal'
+import PendingApprovalBanner from '@/components/Dashboard/PendingApprovalBanner'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -408,6 +409,11 @@ export default function DashboardPage() {
               newLimit={paymentSuccessModal.newLimit}
               newPlanName={paymentSuccessModal.newPlanName}
             />
+          )}
+
+          {/* 승인 대기 직원 배너 (owner / master_admin 전용) */}
+          {user?.clinic_id && user?.role && (
+            <PendingApprovalBanner clinicId={user.clinic_id} role={user.role} />
           )}
 
           {/* 대시보드 홈 */}
