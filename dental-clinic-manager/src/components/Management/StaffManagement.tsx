@@ -13,6 +13,8 @@ import { decryptResidentNumber, encryptResidentNumber } from '@/utils/encryption
 import { appPrompt } from '@/components/ui/AppDialog'
 import UpgradeRequiredModal from '@/components/Subscription/UpgradeRequiredModal'
 import PlanSelectModal from '@/components/Subscription/PlanSelectModal'
+import CardRegistrationModal from '@/components/Subscription/CardRegistrationModal'
+import type { SubscriptionPlan } from '@/types/subscription'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -90,6 +92,8 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     recommendedPlan: string
   }>(null)
   const [planModalOpen, setPlanModalOpen] = useState(false)
+  const [cardModalOpen, setCardModalOpen] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
 
   // 주민번호 마스킹 함수
   const maskResidentNumber = (rrn: string) => {
@@ -203,6 +207,9 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
   const handleApproveRequest = async (requestId: string, permissions?: Permission[]) => {
     if (!currentUser.clinic_id) return
+
+    setError('')
+    setSuccess('')
 
     try {
       const result = await dataService.approveUser(requestId, currentUser.clinic_id, permissions)
@@ -1108,7 +1115,7 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
       {upgradeContext && (
         <UpgradeRequiredModal
-          open={!!upgradeContext}
+          open
           onClose={() => setUpgradeContext(null)}
           onPayNow={() => {
             setUpgradeContext(null)
@@ -1120,9 +1127,22 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       <PlanSelectModal
         isOpen={planModalOpen}
         onClose={() => setPlanModalOpen(false)}
-        onSelect={async () => {
+        onSelect={(plan) => {
+          setSelectedPlan(plan)
           setPlanModalOpen(false)
+          setCardModalOpen(true)
         }}
+      />
+      <CardRegistrationModal
+        isOpen={cardModalOpen}
+        onClose={() => setCardModalOpen(false)}
+        onSuccess={() => {
+          setCardModalOpen(false)
+          // 결제 성공 후 대기 직원 재조회 (Task 11+에서 자동 승인 웹훅이 처리)
+          fetchStaff()
+          fetchJoinRequests()
+        }}
+        selectedPlan={selectedPlan}
       />
     </div>
   )
