@@ -5,6 +5,13 @@ import { getKeywordInsights, totalMonthlyQc, isSearchAdConfigured } from '@/lib/
 import { getSeasonalScores, isDataLabConfigured } from '@/lib/marketing/naver-datalab-client';
 import { checkMedicalLaw } from '@/lib/marketing/medical-law-checker';
 import {
+  embedTextsBatch,
+  cosineSimilarity,
+  serializeEmbedding,
+  deserializeEmbedding,
+  isEmbeddingsConfigured,
+} from '@/lib/marketing/embeddings';
+import {
   DEFAULT_PLATFORM_PRESETS,
   DEFAULT_JOURNEY_DISTRIBUTION,
   JOURNEY_CATEGORY_MAP,
@@ -81,15 +88,38 @@ export async function generateCalendar(
 
   const recentKeywords = (historyRows || []).map((r) => r.keyword as string);
 
-  // 최근 발행 제목도 로드 (유사도 체크용)
+  // 최근 발행 제목 + 임베딩도 함께 로드 (유사도 체크용)
   const { data: recentItems } = await supabase
     .from('content_calendar_items')
-    .select('title')
+    .select('title, title_embedding')
     .in('status', ['scheduled', 'publishing', 'published'])
     .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
     .limit(100);
   const recentTitles = (recentItems || []).map((i) => i.title as string);
+  const recentEmbeddingsRaw = (recentItems || []).map((i) =>
+    deserializeEmbedding((i as unknown as { title_embedding: string | null }).title_embedding)
+  );
+  const recentTitlesNeedingEmbedding = recentTitles
+    .map((t, i) => ({ t, i }))
+    .filter((x) => recentEmbeddingsRaw[x.i] === null)
+    .map((x) => x.t);
+
+  // 임베딩 미생성 분량을 일괄 임베딩 → 메모리 보강
+  let recentEmbeddings = recentEmbeddingsRaw;
+  if (isEmbeddingsConfigured() && recentTitlesNeedingEmbedding.length > 0) {
+    try {
+      const generated = await embedTextsBatch(recentTitlesNeedingEmbedding);
+      let g = 0;
+      recentEmbeddings = recentEmbeddingsRaw.map((existing) => {
+        if (existing) return existing;
+        const next = generated[g++];
+        return next ?? null;
+      });
+    } catch (e) {
+      console.error('[CalendarGen v2] 기존 제목 임베딩 백필 실패:', e);
+    }
+  }
 
   const excludeList = [...(request.excludeKeywords || []), ...recentKeywords];
 
@@ -165,6 +195,43 @@ export async function generateCalendar(
     year,
   });
 
+  // 5-1. 의미적 중복 검사 (Gemini 임베딩 — 토큰 유사도가 못 잡는 표현 변종 차단)
+  let proposalEmbeddings: (number[] | null)[] = proposals.map(() => null);
+  if (isEmbeddingsConfigured()) {
+    try {
+      proposalEmbeddings = await embedTextsBatch(proposals.map((p) => p.title));
+      const SIM_THRESHOLD = 0.85;
+      for (let i = 0; i < proposals.length; i++) {
+        const propEmb = proposalEmbeddings[i];
+        if (!propEmb) continue;
+
+        // 기존 발행분과 비교
+        for (const existing of recentEmbeddings) {
+          if (!existing) continue;
+          if (cosineSimilarity(propEmb, existing) >= SIM_THRESHOLD) {
+            console.warn(`[CalendarGen v2] 임베딩 중복 감지(과거): ${proposals[i].title}`);
+            proposals[i] = fallbackProposal(i, journeySlots[i]);
+            proposalEmbeddings[i] = null;
+            break;
+          }
+        }
+
+        // 같은 회차 내 중복도 검사
+        for (let j = 0; j < i; j++) {
+          if (!proposalEmbeddings[j]) continue;
+          if (cosineSimilarity(propEmb, proposalEmbeddings[j]!) >= SIM_THRESHOLD) {
+            console.warn(`[CalendarGen v2] 임베딩 중복 감지(회차내): ${proposals[i].title}`);
+            proposals[i] = fallbackProposal(i, journeySlots[i]);
+            proposalEmbeddings[i] = null;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[CalendarGen v2] 임베딩 중복 검사 실패 — 토큰 유사도로만 진행:', e);
+    }
+  }
+
   // 6. 의료법 사전 검증 (제목 수준)
   const verifiedProposals = proposals.map((p) => verifyMedicalLaw(p));
 
@@ -209,7 +276,7 @@ export async function generateCalendar(
     throw new Error(`캘린더 생성 실패: ${calError?.message || '알 수 없는 오류'}`);
   }
 
-  const itemsToInsert = items.map((item) => ({
+  const itemsToInsert = items.map((item, i) => ({
     calendar_id: calendar.id as string,
     publish_date: item.publishDate,
     publish_time: item.publishTime,
@@ -227,6 +294,7 @@ export async function generateCalendar(
     needs_medical_review: item.needsMedicalReview,
     planning_rationale: item.planningRationale,
     estimated_search_volume: item.estimatedSearchVolume,
+    title_embedding: serializeEmbedding(proposalEmbeddings[i]),
   }));
 
   const { error: itemsError } = await supabase
