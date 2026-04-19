@@ -17,9 +17,7 @@ export default function StaffPage() {
 
   return (
     <AuthFlow>
-      {({ onShowLogin, onShowSignup }) => (
-        <StaffLanding onShowLogin={onShowLogin} onShowSignup={onShowSignup} />
-      )}
+      <StaffLanding />
     </AuthFlow>
   )
 }

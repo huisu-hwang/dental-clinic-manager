@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import LoginForm from '@/components/Auth/LoginForm'
@@ -15,8 +15,20 @@ export interface AuthFlowRenderProps {
   onShowSignup: () => void
 }
 
+// Context 기반 패턴: render-prop(function children)이 Next.js 15 App Router의
+// Client Component RSC 직렬화에서 에러를 일으키므로(Error 3957765248) Context로 전환.
+const AuthFlowContext = createContext<AuthFlowRenderProps | null>(null)
+
+export function useAuthFlow(): AuthFlowRenderProps {
+  const ctx = useContext(AuthFlowContext)
+  if (!ctx) {
+    throw new Error('useAuthFlow must be used within an <AuthFlow> component')
+  }
+  return ctx
+}
+
 interface AuthFlowProps {
-  children: (props: AuthFlowRenderProps) => ReactNode
+  children: ReactNode
 }
 
 export default function AuthFlow({ children }: AuthFlowProps) {
@@ -92,13 +104,13 @@ export default function AuthFlow({ children }: AuthFlowProps) {
       content = <ForgotPasswordForm onBackToLogin={showLogin} />
       break
     default:
-      content = children({ onShowLogin: showLogin, onShowSignup: showSignup })
+      content = children
   }
 
   return (
-    <>
+    <AuthFlowContext.Provider value={{ onShowLogin: showLogin, onShowSignup: showSignup }}>
       {content}
       <Footer />
-    </>
+    </AuthFlowContext.Provider>
   )
 }

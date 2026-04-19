@@ -21,11 +21,7 @@ import {
 } from '@heroicons/react/24/outline'
 import LandingHeader from './shared/LandingHeader'
 import { useScrollAnimation } from './shared/useScrollAnimation'
-
-interface OwnerLandingProps {
-  onShowLogin: () => void
-  onShowSignup: () => void
-}
+import { useAuthFlow } from './shared/AuthFlow'
 
 function StoryBlock({ children }: { children: React.ReactNode }) {
   const { ref, isVisible } = useScrollAnimation()
@@ -116,7 +112,8 @@ const ownerFaqs = [
   { q: '프리미엄 패키지는 무엇이 다른가요?', a: '기본 기능은 그대로 사용 가능하며, 월 ₩499,000에 AI 데이터 분석·경영현황 대시보드·마케팅 자동화(네이버 블로그)가 포함됩니다.' },
 ]
 
-export default function OwnerLanding({ onShowLogin, onShowSignup }: OwnerLandingProps) {
+export default function OwnerLanding() {
+  const { onShowLogin, onShowSignup } = useAuthFlow()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   return (

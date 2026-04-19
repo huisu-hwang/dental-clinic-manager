@@ -15,11 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 import LandingHeader from './shared/LandingHeader'
 import { useScrollAnimation } from './shared/useScrollAnimation'
-
-interface StaffLandingProps {
-  onShowLogin: () => void
-  onShowSignup: () => void
-}
+import { useAuthFlow } from './shared/AuthFlow'
 
 function StoryBlock({ children }: { children: React.ReactNode }) {
   const { ref, isVisible } = useScrollAnimation()
@@ -93,7 +89,8 @@ const staffFaqs = [
   },
 ]
 
-export default function StaffLanding({ onShowLogin, onShowSignup }: StaffLandingProps) {
+export default function StaffLanding() {
+  const { onShowLogin, onShowSignup } = useAuthFlow()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   return (

@@ -6,9 +6,7 @@ import RoleSelector from '@/components/Landing/RoleSelector'
 export default function RootPage() {
   return (
     <AuthFlow>
-      {({ onShowLogin, onShowSignup }) => (
-        <RoleSelector onShowLogin={onShowLogin} onShowSignup={onShowSignup} />
-      )}
+      <RoleSelector />
     </AuthFlow>
   )
 }

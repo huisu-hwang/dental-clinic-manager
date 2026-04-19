@@ -18,9 +18,7 @@ export default function OwnerPage() {
 
   return (
     <AuthFlow>
-      {({ onShowLogin, onShowSignup }) => (
-        <OwnerLanding onShowLogin={onShowLogin} onShowSignup={onShowSignup} />
-      )}
+      <OwnerLanding />
     </AuthFlow>
   )
 }
