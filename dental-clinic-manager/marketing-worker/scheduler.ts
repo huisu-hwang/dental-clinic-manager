@@ -227,10 +227,24 @@ async function publishItemApi(item: ScheduledItem, headless = false): Promise<Sc
         } : undefined, { headless });
       }
 
+      // 대시보드가 변환해 준 naverBlog 페이로드(면책 문구·정제된 태그·카테고리 포함)를 우선 사용
+      const nb = item.naverBlog;
+      if (nb?.warnings?.length) {
+        console.warn(`[Scheduler] naverBlog 변환 경고 (${item.title}):`, nb.warnings.join(' | '));
+      }
+
+      const publishTitle = nb?.title || parsedContent.title;
+      const publishBody = nb?.body || parsedContent.body;
+      const publishTags = (nb?.tags && nb.tags.length > 0)
+        ? nb.tags
+        : (parsedContent.hashtags || []);
+      const publishCategory = nb?.category;
+
       const result = await publisher.publish({
-        title: parsedContent.title,
-        body: parsedContent.body,
-        hashtags: parsedContent.hashtags,
+        title: publishTitle,
+        body: publishBody,
+        category: publishCategory,
+        hashtags: publishTags,
         images: downloadedImages.length > 0 ? downloadedImages : undefined,
       });
 

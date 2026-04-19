@@ -1,0 +1,235 @@
+'use client'
+
+import { useState } from 'react'
+import {
+  CheckCircleIcon,
+  XCircleIcon,
+  ArrowPathIcon,
+  PencilIcon,
+  ExclamationTriangleIcon,
+  ChartBarIcon,
+} from '@heroicons/react/24/outline'
+import {
+  TOPIC_CATEGORY_LABELS,
+  JOURNEY_STAGE_LABELS,
+  type ContentCalendarItem,
+} from '@/types/marketing'
+
+interface Props {
+  item: ContentCalendarItem
+  onApprove: () => void | Promise<void>
+  onReject: () => void | Promise<void>
+  onUpdate: (patch: Partial<ContentCalendarItem>) => void | Promise<void>
+  onRegenerate: () => void | Promise<void>
+}
+
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  proposed:   { label: '제안',     cls: 'bg-gray-100 text-gray-700' },
+  modified:   { label: '수정됨',   cls: 'bg-amber-100 text-amber-700' },
+  approved:   { label: '승인',     cls: 'bg-emerald-100 text-emerald-700' },
+  rejected:   { label: '반려',     cls: 'bg-rose-100 text-rose-700' },
+  generating: { label: '생성 중',  cls: 'bg-sky-100 text-sky-700' },
+  scheduled:  { label: '발행 예정', cls: 'bg-violet-100 text-violet-700' },
+  publishing: { label: '발행 중',  cls: 'bg-indigo-100 text-indigo-700' },
+  published:  { label: '발행됨',   cls: 'bg-green-100 text-green-700' },
+  failed:     { label: '실패',     cls: 'bg-red-100 text-red-700' },
+  review:     { label: '검토 필요', cls: 'bg-yellow-100 text-yellow-800' },
+}
+
+const CATEGORY_BADGE_CLASSES: Record<string, string> = {
+  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  sky: 'bg-sky-50 text-sky-700 border-sky-200',
+  violet: 'bg-violet-50 text-violet-700 border-violet-200',
+  amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  rose: 'bg-rose-50 text-rose-700 border-rose-200',
+  slate: 'bg-slate-50 text-slate-700 border-slate-200',
+}
+
+export default function CalendarItemCard({
+  item,
+  onApprove,
+  onReject,
+  onUpdate,
+  onRegenerate,
+}: Props) {
+  const [editing, setEditing] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(item.title)
+  const [draftKeyword, setDraftKeyword] = useState(item.keyword || '')
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const cat = item.topic_category
+    ? TOPIC_CATEGORY_LABELS[item.topic_category]
+    : null
+  const journey = item.journey_stage ? JOURNEY_STAGE_LABELS[item.journey_stage] : null
+  const statusBadge = STATUS_BADGE[item.status] || STATUS_BADGE.proposed
+
+  const isLocked = ['scheduled', 'publishing', 'published'].includes(item.status)
+  const canApprove = ['proposed', 'modified'].includes(item.status)
+
+  const handleAction = async (key: string, fn: () => void | Promise<void>) => {
+    if (busy) return
+    setBusy(key)
+    try {
+      await fn()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    await handleAction('save', async () => {
+      await onUpdate({ title: draftTitle, keyword: draftKeyword })
+      setEditing(false)
+    })
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-3 bg-white hover:border-gray-300 transition-all">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-1 min-w-0 flex-1">
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusBadge.cls}`}>
+            {statusBadge.label}
+          </span>
+          {cat && (
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${
+                CATEGORY_BADGE_CLASSES[cat.color] || 'bg-gray-50 text-gray-700 border-gray-200'
+              }`}
+            >
+              {cat.label}
+            </span>
+          )}
+          {journey && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium"
+              title={journey.description}
+            >
+              {journey.label}
+            </span>
+          )}
+          {item.needs_medical_review && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 font-medium inline-flex items-center gap-0.5">
+              <ExclamationTriangleIcon className="h-3 w-3" />
+              심의
+            </span>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <div className="space-y-2 mb-2">
+          <input
+            type="text"
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+            placeholder="제목"
+          />
+          <input
+            type="text"
+            value={draftKeyword}
+            onChange={(e) => setDraftKeyword(e.target.value)}
+            className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+            placeholder="타겟 키워드"
+          />
+          <div className="flex gap-1">
+            <button
+              onClick={handleSaveEdit}
+              disabled={busy !== null}
+              className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 disabled:opacity-50"
+            >
+              저장
+            </button>
+            <button
+              onClick={() => {
+                setEditing(false)
+                setDraftTitle(item.title)
+                setDraftKeyword(item.keyword || '')
+              }}
+              className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <h4 className="text-sm font-semibold text-gray-900 leading-snug mb-1 line-clamp-2">
+            {item.title}
+          </h4>
+          {item.keyword && (
+            <p className="text-xs text-gray-500 mb-1">🔎 {item.keyword}</p>
+          )}
+          {item.estimated_search_volume !== null && item.estimated_search_volume > 0 && (
+            <p className="text-[11px] text-gray-400 mb-1 inline-flex items-center gap-0.5">
+              <ChartBarIcon className="h-3 w-3" />월 ~{item.estimated_search_volume.toLocaleString()}회
+            </p>
+          )}
+          {item.planning_rationale && (
+            <p className="text-[11px] text-gray-500 leading-tight mb-2 italic">
+              💡 {item.planning_rationale}
+            </p>
+          )}
+        </>
+      )}
+
+      {!isLocked && !editing && (
+        <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-100">
+          {canApprove && (
+            <button
+              onClick={() => handleAction('approve', onApprove)}
+              disabled={busy !== null}
+              className="text-[11px] bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+              title="승인"
+            >
+              <CheckCircleIcon className="h-3 w-3" /> 승인
+            </button>
+          )}
+          {item.status === 'approved' && (
+            <button
+              onClick={() => handleAction('unapprove', () => onUpdate({ status: 'proposed' }))}
+              disabled={busy !== null}
+              className="text-[11px] bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+              title="승인 취소"
+            >
+              승인 취소
+            </button>
+          )}
+          <button
+            onClick={() => setEditing(true)}
+            disabled={busy !== null}
+            className="text-[11px] bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+            title="수정"
+          >
+            <PencilIcon className="h-3 w-3" /> 수정
+          </button>
+          <button
+            onClick={() => handleAction('regen', onRegenerate)}
+            disabled={busy !== null}
+            className="text-[11px] bg-violet-50 text-violet-700 hover:bg-violet-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+            title="AI 재생성"
+          >
+            <ArrowPathIcon className={`h-3 w-3 ${busy === 'regen' ? 'animate-spin' : ''}`} />
+            재생성
+          </button>
+          {!['rejected'].includes(item.status) && (
+            <button
+              onClick={() => handleAction('reject', onReject)}
+              disabled={busy !== null}
+              className="text-[11px] bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+              title="반려"
+            >
+              <XCircleIcon className="h-3 w-3" /> 반려
+            </button>
+          )}
+        </div>
+      )}
+
+      {item.status === 'failed' && item.fail_reason && (
+        <p className="text-[11px] text-rose-600 mt-2 leading-tight">
+          ⚠️ {item.fail_reason}
+        </p>
+      )}
+    </div>
+  )
+}

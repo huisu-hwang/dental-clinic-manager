@@ -192,7 +192,8 @@ export default function EmailIntegrationSettings() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error)
-      showMsg('success', '설정이 저장되었습니다.')
+      const blocked = !!json.monitoringBlocked
+      showMsg(blocked ? 'error' : 'success', json.message || '설정이 저장되었습니다.')
       await loadSettings()
     } catch (err) {
       showMsg('error', err instanceof Error ? err.message : '저장 실패')
@@ -420,6 +421,11 @@ export default function EmailIntegrationSettings() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-at-text-secondary">이메일 자동 모니터링 활성화</p>
+            {!isConnected && (
+              <p className="text-xs text-amber-600 mt-1">
+                먼저 위에서 Gmail/네이버 메일 연동을 완료해야 활성화할 수 있습니다.
+              </p>
+            )}
             {settings.lastCheckedAt && (
               <p className="text-xs text-at-text-weak mt-0.5">
                 마지막 확인:{' '}
@@ -434,11 +440,24 @@ export default function EmailIntegrationSettings() {
             )}
           </div>
           <button
-            onClick={() => setMonitoringActive(!monitoringActive)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${monitoringActive ? 'bg-at-accent' : 'bg-at-border'}`}
+            onClick={() => {
+              if (!isConnected) {
+                showMsg('error', '먼저 Gmail/네이버 메일 연동을 완료해주세요.')
+                return
+              }
+              setMonitoringActive(!monitoringActive)
+            }}
+            disabled={!isConnected}
+            className={`relative w-11 h-6 rounded-full transition-colors ${
+              !isConnected
+                ? 'bg-at-border opacity-50 cursor-not-allowed'
+                : monitoringActive
+                  ? 'bg-at-accent'
+                  : 'bg-at-border'
+            }`}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${monitoringActive ? 'translate-x-5' : ''}`}
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${monitoringActive && isConnected ? 'translate-x-5' : ''}`}
             />
           </button>
         </div>

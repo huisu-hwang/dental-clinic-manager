@@ -3,6 +3,22 @@
 // 대시보드 API를 통해 DB 작업을 수행 (Supabase 직접 접속 불필요)
 // ============================================
 
+// 대시보드의 platform-adapters/naver-blog.ts 가 만들어주는 변환 페이로드
+// (생성 시각 기준 면책 문구·태그·카테고리 등이 미리 처리되어 있음)
+export interface NaverBlogPayload {
+  title: string;
+  body: string;
+  bodyHtml: string;
+  summary: string;
+  tags: string[];
+  category?: string;
+  disclaimer: string;
+  wordCount: number;
+  keywordCount: number;
+  hashtags: string[];
+  warnings: string[];
+}
+
 export interface ScheduledItem {
   id: string;
   title: string;
@@ -13,6 +29,8 @@ export interface ScheduledItem {
   generated_images: { path: string; prompt: string; fileName?: string }[] | null;
   platforms: Record<string, boolean>;
   clinic_id: string;
+  /** 대시보드가 변환해 보내주는 네이버 블로그 페이로드 (있으면 우선 사용) */
+  naverBlog?: NaverBlogPayload | null;
 }
 
 export interface PlatformConfig {
