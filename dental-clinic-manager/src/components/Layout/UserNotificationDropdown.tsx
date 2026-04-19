@@ -49,6 +49,8 @@ const NotificationTypeIcons: Record<UserNotificationType, React.ComponentType<{ 
   protocol_review_requested: ClipboardDocumentCheckIcon,
   protocol_review_approved: CheckCircleIcon,
   protocol_review_rejected: XCircleIcon,
+  subscription_upgrade_required: ExclamationCircleIcon,
+  subscription_payment_succeeded: CheckCircleIcon,
 }
 
 // 알림 타입별 기본 링크 매핑 (link가 없는 경우 fallback)
