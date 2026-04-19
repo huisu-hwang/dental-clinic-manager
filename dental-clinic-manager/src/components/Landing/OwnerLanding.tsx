@@ -49,6 +49,63 @@ const problemItems = [
   { icon: DocumentTextIcon, label: '상담 기록 정리' },
 ]
 
+const ownerFeatures = [
+  {
+    icon: ChartBarIcon,
+    title: '일일 업무 보고서',
+    description: '상담·선물·해피콜·리콜 자동 집계와 통계 분석',
+    color: 'from-blue-500 to-cyan-500',
+  },
+  {
+    icon: ClockIcon,
+    title: '출퇴근 · 근태',
+    description: 'QR 체크인, 팀 현황, 스케쥴을 한 화면에서',
+    color: 'from-green-500 to-emerald-500',
+  },
+  {
+    icon: DocumentTextIcon,
+    title: '근로계약서 관리',
+    description: '템플릿 기반 계약서 생성과 체계적 보관',
+    color: 'from-purple-500 to-pink-500',
+  },
+  {
+    icon: CalendarDaysIcon,
+    title: '연차 자동 계산',
+    description: '정책·발생·잔여·승인 워크플로우까지',
+    color: 'from-orange-500 to-amber-500',
+  },
+  {
+    icon: CurrencyDollarIcon,
+    title: '급여 명세서',
+    description: '월별 급여 자동 생성과 직원 배포',
+    color: 'from-rose-500 to-pink-500',
+  },
+  {
+    icon: UserGroupIcon,
+    title: '직원 권한 · 프로토콜',
+    description: '역할별 접근 통제와 업무 표준 문서화',
+    color: 'from-indigo-500 to-violet-500',
+  },
+]
+
+const premiumItems = [
+  {
+    icon: CpuChipIcon,
+    title: 'AI 데이터 분석',
+    description: '매출·상담 지표에서 인사이트를 자동 추출',
+  },
+  {
+    icon: PresentationChartLineIcon,
+    title: '경영현황 대시보드',
+    description: '재무·매출·KPI를 한 화면에서 실시간 확인',
+  },
+  {
+    icon: PencilSquareIcon,
+    title: '마케팅 자동화',
+    description: '네이버 블로그 자동 기획·발행·KPI 추적',
+  },
+]
+
 export default function OwnerLanding({ onShowLogin, onShowSignup }: OwnerLandingProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
@@ -155,6 +212,122 @@ export default function OwnerLanding({ onShowLogin, onShowSignup }: OwnerLanding
               </p>
             </div>
           </StoryBlock>
+        </div>
+      </section>
+
+      {/* SOLUTION */}
+      <section className="relative py-32 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <StoryBlock>
+            <div className="flex items-center gap-4 mb-10">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <HeartIcon className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <span className="text-at-accent font-semibold text-sm tracking-wider uppercase">The Solution</span>
+                <h2 className="text-2xl font-bold text-at-text">잡무는 시스템에게, 실장은 매출에게</h2>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-6 mb-8">
+              <div className="bg-at-surface-alt rounded-2xl p-6 border border-at-border shadow-at-card">
+                <div className="text-4xl mb-4">🔁</div>
+                <h3 className="font-bold text-at-text mb-2">Before</h3>
+                <p className="text-at-text-secondary">
+                  반복 업무에 <span className="text-red-500 font-semibold">70%</span>의 집중력 소진,
+                  상담·매출에는 30%만 남습니다.
+                </p>
+              </div>
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-at-border shadow-at-card">
+                <div className="text-4xl mb-4">✨</div>
+                <h3 className="font-bold text-at-text mb-2">After</h3>
+                <p className="text-at-text-secondary">
+                  잡무는 시스템이 처리하고, 실장은{' '}
+                  <span className="text-at-accent font-semibold">상담·해피콜·매출 관리</span>에 집중합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-xl text-at-text-secondary font-medium">
+                실장의 에너지가{' '}
+                <span className="text-at-accent font-bold">매출로 전환</span>됩니다.
+              </p>
+            </div>
+          </StoryBlock>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section id="owner-features" className="py-32 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-block px-4 py-1.5 bg-at-surface-alt text-at-text-secondary font-semibold text-sm rounded-full mb-4">
+              FEATURES
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-at-text mb-4">
+              병원 운영에 필요한 모든 것
+            </h2>
+            <p className="text-lg text-at-text-secondary max-w-2xl mx-auto">
+              반복 업무를 시스템이 처리하는 6가지 핵심 기능
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ownerFeatures.map((feature) => {
+              const Icon = feature.icon
+              return (
+                <div
+                  key={feature.title}
+                  className="group bg-at-surface-alt hover:bg-white rounded-2xl p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 border border-at-border"
+                >
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg`}>
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-at-text mb-3">{feature.title}</h3>
+                  <p className="text-at-text-secondary leading-relaxed">{feature.description}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* PREMIUM */}
+      <section className="py-32 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 relative overflow-hidden">
+        <div className="absolute top-0 left-1/3 w-96 h-96 bg-purple-500/10 rounded-full filter blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 w-96 h-96 bg-blue-500/10 rounded-full filter blur-3xl" />
+
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-400/20 to-orange-400/20 border border-amber-400/30 text-amber-300 font-bold text-xs tracking-wider uppercase rounded-full mb-4">
+              <SparklesIcon className="w-4 h-4" /> PREMIUM · 월 ₩499,000
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              경영자의 시간을 위해 준비된 한 단계 더
+            </h2>
+            <p className="text-lg text-slate-300 max-w-2xl mx-auto">
+              기본 기능에 더해, 매출 성장을 직접 끌어올리는 도구
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {premiumItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <div
+                  key={item.title}
+                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/10 transition-all"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-6 shadow-lg">
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-3">{item.title}</h3>
+                  <p className="text-slate-300 leading-relaxed">{item.description}</p>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </section>
 
