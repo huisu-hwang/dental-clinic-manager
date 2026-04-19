@@ -3,12 +3,8 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useVisitorRole, type VisitorRole } from './shared/useVisitorRole'
+import { useAuthFlow } from './shared/AuthFlow'
 import LandingHeader from './shared/LandingHeader'
-
-interface RoleSelectorProps {
-  onShowLogin: () => void
-  onShowSignup: () => void
-}
 
 interface RoleCardProps {
   role: VisitorRole
@@ -45,8 +41,9 @@ function RoleCard({ role, emoji, title, tagline, accent, onSelect }: RoleCardPro
   )
 }
 
-export default function RoleSelector({ onShowLogin, onShowSignup }: RoleSelectorProps) {
+export default function RoleSelector() {
   const router = useRouter()
+  const { onShowLogin, onShowSignup } = useAuthFlow()
   const { role, setRole, clearRole, hydrated } = useVisitorRole()
 
   // 저장된 역할이 있으면 자동 리디렉션

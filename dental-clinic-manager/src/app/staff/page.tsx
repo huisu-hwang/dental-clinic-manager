@@ -2,23 +2,22 @@
 
 import { useEffect } from 'react'
 import AuthFlow from '@/components/Landing/shared/AuthFlow'
-import OwnerLanding from '@/components/Landing/OwnerLanding'
+import StaffLanding from '@/components/Landing/StaffLanding'
 import { useVisitorRole } from '@/components/Landing/shared/useVisitorRole'
 
-export default function OwnerPage() {
+export default function StaffPage() {
   const { setRole, hydrated, role } = useVisitorRole()
 
-  // 첫 방문 시 localStorage에 저장
   useEffect(() => {
     if (!hydrated) return
-    if (role !== 'owner') {
-      setRole('owner')
+    if (role !== 'staff') {
+      setRole('staff')
     }
   }, [hydrated, role, setRole])
 
   return (
     <AuthFlow>
-      <OwnerLanding />
+      <StaffLanding />
     </AuthFlow>
   )
 }

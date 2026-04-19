@@ -11,6 +11,8 @@ import PermissionSelector from './PermissionSelector'
 import type { Permission } from '@/types/permissions'
 import { decryptResidentNumber, encryptResidentNumber } from '@/utils/encryptionUtils'
 import { appPrompt } from '@/components/ui/AppDialog'
+import UpgradeRequiredModal from '@/components/Subscription/UpgradeRequiredModal'
+import PlanSelectModal from '@/components/Subscription/PlanSelectModal'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -78,6 +80,16 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
   // 재입사 처리 모달 상태
   const [rehiringStaff, setRehiringStaff] = useState<UserProfile | null>(null)
+
+  // 업그레이드 필요 모달 상태
+  const [upgradeContext, setUpgradeContext] = useState<null | {
+    currentPlan: string
+    currentLimit: number
+    currentActive: number
+    pendingToApprove: number
+    recommendedPlan: string
+  }>(null)
+  const [planModalOpen, setPlanModalOpen] = useState(false)
 
   // 주민번호 마스킹 함수
   const maskResidentNumber = (rrn: string) => {
@@ -195,15 +207,25 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
     try {
       const result = await dataService.approveUser(requestId, currentUser.clinic_id, permissions)
 
-      if (result.error) {
-        setError(result.error || '승인 처리에 실패했습니다.')
-      } else {
-        setSuccess('가입 요청이 승인되었습니다.')
-        setShowPermissionModal(false)
-        setSelectedRequest(null)
-        fetchJoinRequests()
-        fetchStaff()
+      if ('upgradeRequired' in result && result.upgradeRequired) {
+        setUpgradeContext({
+          currentPlan: result.currentPlan,
+          currentLimit: result.currentLimit,
+          currentActive: result.currentActive,
+          pendingToApprove: result.pendingToApprove,
+          recommendedPlan: result.recommendedPlan,
+        })
+        return
       }
+      if ('error' in result && result.error) {
+        setError(result.error)
+        return
+      }
+      setSuccess('가입 요청이 승인되었습니다.')
+      setShowPermissionModal(false)
+      setSelectedRequest(null)
+      fetchJoinRequests()
+      fetchStaff()
     } catch (err) {
       console.error('Error:', err)
       setError('승인 처리 중 오류가 발생했습니다.')
@@ -1083,6 +1105,25 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         </div>,
         document.body
       )}
+
+      {upgradeContext && (
+        <UpgradeRequiredModal
+          open={!!upgradeContext}
+          onClose={() => setUpgradeContext(null)}
+          onPayNow={() => {
+            setUpgradeContext(null)
+            setPlanModalOpen(true)
+          }}
+          context={upgradeContext}
+        />
+      )}
+      <PlanSelectModal
+        isOpen={planModalOpen}
+        onClose={() => setPlanModalOpen(false)}
+        onSelect={async () => {
+          setPlanModalOpen(false)
+        }}
+      />
     </div>
   )
 }

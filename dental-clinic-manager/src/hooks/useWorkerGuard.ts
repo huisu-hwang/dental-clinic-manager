@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback } from 'react'
-import { appAlert } from '@/components/ui/AppDialog'
+import { openWorkerGuardModal, type GuardState } from '@/components/WorkerGuardModal'
 
-type WorkerType = 'marketing' | 'scraping' | 'seo'
+type WorkerType = 'marketing' | 'scraping' | 'seo' | 'dentweb' | 'email'
 
 interface WorkerGuardOptions {
   /** 워커 타입 */
@@ -17,19 +17,12 @@ interface WorkerState {
   online: boolean
 }
 
-const WORKER_LABELS: Record<WorkerType, { name: string; defaultFeature: string }> = {
-  marketing: {
-    name: '마케팅 워커',
-    defaultFeature: '마케팅 기능',
-  },
-  scraping: {
-    name: '스크래핑 워커',
-    defaultFeature: '데이터 연동',
-  },
-  seo: {
-    name: 'SEO 분석 워커',
-    defaultFeature: 'SEO 키워드 분석',
-  },
+const WORKER_LABELS: Record<WorkerType, { defaultFeature: string }> = {
+  marketing: { defaultFeature: '마케팅 기능' },
+  scraping:  { defaultFeature: '데이터 연동' },
+  seo:       { defaultFeature: 'SEO 키워드 분석' },
+  dentweb:   { defaultFeature: '덴트웹 매출 동기화' },
+  email:     { defaultFeature: '이메일 알림' },
 }
 
 /**
@@ -61,6 +54,18 @@ async function checkWorkerState(type: WorkerType): Promise<WorkerState> {
         online: data.seo?.online ?? false,
       }
     }
+    if (type === 'dentweb') {
+      return {
+        installed: data.dentweb?.installed ?? false,
+        online: data.dentweb?.online ?? false,
+      }
+    }
+    if (type === 'email') {
+      return {
+        installed: data.email?.installed ?? false,
+        online: data.email?.online ?? false,
+      }
+    }
     return { installed: false, online: false }
   } catch {
     return { installed: false, online: false }
@@ -68,29 +73,18 @@ async function checkWorkerState(type: WorkerType): Promise<WorkerState> {
 }
 
 /**
- * 워커 상태에 따라 안내 팝업을 띄운다.
- * - 미설치: 설치 요청 안내
- * - 설치됨 & 오프라인: 실행 요청 안내
+ * 워커 상태에 따라 WorkerGuardModal을 띄운다.
+ * - 미설치: 'not_installed' 상태로 모달 표시
+ * - 설치됨 & 오프라인: 'offline' 상태로 모달 표시
+ * 모달 결과(true/false)를 반환한다.
  */
-async function showGuardDialog(type: WorkerType, feature: string, state: WorkerState) {
-  const label = WORKER_LABELS[type]
-
-  if (!state.installed) {
-    await appAlert({
-      title: `${label.name} 미설치`,
-      description: `${feature} 기능을 사용하려면 ${label.name}가 설치되어 있어야 합니다.\n\n${label.name}가 아직 설치되지 않았거나 한 번도 등록되지 않았습니다.\n관리자에게 워커 설치를 요청해주세요.`,
-      variant: 'warning',
-      buttonText: '확인',
-    })
-    return
-  }
-
-  await appAlert({
-    title: `${label.name} 실행 필요`,
-    description: `${feature} 기능을 사용하려면 ${label.name}가 실행 중이어야 합니다.\n\n${label.name}가 현재 실행되고 있지 않습니다.\n관리자에게 워커 실행을 요청해주세요.`,
-    variant: 'warning',
-    buttonText: '확인',
-  })
+async function showGuardDialog(
+  type: WorkerType,
+  feature: string,
+  state: WorkerState
+): Promise<boolean> {
+  const guardState: GuardState = !state.installed ? 'not_installed' : 'offline'
+  return openWorkerGuardModal({ type, featureName: feature, state: guardState })
 }
 
 /**
@@ -125,8 +119,7 @@ export function useWorkerGuard({ type, featureName }: WorkerGuardOptions) {
   const guardAction = useCallback(async (): Promise<boolean> => {
     const state = await checkWorkerState(type)
     if (state.installed && state.online) return true
-    await showGuardDialog(type, feature, state)
-    return false
+    return await showGuardDialog(type, feature, state)
   }, [type, feature])
 
   return { guardAction }
@@ -149,6 +142,5 @@ export async function requireWorker(type: WorkerType, featureName?: string): Pro
   const feature = featureName || label.defaultFeature
   const state = await checkWorkerState(type)
   if (state.installed && state.online) return true
-  await showGuardDialog(type, feature, state)
-  return false
+  return await showGuardDialog(type, feature, state)
 }
