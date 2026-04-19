@@ -205,7 +205,112 @@ export default function StaffLanding({ onShowLogin, onShowSignup }: StaffLanding
         </div>
       </section>
 
-      {/* 나머지 섹션은 다음 Task에서 추가 */}
+      {/* FEATURES */}
+      <section className="py-28 bg-gradient-to-b from-white to-rose-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="inline-block px-4 py-1.5 bg-pink-100 text-pink-700 font-semibold text-sm rounded-full mb-4">
+              FEATURES
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
+              하루 업무가 앱 하나로
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              실장·직원이 매일 쓰는 6가지 기능
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {staffFeatures.map((feature) => {
+              const Icon = feature.icon
+              return (
+                <div
+                  key={feature.title}
+                  className="group bg-white rounded-3xl p-8 transition-all hover:shadow-xl hover:-translate-y-1 border border-slate-100"
+                >
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg`}>
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+                  <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-28 bg-gradient-to-br from-cyan-500 via-teal-500 to-emerald-500 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full filter blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full filter blur-3xl translate-x-1/2 translate-y-1/2" />
+
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
+            오늘 퇴근은 정시에 🕕
+          </h2>
+          <p className="text-xl text-white/90 mb-10">
+            앱 하나로 오늘 업무를 깔끔하게 끝내세요.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={onShowSignup}
+              className="group px-10 py-4 bg-white text-slate-900 font-bold text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2 justify-center"
+            >
+              지금 바로 시작
+              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button
+              onClick={onShowLogin}
+              className="px-10 py-4 border-2 border-white/40 text-white hover:bg-white/10 font-semibold text-lg rounded-2xl transition-all backdrop-blur-sm"
+            >
+              로그인
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-24 bg-white">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">자주 묻는 질문</h2>
+          </div>
+
+          <div className="space-y-4">
+            {staffFaqs.map((faq, i) => {
+              const isOpen = openFaq === i
+              const answerId = `staff-faq-answer-${i}`
+              return (
+                <div key={i} className="bg-rose-50/50 rounded-2xl overflow-hidden border border-rose-100">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={answerId}
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-rose-50 transition-colors"
+                  >
+                    <span className="font-semibold text-slate-900 pr-4">{faq.q}</span>
+                    <ChevronDownIcon
+                      className={`w-5 h-5 text-slate-500 transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  <div
+                    id={answerId}
+                    role="region"
+                    className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-96' : 'max-h-0'}`}
+                  >
+                    <div className="px-6 pb-5">
+                      <p className="text-slate-600 leading-relaxed">{faq.a}</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
