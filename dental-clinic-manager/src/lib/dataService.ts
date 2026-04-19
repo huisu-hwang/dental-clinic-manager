@@ -1501,17 +1501,37 @@ export const dataService = {
   },
 
   // 모든 병원 목록 가져오기 (마스터 전용)
+  // 대표원장(owner)이 'active' 상태로 승인된 병원만 반환한다.
+  // pending(승인 대기) 또는 rejected(거절)된 owner의 병원은 목록에서 제외된다.
   async getAllClinics() {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      const { data: activeOwners, error: ownersError } = await supabase
+        .from('users')
+        .select('clinic_id')
+        .eq('role', 'owner')
+        .eq('status', 'active')
+        .not('clinic_id', 'is', null)
+
+      if (ownersError) throw ownersError
+
+      const activeClinicIds = (activeOwners ?? [])
+        .map((u: { clinic_id: string | null }) => u.clinic_id)
+        .filter((id: string | null): id is string => !!id)
+
+      if (activeClinicIds.length === 0) {
+        return { data: [] }
+      }
+
       const { data, error } = await supabase
         .from('clinics')
         .select(`
           *,
           users!users_clinic_id_fkey(count)
         `)
+        .in('id', activeClinicIds)
         .order('created_at', { ascending: false })
 
       if (error) throw error
