@@ -19,10 +19,14 @@
     "start": "electron dist/main.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.4.7",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.3.0",
     "mssql": "^11.0.1",
+    "node-cron": "^3.0.3",
     "playwright": "^1.50.0",
+    "sharp": "^0.34.5",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
