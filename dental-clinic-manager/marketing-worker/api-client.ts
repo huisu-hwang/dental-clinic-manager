@@ -117,6 +117,22 @@ export class WorkerApiClient {
     return result.config;
   }
 
+  /** 측정 대상 큐 조회 (마지막 측정 ≥ 6h 또는 미측정) */
+  async listMetricsQueue(limit: number = 20): Promise<MetricsQueueItem[]> {
+    const result = await this.request<{ queue: MetricsQueueItem[] }>(
+      `/post-metrics?limit=${limit}`
+    );
+    return result.queue || [];
+  }
+
+  /** 스크래핑 결과 push */
+  async pushPostMetrics(items: PostMetricsInput[]): Promise<{ inserted: number }> {
+    return this.request('/post-metrics', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  }
+
   /** 발행 로그 기록 + 키워드 이력 */
   async logPublish(params: {
     item_id: string;
@@ -133,4 +149,24 @@ export class WorkerApiClient {
       body: JSON.stringify(params),
     });
   }
+}
+
+export interface MetricsQueueItem {
+  id: string;
+  title: string;
+  publish_date: string;
+  published_urls: Record<string, string> | null;
+  platforms: Record<string, boolean> | null;
+  last_measured_at: string | null;
+}
+
+export interface PostMetricsInput {
+  item_id: string;
+  platform: string;
+  views?: number;
+  comments?: number;
+  likes?: number;
+  scraps?: number;
+  shares?: number;
+  raw_payload?: Record<string, unknown>;
 }

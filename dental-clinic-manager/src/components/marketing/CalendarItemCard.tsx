@@ -8,6 +8,10 @@ import {
   PencilIcon,
   ExclamationTriangleIcon,
   ChartBarIcon,
+  EyeIcon,
+  HeartIcon,
+  ChatBubbleLeftIcon,
+  BookmarkIcon,
 } from '@heroicons/react/24/outline'
 import {
   TOPIC_CATEGORY_LABELS,
@@ -230,6 +234,66 @@ export default function CalendarItemCard({
           ⚠️ {item.fail_reason}
         </p>
       )}
+
+      {item.status === 'published' && item.metrics && item.metrics.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+          {item.metrics.map((m) => {
+            const measured = new Date(m.measured_at)
+            const ago = formatTimeAgo(measured)
+            return (
+              <div key={m.platform} className="flex items-center gap-2 flex-wrap text-[11px]">
+                <span className="text-gray-400 font-medium">{platformLabel(m.platform)}</span>
+                {m.views !== null && (
+                  <span className="inline-flex items-center gap-0.5 text-blue-600">
+                    <EyeIcon className="h-3 w-3" />
+                    {m.views.toLocaleString()}
+                  </span>
+                )}
+                {m.likes !== null && (
+                  <span className="inline-flex items-center gap-0.5 text-rose-500">
+                    <HeartIcon className="h-3 w-3" />
+                    {m.likes.toLocaleString()}
+                  </span>
+                )}
+                {m.comments !== null && (
+                  <span className="inline-flex items-center gap-0.5 text-emerald-600">
+                    <ChatBubbleLeftIcon className="h-3 w-3" />
+                    {m.comments.toLocaleString()}
+                  </span>
+                )}
+                {m.scraps !== null && m.scraps > 0 && (
+                  <span className="inline-flex items-center gap-0.5 text-violet-600">
+                    <BookmarkIcon className="h-3 w-3" />
+                    {m.scraps.toLocaleString()}
+                  </span>
+                )}
+                <span className="text-gray-400 ml-auto">{ago}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
+}
+
+function platformLabel(p: string): string {
+  switch (p) {
+    case 'naver_blog': return '네이버'
+    case 'instagram': return '인스타'
+    case 'facebook': return '페북'
+    case 'threads': return '쓰레드'
+    default: return p
+  }
+}
+
+function formatTimeAgo(d: Date): string {
+  const ms = Date.now() - d.getTime()
+  const min = Math.floor(ms / 60000)
+  if (min < 1) return '방금'
+  if (min < 60) return `${min}분 전`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}시간 전`
+  const day = Math.floor(hr / 24)
+  return `${day}일 전`
 }
