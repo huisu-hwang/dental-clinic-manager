@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
  * Google OAuth2 콜백 - code를 토큰으로 교환하고 DB에 저장
  */
 export async function GET(request: NextRequest) {
-  const baseRedirect = '/dashboard/marketing?tab=settings';
+  const baseRedirect = '/dashboard/financial?tab=settings';
 
   try {
     const { searchParams } = new URL(request.url);

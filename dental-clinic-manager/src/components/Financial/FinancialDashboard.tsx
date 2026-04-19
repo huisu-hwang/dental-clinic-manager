@@ -59,8 +59,12 @@ export default function FinancialDashboard() {
   const [showRevenueForm, setShowRevenueForm] = useState(false)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
 
-  // 탭 상태
-  const [activeTab, setActiveTab] = useState<'status' | 'settings'>('status')
+  // 탭 상태 (URL ?tab=settings 로 진입 시 설정 탭 자동 활성화)
+  const [activeTab, setActiveTab] = useState<'status' | 'settings'>(() => {
+    if (typeof window === 'undefined') return 'status'
+    const params = new URLSearchParams(window.location.search)
+    return params.get('tab') === 'settings' ? 'settings' : 'status'
+  })
 
   // 데이터 로드
   const loadData = async () => {
