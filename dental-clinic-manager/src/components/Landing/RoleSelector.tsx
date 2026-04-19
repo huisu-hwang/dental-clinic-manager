@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowRightIcon,
   SparklesIcon,
@@ -11,6 +11,8 @@ import {
   QrCodeIcon,
   CalendarDaysIcon,
   ClockIcon,
+  CheckCircleIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { useVisitorRole, type VisitorRole } from './shared/useVisitorRole'
 import { useAuthFlow } from './shared/AuthFlow'
@@ -173,26 +175,71 @@ function RoleCard({ role, emoji, label, title, tagline, tags, accent, onSelect }
 
 export default function RoleSelector() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { onShowLogin, onShowSignup } = useAuthFlow()
   const { role, setRole, clearRole, hydrated } = useVisitorRole()
+  const [toast, setToast] = useState<string | null>(null)
+  // 이번 세션에서 이미 '해제' 요청을 처리했는지 — 처리 후 role이 다시 저장되지 않도록 자동 리디렉션을 한 번 억제
+  const [clearedThisMount, setClearedThisMount] = useState(false)
 
-  // 저장된 역할이 있으면 자동 리디렉션
+  // ?clear=1로 들어온 경우(다른 랜딩에서 "역할 다시 선택" 클릭): 저장된 역할 해제 + 토스트 + URL 정리
   useEffect(() => {
     if (!hydrated) return
+    if (searchParams.get('clear') !== '1') return
+    if (role) {
+      clearRole()
+    }
+    setClearedThisMount(true)
+    setToast('역할 선택이 초기화되었어요. 다시 선택해 주세요.')
+    router.replace('/', { scroll: false })
+  }, [hydrated, searchParams, role, clearRole, router])
+
+  // 저장된 역할이 있으면 자동 리디렉션
+  // (단, 방금 해제한 세션이거나 ?clear=1 요청 중에는 억제 — 같은 render cycle 경쟁 방지)
+  useEffect(() => {
+    if (!hydrated) return
+    if (clearedThisMount) return
+    if (searchParams.get('clear') === '1') return
     if (role === 'owner') {
       router.replace('/owner')
     } else if (role === 'staff') {
       router.replace('/staff')
     }
-  }, [hydrated, role, router])
+  }, [hydrated, role, router, clearedThisMount, searchParams])
+
+  // 토스트 자동 닫힘 (4초)
+  useEffect(() => {
+    if (!toast) return
+    const id = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(id)
+  }, [toast])
 
   const handleSelect = (selected: VisitorRole) => {
     setRole(selected)
-    router.push(selected === 'owner' ? '/owner' : '/staff')
+    // 사용자가 명시적으로 선택 → ?clear=1로 유발된 억제 모드를 해제하고
+    // 자동 리디렉션 useEffect가 fallback으로 동작할 수 있게 한다.
+    setClearedThisMount(false)
+    const target = selected === 'owner' ? '/owner' : '/staff'
+    router.push(target)
+    // router.push가 어떤 이유로 실패한 경우를 대비한 안전망 — 400ms 후에도
+    // 경로가 그대로면 하드 네비게이션으로 전환
+    window.setTimeout(() => {
+      if (typeof window !== 'undefined' && window.location.pathname !== target) {
+        window.location.href = target
+      }
+    }, 400)
   }
 
-  // 하이드레이션 완료 전이거나 리디렉션 중일 때 플래시 방지
-  if (!hydrated || role) {
+  const handleClearInline = () => {
+    const hadRole = Boolean(role)
+    clearRole()
+    setClearedThisMount(true)
+    setToast(hadRole ? '저장된 역할을 해제했어요.' : '저장된 역할이 없었어요.')
+  }
+
+  // 하이드레이션 완료 전이거나 자동 리디렉션 중일 때 플래시 방지
+  // (clearedThisMount=true면 리디렉션 억제 — role이 잠깐 남아있어도 RoleSelector를 그대로 표시)
+  if (!hydrated || (role && !clearedThisMount)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-400" />
@@ -237,6 +284,25 @@ export default function RoleSelector() {
       `}</style>
 
       <LandingHeader variant="light" onShowLogin={onShowLogin} onShowSignup={onShowSignup} />
+
+      {/* 상단 토스트 (해제 완료 / clear=1 처리 등 피드백) */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 rounded-full bg-emerald-600 text-white px-5 py-2.5 shadow-lg shadow-emerald-600/20 text-sm font-medium"
+        >
+          <CheckCircleIcon className="h-5 w-5" />
+          <span>{toast}</span>
+          <button
+            onClick={() => setToast(null)}
+            aria-label="알림 닫기"
+            className="-mr-1 p-1 rounded-full hover:bg-white/15 transition-colors"
+          >
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <main className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
@@ -287,17 +353,23 @@ export default function RoleSelector() {
             />
           </div>
 
-          {/* 선택 기억 해제 */}
+          {/* 선택 기억 해제 — 저장된 role이 있을 때만 의미 있음 */}
           <div className="text-center mt-14">
-            <p className="text-sm text-slate-500">
-              선택한 페이지는 다음 방문 시 자동으로 열려요 ·{' '}
-              <button
-                onClick={clearRole}
-                className="font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 hover:text-slate-900 hover:decoration-slate-600 transition-colors"
-              >
-                선택 기억 해제
-              </button>
-            </p>
+            {role ? (
+              <p className="text-sm text-slate-600">
+                현재 <span className="font-semibold text-slate-900">{role === 'owner' ? '대표원장' : '실장·직원'}</span> 페이지가 저장돼 있어요 ·{' '}
+                <button
+                  onClick={handleClearInline}
+                  className="font-semibold text-indigo-600 underline decoration-indigo-300 underline-offset-4 hover:text-indigo-700 hover:decoration-indigo-500 transition-colors"
+                >
+                  선택 기억 해제
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500">
+                선택한 페이지는 다음 방문 시 자동으로 열려요.
+              </p>
+            )}
           </div>
         </div>
       </main>

@@ -469,6 +469,21 @@ export default function OwnerLanding() {
           </div>
         </div>
       </section>
+
+      {/* 역할 다시 선택 — 실수로 이 페이지로 온 경우 */}
+      <section className="py-10 bg-white border-t border-at-border">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-sm text-at-text-secondary">
+            실장·직원이신가요?{' '}
+            <a
+              href="/?clear=1"
+              className="font-semibold text-at-accent underline decoration-at-accent/40 underline-offset-4 hover:decoration-at-accent transition-colors"
+            >
+              역할 다시 선택
+            </a>
+          </p>
+        </div>
+      </section>
     </div>
   )
 }
