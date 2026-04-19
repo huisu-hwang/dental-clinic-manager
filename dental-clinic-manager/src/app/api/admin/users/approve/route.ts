@@ -22,6 +22,8 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { safeErrorMessage } from '@/lib/utils/safeError'
 import { requireMasterAdmin } from '@/lib/auth/requireMasterAdmin'
+import { countActiveEmployees, getSubscription, getPlanById } from '@/lib/subscriptionService'
+import { findPlanByHeadcount, requiresUpgrade } from '@/lib/subscriptionPlans'
 
 function escapeHtml(str: string): string {
   return str
@@ -64,6 +66,27 @@ export async function POST(request: Request) {
         { success: false, error: 'userId is required' },
         { status: 400 }
       )
+    }
+
+    // 인원 상한 가드: 승인 전 플랜 한도 초과 여부 확인
+    const targetClinicId = clinicId
+    if (targetClinicId) {
+      const [activeCount, subscription] = await Promise.all([
+        countActiveEmployees(targetClinicId),
+        getSubscription(targetClinicId),
+      ])
+      const currentPlan = subscription?.plan_id ? await getPlanById(subscription.plan_id) : null
+      const currentLimit = currentPlan?.max_users ?? 4
+      if (requiresUpgrade({ currentActive: activeCount, pendingToApprove: 1, currentLimit })) {
+        return NextResponse.json({
+          error: 'UPGRADE_REQUIRED',
+          currentPlan: currentPlan?.name ?? 'free',
+          currentLimit,
+          currentActive: activeCount,
+          pendingToApprove: 1,
+          recommendedPlan: findPlanByHeadcount(activeCount + 1),
+        }, { status: 403 })
+      }
     }
 
     // Admin 클라이언트 생성 (SERVICE_ROLE_KEY 사용)
