@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import type { SubscriptionStatusResponse, SubscriptionPlan } from '@/types/subscription'
+import { formatPlanPrice } from '@/lib/subscriptionPlans'
 import PlanSelectModal from './PlanSelectModal'
 import CardRegistrationModal from './CardRegistrationModal'
 
@@ -104,8 +105,8 @@ export default function SubscriptionStatus() {
             <p className="mt-1 text-xl font-bold text-gray-900">
               {plan ? plan.display_name : 'Free'} 플랜
             </p>
-            {plan && plan.price > 0 && (
-              <p className="text-sm text-gray-600">{plan.price.toLocaleString()}원/월</p>
+            {plan && (
+              <p className="text-sm text-gray-600">{formatPlanPrice(plan)}</p>
             )}
           </div>
 

@@ -416,6 +416,7 @@ export interface UserNotification {
   created_at: string
   created_by?: string          // 알림 발생시킨 사용자
   expires_at?: string          // 알림 만료 시간 (선택)
+  metadata?: Record<string, unknown> | null  // 추가 데이터 (JSONB)
 }
 
 // 사용자 알림 생성용 입력 인터페이스

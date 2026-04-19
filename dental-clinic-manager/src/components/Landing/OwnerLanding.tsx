@@ -137,7 +137,7 @@ export default function OwnerLanding() {
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.15] tracking-tight mb-8">
             <span className="block mb-2 sm:mb-4">능력있는 실장을</span>
             <span className="block bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent pb-2">
-              엑셀과 연차 계산에
+              반복 업무에
             </span>
             <span className="block">낭비하지 마세요</span>
           </h1>
@@ -232,7 +232,7 @@ export default function OwnerLanding() {
               </div>
               <div>
                 <span className="text-at-accent font-semibold text-sm tracking-wider uppercase">The Solution</span>
-                <h2 className="text-2xl font-bold text-at-text">잡무는 시스템에게, 실장은 매출에게</h2>
+                <h2 className="text-2xl font-bold text-at-text">잡무는 시스템에게, 실장은 매출에 집중</h2>
               </div>
             </div>
 

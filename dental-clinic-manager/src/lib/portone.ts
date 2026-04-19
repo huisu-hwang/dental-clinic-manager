@@ -177,3 +177,30 @@ export function calculateProratedAmount(
 export function getDaysBetween(from: Date, to: Date): number {
   return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
 }
+
+/**
+ * 포트원 결제 부분 취소 (일할 환불용)
+ * @see https://developers.portone.io/api/rest-v2/payment#post-/payments/-paymentId-/cancel
+ */
+export async function partialRefund(params: {
+  portonePaymentId: string
+  amount: number
+  reason: string
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await portoneRequest<unknown>(
+      `/payments/${encodeURIComponent(params.portonePaymentId)}/cancel`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: params.amount,
+          reason: params.reason,
+        }),
+      }
+    )
+    return { ok: true }
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    return { ok: false, error: `REFUND_FAILED: ${msg}` }
+  }
+}

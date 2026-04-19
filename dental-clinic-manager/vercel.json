@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/generate-approved-posts",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/investment/profit-snapshot",
+      "schedule": "5 15 * * *"
     }
   ]
 }
