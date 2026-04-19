@@ -232,7 +232,7 @@ export default function OwnerLanding() {
               </div>
               <div>
                 <span className="text-at-accent font-semibold text-sm tracking-wider uppercase">The Solution</span>
-                <h2 className="text-2xl font-bold text-at-text">잡무는 시스템에게, 실장은 매출에게</h2>
+                <h2 className="text-2xl font-bold text-at-text">잡무는 시스템에게, 실장은 매출에 집중</h2>
               </div>
             </div>
 
