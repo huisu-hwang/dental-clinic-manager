@@ -1,7 +1,7 @@
 // src/components/WorkerGuardModal.tsx
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { AlertTriangle, Download, RefreshCw, X, Loader2 } from 'lucide-react'
 import { triggerWorkerDownload } from '@/lib/workers/installer'
@@ -88,8 +88,13 @@ function WorkerGuardModal({ type, featureName, state, onResolve }: ModalProps) {
   const [downloading, setDownloading] = useState(false)
   const [rechecking, setRechecking] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [offlineCycleKey, setOfflineCycleKey] = useState(0)
 
   const isNotInstalled = state === 'not_installed'
+
+  const handleAutoRecovered = useCallback(() => {
+    onResolve(true)
+  }, [onResolve])
 
   const handleDownload = async () => {
     setDownloading(true)
@@ -111,8 +116,12 @@ function WorkerGuardModal({ type, featureName, state, onResolve }: ModalProps) {
     setRechecking(false)
     if (status.installed && status.online) {
       onResolve(true)
+      return
     }
-    // else: 모달 유지 — 미설치/오프라인 상태 그대로
+    // 실패 시 OfflineSection 재마운트 (자동 재시도 카운터 리셋)
+    if (!isNotInstalled) {
+      setOfflineCycleKey((k) => k + 1)
+    }
   }
 
   const handleCancel = () => onResolve(false)
@@ -155,7 +164,11 @@ function WorkerGuardModal({ type, featureName, state, onResolve }: ModalProps) {
           {isNotInstalled ? (
             <NotInstalledGuide />
           ) : (
-            <OfflineGuide />
+            <OfflineSection
+              key={offlineCycleKey}
+              type={type}
+              onAutoRecovered={handleAutoRecovered}
+            />
           )}
 
           {downloadError && (
@@ -229,16 +242,94 @@ function NotInstalledGuide() {
   )
 }
 
-function OfflineGuide() {
+interface OfflineSectionProps {
+  type: WorkerType
+  onAutoRecovered: () => void
+}
+
+function OfflineSection({ type, onAutoRecovered }: OfflineSectionProps) {
+  const MAX_ATTEMPTS = 3
+  const INTERVAL_MS = 5000
+
+  const [attempt, setAttempt] = useState(0) // 0..MAX_ATTEMPTS (완료 횟수)
+  const [secondsLeft, setSecondsLeft] = useState(INTERVAL_MS / 1000)
+  const [exhausted, setExhausted] = useState(false)
+
+  useEffect(() => {
+    if (exhausted) return
+    if (attempt >= MAX_ATTEMPTS) {
+      setExhausted(true)
+      return
+    }
+
+    let cancelled = false
+    let countdownTimer: ReturnType<typeof setInterval> | null = null
+    let tickRemaining = INTERVAL_MS / 1000
+
+    setSecondsLeft(tickRemaining)
+    countdownTimer = setInterval(() => {
+      tickRemaining -= 1
+      if (cancelled) return
+      setSecondsLeft(Math.max(0, tickRemaining))
+    }, 1000)
+
+    const fireTimer = setTimeout(async () => {
+      if (cancelled) return
+      const status = await pingWorkerStatus(type)
+      if (cancelled) return
+      if (status.installed && status.online) {
+        onAutoRecovered()
+        return
+      }
+      setAttempt((n) => n + 1)
+    }, INTERVAL_MS)
+
+    return () => {
+      cancelled = true
+      if (countdownTimer) clearInterval(countdownTimer)
+      clearTimeout(fireTimer)
+    }
+  }, [attempt, exhausted, type, onAutoRecovered])
+
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
-      <p className="mb-2 font-medium text-amber-900">해결 방법</p>
-      <ol className="list-decimal space-y-1 pl-5 text-amber-800">
-        <li>작업 표시줄 우측 트레이 영역을 확인합니다.</li>
-        <li>통합 워커 아이콘을 우클릭하여 &ldquo;종료&rdquo;합니다.</li>
-        <li>시작 메뉴에서 통합 워커를 다시 실행합니다.</li>
-        <li>1분 후 [다시 확인]을 눌러주세요.</li>
-      </ol>
+    <div className="space-y-3">
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+        <p className="mb-2 font-medium text-amber-900">해결 방법</p>
+        <ol className="list-decimal space-y-1 pl-5 text-amber-800">
+          <li>작업 표시줄 우측 트레이 영역을 확인합니다.</li>
+          <li>통합 워커 아이콘을 우클릭하여 &ldquo;종료&rdquo;합니다.</li>
+          <li>시작 메뉴에서 통합 워커를 다시 실행합니다.</li>
+          <li>1분 후 [다시 확인]을 눌러주세요.</li>
+        </ol>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+        <RefreshCw className={`h-3.5 w-3.5 ${exhausted ? '' : 'animate-spin'}`} />
+        {exhausted ? (
+          <span>자동 확인 종료. 워커를 재시작 후 [다시 확인]을 눌러주세요.</span>
+        ) : (
+          <span>
+            자동 재시도{' '}
+            <DotIndicator current={attempt} total={MAX_ATTEMPTS} />{' '}
+            ({attempt + 1}/{MAX_ATTEMPTS}) — {secondsLeft}초 후 다시 확인...
+          </span>
+        )}
+      </div>
     </div>
+  )
+}
+
+function DotIndicator({ current, total }: { current: number; total: number }) {
+  return (
+    <span aria-hidden className="inline-flex gap-0.5">
+      {Array.from({ length: total }).map((_, i) => (
+        <span
+          key={i}
+          className={`inline-block h-1.5 w-1.5 rounded-full ${
+            i < current ? 'bg-amber-600' : 'bg-amber-300'
+          }`}
+        />
+      ))}
+    </span>
   )
 }
