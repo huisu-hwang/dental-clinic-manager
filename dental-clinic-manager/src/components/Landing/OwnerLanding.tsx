@@ -106,6 +106,14 @@ const premiumItems = [
   },
 ]
 
+const ownerFaqs = [
+  { q: '설치가 필요한가요?', a: '아니요. 웹 브라우저에서 바로 사용 가능합니다. PC·태블릿·스마트폰 어디서든 접속됩니다.' },
+  { q: '데이터는 안전한가요?', a: '글로벌 클라우드 인프라에서 암호화되어 저장되며, 자동 백업으로 손실 없이 보관됩니다.' },
+  { q: '직원 권한 설정이 가능한가요?', a: '원장·부원장·실장·팀장·일반 직원 등 역할별 권한을 세분화해 설정할 수 있습니다.' },
+  { q: '기존 데이터 이전이 가능한가요?', a: 'Excel 파일 등을 통한 기존 데이터 이전을 지원합니다.' },
+  { q: '프리미엄 패키지는 무엇이 다른가요?', a: '기본 기능은 그대로 사용 가능하며, 월 ₩499,000에 AI 데이터 분석·경영현황 대시보드·마케팅 자동화(네이버 블로그)가 포함됩니다.' },
+]
+
 export default function OwnerLanding({ onShowLogin, onShowSignup }: OwnerLandingProps) {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
@@ -331,7 +339,126 @@ export default function OwnerLanding({ onShowLogin, onShowSignup }: OwnerLanding
         </div>
       </section>
 
-      {/* 나머지 섹션은 다음 Task에서 추가 */}
+      {/* TRUST */}
+      <section className="relative py-32 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <StoryBlock>
+            <div className="text-center mb-12">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-at-tag text-at-accent rounded-full text-sm font-semibold mb-6">
+                <SparklesIcon className="w-4 h-4" />
+                Why Clinic Manager?
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-at-text leading-tight">
+                현장의 필요를 느낀{' '}
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  치과 원장이 직접 개발
+                </span>
+                했습니다
+              </h2>
+            </div>
+
+            <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-at-border">
+              <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-3xl">👨‍⚕️</span>
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-at-text-weak text-sm mb-1">개발자이자 사용자</p>
+                  <p className="text-2xl font-bold text-at-text">현직 치과 원장</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-lg text-at-text-secondary">
+                    <span className="font-semibold">현장의 불편함</span>을 직접 경험하고 해결한 솔루션
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-lg text-at-text-secondary">
+                    <span className="font-semibold">본인 병원에서 매일 사용</span>하며 지속 개선 중
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircleIcon className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-lg text-at-text-secondary">
+                    치과 업무 흐름을 <span className="font-semibold">정확히 이해</span>한 맞춤형 설계
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-at-border">
+                <p className="text-at-text-secondary italic text-center">
+                  &quot;직접 쓰면서 불편한 건 바로바로 고칩니다.<br />제가 매일 쓰니까요.&quot;
+                </p>
+              </div>
+            </div>
+          </StoryBlock>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-32 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full filter blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full filter blur-3xl translate-x-1/2 translate-y-1/2" />
+
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
+            실장의 시간을 매출로 전환할 때입니다
+          </h2>
+          <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto">
+            복잡한 설치 없이, 웹 브라우저로 바로 시작하세요.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={onShowSignup}
+              className="group px-10 py-4 bg-white text-at-text font-bold text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2 justify-center"
+            >
+              무료로 시작하기
+              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button
+              onClick={onShowLogin}
+              className="px-10 py-4 border-2 border-white/30 text-white hover:bg-white/10 font-semibold text-lg rounded-2xl transition-all backdrop-blur-sm"
+            >
+              로그인
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="owner-faq" className="py-24 bg-at-surface-alt">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-at-text mb-4">자주 묻는 질문</h2>
+          </div>
+
+          <div className="space-y-4">
+            {ownerFaqs.map((faq, i) => (
+              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-at-card border border-at-border">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-at-surface-alt transition-colors"
+                >
+                  <span className="font-semibold text-at-text pr-4">{faq.q}</span>
+                  <ChevronDownIcon
+                    className={`w-5 h-5 text-at-text-weak transition-transform duration-300 flex-shrink-0 ${openFaq === i ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                <div className={`overflow-hidden transition-all duration-300 ${openFaq === i ? 'max-h-48' : 'max-h-0'}`}>
+                  <div className="px-6 pb-5">
+                    <p className="text-at-text-secondary leading-relaxed">{faq.a}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
