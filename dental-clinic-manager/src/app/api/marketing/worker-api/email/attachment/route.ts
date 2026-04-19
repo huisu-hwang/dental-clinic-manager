@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // access token 갱신
-    const decryptedRefreshToken = decrypt(integration.refresh_token_encrypted as string);
+    const decryptedRefreshToken = decrypt(integration.encrypted_refresh_token as string);
     const tokenData = await refreshToken(clientId, clientSecret, decryptedRefreshToken);
 
     // 첨부파일 다운로드

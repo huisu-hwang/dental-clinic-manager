@@ -79,7 +79,7 @@ async function handleGmailCheck(
   }
 
   // refresh token으로 access token 갱신
-  const decryptedRefreshToken = decrypt(integration.refresh_token_encrypted as string);
+  const decryptedRefreshToken = decrypt(integration.encrypted_refresh_token as string);
   const tokenData = await refreshToken(clientId, clientSecret, decryptedRefreshToken);
 
   // 갱신된 access token 저장
@@ -89,7 +89,7 @@ async function handleGmailCheck(
   await admin
     .from('clinic_email_integrations')
     .update({
-      access_token_encrypted: encryptedAccessToken,
+      encrypted_access_token: encryptedAccessToken,
       token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
       updated_at: new Date().toISOString(),
     })
