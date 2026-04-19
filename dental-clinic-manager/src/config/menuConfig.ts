@@ -32,23 +32,23 @@ export const PREMIUM_FEATURE_INFO: Record<PremiumFeatureId, {
   priceLabel: string
 }> = {
   'ai-analysis': {
-    title: 'AI 데이터 분석',
-    description: 'AI가 병원 데이터를 분석하여 경영 인사이트를 제공합니다.',
-    highlights: ['매출/환자 추이 자동 분석', '맞춤형 경영 인사이트', 'AI 채팅으로 질문하기'],
+    title: '프리미엄 패키지',
+    description: 'AI 분석, 경영 현황, 마케팅 자동화를 하나의 패키지로 이용하세요.',
+    highlights: ['AI 데이터 분석 — 매출/환자 추이 자동 분석, AI 채팅', '경영 현황 — 수입/지출 관리, 손익 분석, 세금 계산', '마케팅 자동화 — AI 임상글 생성, SEO 분석, 게시물 관리'],
     planName: '프리미엄',
     priceLabel: '월 499,000원',
   },
   'financial': {
-    title: '경영 현황',
-    description: '수입/지출을 체계적으로 관리하고 손익을 분석합니다.',
-    highlights: ['수입/지출 관리', '손익 분석 리포트', '세금 계산 자동화'],
+    title: '프리미엄 패키지',
+    description: 'AI 분석, 경영 현황, 마케팅 자동화를 하나의 패키지로 이용하세요.',
+    highlights: ['AI 데이터 분석 — 매출/환자 추이 자동 분석, AI 채팅', '경영 현황 — 수입/지출 관리, 손익 분석, 세금 계산', '마케팅 자동화 — AI 임상글 생성, SEO 분석, 게시물 관리'],
     planName: '프리미엄',
     priceLabel: '월 499,000원',
   },
   'marketing': {
-    title: '마케팅 자동화',
-    description: '네이버 블로그 임상글을 AI로 자동 생성하고 관리합니다.',
-    highlights: ['AI 임상글 자동 생성', 'SEO 최적화 분석', '게시물 일괄 관리'],
+    title: '프리미엄 패키지',
+    description: 'AI 분석, 경영 현황, 마케팅 자동화를 하나의 패키지로 이용하세요.',
+    highlights: ['AI 데이터 분석 — 매출/환자 추이 자동 분석, AI 채팅', '경영 현황 — 수입/지출 관리, 손익 분석, 세금 계산', '마케팅 자동화 — AI 임상글 생성, SEO 분석, 게시물 관리'],
     planName: '프리미엄',
     priceLabel: '월 499,000원',
   },
