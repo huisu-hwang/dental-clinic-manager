@@ -1736,42 +1736,33 @@ export const dataService = {
   // clinic_id가 null인 사용자(예: 시스템 관리자 후보)도 처리한다.
   async approveUser(userId: string, clinicId: string | null, permissions?: string[]) {
     try {
-      const supabase = await ensureConnection()
+      const res = await fetch('/api/staff/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          userIds: [userId],
+          permissions,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
 
-      console.log('[approveUser] Approving user:', userId, 'clinicId:', clinicId ?? 'null')
-
-      // 업데이트 데이터 준비
-      const updateData: any = {
-        status: 'active',
-        approved_at: new Date().toISOString()
+      if (res.status === 403 && data?.error === 'UPGRADE_REQUIRED') {
+        return {
+          upgradeRequired: true,
+          currentPlan: data.currentPlan,
+          currentLimit: data.currentLimit,
+          currentActive: data.currentActive,
+          pendingToApprove: data.pendingToApprove,
+          recommendedPlan: data.recommendedPlan,
+        } as const
       }
 
-      // 권한이 지정된 경우 저장
-      if (permissions && permissions.length > 0) {
-        updateData.permissions = permissions
+      if (!res.ok) {
+        return { error: data?.error ?? '승인 처리에 실패했습니다.' }
       }
-
-      // 사용자 상태를 'active'로 업데이트
-      // Database Trigger (users_approval_notification_trigger)가
-      // 자동으로 Edge Function을 호출하여 승인 이메일을 발송합니다.
-      const updateQuery = supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', userId)
-
-      const { error } = await (
-        clinicId ? updateQuery.eq('clinic_id', clinicId) : updateQuery.is('clinic_id', null)
-      )
-
-      if (error) {
-        console.error('[approveUser] Database error:', error)
-        return { error: error.message }
-      }
-
-      console.log('[approveUser] User approved successfully (email will be sent by trigger)')
-      return { success: true }
+      return { success: true as const }
     } catch (error: unknown) {
-      console.error('[approveUser] Unexpected error:', error)
       const errorMessage = error instanceof Error ? error.message : JSON.stringify(error)
       return { error: errorMessage }
     }
