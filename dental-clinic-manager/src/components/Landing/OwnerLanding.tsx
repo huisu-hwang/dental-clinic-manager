@@ -470,16 +470,25 @@ export default function OwnerLanding() {
         </div>
       </section>
 
-      {/* 역할 다시 선택 — 실수로 이 페이지로 온 경우 */}
-      <section className="py-10 bg-white border-t border-at-border">
+      {/* 반대 랜딩 이동 + 역할 선택 초기화 */}
+      <section className="py-14 bg-white border-t border-at-border">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-at-text-secondary">
-            실장·직원이신가요?{' '}
+          <p className="text-sm text-at-text-secondary mb-5">
+            실장·직원이신가요? 직원용 랜딩에서 실제 업무 기능을 둘러보세요.
+          </p>
+          <a
+            href="/staff"
+            className="group inline-flex items-center gap-2 rounded-xl border border-at-border bg-at-surface-alt hover:bg-white hover:border-at-accent/40 px-6 py-3 text-at-text font-semibold shadow-at-card transition-all hover:-translate-y-0.5"
+          >
+            실장·직원 페이지로 이동
+            <ArrowRightIcon className="h-4 w-4 text-at-accent group-hover:translate-x-0.5 transition-transform" />
+          </a>
+          <p className="mt-5 text-xs text-at-text-weak">
             <a
               href="/?clear=1"
-              className="font-semibold text-at-accent underline decoration-at-accent/40 underline-offset-4 hover:decoration-at-accent transition-colors"
+              className="underline decoration-at-text-weak/40 underline-offset-4 hover:decoration-at-text-weak"
             >
-              역할 다시 선택
+              역할 선택 초기화
             </a>
           </p>
         </div>
