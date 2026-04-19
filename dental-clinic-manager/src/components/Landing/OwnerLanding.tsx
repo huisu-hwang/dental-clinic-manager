@@ -11,6 +11,7 @@ import {
   CalendarDaysIcon,
   UserGroupIcon,
   CurrencyDollarIcon,
+  GiftIcon,
   HeartIcon,
   SparklesIcon,
   CheckCircleIcon,
@@ -46,6 +47,7 @@ const problemItems = [
   { icon: UserGroupIcon, label: '스케쥴 수동 조율' },
   { icon: CurrencyDollarIcon, label: '급여 명세서 취합' },
   { icon: HeartIcon, label: '환자 리콜 추적' },
+  { icon: GiftIcon, label: '선물 재고 확인' },
   { icon: DocumentTextIcon, label: '상담 기록 정리' },
 ]
 
@@ -438,24 +440,35 @@ export default function OwnerLanding({ onShowLogin, onShowSignup }: OwnerLanding
           </div>
 
           <div className="space-y-4">
-            {ownerFaqs.map((faq, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-at-card border border-at-border">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-at-surface-alt transition-colors"
-                >
-                  <span className="font-semibold text-at-text pr-4">{faq.q}</span>
-                  <ChevronDownIcon
-                    className={`w-5 h-5 text-at-text-weak transition-transform duration-300 flex-shrink-0 ${openFaq === i ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                <div className={`overflow-hidden transition-all duration-300 ${openFaq === i ? 'max-h-48' : 'max-h-0'}`}>
-                  <div className="px-6 pb-5">
-                    <p className="text-at-text-secondary leading-relaxed">{faq.a}</p>
+            {ownerFaqs.map((faq, i) => {
+              const isOpen = openFaq === i
+              const answerId = `owner-faq-answer-${i}`
+              return (
+                <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-at-card border border-at-border">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={answerId}
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-at-surface-alt transition-colors"
+                  >
+                    <span className="font-semibold text-at-text pr-4">{faq.q}</span>
+                    <ChevronDownIcon
+                      className={`w-5 h-5 text-at-text-weak transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  <div
+                    id={answerId}
+                    role="region"
+                    className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-96' : 'max-h-0'}`}
+                  >
+                    <div className="px-6 pb-5">
+                      <p className="text-at-text-secondary leading-relaxed">{faq.a}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
