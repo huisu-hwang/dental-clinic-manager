@@ -25,21 +25,25 @@ export interface KeywordSuggestion {
 
 /**
  * 네이버 연관검색어 수집 (자동완성 API)
+ * - 모바일 엔드포인트(`frm=nv_mobile`)가 PC보다 응답이 안정적
+ * - st=100 으로 더 많은 후보 확보
  */
 export async function fetchNaverSuggestions(query: string): Promise<string[]> {
   try {
     const encoded = encodeURIComponent(query);
-    const url = `https://ac.search.naver.com/nx/ac?q=${encoded}&con=1&frm=nv&ans=2&r_format=json&r_enc=UTF-8&r_unicode=0&t_koreng=1&run=2&rev=4&q_enc=UTF-8`;
+    const url = `https://ac.search.naver.com/nx/ac?q=${encoded}&st=100&frm=nv_mobile&r_format=json&r_enc=UTF-8&r_unicode=0&t_koreng=1&ans=2&run=2&rev=4&q_enc=UTF-8`;
 
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
       },
     });
 
     const data = await res.json();
-    const items: string[] = data.items?.[0] || [];
-    return items.map((item: string | string[]) => Array.isArray(item) ? item[0] : item).filter(Boolean);
+    const items = (data.items?.[0] || []) as (string | string[])[];
+    return items
+      .map((item) => (Array.isArray(item) ? item[0] : item))
+      .filter((s): s is string => typeof s === 'string' && s.length > 0);
   } catch (error) {
     console.error('[KeywordResearch] 연관검색어 수집 실패:', error);
     return [];
@@ -172,6 +176,42 @@ export function getKeywordPool(
   return combined.filter(
     (k) => !excludeKeywords.some((ex) => ex.includes(k.keyword) || k.keyword.includes(ex))
   );
+}
+
+/**
+ * 여러 키워드의 연관 키워드 일괄 조회 (네이버 자동완성 기반)
+ * SearchAd API 미제공 환경에서 relKeywords 대체용
+ *
+ * - 동시성 4 제한 (자동완성 API 부하 방지)
+ * - 각 시드당 최대 6개 연관어 반환
+ * - 시드와 동일한 결과 제외
+ */
+export async function getRelatedKeywordsBatch(
+  seeds: string[],
+  perSeed: number = 6
+): Promise<Map<string, string[]>> {
+  const result = new Map<string, string[]>();
+  const concurrency = 4;
+  const queue = [...seeds];
+
+  async function worker() {
+    while (queue.length > 0) {
+      const seed = queue.shift();
+      if (!seed) continue;
+      try {
+        const suggestions = await fetchNaverSuggestions(seed);
+        const filtered = suggestions
+          .filter((s) => s && s !== seed && !s.includes('-') && s.length >= 2)
+          .slice(0, perSeed);
+        result.set(seed, filtered);
+      } catch {
+        result.set(seed, []);
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return result;
 }
 
 /**

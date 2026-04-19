@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
-import { getKeywordPool, titleSimilarity, type KeywordSuggestion } from '@/lib/marketing/keyword-researcher';
-import { getKeywordInsights, totalMonthlyQc } from '@/lib/marketing/naver-searchad-client';
-import { getSeasonalScores } from '@/lib/marketing/naver-datalab-client';
+import { getKeywordPool, getRelatedKeywordsBatch, titleSimilarity, type KeywordSuggestion } from '@/lib/marketing/keyword-researcher';
+import { getKeywordInsights, totalMonthlyQc, isSearchAdConfigured } from '@/lib/marketing/naver-searchad-client';
+import { getSeasonalScores, isDataLabConfigured } from '@/lib/marketing/naver-datalab-client';
 import { checkMedicalLaw } from '@/lib/marketing/medical-law-checker';
 import {
   DEFAULT_PLATFORM_PRESETS,
@@ -122,23 +122,36 @@ export async function generateCalendar(
   // 시드 키워드 상한 (API 쿼터·응답시간 균형)
   const seedKeywords = Array.from(new Set(seedPool.map((s) => s.keyword))).slice(0, 30);
 
-  const [insights, seasonalScores] = await Promise.all([
+  // SearchAd 미설정 환경: 자동완성 API로 relKeywords 보강
+  const searchAdLive = isSearchAdConfigured();
+  const dataLabLive = isDataLabConfigured();
+
+  const [insights, seasonalScores, autocompleteRelated] = await Promise.all([
     getKeywordInsights(seedKeywords),
     getSeasonalScores(seedKeywords, month, year),
+    searchAdLive
+      ? Promise.resolve(new Map<string, string[]>())
+      : getRelatedKeywordsBatch(seedKeywords, 6),
   ]);
   const insightMap = new Map(insights.map((i) => [i.keyword, i]));
 
   // 시드 키워드에 검색량/경쟁도/시즌점수를 덧붙인 프로파일
   const seedProfiles = seedPool.map((sp) => {
     const insight = insightMap.get(sp.keyword);
+    const apiRel = insight?.relKeywords || [];
+    const acRel = autocompleteRelated.get(sp.keyword) || [];
     return {
       ...sp,
       monthlyQc: insight ? totalMonthlyQc(insight) : 0,
       compIdx: insight?.compIdx || '중간',
-      relKeywords: insight?.relKeywords || [],
+      relKeywords: apiRel.length > 0 ? apiRel : acRel,
       seasonalScore: seasonalScores.get(sp.keyword) ?? 50,
     };
   });
+
+  console.log(
+    `[CalendarGen v2] SearchAd=${searchAdLive ? 'live' : 'mock'}, DataLab=${dataLabLive ? 'live' : 'mock'}, autocomplete-rel=${autocompleteRelated.size}`
+  );
 
   // 5. AI 호출 (멀티 제약 JSON 생성)
   const proposals = await proposeTopicsWithAi({
@@ -320,14 +333,22 @@ async function proposeTopicsWithAi(opts: {
     })
     .join('\n');
 
-  // 시드 풀 프리브리프
-  const topSeeds = seedProfiles
+  // 시드 풀 프리브리프 (시즌 점수 높은 순으로 정렬해 우선 노출)
+  const sortedSeeds = [...seedProfiles].sort((a, b) => b.seasonalScore - a.seasonalScore);
+  const topSeeds = sortedSeeds
     .slice(0, 20)
-    .map(
-      (s) =>
-        `  - "${s.keyword}" (카테고리=${s.topicCategory}, 여정=${s.journeyStage}, 월검색량~${s.monthlyQc}, 경쟁=${s.compIdx}, 시즌점수=${s.seasonalScore})`
-    )
+    .map((s) => {
+      const rel = s.relKeywords.length > 0 ? ` ↳ 연관: ${s.relKeywords.slice(0, 4).join(', ')}` : '';
+      return `  - "${s.keyword}" [${s.topicCategory}/${s.journeyStage}] 월검색량~${s.monthlyQc} · 경쟁=${s.compIdx} · 시즌점수=${s.seasonalScore}${rel}`;
+    })
     .join('\n');
+
+  // 시즌 상위 키워드 (DataLab 트렌드 기반)
+  const seasonalTop = sortedSeeds
+    .filter((s) => s.seasonalScore >= 70)
+    .slice(0, 8)
+    .map((s) => `${s.keyword}(${s.seasonalScore}점)`)
+    .join(', ');
 
   const prompt = `당신은 치과 전문 네이버 블로그 SEO 기획자입니다. 아래 조건으로 **정확히 ${totalSlots}개**의 글 주제를 기획해주세요.
 
@@ -341,11 +362,12 @@ async function proposeTopicsWithAi(opts: {
 ## 시기
 - 기준: ${year}년 ${month}월
 - 시즌성·이벤트 키워드 적극 반영 (예: 6/9 치아의날, 여름방학 교정, 연말 보험 소진)
+${seasonalTop ? `- **이번 달 시즌 상위 (네이버 데이터랩 트렌드)**: ${seasonalTop}\n  → 시즌점수 70+ 키워드는 가급적 1~2개 슬롯에 직접 활용` : ''}
 
 ## ${totalSlots}개 슬롯 (여정 단계와 카테고리는 고정)
 ${slotLines}
 
-## 시드 키워드 풀 (검색량·경쟁도 참고)
+## 시드 키워드 풀 (시즌점수 높은 순, 검색량·경쟁도·연관어 포함)
 ${topSeeds}
 ${focusKeywords.length ? `\n## 집중 키워드 (있으면 최소 1개 포함)\n  ${focusKeywords.join(', ')}` : ''}
 
