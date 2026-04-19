@@ -338,6 +338,17 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         setResigningStaff(null)
         fetchStaff()
         fetchResignedStaff()
+
+        // 구독 재조정: 퇴사 후 재직 수가 하위 구간으로 떨어졌으면 다운그레이드 + 부분 환불
+        try {
+          await fetch('/api/subscription/downgrade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: '직원 퇴사' }),
+          })
+        } catch (e) {
+          console.warn('[handleResignUser] 다운그레이드 재조정 실패(무시):', e)
+        }
       }
     } catch (err) {
       console.error('[handleResignUser] 예외 발생:', err)
