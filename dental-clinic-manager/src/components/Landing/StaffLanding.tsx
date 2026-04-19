@@ -102,7 +102,7 @@ export default function StaffLanding() {
     window.setTimeout(() => setToast(null), 3500)
   }
 
-  // 원장에게 추천하기 — Web Share API 우선, 미지원 환경은 클립보드 복사
+  // 원장님께 추천 — Web Share API 우선, 미지원 환경은 클립보드 복사
   const handleRecommendToOwner = async () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const url = `${origin}/owner`
@@ -136,7 +136,7 @@ export default function StaffLanding() {
     <div className="min-h-screen bg-white overflow-x-hidden">
       <LandingHeader variant="light" onShowLogin={onShowLogin} onShowSignup={onShowSignup} />
 
-      {/* 상단 토스트 (원장에게 추천 링크 복사 등 피드백) */}
+      {/* 상단 토스트 (원장님께 추천 링크 복사 등 피드백) */}
       {toast && (
         <div
           role="status"
@@ -316,7 +316,7 @@ export default function StaffLanding() {
               className="group px-10 py-4 bg-white text-slate-900 font-bold text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2 justify-center"
             >
               <PaperAirplaneIcon className="w-5 h-5 -rotate-45" />
-              원장에게 추천하기
+              원장님께 추천
             </button>
             <button
               type="button"
@@ -373,16 +373,25 @@ export default function StaffLanding() {
         </div>
       </section>
 
-      {/* 역할 다시 선택 — 실수로 이 페이지로 온 경우 */}
-      <section className="py-10 bg-white border-t border-slate-100">
+      {/* 반대 랜딩 이동 + 역할 선택 초기화 */}
+      <section className="py-14 bg-white border-t border-slate-100">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-slate-600">
-            대표원장이신가요?{' '}
+          <p className="text-sm text-slate-600 mb-5">
+            대표원장이신가요? 경영·매출 중심으로 정리된 원장용 랜딩을 확인해보세요.
+          </p>
+          <a
+            href="/owner"
+            className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300 px-6 py-3 text-slate-900 font-semibold shadow-sm transition-all hover:-translate-y-0.5"
+          >
+            대표원장 페이지로 이동
+            <ArrowRightIcon className="h-4 w-4 text-indigo-600 group-hover:translate-x-0.5 transition-transform" />
+          </a>
+          <p className="mt-5 text-xs text-slate-500">
             <a
               href="/?clear=1"
-              className="font-semibold text-rose-600 underline decoration-rose-300 underline-offset-4 hover:decoration-rose-500 transition-colors"
+              className="underline decoration-slate-300 underline-offset-4 hover:decoration-slate-500"
             >
-              역할 다시 선택
+              역할 선택 초기화
             </a>
           </p>
         </div>
