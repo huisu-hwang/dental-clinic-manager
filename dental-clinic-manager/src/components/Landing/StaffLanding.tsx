@@ -102,7 +102,7 @@ export default function StaffLanding() {
     window.setTimeout(() => setToast(null), 3500)
   }
 
-  // 원장에게 추천하기 — Web Share API 우선, 미지원 환경은 클립보드 복사
+  // 원장님께 추천 — Web Share API 우선, 미지원 환경은 클립보드 복사
   const handleRecommendToOwner = async () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const url = `${origin}/owner`
@@ -136,7 +136,7 @@ export default function StaffLanding() {
     <div className="min-h-screen bg-white overflow-x-hidden">
       <LandingHeader variant="light" onShowLogin={onShowLogin} onShowSignup={onShowSignup} />
 
-      {/* 상단 토스트 (원장에게 추천 링크 복사 등 피드백) */}
+      {/* 상단 토스트 (원장님께 추천 링크 복사 등 피드백) */}
       {toast && (
         <div
           role="status"
@@ -316,7 +316,7 @@ export default function StaffLanding() {
               className="group px-10 py-4 bg-white text-slate-900 font-bold text-lg rounded-2xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-2 justify-center"
             >
               <PaperAirplaneIcon className="w-5 h-5 -rotate-45" />
-              원장에게 추천하기
+              원장님께 추천
             </button>
             <button
               type="button"
