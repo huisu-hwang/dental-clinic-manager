@@ -1264,11 +1264,11 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                               onClick={() => handleTabClick(tab.id)}
                               className={`
                                 group flex items-center justify-center py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
-                                ${tab.isPremiumLocked
-                                  ? 'text-slate-300 cursor-not-allowed opacity-50'
-                                  : isActive
+                                ${isActive
                                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
-                                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                                    : tab.isPremiumFeature
+                                      ? 'text-slate-500 hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
+                                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                                 }
                               `}
                             >
@@ -1305,7 +1305,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                   <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">PRO</span>}
+                  {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none transition-transform group-hover:scale-110">PRO</span>}
                 </button>
               )
             })}
@@ -1329,7 +1329,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                   <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">PRO</span>}
+                  {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none transition-transform group-hover:scale-110">PRO</span>}
                 </button>
               )
             })}
@@ -1393,17 +1393,17 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                             onClick={() => handleTabClick(tab.id)}
                             className={`
                               group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
-                              ${tab.isPremiumLocked
-                                ? 'text-at-text-weak cursor-not-allowed opacity-50'
-                                : isActive
+                              ${isActive
                                   ? 'bg-at-accent-light text-at-accent'
-                                  : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
+                                  : tab.isPremiumFeature
+                                    ? 'text-at-text-secondary hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
+                                    : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                               }
                             `}
                           >
                             <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
                             <span className="truncate">{tab.label}</span>
-                            {tab.isPremiumFeature && <span className="ml-auto text-[8px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1 py-0.5 rounded-full flex-shrink-0 leading-none">PRO</span>}
+                            {tab.isPremiumFeature && <span className="ml-auto text-[8px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1 py-0.5 rounded-full flex-shrink-0 leading-none transition-transform group-hover:scale-110">PRO</span>}
                           </button>
                         )
                       })}
