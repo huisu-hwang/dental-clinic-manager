@@ -1266,8 +1266,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                                 group flex items-center justify-center py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
                                 ${isActive
                                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
-                                    : tab.isPremiumFeature
-                                      ? 'text-slate-500 hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
+                                    : tab.isPremiumLocked
+                                      ? 'text-slate-300 hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
                                       : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                                 }
                               `}
@@ -1303,7 +1303,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     }
                   `}
                 >
-                  {tab.isPremiumFeature && !isActive ? (
+                  {tab.isPremiumLocked && !isActive ? (
                     <>
                       <Icon className="w-5 h-5 flex-shrink-0 text-gray-300 group-hover:hidden" />
                       <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
@@ -1337,7 +1337,7 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     }
                   `}
                 >
-                  {tab.isPremiumFeature && !isActive ? (
+                  {tab.isPremiumLocked && !isActive ? (
                     <>
                       <Icon className="w-5 h-5 flex-shrink-0 text-gray-300 group-hover:hidden" />
                       <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
@@ -1415,13 +1415,13 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                               group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
                               ${isActive
                                   ? 'bg-at-accent-light text-at-accent'
-                                  : tab.isPremiumFeature
-                                    ? 'text-at-text-secondary hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
+                                  : tab.isPremiumLocked
+                                    ? 'text-gray-400 hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
                                     : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                               }
                             `}
                           >
-                            {tab.isPremiumFeature && !isActive ? (
+                            {tab.isPremiumLocked && !isActive ? (
                               <>
                                 <Icon className="w-4 h-4 flex-shrink-0 text-gray-300 group-hover:hidden" />
                                 <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
