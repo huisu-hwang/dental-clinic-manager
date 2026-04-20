@@ -448,6 +448,45 @@ export default function ContentCalendarView() {
         </div>
       )}
 
+      {/* 선택된 항목 일괄 작업 바 */}
+      {selectedItems.size > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap gap-2 items-center bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm">
+          <span className="text-sm font-medium text-blue-800">
+            {selectedItems.size}개 선택됨
+          </span>
+          <button
+            onClick={() => handleBatchAction('batch_approve')}
+            disabled={bulkBusy !== null}
+            className="bg-emerald-600 text-white text-xs px-3 py-1.5 rounded hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            <CheckCircleIcon className="h-3.5 w-3.5" />
+            {bulkBusy === 'batch_approve' ? '처리 중...' : '선택 승인'}
+          </button>
+          <button
+            onClick={() => handleBatchAction('batch_regenerate')}
+            disabled={bulkBusy !== null}
+            className="bg-violet-100 text-violet-700 text-xs px-3 py-1.5 rounded hover:bg-violet-200 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            <ArrowPathIcon className={`h-3.5 w-3.5 ${bulkBusy === 'batch_regenerate' ? 'animate-spin' : ''}`} />
+            {bulkBusy === 'batch_regenerate' ? '재생성 중...' : '선택 재생성'}
+          </button>
+          <button
+            onClick={() => handleBatchAction('batch_reject')}
+            disabled={bulkBusy !== null}
+            className="bg-rose-100 text-rose-700 text-xs px-3 py-1.5 rounded hover:bg-rose-200 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            <XCircleIcon className="h-3.5 w-3.5" />
+            {bulkBusy === 'batch_reject' ? '처리 중...' : '선택 반려'}
+          </button>
+          <button
+            onClick={handleClearSelection}
+            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 ml-auto"
+          >
+            선택 해제
+          </button>
+        </div>
+      )}
+
       {/* 빈 상태 */}
       {!loading && calendars.length === 0 && (
         <div className="text-center py-12 text-at-text-weak">
