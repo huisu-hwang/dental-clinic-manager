@@ -50,14 +50,14 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
     <div className="relative min-h-screen">
       {/* 데모 배경 */}
       <div className="pointer-events-none select-none" aria-hidden="true">
-        <div className="blur-[6px] opacity-40 saturate-50">
+        <div className="blur-[2px] opacity-70">
           {children}
         </div>
       </div>
 
-      {/* 중앙 오버레이 */}
-      <div className="absolute inset-0 flex items-center justify-center p-4 z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/80 to-white/60" />
+      {/* 상단 오버레이 */}
+      <div className="absolute inset-0 flex items-start justify-center pt-8 p-4 z-10 overflow-y-auto">
+        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/30 to-transparent" />
 
         <div className="relative w-full max-w-2xl">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
