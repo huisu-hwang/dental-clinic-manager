@@ -42,13 +42,13 @@ const US_EXCHANGE_CODES: Record<string, string> = {
 }
 
 // ============================================
-// 토큰 관리 (Race Condition 방지)
+// 토큰 관리 (Race Condition 방지 + DB 캐시)
 // ============================================
 
-/** credential별 토큰 갱신 잠금 */
+/** credential별 토큰 갱신 잠금 (동일 프로세스 내 중복 호출 방지) */
 const tokenLocks = new Map<string, Promise<string>>()
 
-/** 메모리 토큰 캐시 */
+/** 메모리 토큰 캐시 (동일 프로세스 내 빠른 조회) */
 const tokenCache = new Map<string, { token: string; expiresAt: number }>()
 
 interface KISCredential {
@@ -63,8 +63,10 @@ function getBaseUrl(isPaperTrading: boolean): string {
 
 /**
  * KIS Access Token 발급
- * - 메모리 캐시 확인 → 없으면 API 호출
- * - Race Condition 방지: 동일 credential에 대한 중복 호출 차단
+ * 우선순위:
+ *   1. 메모리 캐시 (동일 프로세스)
+ *   2. DB 캐시 (서버리스 인스턴스 간 공유, PWA/웹/워커 공통)
+ *   3. KIS API 호출 (최후 수단, 1분당 1회 제한 있음)
  */
 export async function getAccessToken(
   credentialId: string,
@@ -80,7 +82,7 @@ export async function getAccessToken(
   const existing = tokenLocks.get(credentialId)
   if (existing) return existing
 
-  // 3. 새로 발급
+  // 3. 새로 발급 (DB 캐시 확인 → API 호출)
   const refreshPromise = refreshToken(credentialId, credential)
   tokenLocks.set(credentialId, refreshPromise)
 
@@ -95,6 +97,15 @@ async function refreshToken(
   credentialId: string,
   credential: KISCredential
 ): Promise<string> {
+  // 2-1. DB 캐시 확인 (만료 1시간 전이면 유효)
+  const dbToken = await loadTokenFromDb(credentialId)
+  if (dbToken && dbToken.expiresAt > Date.now() + 3600_000) {
+    // 메모리 캐시에도 저장
+    tokenCache.set(credentialId, dbToken)
+    return dbToken.token
+  }
+
+  // 2-2. KIS API로 새 토큰 발급
   const baseUrl = getBaseUrl(credential.isPaperTrading)
 
   const response = await fetch(`${baseUrl}/oauth2/tokenP`, {
@@ -109,21 +120,78 @@ async function refreshToken(
 
   if (!response.ok) {
     const text = await response.text()
+    // 403 = 발급 제한(1분당 1회) - DB 캐시가 있으면 만료 시간 체크 느슨하게 fallback
+    if (response.status === 403 && dbToken && dbToken.expiresAt > Date.now()) {
+      console.warn('[KIS] 토큰 발급 제한 - DB 캐시 토큰 fallback 사용')
+      tokenCache.set(credentialId, dbToken)
+      return dbToken.token
+    }
     throw new Error(`KIS 토큰 발급 실패 (${response.status}): ${text}`)
   }
 
   const data: KISTokenResponse = await response.json()
-
-  // 만료 시간 파싱 (KIS 형식: "YYYY-MM-DD HH:mm:ss")
   const expiresAt = new Date(data.access_token_token_expired).getTime()
 
-  // 메모리 캐시 저장
-  tokenCache.set(credentialId, {
-    token: data.access_token,
-    expiresAt,
-  })
+  // 메모리 캐시 + DB 캐시 저장
+  tokenCache.set(credentialId, { token: data.access_token, expiresAt })
+  await saveTokenToDb(credentialId, data.access_token, expiresAt)
 
   return data.access_token
+}
+
+/**
+ * DB에서 캐시된 토큰 로드
+ */
+async function loadTokenFromDb(credentialId: string): Promise<{ token: string; expiresAt: number } | null> {
+  try {
+    // 동적 import로 서버 사이드에서만 로드
+    const { getSupabaseAdmin } = await import('@/lib/supabase/admin')
+    const { investmentDecrypt } = await import('@/lib/investmentCrypto')
+    const supabase = getSupabaseAdmin()
+    if (!supabase) return null
+
+    const { data } = await supabase
+      .from('user_broker_credentials')
+      .select('cached_access_token_encrypted, token_expires_at')
+      .eq('id', credentialId)
+      .maybeSingle()
+
+    if (!data?.cached_access_token_encrypted || !data?.token_expires_at) return null
+
+    const expiresAt = new Date(data.token_expires_at).getTime()
+    if (Number.isNaN(expiresAt)) return null
+
+    const token = investmentDecrypt(data.cached_access_token_encrypted)
+    return { token, expiresAt }
+  } catch (err) {
+    console.warn('[KIS] DB 토큰 로드 실패:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+/**
+ * DB에 토큰 저장 (암호화)
+ */
+async function saveTokenToDb(credentialId: string, token: string, expiresAt: number): Promise<void> {
+  try {
+    const { getSupabaseAdmin } = await import('@/lib/supabase/admin')
+    const { investmentEncrypt } = await import('@/lib/investmentCrypto')
+    const supabase = getSupabaseAdmin()
+    if (!supabase) return
+
+    const encrypted = investmentEncrypt(token)
+    const expiresAtIso = new Date(expiresAt).toISOString()
+
+    await supabase
+      .from('user_broker_credentials')
+      .update({
+        cached_access_token_encrypted: encrypted,
+        token_expires_at: expiresAtIso,
+      })
+      .eq('id', credentialId)
+  } catch (err) {
+    console.warn('[KIS] DB 토큰 저장 실패:', err instanceof Error ? err.message : err)
+  }
 }
 
 /**

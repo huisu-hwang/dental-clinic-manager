@@ -87,8 +87,13 @@ export async function GET() {
       action: 'balance_fetch_failed',
     })
 
+    // KIS 토큰 발급 제한(403 EGW00133)은 사용자 친화 메시지로
+    const friendlyMessage = message.includes('EGW00133') || message.includes('접근토큰 발급 잠시 후')
+      ? '잠시 후 다시 시도해주세요 (KIS API 요청이 많아 1분간 제한되었습니다)'
+      : message
+
     return NextResponse.json({
-      error: message,
+      error: friendlyMessage,
       hasCredential: true,
     }, { status: 500 })
   }
