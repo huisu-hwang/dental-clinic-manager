@@ -1182,7 +1182,7 @@ export async function performAnalysisV2(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       contents.push(candidate.content as any);
 
-      // Function calls 처리 (Thought Signature 포함)
+      // Function calls 처리
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const functionResponseParts: any[] = [];
 
@@ -1190,7 +1190,7 @@ export async function performAnalysisV2(
         if (part.functionCall) {
           const { name, args } = part.functionCall;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const thoughtSignature = (part.functionCall as any).thoughtSignature;
+          const callId = (part.functionCall as any).id || '';
 
           const result = await processToolCall(
             supabase,
@@ -1200,12 +1200,19 @@ export async function performAnalysisV2(
           );
           console.log(`[AI Analysis V2 Gemini] Tool result for ${name}:`, result.substring(0, 500));
 
-          // Thought Signature를 포함한 function response 구성
+          // function response 구성 (thoughtSignature는 functionResponse 외부, Part 레벨에 배치)
+          let parsedResult: Record<string, unknown>;
+          try {
+            parsedResult = JSON.parse(result);
+          } catch {
+            parsedResult = { result: result };
+          }
+
           functionResponseParts.push({
             functionResponse: {
+              id: callId,
               name: name || '',
-              response: JSON.parse(result),
-              ...(thoughtSignature && { thoughtSignature }),
+              response: parsedResult,
             },
           });
         }
