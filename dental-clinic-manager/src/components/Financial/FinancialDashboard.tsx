@@ -14,12 +14,11 @@ import ExpenseForm from './ExpenseForm'
 import HometaxSyncPanel from './HometaxSyncPanel'
 import HometaxDataView from './HometaxDataView'
 import HometaxCredentialsSettings from './HometaxCredentialsSettings'
-import TaxSettingsForm from './TaxSettingsForm'
+// import TaxSettingsForm from './TaxSettingsForm' // 추후 구체화 후 복원
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  PiggyBank,
   Receipt,
   Plus,
   ChevronLeft,
@@ -108,13 +107,17 @@ export default function FinancialDashboard() {
     loadData()
   }, [clinicId, selectedYear, selectedMonth])
 
-  // sync_pending일 때 자동 재조회 (최대 6회, 5초 간격 = 30초)
+  // sync_pending일 때 자동 재조회
+  // 워커 동기화 주기가 최대 5분이므로, 처음 30초는 5초 간격 → 이후 15초 간격으로 최대 5분까지 폴링
   useEffect(() => {
-    if (!syncPending || syncRetryCount >= 6) return
+    if (!syncPending) return
+    const maxRetries = 26 // 6회(30초) + 20회(300초) = 약 5분 30초
+    if (syncRetryCount >= maxRetries) return
+    const interval = syncRetryCount < 6 ? 5000 : 15000
     const timer = setTimeout(() => {
       setSyncRetryCount(prev => prev + 1)
       loadData()
-    }, 5000)
+    }, interval)
     return () => clearTimeout(timer)
   }, [syncPending, syncRetryCount])
 
@@ -265,7 +268,7 @@ export default function FinancialDashboard() {
                     {selectedYear}년 {selectedMonth}월 수입 데이터를 덴트웹에서 불러오는 중...
                   </p>
                   <p className="text-xs text-amber-600 mt-0.5">
-                    워커에서 처리 후 자동으로 반영됩니다 (최대 30초 소요)
+                    워커 동기화 주기에 따라 자동으로 반영됩니다 (최대 수 분 소요)
                   </p>
                 </div>
               </div>
@@ -348,22 +351,7 @@ export default function FinancialDashboard() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl shadow-md p-6 overflow-hidden relative group hover:shadow-lg transition-shadow text-white">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <PiggyBank className="w-24 h-24 text-white transform translate-x-4 -translate-y-4" />
-              </div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold tracking-wider text-purple-200 uppercase">예상 세후 순이익</p>
-                <span className="bg-white/20 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">올해 누적</span>
-              </div>
-              <h3 className="text-3xl font-black mt-2 mb-4">
-                {formatCurrency(summary?.estimated_post_tax_profit ?? summary?.post_tax_profit ?? 0)}
-              </h3>
-              <div className="flex items-center justify-between text-xs font-medium bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-                <span>예상 세금 ({summary?.estimated_elapsed_months || selectedMonth}개월 누적)</span>
-                <span className="text-base">{formatCurrency(summary?.estimated_total_tax ?? 0)}</span>
-              </div>
-            </div>
+            {/* 예상 세후 순이익 카드 — 추후 구체화 후 다시 노출 예정 */}
           </div>
 
           {/* Hometax Integration - Placeholder */}
@@ -611,8 +599,8 @@ export default function FinancialDashboard() {
             </div>
           </div>
 
-          {/* 세무 설정 (예상 세금 계산용) */}
-          <TaxSettingsForm clinicId={clinicId} onSaved={loadData} />
+          {/* 세무 설정 (예상 세금 계산용) — 추후 구체화 후 다시 노출 예정 */}
+          {/* <TaxSettingsForm clinicId={clinicId} onSaved={loadData} /> */}
 
           {/* 홈택스 인증정보 설정 */}
           <HometaxCredentialsSettings clinicId={clinicId} />
