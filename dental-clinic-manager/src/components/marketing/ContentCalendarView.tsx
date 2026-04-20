@@ -282,17 +282,17 @@ export default function ContentCalendarView() {
   return (
     <div className="space-y-4">
       {/* 헤더 / 액션 */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-200">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-at-border">
         <div className="flex items-center gap-2">
-          <CalendarDaysIcon className="h-5 w-5 text-gray-700" />
-          <h2 className="text-base font-bold text-gray-900">콘텐츠 캘린더</h2>
-          <span className="text-xs text-gray-500">— AI가 한 달치 주제를 기획하고, 승인하면 자동 발행됩니다</span>
+          <CalendarDaysIcon className="h-5 w-5 text-at-text-secondary" />
+          <h2 className="text-base font-bold text-at-text">콘텐츠 캘린더</h2>
+          <span className="text-xs text-at-text-weak">— AI가 한 달치 주제를 기획하고, 승인하면 자동 발행됩니다</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleGenerate(0)}
             disabled={generating}
-            className="bg-emerald-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1"
+            className="bg-at-accent text-white text-sm px-3 py-1.5 rounded-xl hover:bg-at-accent-hover disabled:opacity-50 inline-flex items-center gap-1 transition-all duration-200"
           >
             <SparklesIcon className={`h-4 w-4 ${generating ? 'animate-pulse' : ''}`} />
             {generating ? '생성 중...' : '이번 달 계획 생성'}
@@ -300,14 +300,14 @@ export default function ContentCalendarView() {
           <button
             onClick={() => handleGenerate(1)}
             disabled={generating}
-            className="bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            className="bg-at-surface-alt text-at-text-secondary text-sm px-3 py-1.5 rounded-xl hover:bg-at-surface-hover disabled:opacity-50 transition-all duration-200"
           >
             다음 달 계획
           </button>
           <button
             onClick={loadCalendars}
             disabled={loading}
-            className="text-gray-500 hover:text-gray-700 p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
+            className="text-at-text-weak hover:text-at-text-secondary p-1.5 rounded-xl hover:bg-at-surface-alt disabled:opacity-50 transition-all duration-200"
             title="새로고침"
           >
             <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -316,7 +316,7 @@ export default function ContentCalendarView() {
       </div>
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-sm text-rose-700">
+        <div className="bg-at-error-bg border border-at-error/20 rounded-xl p-3 text-sm text-at-error">
           ⚠️ {error}
         </div>
       )}
@@ -324,11 +324,11 @@ export default function ContentCalendarView() {
       {/* 캘린더 목록 (드롭다운) */}
       {calendars.length > 0 && (
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">기간:</label>
+          <label className="text-sm text-at-text-secondary">기간:</label>
           <select
             value={selectedCalendarId || ''}
             onChange={(e) => setSelectedCalendarId(e.target.value)}
-            className="text-sm border border-gray-300 rounded px-2 py-1"
+            className="text-sm border border-at-border rounded-xl px-2 py-1"
           >
             {calendars.map((c) => (
               <option key={c.id} value={c.id}>
@@ -341,22 +341,22 @@ export default function ContentCalendarView() {
 
       {/* 통계 패널 */}
       {selected && stats && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-at-surface-alt border border-at-border rounded-2xl shadow-at-card p-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
-            <div className="text-[11px] text-gray-500">총 주제</div>
-            <div className="text-lg font-bold text-gray-900">{stats.total}개</div>
+            <div className="text-xs text-at-text-secondary font-medium">총 주제</div>
+            <div className="text-2xl font-bold text-at-text">{stats.total}개</div>
           </div>
           <div>
-            <div className="text-[11px] text-gray-500">승인 완료</div>
-            <div className="text-lg font-bold text-emerald-600">{stats.byStatus.approved || 0}개</div>
+            <div className="text-xs text-at-text-secondary font-medium">승인 완료</div>
+            <div className="text-2xl font-bold text-at-success">{stats.byStatus.approved || 0}개</div>
           </div>
           <div>
-            <div className="text-[11px] text-gray-500">발행 예정</div>
-            <div className="text-lg font-bold text-violet-600">{stats.byStatus.scheduled || 0}개</div>
+            <div className="text-xs text-at-text-secondary font-medium">발행 예정</div>
+            <div className="text-2xl font-bold text-at-accent">{stats.byStatus.scheduled || 0}개</div>
           </div>
           <div>
-            <div className="text-[11px] text-gray-500">심의 필요</div>
-            <div className="text-lg font-bold text-yellow-700">{stats.needsReview}개</div>
+            <div className="text-xs text-at-text-secondary font-medium">심의 필요</div>
+            <div className="text-2xl font-bold text-at-warning">{stats.needsReview}개</div>
           </div>
           <div className="col-span-2 sm:col-span-4 flex flex-wrap gap-1.5 mt-1">
             {Object.entries(stats.byCategory).map(([cat, count]) => {
@@ -365,10 +365,10 @@ export default function ContentCalendarView() {
               return (
                 <span
                   key={cat}
-                  className="text-[11px] bg-white border border-gray-200 px-2 py-0.5 rounded inline-flex items-center gap-1"
+                  className="text-xs bg-at-surface border border-at-border px-2 py-0.5 rounded-full inline-flex items-center gap-1"
                 >
                   <span>{meta.label}</span>
-                  <span className="font-bold text-gray-700">{count}</span>
+                  <span className="font-bold text-at-text-secondary">{count}</span>
                 </span>
               )
             })}
@@ -376,78 +376,82 @@ export default function ContentCalendarView() {
         </div>
       )}
 
-      {/* 일괄 액션 */}
-      {selected && (selected.content_calendar_items || []).some((i) => ['proposed', 'modified'].includes(i.status)) && (
-        <div className="flex flex-wrap gap-2 items-center bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <span className="text-sm text-amber-800">⚡ 일괄 작업:</span>
-          <button
-            onClick={() => handleBulk('approve_all')}
-            disabled={bulkBusy !== null}
-            className="bg-emerald-600 text-white text-xs px-3 py-1 rounded hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1"
-          >
-            <CheckCircleIcon className="h-3.5 w-3.5" />
-            {bulkBusy === 'approve_all' ? '처리 중...' : '모두 승인'}
-          </button>
-          <button
-            onClick={() => handleBulk('approve_non_review')}
-            disabled={bulkBusy !== null}
-            className="bg-emerald-50 text-emerald-700 text-xs px-3 py-1 rounded hover:bg-emerald-100 disabled:opacity-50"
-          >
-            {bulkBusy === 'approve_non_review' ? '처리 중...' : '심의 필요 제외 모두 승인'}
-          </button>
-          <button
-            onClick={() => handleBulk('reject_all')}
-            disabled={bulkBusy !== null}
-            className="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded hover:bg-gray-200 disabled:opacity-50"
-          >
-            {bulkBusy === 'reject_all' ? '처리 중...' : '모두 반려'}
-          </button>
-        </div>
-      )}
-
-      {/* 선택된 항목 일괄 작업 바 */}
-      {selectedItems.size > 0 && (
-        <div className="sticky top-0 z-10 flex flex-wrap gap-2 items-center bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm">
-          <span className="text-sm font-medium text-blue-800">
-            {selectedItems.size}개 선택됨
-          </span>
-          <button
-            onClick={() => handleBatchAction('batch_approve')}
-            disabled={bulkBusy !== null}
-            className="bg-emerald-600 text-white text-xs px-3 py-1.5 rounded hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1"
-          >
-            <CheckCircleIcon className="h-3.5 w-3.5" />
-            {bulkBusy === 'batch_approve' ? '처리 중...' : '선택 승인'}
-          </button>
-          <button
-            onClick={() => handleBatchAction('batch_regenerate')}
-            disabled={bulkBusy !== null}
-            className="bg-violet-100 text-violet-700 text-xs px-3 py-1.5 rounded hover:bg-violet-200 disabled:opacity-50 inline-flex items-center gap-1"
-          >
-            <ArrowPathIcon className={`h-3.5 w-3.5 ${bulkBusy === 'batch_regenerate' ? 'animate-spin' : ''}`} />
-            {bulkBusy === 'batch_regenerate' ? '재생성 중...' : '선택 재생성'}
-          </button>
-          <button
-            onClick={() => handleBatchAction('batch_reject')}
-            disabled={bulkBusy !== null}
-            className="bg-rose-100 text-rose-700 text-xs px-3 py-1.5 rounded hover:bg-rose-200 disabled:opacity-50 inline-flex items-center gap-1"
-          >
-            <XCircleIcon className="h-3.5 w-3.5" />
-            {bulkBusy === 'batch_reject' ? '처리 중...' : '선택 반려'}
-          </button>
-          <button
-            onClick={handleClearSelection}
-            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 ml-auto"
-          >
-            선택 해제
-          </button>
+      {/* 일괄 작업 바 (통합) */}
+      {selected && (
+        selectedItems.size > 0 ||
+        (selected.content_calendar_items || []).some((i) => ['proposed', 'modified'].includes(i.status))
+      ) && (
+        <div className="bg-at-surface-alt border border-at-border rounded-2xl p-3 sticky top-0 z-10 flex flex-wrap gap-2 items-center transition-all duration-200">
+          {selectedItems.size > 0 ? (
+            <>
+              <span className="bg-at-accent text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                {selectedItems.size}개 선택됨
+              </span>
+              <button
+                onClick={() => handleBatchAction('batch_approve')}
+                disabled={bulkBusy !== null}
+                className="bg-at-accent text-white text-xs px-3 py-1.5 rounded-xl hover:bg-at-accent-hover disabled:opacity-50 inline-flex items-center gap-1 transition-all duration-200"
+              >
+                <CheckCircleIcon className="h-3.5 w-3.5" />
+                {bulkBusy === 'batch_approve' ? '처리 중...' : '선택 승인'}
+              </button>
+              <button
+                onClick={() => handleBatchAction('batch_regenerate')}
+                disabled={bulkBusy !== null}
+                className="bg-at-surface text-at-accent border border-at-accent/30 text-xs px-3 py-1.5 rounded-xl hover:bg-at-accent-light disabled:opacity-50 inline-flex items-center gap-1 transition-all duration-200"
+              >
+                <ArrowPathIcon className={`h-3.5 w-3.5 ${bulkBusy === 'batch_regenerate' ? 'animate-spin' : ''}`} />
+                {bulkBusy === 'batch_regenerate' ? '재생성 중...' : '선택 재생성'}
+              </button>
+              <button
+                onClick={() => handleBatchAction('batch_reject')}
+                disabled={bulkBusy !== null}
+                className="bg-at-surface text-at-error border border-at-error/20 text-xs px-3 py-1.5 rounded-xl hover:bg-at-error-bg disabled:opacity-50 inline-flex items-center gap-1 transition-all duration-200"
+              >
+                <XCircleIcon className="h-3.5 w-3.5" />
+                {bulkBusy === 'batch_reject' ? '처리 중...' : '선택 반려'}
+              </button>
+              <button
+                onClick={handleClearSelection}
+                className="text-at-text-weak hover:text-at-text-secondary text-xs px-2 py-1.5 ml-auto transition-all duration-200"
+              >
+                선택 해제
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-at-text-secondary font-medium">전체:</span>
+              <button
+                onClick={() => handleBulk('approve_all')}
+                disabled={bulkBusy !== null}
+                className="bg-at-accent text-white text-xs px-3 py-1.5 rounded-xl hover:bg-at-accent-hover disabled:opacity-50 inline-flex items-center gap-1 transition-all duration-200"
+              >
+                <CheckCircleIcon className="h-3.5 w-3.5" />
+                {bulkBusy === 'approve_all' ? '처리 중...' : '모두 승인'}
+              </button>
+              <button
+                onClick={() => handleBulk('approve_non_review')}
+                disabled={bulkBusy !== null}
+                className="bg-at-accent text-white text-xs px-3 py-1.5 rounded-xl hover:bg-at-accent-hover disabled:opacity-50 transition-all duration-200"
+              >
+                {bulkBusy === 'approve_non_review' ? '처리 중...' : '심의 제외 승인'}
+              </button>
+              <button
+                onClick={() => handleBulk('reject_all')}
+                disabled={bulkBusy !== null}
+                className="bg-at-surface text-at-error border border-at-error/20 text-xs px-3 py-1.5 rounded-xl hover:bg-at-error-bg disabled:opacity-50 transition-all duration-200"
+              >
+                {bulkBusy === 'reject_all' ? '처리 중...' : '모두 반려'}
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {/* 빈 상태 */}
       {!loading && calendars.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <CalendarDaysIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+        <div className="text-center py-12 text-at-text-weak">
+          <CalendarDaysIcon className="h-12 w-12 mx-auto mb-3 text-at-text-weak" />
           <p className="text-sm">아직 생성된 캘린더가 없습니다.</p>
           <p className="text-xs mt-1">위의 &quot;이번 달 계획 생성&quot; 버튼을 눌러 시작하세요.</p>
         </div>
@@ -456,12 +460,12 @@ export default function ContentCalendarView() {
       {/* 월간 그리드 */}
       {selected && grid && (
         <div>
-          <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-at-border border border-at-border rounded-2xl overflow-hidden">
             {WEEKDAY_LABELS.map((label, i) => (
               <div
                 key={label}
-                className={`bg-gray-50 text-center text-xs font-medium py-1.5 ${
-                  i === 0 ? 'text-rose-600' : i === 6 ? 'text-blue-600' : 'text-gray-700'
+                className={`bg-at-surface-alt text-center text-xs font-semibold py-1.5 ${
+                  i === 0 ? 'text-at-error' : i === 6 ? 'text-at-accent' : 'text-at-text-secondary'
                 }`}
               >
                 {label}
@@ -474,11 +478,11 @@ export default function ContentCalendarView() {
               return (
                 <div
                   key={cell.date}
-                  className={`bg-white min-h-[110px] p-1.5 ${cell.inMonth ? '' : 'opacity-40 bg-gray-50'}`}
+                  className={`bg-at-surface min-h-[120px] p-1.5 ${cell.inMonth ? '' : 'opacity-40 bg-at-surface-alt'}`}
                 >
                   <div
-                    className={`text-[11px] font-medium mb-1 ${
-                      dow === 0 ? 'text-rose-500' : dow === 6 ? 'text-blue-500' : 'text-gray-700'
+                    className={`text-xs font-semibold mb-1 ${
+                      dow === 0 ? 'text-at-error' : dow === 6 ? 'text-at-accent' : 'text-at-text-secondary'
                     }`}
                   >
                     {day}
