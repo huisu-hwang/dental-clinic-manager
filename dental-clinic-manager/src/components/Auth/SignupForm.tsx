@@ -6,9 +6,8 @@ import { dataService } from '@/lib/dataService'
 import { getSupabase } from '@/lib/supabase'
 import { encryptResidentNumber } from '@/utils/encryptionUtils'
 import {
-  validateResidentNumberWithMessage,
-  autoFormatResidentNumber,
-  sanitizeResidentNumberInput
+  validatePartialResidentNumberWithMessage,
+  autoFormatPartialResidentNumber,
 } from '@/utils/residentNumberUtils'
 import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
 import ConsentAgreementSection from '@/components/Auth/ConsentAgreementSection'
@@ -184,10 +183,10 @@ export default function SignupForm({
       return false;
     }
 
-    // 주민등록번호 검증
-    const residentValidation = validateResidentNumberWithMessage(formData.residentNumber);
+    // 주민등록번호 앞 7자리 검증
+    const residentValidation = validatePartialResidentNumberWithMessage(formData.residentNumber);
     if (!residentValidation.isValid) {
-      setError(residentValidation.error || '주민등록번호가 유효하지 않습니다.');
+      setError(residentValidation.error || '주민등록번호 앞 7자리가 유효하지 않습니다.');
       return false;
     }
 
@@ -217,7 +216,7 @@ export default function SignupForm({
       return false;
     }
     if (!consents.sensitive_info) {
-      setError('민감정보(주민등록번호) 수집 동의를 해주세요.');
+      setError('민감정보(주민등록번호 앞 7자리) 수집 동의를 해주세요.');
       return false;
     }
 
@@ -518,7 +517,7 @@ export default function SignupForm({
 
               <div>
                 <label htmlFor="residentNumber" className="block text-sm font-medium text-at-text-secondary mb-1">
-                  주민등록번호 * <span className="text-xs text-at-text-weak">(암호화되어 저장됩니다)</span>
+                  주민등록번호 앞 7자리 * <span className="text-xs text-at-text-weak">(생년월일 + 성별)</span>
                 </label>
                 <input
                   type="text"
@@ -526,17 +525,17 @@ export default function SignupForm({
                   name="residentNumber"
                   value={formData.residentNumber}
                   onChange={(e) => {
-                    const formatted = autoFormatResidentNumber(e.target.value);
+                    const formatted = autoFormatPartialResidentNumber(e.target.value);
                     setFormData(prev => ({ ...prev, residentNumber: formatted.value }));
                   }}
                   className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
-                  placeholder="123456-7890123"
-                  maxLength={14}
+                  placeholder="900101-1"
+                  maxLength={8}
                   required
                   disabled={loading}
                 />
                 <p className="text-xs text-at-text-weak mt-1">
-                  ※ 근로계약서 작성 시 필요합니다. 암호화되어 안전하게 보관됩니다.
+                  ※ 전체 주민등록번호는 근로계약서 작성 시 별도로 입력합니다.
                 </p>
               </div>
 

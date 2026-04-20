@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { MagnifyingGlassIcon, BuildingOfficeIcon, PlusCircleIcon, LockClosedIcon, HomeIcon, IdentificationIcon } from '@heroicons/react/24/outline'
 import { getSupabase } from '@/lib/supabase'
-import { formatResidentNumber, validateResidentNumberWithMessage } from '@/utils/residentNumberUtils'
+import { formatPartialResidentNumber, validatePartialResidentNumberWithMessage, autoFormatPartialResidentNumber } from '@/utils/residentNumberUtils'
 import { encryptResidentNumber } from '@/utils/encryptionUtils'
 import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
 
@@ -108,14 +108,14 @@ export default function ClinicSelectionForm({
     }
 
     if (!joinRequestData.resident_registration_number) {
-      setError('주민등록번호는 필수 입력입니다.')
+      setError('주민등록번호 앞 7자리를 입력해주세요.')
       return
     }
 
-    // Validate resident registration number
-    const validation = validateResidentNumberWithMessage(joinRequestData.resident_registration_number)
+    // Validate partial resident registration number (앞 7자리)
+    const validation = validatePartialResidentNumberWithMessage(joinRequestData.resident_registration_number)
     if (!validation.isValid) {
-      setError(validation.error || '주민등록번호 형식이 올바르지 않습니다.')
+      setError(validation.error || '주민등록번호 앞 7자리 형식이 올바르지 않습니다.')
       return
     }
 
@@ -407,7 +407,7 @@ export default function ClinicSelectionForm({
                       개인정보 (근로계약서용)
                     </h4>
                     <p className="text-xs text-at-text-secondary">
-                      주민등록번호는 AES-256 암호화되어 안전하게 저장됩니다.
+                      주민등록번호 앞 7자리(생년월일+성별)만 수집합니다. 전체 주민번호는 근로계약서 작성 시 별도 입력합니다.
                     </p>
                   </div>
                 </div>
@@ -433,7 +433,7 @@ export default function ClinicSelectionForm({
 
                   <div>
                     <label className="block text-sm font-medium text-at-text-secondary mb-1">
-                      주민등록번호 *
+                      주민등록번호 앞 7자리 *
                     </label>
                     <div className="relative">
                       <IdentificationIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-at-text-weak" />
@@ -441,19 +441,19 @@ export default function ClinicSelectionForm({
                         type="text"
                         value={joinRequestData.resident_registration_number}
                         onChange={(e) => {
-                          const formatted = formatResidentNumber(e.target.value)
-                          setJoinRequestData({ ...joinRequestData, resident_registration_number: formatted })
+                          const formatted = autoFormatPartialResidentNumber(e.target.value)
+                          setJoinRequestData({ ...joinRequestData, resident_registration_number: formatted.value })
                         }}
                         className="w-full pl-10 pr-3 py-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent font-mono"
-                        placeholder="000000-0000000"
-                        maxLength={14}
+                        placeholder="900101-1"
+                        maxLength={8}
                         required
                         disabled={submitting}
                       />
                     </div>
                     <p className="mt-1 text-xs text-at-text-weak flex items-center">
                       <LockClosedIcon className="h-3 w-3 text-at-success mr-1" />
-                      근로계약서 작성에 사용되며, 암호화되어 저장됩니다.
+                      전체 주민등록번호는 근로계약서 작성 시 별도로 입력합니다.
                     </p>
                   </div>
                 </div>

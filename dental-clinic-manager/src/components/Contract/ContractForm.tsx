@@ -13,7 +13,7 @@ import { convertWorkScheduleToContractData, formatDaySchedule } from '@/utils/wo
 import type { ContractFormData, ContractData } from '@/types/contract'
 import type { User } from '@/types/auth'
 import type { UserProfile } from '@/contexts/AuthContext'
-import { formatResidentNumber } from '@/utils/residentNumberUtils'
+import { formatResidentNumber, autoFormatResidentNumber, validateResidentNumberWithMessage } from '@/utils/residentNumberUtils'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import type { DaySchedule, WorkSchedule, DayName } from '@/types/workSchedule'
 import { appAlert } from '@/components/ui/AppDialog'
@@ -78,23 +78,17 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       if (selectedEmployee) {
         console.log('[ContractForm] Employee selected, loading data:', selectedEmployee.id)
 
-        // 1. 주민번호 복호화
-        console.log('[ContractForm] Decrypting resident number...')
-        const decryptedResidentNumber = selectedEmployee.resident_registration_number
-          ? await decryptResidentNumber(selectedEmployee.resident_registration_number)
-          : ''
+        // 주민번호는 프로필에서 가져오지 않음 (앞 7자리만 저장되어 있으므로)
+        // 근로계약서 작성 시 직원이 전체 13자리를 직접 입력
+        console.log('[ContractForm] Employee selected - resident number will be entered manually for contract')
 
-        if (!decryptedResidentNumber && selectedEmployee.resident_registration_number) {
-          console.warn('[ContractForm] Failed to decrypt resident number')
-        }
-
-        // 2. 기본 직원 정보 자동 입력
+        // 기본 직원 정보 자동 입력 (주민번호 제외)
         setFormData(prev => ({
           ...prev,
           employee_name: selectedEmployee.name,
           employee_address: selectedEmployee.address || '',
           employee_phone: selectedEmployee.phone || '',
-          employee_resident_number: decryptedResidentNumber || '',
+          employee_resident_number: '', // 직원이 직접 입력
           // 직원의 입사일이 있으면 계약 시작일에 자동 입력
           ...(selectedEmployee.hire_date && { employment_period_start: selectedEmployee.hire_date })
         }))
@@ -207,6 +201,13 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       return
     }
 
+    // 주민등록번호 전체(13자리) 검증
+    const residentValidation = validateResidentNumberWithMessage(formData.employee_resident_number || '')
+    if (!residentValidation.isValid) {
+      await appAlert(residentValidation.error || '주민등록번호(13자리)를 정확히 입력해주세요.')
+      return
+    }
+
     if (periodType === 'unset') {
       await appAlert('근로 기한을 선택해주세요 (무기한 또는 기간 있음).')
       return
@@ -291,13 +292,23 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-at-text-secondary mb-1">주민등록번호</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">
+                  주민등록번호 <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formatResidentNumber(formData.employee_resident_number || '')}
-                  readOnly
-                  className="w-full px-3 py-2 border border-at-border rounded bg-at-surface-alt"
+                  onChange={(e) => {
+                    const formatted = autoFormatResidentNumber(e.target.value)
+                    setFormData(prev => ({ ...prev, employee_resident_number: formatted.value }))
+                  }}
+                  placeholder="000000-0000000"
+                  maxLength={14}
+                  className="w-full px-3 py-2 border border-at-border rounded focus:ring-2 focus:ring-at-accent focus:border-transparent font-mono"
                 />
+                <p className="mt-1 text-xs text-at-text-weak">
+                  근로계약서 작성을 위해 전체 주민등록번호(13자리)를 입력해주세요. 암호화되어 저장됩니다.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-at-text-secondary mb-1">전화번호</label>

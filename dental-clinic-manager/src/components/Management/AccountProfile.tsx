@@ -19,10 +19,9 @@ import {
 } from 'lucide-react'
 import type { UserProfile } from '@/contexts/AuthContext'
 import {
-  formatResidentNumber,
-  validateResidentNumberWithMessage,
-  maskResidentNumber,
-  checkPersonalInfoCompletion
+  formatPartialResidentNumber,
+  validatePartialResidentNumberWithMessage,
+  checkPersonalInfoCompletionPartial
 } from '@/utils/residentNumberUtils'
 import { encryptResidentNumber, decryptResidentNumber } from '@/utils/encryptionUtils'
 import { checkSecuritySession, setSecuritySession } from '@/lib/securitySession'
@@ -171,7 +170,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   }
 
   const handleResidentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatResidentNumber(e.target.value)
+    const formatted = formatPartialResidentNumber(e.target.value)
     setFormData(prev => ({
       ...prev,
       resident_registration_number: formatted
@@ -181,7 +180,7 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
   }
 
   // Check if personal info is missing
-  const personalInfoStatus = checkPersonalInfoCompletion({
+  const personalInfoStatus = checkPersonalInfoCompletionPartial({
     name: formData.name,
     phone: formData.phone,
     address: formData.address,
@@ -193,11 +192,11 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
     setError('')
     setSuccess('')
 
-    // Validate resident registration number if provided
+    // Validate partial resident registration number if provided (앞 7자리)
     if (formData.resident_registration_number) {
-      const validation = validateResidentNumberWithMessage(decryptedResidentNumber)
+      const validation = validatePartialResidentNumberWithMessage(decryptedResidentNumber)
       if (!validation.isValid) {
-        setError(validation.error || '주민등록번호 형식이 올바르지 않습니다.')
+        setError(validation.error || '주민등록번호 앞 7자리 형식이 올바르지 않습니다.')
         return
       }
     }
@@ -403,8 +402,8 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                       개인정보 (근로계약서용)
                     </h3>
                     <p className="text-xs text-at-text-secondary">
-                      주민등록번호는 AES-256 암호화되어 안전하게 저장됩니다.
-                      본인과 원장님만 조회할 수 있습니다.
+                      주민등록번호 앞 7자리(생년월일+성별)만 수집합니다.
+                      전체 주민번호는 근로계약서 작성 시 별도로 입력합니다.
                     </p>
                   </div>
                 </div>
@@ -452,10 +451,10 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                     )}
                   </div>
 
-                  {/* Resident Registration Number */}
+                  {/* Resident Registration Number (앞 7자리) */}
                   <div>
                     <label className="block text-sm font-medium text-at-text-secondary mb-1">
-                      주민등록번호
+                      주민등록번호 앞 7자리
                       {!formData.resident_registration_number && <span className="text-red-500 ml-1">*</span>}
                     </label>
                     <div className="relative">
@@ -466,15 +465,15 @@ export default function AccountProfile({ currentUser, onClose, onUpdate }: Accou
                         value={loadingDecryption ? '복호화 중...' : (decryptedResidentNumber || formData.resident_registration_number)}
                         onChange={handleResidentNumberChange}
                         className="w-full pl-10 pr-3 py-2 border border-at-border rounded-lg focus:ring-at-accent focus:border-at-accent font-mono"
-                        placeholder="000000-0000000"
-                        maxLength={14}
+                        placeholder="900101-1"
+                        maxLength={8}
                         disabled={saving || loadingDecryption}
                       />
                     </div>
                     <div className="mt-1 flex items-start space-x-1">
                       <Lock className="w-3 h-3 text-at-success flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-at-text-weak">
-                        AES-256 암호화되어 저장됩니다. 본인과 원장만 조회 가능합니다.
+                        생년월일 + 성별 구분자만 수집합니다. 전체 주민번호는 근로계약서 작성 시 별도 입력합니다.
                       </p>
                     </div>
                     {!formData.resident_registration_number && (
