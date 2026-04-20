@@ -224,8 +224,7 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
                 <option value="US">미국</option>
               </select>
               <TickerSearch
-                value=""
-                onChange={(ticker, name) => { if (ticker) addTicker(ticker, name) }}
+                onSelect={(ticker, name) => addTicker(ticker, name)}
                 market={addingMarket}
                 className="flex-1"
               />
