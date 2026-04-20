@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
 import { PREMIUM_FEATURE_INFO } from '@/config/menuConfig'
-import type { PremiumFeatureId } from '@/config/menuConfig'
+import type { PremiumFeatureId, PremiumPlanOption } from '@/config/menuConfig'
 import { Sparkles, Check, CreditCard } from 'lucide-react'
 import CardRegistrationModal from '@/components/Subscription/CardRegistrationModal'
 import type { SubscriptionPlan } from '@/types/subscription'
@@ -32,14 +32,11 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
 
   const info = PREMIUM_FEATURE_INFO[featureId]
 
-  async function handleSubscribe() {
+  async function handleSelectPlan(option: PremiumPlanOption) {
     try {
       const res = await fetch('/api/subscription/plans?type=feature')
       const plans: SubscriptionPlan[] = await res.json()
-      // premium-bundle 또는 해당 feature의 플랜 찾기
-      const plan = featureId === 'investment'
-        ? plans.find(p => p.feature_id === 'investment')
-        : plans.find(p => p.feature_id === 'premium-bundle')
+      const plan = plans.find(p => p.feature_id === option.planFeatureId)
       if (plan) {
         setSelectedPlan(plan)
         setShowPayment(true)
@@ -51,19 +48,18 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
 
   return (
     <div className="relative min-h-screen">
-      {/* 데모 배경: 실제 콘텐츠를 흐리게 표시 */}
+      {/* 데모 배경 */}
       <div className="pointer-events-none select-none" aria-hidden="true">
         <div className="blur-[6px] opacity-40 saturate-50">
           {children}
         </div>
       </div>
 
-      {/* 중앙 오버레이: 기능 설명 + 결제 CTA */}
+      {/* 중앙 오버레이 */}
       <div className="absolute inset-0 flex items-center justify-center p-4 z-10">
-        {/* 배경 그라데이션 */}
         <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/80 to-white/60" />
 
-        <div className="relative w-full max-w-lg">
+        <div className="relative w-full max-w-2xl">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
             {/* 헤더 */}
             <div className="bg-gradient-to-r from-amber-400 to-amber-500 px-6 py-4">
@@ -76,44 +72,62 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
                     <h2 className="text-lg font-bold text-white">{info.title}</h2>
                     <span className="text-[10px] font-bold tracking-wider bg-white/25 text-white px-2 py-0.5 rounded-full">PRO</span>
                   </div>
-                  <p className="text-sm text-white/80">{info.planName} 플랜</p>
+                  <p className="text-sm text-white/80">{info.description}</p>
                 </div>
               </div>
             </div>
 
-            {/* 본문 */}
-            <div className="px-6 py-5">
-              <p className="text-sm text-gray-600 mb-4">{info.description}</p>
+            {/* 플랜 카드 */}
+            <div className={`px-6 py-5 ${info.plans.length > 1 ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : ''}`}>
+              {info.plans.map((option) => (
+                <div
+                  key={option.planFeatureId}
+                  className={`relative rounded-xl border-2 p-5 flex flex-col ${
+                    option.recommended ? 'border-amber-400 bg-amber-50/50' : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  {option.recommended && info.plans.length > 1 && (
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-3 py-0.5 text-[10px] font-bold text-white whitespace-nowrap">
+                      추천
+                    </span>
+                  )}
 
-              <ul className="space-y-2.5 mb-6">
-                {info.highlights.map((item, i) => (
-                  <li key={i} className="flex items-center gap-2.5 text-sm text-gray-700">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-3 h-3 text-green-600" />
-                    </div>
-                    {item}
-                  </li>
-                ))}
-              </ul>
+                  <h3 className="font-semibold text-gray-900 text-base">{option.name}</h3>
+                  <div className="mt-2 mb-4">
+                    <span className="text-2xl font-bold text-gray-900">{option.priceLabel}</span>
+                    {option.priceLabel.includes('원') && (
+                      <span className="text-xs text-gray-500 ml-1">(VAT 포함)</span>
+                    )}
+                  </div>
 
-              {/* 가격 */}
-              <div className="flex items-baseline gap-1 mb-5">
-                <span className="text-3xl font-bold text-gray-900">{info.priceLabel}</span>
-                {info.priceLabel.includes('원') && (
-                  <span className="text-sm text-gray-500">(VAT 포함)</span>
-                )}
-              </div>
+                  <ul className="space-y-2 mb-5 flex-1">
+                    {option.includes.map((item, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                        <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                          <Check className="w-2.5 h-2.5 text-green-600" />
+                        </div>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
 
-              {/* 결제 버튼 */}
-              <button
-                onClick={handleSubscribe}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40"
-              >
-                <CreditCard className="w-5 h-5" />
-                구독 시작하기
-              </button>
+                  <button
+                    onClick={() => handleSelectPlan(option)}
+                    className={`w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-xl transition-all text-sm ${
+                      option.recommended
+                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white shadow-lg shadow-amber-500/25'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    구독 시작하기
+                  </button>
+                </div>
+              ))}
+            </div>
 
-              <p className="text-center text-xs text-gray-400 mt-3">
+            <div className="px-6 pb-4">
+              <p className="text-center text-xs text-gray-400">
                 언제든 구독을 취소할 수 있습니다
               </p>
             </div>

@@ -44,6 +44,50 @@ async function loadYtdMonths(
   return (data ?? []) as Array<{ month: number; total_revenue: number | null; total_expense: number | null; pre_tax_profit: number | null }>;
 }
 
+// dentweb 연동 클리닉에서 해당 월 revenue가 없으면 pending 요청 추가
+async function requestRevenueSyncIfNeeded(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  clinicId: string,
+  year: number,
+  month: number,
+): Promise<boolean> {
+  // dentweb_sync_config가 있는지 (= dentweb 연동 클리닉인지) 확인
+  const { data: syncConfig } = await supabase
+    .from('dentweb_sync_config')
+    .select('id, pending_revenue_months, is_active')
+    .eq('clinic_id', clinicId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (!syncConfig) return false;
+
+  // 해당 월 revenue_records가 있는지 확인
+  const { data: existingRevenue } = await supabase
+    .from('revenue_records')
+    .select('id')
+    .eq('clinic_id', clinicId)
+    .eq('year', year)
+    .eq('month', month)
+    .maybeSingle();
+
+  if (existingRevenue) return false; // 이미 데이터 있음
+
+  // pending 목록에 이미 있는지 확인
+  const pending = (syncConfig.pending_revenue_months || []) as Array<{ year: number; month: number }>;
+  const alreadyPending = pending.some((p: { year: number; month: number }) => p.year === year && p.month === month);
+  if (alreadyPending) return true; // 이미 요청됨
+
+  // pending 목록에 추가
+  const updated = [...pending, { year, month }];
+  await supabase
+    .from('dentweb_sync_config')
+    .update({ pending_revenue_months: updated })
+    .eq('id', syncConfig.id);
+
+  return true; // 새로 요청함
+}
+
 // GET: 재무 요약 조회
 export async function GET(request: NextRequest) {
   try {
@@ -86,6 +130,9 @@ export async function GET(request: NextRequest) {
         .eq('month', monthNum)
         .single();
 
+      // 2-1. dentweb 연동인데 해당 월 revenue가 없으면 on-demand 동기화 요청
+      const syncPending = await requestRevenueSyncIfNeeded(supabase, clinicId, yearNum, monthNum);
+
       // 3. 올해 누적 순이익 + 예상 세금 계산
       const ytdMonths = await loadYtdMonths(supabase, clinicId, yearNum, monthNum);
       const ytdNetIncome = ytdMonths.reduce(
@@ -100,6 +147,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        sync_pending: syncPending,
         data: {
           ...(data || {}),
           revenue_source_type: revenueRecord?.source_type || null,

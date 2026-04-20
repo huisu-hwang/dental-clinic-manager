@@ -825,7 +825,9 @@ export default function DashboardPage() {
 
           {/* 환자 리콜 관리 */}
           {activeTab === 'recall' && (
-            <RecallManagement />
+            <PremiumGate featureId="recall">
+              <RecallManagement />
+            </PremiumGate>
           )}
 
           {/* 업무 체크리스트 */}
