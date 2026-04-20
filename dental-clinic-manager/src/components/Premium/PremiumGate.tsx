@@ -55,8 +55,8 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
         </div>
       </div>
 
-      {/* 상단 오버레이 */}
-      <div className="absolute inset-0 flex items-start justify-center pt-8 p-4 z-10 overflow-y-auto">
+      {/* 고정 오버레이 */}
+      <div className="fixed inset-0 flex items-center justify-center p-4 z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/30 to-transparent" />
 
         <div className="relative w-full max-w-2xl">
