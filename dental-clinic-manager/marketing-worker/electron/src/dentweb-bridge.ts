@@ -708,27 +708,25 @@ async function syncSingleMonthRevenue(
 
 /**
  * pending_revenue_months에서 요청된 월 동기화 + 처리 완료된 항목 제거
+ * 서버 API를 통해 pending 조회/정리 (RLS 우회)
  */
 async function processPendingRevenueMonths(dbPool: sql.ConnectionPool): Promise<void> {
   const cfg = getDentwebConfig();
   const { dashboardUrl } = getConfig();
   if (!cfg.clinicId || !cfg.apiKey) return;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://beahjntkmkfhpcbhfnrr.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  if (!supabaseAnonKey) return;
-
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // 서버 API로 pending 목록 조회 (RLS 우회)
+    const pendingUrl = `${dashboardUrl}/api/dentweb/pending-revenue?clinic_id=${cfg.clinicId}&api_key=${cfg.apiKey}`;
+    const pendingRes = await fetchWithRetry(pendingUrl, undefined, 1);
+    const pendingData = await pendingRes.json();
 
-    // pending_revenue_months 조회
-    const { data: config } = await supabase
-      .from('dentweb_sync_config')
-      .select('pending_revenue_months')
-      .eq('clinic_id', cfg.clinicId)
-      .single();
+    if (!pendingData.success) {
+      log('warn', `[DentWeb] pending 조회 실패: ${pendingData.error}`);
+      return;
+    }
 
-    const pending = (config?.pending_revenue_months || []) as Array<{ year: number; month: number }>;
+    const pending = (pendingData.data?.pending_months || []) as Array<{ year: number; month: number }>;
     if (pending.length === 0) return;
 
     log('info', `[DentWeb] on-demand 수입 동기화 요청 ${pending.length}건 처리 시작`);
@@ -742,17 +740,25 @@ async function processPendingRevenueMonths(dbPool: sql.ConnectionPool): Promise<
       }
     }
 
-    // 완료된 항목 제거
+    // 완료된 항목을 서버 API로 제거 (RLS 우회)
     if (completed.length > 0) {
-      const remaining = pending.filter(
-        p => !completed.some(c => c.year === p.year && c.month === p.month)
-      );
-      await supabase
-        .from('dentweb_sync_config')
-        .update({ pending_revenue_months: remaining })
-        .eq('clinic_id', cfg.clinicId);
+      const removeUrl = `${dashboardUrl}/api/dentweb/pending-revenue`;
+      const removeRes = await fetchWithRetry(removeUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinic_id: cfg.clinicId,
+          api_key: cfg.apiKey,
+          completed_months: completed,
+        }),
+      }, 1);
+      const removeData = await removeRes.json();
 
-      log('info', `[DentWeb] on-demand 수입 동기화 완료: ${completed.length}건 처리, ${remaining.length}건 잔여`);
+      if (removeData.success) {
+        log('info', `[DentWeb] on-demand 수입 동기화 완료: ${completed.length}건 처리, ${removeData.data?.remaining_count || 0}건 잔여`);
+      } else {
+        log('warn', `[DentWeb] pending 제거 실패: ${removeData.error}`);
+      }
     }
   } catch (err) {
     log('warn', `[DentWeb] on-demand 수입 동기화 오류: ${err instanceof Error ? err.message : String(err)}`);
