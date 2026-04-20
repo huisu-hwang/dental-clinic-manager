@@ -135,6 +135,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: '전체 거절 완료' });
     }
 
+    // 선택된 항목들에 대한 일괄 작업
+    const { itemIds } = body;
+    if (action === 'batch_approve' && Array.isArray(itemIds) && itemIds.length > 0) {
+      const { error } = await supabase
+        .from('content_calendar_items')
+        .update({ status: 'approved' })
+        .in('id', itemIds)
+        .in('status', ['proposed', 'modified']);
+      if (error) throw error;
+      return NextResponse.json({ message: `${itemIds.length}개 항목 승인 완료` });
+    }
+
+    if (action === 'batch_reject' && Array.isArray(itemIds) && itemIds.length > 0) {
+      const { error } = await supabase
+        .from('content_calendar_items')
+        .update({ status: 'rejected' })
+        .in('id', itemIds);
+      if (error) throw error;
+      return NextResponse.json({ message: `${itemIds.length}개 항목 반려 완료` });
+    }
+
+    if (action === 'batch_regenerate' && Array.isArray(itemIds) && itemIds.length > 0) {
+      // 재생성은 개별적으로 처리해야 하므로 itemIds만 반환
+      return NextResponse.json({ message: '일괄 재생성은 클라이언트에서 순차 처리합니다.', itemIds });
+    }
+
     return NextResponse.json({ error: '유효하지 않은 action' }, { status: 400 });
   } catch (error) {
     console.error('[API] calendar/items POST:', error);

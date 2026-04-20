@@ -25,6 +25,8 @@ interface Props {
   onReject: () => void | Promise<void>
   onUpdate: (patch: Partial<ContentCalendarItem>) => void | Promise<void>
   onRegenerate: () => void | Promise<void>
+  selected?: boolean
+  onToggleSelect?: (id: string) => void
 }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
@@ -55,6 +57,8 @@ export default function CalendarItemCard({
   onReject,
   onUpdate,
   onRegenerate,
+  selected,
+  onToggleSelect,
 }: Props) {
   const [editing, setEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(item.title)
@@ -88,8 +92,18 @@ export default function CalendarItemCard({
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg p-3 bg-white hover:border-gray-300 transition-all">
-      <div className="flex items-start justify-between gap-2 mb-2">
+    <div className={`group border rounded-lg p-2.5 bg-white transition-all ${
+      selected ? 'border-blue-400 bg-blue-50/30 ring-1 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+    }`}>
+      <div className="flex items-start gap-1.5 mb-1.5">
+        {onToggleSelect && !isLocked && (
+          <input
+            type="checkbox"
+            checked={selected || false}
+            onChange={() => onToggleSelect(item.id)}
+            className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+          />
+        )}
         <div className="flex flex-wrap items-center gap-1 min-w-0 flex-1">
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusBadge.cls}`}>
             {statusBadge.label}
@@ -178,7 +192,7 @@ export default function CalendarItemCard({
       )}
 
       {!isLocked && !editing && (
-        <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-100">
+        <div className="flex flex-wrap gap-1 pt-1.5 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity duration-150 max-h-0 group-hover:max-h-20 overflow-hidden">
           {canApprove && (
             <button
               onClick={() => handleAction('approve', onApprove)}
