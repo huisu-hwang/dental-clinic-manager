@@ -396,26 +396,38 @@ export default function LogsSection({
           </div>
           <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
             <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
-              <table className="w-full text-xs sm:text-sm text-left min-w-[500px]">
+              <table className="w-full text-xs sm:text-sm text-left min-w-[560px]">
                 <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
                   <tr>
-                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
-                    <th className="p-2 sm:p-3 font-medium">환자명</th>
-                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">선물 종류</th>
-                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">수량</th>
-                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">네이버 리뷰</th>
-                    <th className="p-2 sm:p-3 font-medium">비고</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 font-semibold whitespace-nowrap w-[100px] sm:w-[110px]">날짜</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 font-semibold w-[80px] sm:w-[100px]">환자명</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 font-semibold whitespace-nowrap">선물 종류</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 font-semibold whitespace-nowrap text-center w-[60px]">수량</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 font-semibold whitespace-nowrap w-[90px] sm:w-[110px]">리뷰</th>
+                    <th className="px-3 py-2.5 sm:px-4 sm:py-3 font-semibold">비고</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-at-border">
                   {sortedGiftLogs.map(log => (
-                    <tr key={log.id} className="border-b border-at-border hover:bg-at-surface-hover">
-                      <td className="p-2 sm:p-3 whitespace-nowrap">{log.date}</td>
-                      <td className="p-2 sm:p-3">{log.patient_name}</td>
-                      <td className="p-2 sm:p-3 whitespace-nowrap">{log.gift_type}</td>
-                      <td className="p-2 sm:p-3 text-center whitespace-nowrap">1개</td>
-                      <td className="p-2 sm:p-3 whitespace-nowrap">{log.naver_review}</td>
-                      <td className="p-2 sm:p-3">{log.notes}</td>
+                    <tr key={log.id} className="hover:bg-at-surface-hover transition-colors">
+                      <td className="px-3 py-2 sm:px-4 sm:py-2.5 whitespace-nowrap text-at-text-secondary">{log.date}</td>
+                      <td className="px-3 py-2 sm:px-4 sm:py-2.5 font-medium">{log.patient_name}</td>
+                      <td className="px-3 py-2 sm:px-4 sm:py-2.5 whitespace-nowrap">{log.gift_type}</td>
+                      <td className="px-3 py-2 sm:px-4 sm:py-2.5 text-center whitespace-nowrap">{log.quantity || 1}개</td>
+                      <td className="px-3 py-2 sm:px-4 sm:py-2.5 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                          log.naver_review === '미작성'
+                            ? 'bg-gray-100 text-gray-500'
+                            : log.naver_review === '네이버'
+                            ? 'bg-green-100 text-green-700'
+                            : log.naver_review === '구글'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {log.naver_review}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 sm:px-4 sm:py-2.5 text-at-text-secondary">{log.notes}</td>
                     </tr>
                   ))}
                 </tbody>
