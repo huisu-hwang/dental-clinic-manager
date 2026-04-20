@@ -161,4 +161,66 @@ export class DentwebApiClient {
       return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
     }
   }
+
+  /** 쿼리 결과 전송 */
+  async submitQueryResult(
+    clinicId: string,
+    apiKey: string,
+    result: {
+      request_id: string;
+      data?: unknown[];
+      row_count?: number;
+      error_message?: string;
+      execution_time_ms?: number;
+    }
+  ): Promise<void> {
+    const url = `${this.dashboardUrl}/api/dentweb/query`;
+    await this.request(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        clinic_id: clinicId,
+        api_key: apiKey,
+        ...result,
+      }),
+    });
+  }
+
+  /** 스키마 정보 전송 */
+  async submitSchema(
+    clinicId: string,
+    apiKey: string,
+    schemaData: {
+      tables: Array<{
+        name: string;
+        columns: Array<{ name: string; type: string; max_length: number | null; is_nullable: string }>;
+      }>;
+    },
+    writableTables: string[]
+  ): Promise<void> {
+    const url = `${this.dashboardUrl}/api/dentweb/schema`;
+    await this.request(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        clinic_id: clinicId,
+        api_key: apiKey,
+        schema_data: schemaData,
+        writable_tables: writableTables,
+      }),
+    });
+  }
+
+  /** 대기 중인 쿼리 요청 폴링 */
+  async pollPendingQueries(
+    clinicId: string,
+    apiKey: string
+  ): Promise<Array<{ id: string; query_type: string; query_text: string }>> {
+    try {
+      const data = await this.request(
+        `${this.dashboardUrl}/api/dentweb/query?clinic_id=${clinicId}&api_key=${apiKey}&action=poll`
+      );
+      return data.requests || [];
+    } catch {
+      return [];
+    }
+  }
 }

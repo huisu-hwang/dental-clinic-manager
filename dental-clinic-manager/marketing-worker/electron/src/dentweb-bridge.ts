@@ -1,6 +1,8 @@
 import sql from 'mssql';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { getConfig, setConfig, getDentwebConfig } from './config-store';
 import { log } from './logger';
+import { DentwebApiClient } from './dentweb-api-client';
 
 /* ------------------------------------------------------------------ */
 /*  Status management                                                  */
@@ -716,6 +718,278 @@ async function syncRevenueToServer(dbPool: sql.ConnectionPool): Promise<void> {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Schema discovery                                                   */
+/* ------------------------------------------------------------------ */
+
+/** DentWeb DB 전체 스키마를 INFORMATION_SCHEMA에서 탐색 */
+async function discoverDentwebSchema(dbPool: sql.ConnectionPool): Promise<{
+  tables: Array<{ name: string; columns: Array<{ name: string; type: string; max_length: number | null; is_nullable: string }> }>;
+  writableTables: string[];
+}> {
+  log('info', '[DentWeb] Discovering database schema...');
+
+  const tablesResult = await dbPool.request().query(`
+    SELECT TABLE_NAME
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_TYPE = 'BASE TABLE'
+    ORDER BY TABLE_NAME
+  `);
+
+  const columnsResult = await dbPool.request().query(`
+    SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE,
+           CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
+    FROM INFORMATION_SCHEMA.COLUMNS
+    ORDER BY TABLE_NAME, ORDINAL_POSITION
+  `);
+
+  const columnsByTable = new Map<string, Array<{ name: string; type: string; max_length: number | null; is_nullable: string }>>();
+  for (const col of columnsResult.recordset) {
+    const tableName = col.TABLE_NAME;
+    if (!columnsByTable.has(tableName)) {
+      columnsByTable.set(tableName, []);
+    }
+    columnsByTable.get(tableName)!.push({
+      name: col.COLUMN_NAME,
+      type: col.DATA_TYPE,
+      max_length: col.CHARACTER_MAXIMUM_LENGTH,
+      is_nullable: col.IS_NULLABLE,
+    });
+  }
+
+  const tables = tablesResult.recordset.map((t: { TABLE_NAME: string }) => ({
+    name: t.TABLE_NAME,
+    columns: columnsByTable.get(t.TABLE_NAME) || [],
+  }));
+
+  // 포스트잇/메모 관련 테이블 자동 식별 (쓰기 허용 대상)
+  const writablePatterns = ['포스트', 'postit', 'post_it', '메모', 'memo', '쪽지', 'note', '노트'];
+  const writableTables = tables
+    .filter((t: { name: string }) => writablePatterns.some(p => t.name.toLowerCase().includes(p.toLowerCase()) || t.name.includes(p)))
+    .map((t: { name: string }) => t.name);
+
+  log('info', `[DentWeb] Schema discovered: ${tables.length} tables, ${writableTables.length} writable tables: ${writableTables.join(', ') || '(none)'}`);
+
+  return { tables, writableTables };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Query proxy (Realtime + polling fallback)                          */
+/* ------------------------------------------------------------------ */
+
+let realtimeChannel: RealtimeChannel | null = null;
+let pollingInterval: ReturnType<typeof setInterval> | null = null;
+let queryApiClient: DentwebApiClient | null = null;
+let cachedWritableTables: string[] = [];
+
+/** 읽기 쿼리 안전 검증 */
+function validateReadQuery(queryText: string): void {
+  const normalized = queryText.trim().toUpperCase();
+
+  if (!normalized.startsWith('SELECT')) {
+    throw new Error('읽기 모드에서는 SELECT 쿼리만 실행할 수 있습니다.');
+  }
+
+  // 최상위 레벨에서 위험 명령 차단
+  const dangerousTopLevel = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE', 'EXEC', 'EXECUTE'];
+  for (const cmd of dangerousTopLevel) {
+    if (normalized.startsWith(cmd)) {
+      throw new Error(`읽기 모드에서는 ${cmd} 명령을 실행할 수 없습니다.`);
+    }
+  }
+
+  // xp_ / sp_ 위험 프로시저 차단
+  if (/\b(XP_|SP_)\w+/i.test(queryText)) {
+    throw new Error('시스템 프로시저 호출은 차단되어 있습니다.');
+  }
+}
+
+/** 쓰기 쿼리 안전 검증 (포스트잇 테이블만 허용) */
+function validateWriteQuery(queryText: string, writableTables: string[]): void {
+  const normalized = queryText.trim().toUpperCase();
+
+  if (!normalized.startsWith('INSERT') && !normalized.startsWith('UPDATE')) {
+    throw new Error('쓰기 모드에서는 INSERT 또는 UPDATE만 실행할 수 있습니다.');
+  }
+
+  // 위험 명령 차단
+  const blocked = ['DROP', 'TRUNCATE', 'ALTER', 'CREATE', 'EXEC', 'EXECUTE', 'XP_', 'DELETE'];
+  for (const cmd of blocked) {
+    const regex = new RegExp(`\\b${cmd}\\b`, 'i');
+    if (regex.test(queryText)) {
+      throw new Error(`차단된 SQL 명령입니다: ${cmd}`);
+    }
+  }
+
+  // 대상 테이블 추출
+  let targetTable = '';
+  if (normalized.startsWith('INSERT')) {
+    const match = queryText.match(/INSERT\s+INTO\s+\[?(\w+)\]?/i);
+    targetTable = match?.[1] || '';
+  } else if (normalized.startsWith('UPDATE')) {
+    const match = queryText.match(/UPDATE\s+\[?(\w+)\]?/i);
+    targetTable = match?.[1] || '';
+  }
+
+  if (!targetTable) {
+    throw new Error('대상 테이블을 식별할 수 없습니다.');
+  }
+
+  const isAllowed = writableTables.some(
+    t => t.toUpperCase() === targetTable.toUpperCase()
+  );
+
+  if (!isAllowed) {
+    throw new Error(
+      `쓰기가 허용되지 않은 테이블입니다: ${targetTable}. 허용된 테이블: ${writableTables.join(', ') || '(없음)'}`
+    );
+  }
+}
+
+/** 쿼리 요청 처리 (읽기/쓰기 공통) */
+async function handleQueryRequest(
+  dbPool: sql.ConnectionPool,
+  request: { id: string; query_type: string; query_text: string },
+  apiClient: DentwebApiClient,
+  clinicId: string,
+  apiKey: string,
+  writableTables: string[]
+): Promise<void> {
+  const startTime = Date.now();
+
+  try {
+    if (request.query_type === 'write') {
+      validateWriteQuery(request.query_text, writableTables);
+    } else {
+      validateReadQuery(request.query_text);
+    }
+
+    // SQL 실행 (30초 타임아웃)
+    const sqlRequest = dbPool.request();
+    sqlRequest.timeout = 30000;
+    const result = await sqlRequest.query(request.query_text);
+
+    const executionTime = Date.now() - startTime;
+    const data = result.recordset || [];
+    const rowCount = data.length || result.rowsAffected?.[0] || 0;
+
+    // 최대 1000행 제한
+    const limitedData = data.slice(0, 1000);
+
+    log('info', `[DentWeb] Query executed: ${request.id} (${rowCount} rows, ${executionTime}ms)`);
+
+    await apiClient.submitQueryResult(clinicId, apiKey, {
+      request_id: request.id,
+      data: limitedData,
+      row_count: rowCount,
+      execution_time_ms: executionTime,
+    });
+  } catch (error) {
+    const executionTime = Date.now() - startTime;
+    log('error', `[DentWeb] Query error: ${request.id} - ${String(error)}`);
+
+    await apiClient.submitQueryResult(clinicId, apiKey, {
+      request_id: request.id,
+      error_message: String(error),
+      execution_time_ms: executionTime,
+    });
+  }
+}
+
+/** Supabase Realtime 구독 시작 - 쿼리 요청 수신 */
+async function startQueryProxy(
+  dbPool: sql.ConnectionPool,
+  clinicId: string,
+  apiKey: string,
+  apiClient: DentwebApiClient,
+  writableTables: string[]
+): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://beahjntkmkfhpcbhfnrr.supabase.co';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+  if (!supabaseAnonKey) {
+    log('warn', '[DentWeb] Supabase anon key not available for Realtime. Falling back to polling.');
+    startQueryPolling(dbPool, clinicId, apiKey, apiClient, writableTables);
+    return;
+  }
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    realtimeChannel = supabase.channel(`dentweb-queries-${clinicId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'dentweb_query_requests',
+        filter: `clinic_id=eq.${clinicId}`,
+      }, async (payload) => {
+        const request = payload.new as {
+          id: string;
+          query_type: string;
+          query_text: string;
+          status: string;
+        };
+
+        if (request.status !== 'pending') return;
+
+        log('info', `[DentWeb] Query request received via Realtime: ${request.id} (${request.query_type})`);
+        await handleQueryRequest(dbPool, request, apiClient, clinicId, apiKey, writableTables);
+      })
+      .subscribe((status) => {
+        log('info', `[DentWeb] Realtime subscription status: ${status}`);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          log('warn', '[DentWeb] Realtime subscription failed, falling back to polling.');
+          realtimeChannel?.unsubscribe();
+          realtimeChannel = null;
+          startQueryPolling(dbPool, clinicId, apiKey, apiClient, writableTables);
+        }
+      });
+  } catch (err) {
+    log('warn', `[DentWeb] Realtime setup failed: ${err instanceof Error ? err.message : String(err)}. Falling back to polling.`);
+    startQueryPolling(dbPool, clinicId, apiKey, apiClient, writableTables);
+  }
+}
+
+/** 폴링 방식 폴백 (Realtime을 사용할 수 없을 때) */
+async function startQueryPolling(
+  dbPool: sql.ConnectionPool,
+  clinicId: string,
+  apiKey: string,
+  apiClient: DentwebApiClient,
+  writableTables: string[]
+): Promise<void> {
+  if (pollingInterval) return; // 이미 폴링 중
+
+  log('info', '[DentWeb] Starting query polling (5s interval)...');
+
+  pollingInterval = setInterval(async () => {
+    try {
+      const requests = await apiClient.pollPendingQueries(clinicId, apiKey);
+      if (!requests || requests.length === 0) return;
+
+      for (const request of requests) {
+        await handleQueryRequest(dbPool, request, apiClient, clinicId, apiKey, writableTables);
+      }
+    } catch {
+      // 폴링 실패 시 무시 (다음 주기에 재시도)
+    }
+  }, 5000);
+}
+
+/** 쿼리 프록시 정지 */
+function stopQueryProxy(): void {
+  if (realtimeChannel) {
+    realtimeChannel.unsubscribe();
+    realtimeChannel = null;
+  }
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+  queryApiClient = null;
+  log('info', '[DentWeb] Query proxy stopped');
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main sync loop                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -902,6 +1176,30 @@ export async function startDentwebSync(): Promise<void> {
   // Run first sync immediately
   await runSync();
 
+  // Schema discovery + query proxy (DB 연결 성공 시에만)
+  if (pool && pool.connected && cfg.clinicId && cfg.apiKey) {
+    try {
+      queryApiClient = new DentwebApiClient();
+      const { tables, writableTables } = await discoverDentwebSchema(pool);
+      cachedWritableTables = writableTables;
+
+      // 스키마 정보를 서버로 전송
+      await queryApiClient.submitSchema(
+        cfg.clinicId,
+        cfg.apiKey,
+        { tables },
+        writableTables
+      );
+      log('info', '[DentWeb] Schema submitted to server');
+
+      // 쿼리 프록시 시작 (Realtime 또는 폴링)
+      await startQueryProxy(pool, cfg.clinicId, cfg.apiKey, queryApiClient, writableTables);
+    } catch (err) {
+      log('warn', `[DentWeb] Schema discovery / query proxy 시작 실패: ${err instanceof Error ? err.message : String(err)}`);
+      // 스키마/프록시 실패해도 기존 동기화는 계속 진행
+    }
+  }
+
   // Start interval
   const interval = (getDentwebConfig().syncInterval || 300) * 1000;
   if (syncTimer) clearInterval(syncTimer);
@@ -913,6 +1211,9 @@ export async function startDentwebSync(): Promise<void> {
 }
 
 export async function stopDentwebSync(): Promise<void> {
+  // 쿼리 프록시 정지 (Realtime 채널 해제 + 폴링 중지)
+  stopQueryProxy();
+
   if (syncTimer) {
     clearInterval(syncTimer);
     syncTimer = null;
