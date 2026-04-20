@@ -55,7 +55,13 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
       const res = await fetch('/api/investment/strategies')
       const json = await res.json()
       const found = (json.data || []).find((s: InvestmentStrategy) => s.id === strategyId)
-      if (found) setStrategy(found)
+      if (found) {
+        setStrategy(found)
+        // 전략의 target_market을 기본 시장으로 설정
+        if (found.target_market === 'KR' || found.target_market === 'US') {
+          setAddingMarket(found.target_market)
+        }
+      }
     } catch {
       console.error('전략 로드 실패')
     } finally {
@@ -63,14 +69,35 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
     }
   }, [strategyId])
 
+  // 전략의 감시 종목을 자동으로 불러와서 초기 선택으로 설정
+  const loadWatchlist = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/investment/watchlist?strategyId=${strategyId}`)
+      const json = await res.json()
+      if (res.ok && json.data) {
+        const watchlistTickers: TickerEntry[] = (json.data as Array<{ ticker: string; ticker_name: string | null; market: Market }>)
+          .filter(w => w.market === 'KR' || w.market === 'US')
+          .map(w => ({
+            ticker: w.ticker,
+            name: w.ticker_name || w.ticker,
+            market: w.market,
+          }))
+        if (watchlistTickers.length > 0) {
+          setTickers(watchlistTickers)
+        }
+      }
+    } catch { /* ignore */ }
+  }, [strategyId])
+
   useEffect(() => {
     loadStrategy()
+    loadWatchlist()
     const end = new Date()
     const start = new Date()
     start.setFullYear(start.getFullYear() - 1)
     setEndDate(end.toISOString().split('T')[0])
     setStartDate(start.toISOString().split('T')[0])
-  }, [loadStrategy])
+  }, [loadStrategy, loadWatchlist])
 
   const addTicker = (ticker: string, name?: string) => {
     if (!ticker.trim()) return
