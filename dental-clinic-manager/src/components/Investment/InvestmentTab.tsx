@@ -167,6 +167,7 @@ export default function InvestmentTab() {
             balanceLoading={balanceLoading}
             balanceError={balanceError}
             onRefreshBalance={loadBalance}
+            onRefresh={loadData}
           />
         )}
         {subTab === 'connect' && (
@@ -196,7 +197,7 @@ export default function InvestmentTab() {
 // 서브탭 컴포넌트들
 // ============================================
 
-function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergencyStopping, onEmergencyStop, onNavigate, balance, balanceLoading, balanceError, onRefreshBalance }: {
+function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergencyStopping, onEmergencyStop, onNavigate, balance, balanceLoading, balanceError, onRefreshBalance, onRefresh }: {
   hasCredential: boolean | null
   strategies: InvestmentStrategy[]
   activeStrategies: InvestmentStrategy[]
@@ -207,7 +208,32 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
   balanceLoading: boolean
   balanceError: string | null
   onRefreshBalance: () => void
+  onRefresh: () => void
 }) {
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  const toggleActive = async (s: InvestmentStrategy) => {
+    setTogglingId(s.id)
+    try {
+      const res = await fetch('/api/investment/strategies', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: s.id, isActive: !s.is_active }),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        onRefresh()
+      } else {
+        if (json.code === 'NO_WATCHLIST') {
+          alert('⚠️ 감시 종목이 없습니다.\n\n전략 관리 탭에서 자동매매할 종목을 먼저 추가해주세요.')
+        } else if (json.code === 'NO_CREDENTIAL') {
+          alert('⚠️ 증권 계좌 연결이 필요합니다.\n\n계좌 연결 탭에서 KIS 계좌를 먼저 연결해주세요.')
+        } else {
+          alert(json.error || '전환 실패')
+        }
+      }
+    } catch { alert('네트워크 오류') } finally { setTogglingId(null) }
+  }
   if (!hasCredential) {
     return (
       <div className="max-w-lg mx-auto mt-8">
@@ -337,33 +363,71 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 활성 전략 */}
+        {/* 전략 목록 (활성/비활성 모두) */}
         <div className="bg-white rounded-3xl shadow-sm border border-at-border overflow-hidden">
-          <div className="px-6 py-4 border-b border-at-border">
-            <h3 className="text-base font-semibold text-at-text">활성 전략</h3>
+          <div className="px-6 py-4 border-b border-at-border flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-at-text">내 전략</h3>
+              <p className="text-xs text-at-text-secondary mt-0.5">
+                클릭하여 자동매매 활성/비활성 전환
+              </p>
+            </div>
+            <button onClick={() => onNavigate('strategy')} className="text-xs text-at-accent hover:underline">
+              전략 관리 →
+            </button>
           </div>
           <div className="p-6">
-            {activeStrategies.length === 0 ? (
+            {strategies.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-at-text-weak">
                 <Target className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">활성화된 전략이 없습니다</p>
+                <p className="text-sm">아직 생성된 전략이 없습니다</p>
                 <button onClick={() => onNavigate('strategy')} className="mt-3 text-sm text-at-accent hover:underline">
                   전략 만들기 →
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {activeStrategies.map(s => (
-                  <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-at-surface-alt border border-at-border">
-                    <div>
-                      <p className="text-sm font-medium text-at-text">{s.name}</p>
-                      <p className="text-xs text-at-text-secondary mt-0.5">
-                        {s.target_market === 'KR' ? '국내' : '미국'} · {s.timeframe} · Level {s.automation_level}
-                      </p>
+              <div className="space-y-2">
+                {strategies.map(s => {
+                  const isToggling = togglingId === s.id
+                  return (
+                    <div key={s.id} className={`flex items-center justify-between gap-2 p-3 rounded-xl border transition-colors ${
+                      s.is_active
+                        ? 'bg-green-50/40 border-green-200'
+                        : 'bg-at-surface-alt border-at-border'
+                    }`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-at-text truncate">{s.name}</p>
+                        <p className="text-xs text-at-text-secondary mt-0.5">
+                          {s.target_market === 'KR' ? '국내' : '미국'} · {s.timeframe} · Level {s.automation_level}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => toggleActive(s)}
+                        disabled={isToggling}
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
+                          s.is_active
+                            ? 'bg-green-500 text-white hover:bg-green-600'
+                            : 'bg-white text-at-text-secondary border border-at-border hover:bg-at-accent hover:text-white hover:border-at-accent'
+                        }`}
+                        title={s.is_active ? '자동매매 중지' : '자동매매 시작'}
+                      >
+                        {isToggling ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : s.is_active ? (
+                          <>
+                            <Pause className="w-3.5 h-3.5" />
+                            <span>활성</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-3.5 h-3.5" />
+                            <span>비활성</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-                    <span className="px-2 py-0.5 text-xs rounded-full bg-green-50 text-at-success border border-green-200 font-medium">활성</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
