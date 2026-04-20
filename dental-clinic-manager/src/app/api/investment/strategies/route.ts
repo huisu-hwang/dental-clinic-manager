@@ -179,7 +179,7 @@ export async function PATCH(request: NextRequest) {
   // 소유권 확인
   const { data: existing } = await supabase
     .from('investment_strategies')
-    .select('id, user_id, is_active')
+    .select('id, user_id, is_active, automation_level')
     .eq('id', id)
     .eq('user_id', userId)
     .single()
@@ -250,7 +250,40 @@ export async function PATCH(request: NextRequest) {
     updateData.automation_level = updates.automationLevel
   }
   if (updates.isActive !== undefined) {
-    updateData.is_active = Boolean(updates.isActive)
+    const activating = Boolean(updates.isActive)
+
+    // 활성화 시 사전 조건 체크
+    if (activating && !existing.is_active) {
+      // 1. 감시 종목 존재 여부
+      const { count: watchCount } = await supabase
+        .from('strategy_watchlist')
+        .select('id', { count: 'exact', head: true })
+        .eq('strategy_id', id)
+        .eq('is_active', true)
+      if ((watchCount ?? 0) === 0) {
+        return NextResponse.json({
+          error: '감시 종목이 없습니다. 자동매매할 종목을 먼저 추가해주세요.',
+          code: 'NO_WATCHLIST',
+        }, { status: 400 })
+      }
+
+      // 2. 활성 계좌 존재 여부 (Level 2 자동매매만)
+      if (existing.automation_level === 2) {
+        const { count: credCount } = await supabase
+          .from('user_broker_credentials')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('is_active', true)
+        if ((credCount ?? 0) === 0) {
+          return NextResponse.json({
+            error: 'Level 2 자동매매는 증권 계좌 연결이 필요합니다.',
+            code: 'NO_CREDENTIAL',
+          }, { status: 400 })
+        }
+      }
+    }
+
+    updateData.is_active = activating
   }
 
   if (Object.keys(updateData).length === 0) {

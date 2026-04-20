@@ -12,6 +12,7 @@ import Link from 'next/link'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
 import BacktestPanel from './BacktestPanel'
+import StrategyCard from './StrategyCard'
 import type { InvestmentStrategy } from '@/types/investment'
 
 type SubTab = 'dashboard' | 'connect' | 'strategy' | 'trading' | 'portfolio'
@@ -172,7 +173,7 @@ export default function InvestmentTab() {
           <ConnectContent onCredentialChange={loadData} />
         )}
         {subTab === 'strategy' && (
-          <StrategySubTab strategies={strategies} onRefresh={loadData} onBacktest={setBacktestStrategyId} />
+          <StrategySubTab strategies={strategies} onRefresh={loadData} onBacktest={setBacktestStrategyId} hasCredential={!!hasCredential} />
         )}
         {subTab === 'trading' && (
           <TradingContent />
@@ -291,6 +292,50 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
         </button>
       )}
 
+      {/* 자동매매 시작 가이드 (활성 전략 없을 때만) */}
+      {activeStrategies.length === 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
+          <h3 className="font-semibold text-at-text mb-3">🚀 자동매매 시작하기</h3>
+          <ol className="space-y-2 text-sm">
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent-light text-at-accent text-xs font-bold flex items-center justify-center">1</span>
+              <div>
+                <button onClick={() => onNavigate('connect')} className="text-at-accent font-medium hover:underline">계좌 연결</button>
+                <span className="text-at-text-secondary"> - KIS 증권 계좌를 연결 (모의투자부터 권장)</span>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent-light text-at-accent text-xs font-bold flex items-center justify-center">2</span>
+              <div>
+                <button onClick={() => onNavigate('strategy')} className="text-at-accent font-medium hover:underline">전략 만들기</button>
+                <span className="text-at-text-secondary"> - 지표/조건/리스크 설정 (프리셋 활용 가능)</span>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent-light text-at-accent text-xs font-bold flex items-center justify-center">3</span>
+              <div>
+                <span className="text-at-text font-medium">감시 종목 추가</span>
+                <span className="text-at-text-secondary"> - 전략 카드를 펼쳐서 자동매매할 종목 추가</span>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent-light text-at-accent text-xs font-bold flex items-center justify-center">4</span>
+              <div>
+                <span className="text-at-text font-medium">백테스트</span>
+                <span className="text-at-text-secondary"> - 과거 데이터로 전략의 성과 검증</span>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-700 text-xs font-bold flex items-center justify-center">5</span>
+              <div>
+                <span className="text-at-text font-medium">▶ 자동매매 시작</span>
+                <span className="text-at-text-secondary"> - 전략 카드의 [▶] 버튼으로 활성화</span>
+              </div>
+            </li>
+          </ol>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 활성 전략 */}
         <div className="bg-white rounded-3xl shadow-sm border border-at-border overflow-hidden">
@@ -342,25 +387,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
   )
 }
 
-function StrategySubTab({ strategies, onRefresh, onBacktest }: { strategies: InvestmentStrategy[]; onRefresh: () => void; onBacktest: (id: string) => void }) {
-  const toggleActive = async (id: string, isActive: boolean) => {
-    await fetch('/api/investment/strategies', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, isActive: !isActive }),
-    })
-    onRefresh()
-  }
-
-  const deleteStrategy = async (id: string) => {
-    if (!confirm('이 전략을 삭제하시겠습니까?')) return
-    const res = await fetch(`/api/investment/strategies?id=${id}`, { method: 'DELETE' })
-    if (res.ok) onRefresh()
-    else { const json = await res.json(); alert(json.error) }
-  }
-
-  const MARKET_LABELS: Record<string, string> = { KR: '국내', US: '미국' }
-
+function StrategySubTab({ strategies, onRefresh, onBacktest, hasCredential }: { strategies: InvestmentStrategy[]; onRefresh: () => void; onBacktest: (id: string) => void; hasCredential: boolean }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -387,39 +414,13 @@ function StrategySubTab({ strategies, onRefresh, onBacktest }: { strategies: Inv
       ) : (
         <div className="space-y-3">
           {strategies.map(s => (
-            <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-at-text">{s.name}</h3>
-                    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                      s.is_active
-                        ? 'bg-green-50 text-at-success border border-green-200'
-                        : 'bg-at-surface-alt text-at-text-weak border border-at-border'
-                    }`}>{s.is_active ? '활성' : '비활성'}</span>
-                    <span className="px-2 py-0.5 text-xs rounded-full bg-at-accent-light text-at-accent font-medium">
-                      {MARKET_LABELS[s.target_market] || s.target_market}
-                    </span>
-                  </div>
-                  {s.description && <p className="text-xs text-at-text-secondary mt-1">{s.description}</p>}
-                  <div className="flex items-center gap-4 mt-2 text-xs text-at-text-weak">
-                    <span>지표 {(s.indicators as unknown[]).length}개</span>
-                    <span>Level {s.automation_level}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => onBacktest(s.id)} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary" title="백테스트">
-                    <BarChart3 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => toggleActive(s.id, s.is_active)} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary" title={s.is_active ? '비활성화' : '활성화'}>
-                    {s.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </button>
-                  <button onClick={() => deleteStrategy(s.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors text-at-error/60 hover:text-at-error" title="삭제" disabled={s.is_active}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            <StrategyCard
+              key={s.id}
+              strategy={s}
+              hasCredential={hasCredential}
+              onRefresh={onRefresh}
+              onBacktest={onBacktest}
+            />
           ))}
         </div>
       )}
