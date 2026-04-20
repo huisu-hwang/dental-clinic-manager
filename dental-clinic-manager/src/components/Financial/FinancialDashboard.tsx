@@ -35,6 +35,8 @@ import {
   ChevronDown,
   ChevronUp,
   Settings,
+  RefreshCw,
+  Download,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -54,6 +56,11 @@ export default function FinancialDashboard() {
   const [summary, setSummary] = useState<FinancialSummary | null>(null)
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
   const [loading, setLoading] = useState(true)
+
+  // 수입 동기화 상태
+  const [syncPending, setSyncPending] = useState(false)
+  const [syncRetryCount, setSyncRetryCount] = useState(0)
+  const [backfillLoading, setBackfillLoading] = useState(false)
 
   // 모달 상태
   const [showRevenueForm, setShowRevenueForm] = useState(false)
@@ -78,6 +85,7 @@ export default function FinancialDashboard() {
       const summaryData = await summaryRes.json()
       if (summaryData.success) {
         setSummary(summaryData.data)
+        setSyncPending(!!summaryData.sync_pending)
       }
 
       // 지출 내역 로드
@@ -96,8 +104,44 @@ export default function FinancialDashboard() {
   }
 
   useEffect(() => {
+    setSyncRetryCount(0)
     loadData()
   }, [clinicId, selectedYear, selectedMonth])
+
+  // sync_pending일 때 자동 재조회 (최대 6회, 5초 간격 = 30초)
+  useEffect(() => {
+    if (!syncPending || syncRetryCount >= 6) return
+    const timer = setTimeout(() => {
+      setSyncRetryCount(prev => prev + 1)
+      loadData()
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [syncPending, syncRetryCount])
+
+  // 과거 데이터 전체 불러오기
+  const handleBackfillRequest = async () => {
+    if (!clinicId) return
+    setBackfillLoading(true)
+    try {
+      const res = await fetch('/api/dentweb/request-revenue-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clinic_id: clinicId, mode: 'backfill' }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        await appAlert(`${result.data.added_count}개월 수입 데이터 동기화를 요청했습니다. 워커에서 처리 후 자동으로 반영됩니다.`)
+        setSyncPending(true)
+        setSyncRetryCount(0)
+      } else {
+        await appAlert(result.error || '요청 실패')
+      }
+    } catch {
+      await appAlert('요청 중 오류가 발생했습니다.')
+    } finally {
+      setBackfillLoading(false)
+    }
+  }
 
   // 월 이동
   const goToPreviousMonth = () => {
@@ -210,6 +254,33 @@ export default function FinancialDashboard() {
         </div>
       ) : activeTab === 'status' ? (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+          {/* 수입 동기화 안내 배너 */}
+          {syncPending && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="w-5 h-5 text-amber-600 animate-spin" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">
+                    {selectedYear}년 {selectedMonth}월 수입 데이터를 덴트웹에서 불러오는 중...
+                  </p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    워커에서 처리 후 자동으로 반영됩니다 (최대 30초 소요)
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={handleBackfillRequest}
+                  disabled={backfillLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-xl hover:bg-amber-700 transition disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {backfillLoading ? '요청 중...' : '과거 전체 불러오기'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Executive Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
