@@ -661,7 +661,14 @@ async function getMonthlyRevenue(dbPool: sql.ConnectionPool, year: number, month
   };
 }
 
-/** 당월 + 전월 수입 데이터를 서버에 전송 */
+/** 앱 시작 후 첫 수입 동기화에서 전체 backfill 완료 여부 */
+let revenueBackfillDone = false;
+
+/**
+ * 수입 데이터를 서버에 전송.
+ * - 앱 시작 후 첫 호출: 올해 전체(1~당월) + 전년도 10~12월 backfill
+ * - 이후 호출: 당월 + 전월만 동기화 (효율적)
+ */
 async function syncRevenueToServer(dbPool: sql.ConnectionPool): Promise<void> {
   const cfg = getDentwebConfig();
   const { dashboardUrl } = getConfig();
@@ -672,14 +679,26 @@ async function syncRevenueToServer(dbPool: sql.ConnectionPool): Promise<void> {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  // 당월과 전월 동기화 (전월 데이터가 늦게 입력될 수 있으므로)
-  const months: Array<{ year: number; month: number }> = [
-    { year: currentYear, month: currentMonth },
-  ];
-  if (currentMonth === 1) {
-    months.push({ year: currentYear - 1, month: 12 });
+  let months: Array<{ year: number; month: number }>;
+
+  if (!revenueBackfillDone) {
+    // 첫 동기화: 올해 1월~당월 전체 + 전년도 최근 3개월
+    months = [];
+    for (let m = 1; m <= currentMonth; m++) {
+      months.push({ year: currentYear, month: m });
+    }
+    for (let m = 10; m <= 12; m++) {
+      months.push({ year: currentYear - 1, month: m });
+    }
+    log('info', `[DentWeb] 수입 전체 backfill 시작 (${months.length}개월)`);
   } else {
-    months.push({ year: currentYear, month: currentMonth - 1 });
+    // 정기 동기화: 당월 + 전월
+    months = [{ year: currentYear, month: currentMonth }];
+    if (currentMonth === 1) {
+      months.push({ year: currentYear - 1, month: 12 });
+    } else {
+      months.push({ year: currentYear, month: currentMonth - 1 });
+    }
   }
 
   for (const { year, month } of months) {
@@ -714,6 +733,11 @@ async function syncRevenueToServer(dbPool: sql.ConnectionPool): Promise<void> {
     } catch (err) {
       log('warn', `[DentWeb] ${year}-${String(month).padStart(2, '0')} 수입 동기화 오류: ${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  if (!revenueBackfillDone) {
+    revenueBackfillDone = true;
+    log('info', '[DentWeb] 수입 전체 backfill 완료, 이후 당월+전월만 동기화');
   }
 }
 
