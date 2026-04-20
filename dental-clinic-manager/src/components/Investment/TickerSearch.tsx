@@ -27,6 +27,8 @@ export default function TickerSearch({ value, onChange, market, placeholder, cla
   const [open, setOpen] = useState(false)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  // IME 조합 상태 (한글 입력 시 자모 단위로 onChange 발생 방지)
+  const composingRef = useRef(false)
 
   // 외부 클릭 시 닫기
   useEffect(() => {
@@ -62,13 +64,33 @@ export default function TickerSearch({ value, onChange, market, placeholder, cla
     }
   }, [market])
 
+  const scheduleSearch = (val: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => search(val), 300)
+  }
+
   const handleInputChange = (val: string) => {
     setQuery(val)
     onChange(val)
 
-    // 디바운스 검색 (300ms)
+    // IME 조합 중이면 검색 예약 안 함 (compositionend에서 처리)
+    if (composingRef.current) return
+
+    scheduleSearch(val)
+  }
+
+  const handleCompositionStart = () => {
+    composingRef.current = true
+    // 조합 시작 시 기존 디바운스 취소 (불완전한 자모로 검색 방지)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => search(val), 300)
+  }
+
+  const handleCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
+    composingRef.current = false
+    const val = (e.target as HTMLInputElement).value
+    setQuery(val)
+    onChange(val)
+    scheduleSearch(val)
   }
 
   const handleSelect = (result: TickerResult) => {
@@ -93,6 +115,8 @@ export default function TickerSearch({ value, onChange, market, placeholder, cla
           type="text"
           value={query}
           onChange={e => handleInputChange(e.target.value)}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder || (market === 'KR' ? '종목명 또는 코드 (예: 삼성전자, 005930)' : '종목명 또는 심볼 (예: Apple, AAPL)')}
           className="w-full pl-9 pr-8 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent"
