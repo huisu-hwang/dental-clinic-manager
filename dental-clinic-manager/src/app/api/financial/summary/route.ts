@@ -107,39 +107,50 @@ export async function GET(request: NextRequest) {
     if (month) {
       const monthNum = parseInt(month);
 
-      // 1. 재무 요약 조회
-      const { data, error } = await supabase
-        .from('financial_summary_view')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .eq('year', yearNum)
-        .eq('month', monthNum)
-        .single();
+      // 모든 독립 쿼리를 병렬 실행 (기존 5~7개 순차 → 병렬)
+      const [
+        summaryResult,
+        revenueResult,
+        syncPending,
+        ytdMonths,
+        settings,
+      ] = await Promise.all([
+        // 1. 재무 요약 조회
+        supabase
+          .from('financial_summary_view')
+          .select('*')
+          .eq('clinic_id', clinicId)
+          .eq('year', yearNum)
+          .eq('month', monthNum)
+          .single(),
+        // 2. revenue_records에서 source_type 조회
+        supabase
+          .from('revenue_records')
+          .select('source_type')
+          .eq('clinic_id', clinicId)
+          .eq('year', yearNum)
+          .eq('month', monthNum)
+          .single(),
+        // 3. dentweb 연동인데 해당 월 revenue가 없으면 on-demand 동기화 요청
+        requestRevenueSyncIfNeeded(supabase, clinicId, yearNum, monthNum),
+        // 4. 올해 누적 순이익
+        loadYtdMonths(supabase, clinicId, yearNum, monthNum),
+        // 5. 세무 설정
+        loadTaxSettings(supabase, clinicId),
+      ]);
 
+      const { data, error } = summaryResult;
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching financial summary:', error);
         return NextResponse.json({ error: '재무 요약 조회에 실패했습니다.' }, { status: 500 });
       }
 
-      // 2. revenue_records에서 source_type 조회
-      const { data: revenueRecord } = await supabase
-        .from('revenue_records')
-        .select('source_type')
-        .eq('clinic_id', clinicId)
-        .eq('year', yearNum)
-        .eq('month', monthNum)
-        .single();
+      const revenueRecord = revenueResult.data;
 
-      // 2-1. dentweb 연동인데 해당 월 revenue가 없으면 on-demand 동기화 요청
-      const syncPending = await requestRevenueSyncIfNeeded(supabase, clinicId, yearNum, monthNum);
-
-      // 3. 올해 누적 순이익 + 예상 세금 계산
-      const ytdMonths = await loadYtdMonths(supabase, clinicId, yearNum, monthNum);
       const ytdNetIncome = ytdMonths.reduce(
         (sum, m) => sum + ((m.total_revenue || 0) - (m.total_expense || 0)),
         0
       );
-      const settings = await loadTaxSettings(supabase, clinicId);
       const elapsed = ytdMonths.length > 0
         ? Math.max(...ytdMonths.map(m => m.month))
         : monthNum;

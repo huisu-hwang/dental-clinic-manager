@@ -107,13 +107,17 @@ export default function FinancialDashboard() {
     loadData()
   }, [clinicId, selectedYear, selectedMonth])
 
-  // sync_pending일 때 자동 재조회 (최대 6회, 5초 간격 = 30초)
+  // sync_pending일 때 자동 재조회
+  // 워커 동기화 주기가 최대 5분이므로, 처음 30초는 5초 간격 → 이후 15초 간격으로 최대 5분까지 폴링
   useEffect(() => {
-    if (!syncPending || syncRetryCount >= 6) return
+    if (!syncPending) return
+    const maxRetries = 26 // 6회(30초) + 20회(300초) = 약 5분 30초
+    if (syncRetryCount >= maxRetries) return
+    const interval = syncRetryCount < 6 ? 5000 : 15000
     const timer = setTimeout(() => {
       setSyncRetryCount(prev => prev + 1)
       loadData()
-    }, 5000)
+    }, interval)
     return () => clearTimeout(timer)
   }, [syncPending, syncRetryCount])
 
@@ -264,7 +268,7 @@ export default function FinancialDashboard() {
                     {selectedYear}년 {selectedMonth}월 수입 데이터를 덴트웹에서 불러오는 중...
                   </p>
                   <p className="text-xs text-amber-600 mt-0.5">
-                    워커에서 처리 후 자동으로 반영됩니다 (최대 30초 소요)
+                    워커 동기화 주기에 따라 자동으로 반영됩니다 (최대 수 분 소요)
                   </p>
                 </div>
               </div>
