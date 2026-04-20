@@ -197,33 +197,35 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
         )}
       </div>
 
-      {/* 검색 결과 드롭다운 */}
+      {/* 검색 결과 드롭다운 - 모바일에서도 종목명 전체가 보이도록 충분히 넓게 */}
       {open && results.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-at-border max-h-60 overflow-y-auto">
+        <div className="absolute z-50 mt-1 left-0 right-0 w-full min-w-[280px] bg-white rounded-xl shadow-lg border border-at-border max-h-[60vh] sm:max-h-72 overflow-y-auto">
           {results.map((r, i) => (
             <button
               key={`${r.ticker}-${i}`}
               type="button"
               onMouseDown={e => e.preventDefault()}
               onClick={() => handleSelect(r)}
-              className={`w-full text-left px-3 py-2.5 transition-colors flex items-center gap-3 border-b border-at-border/50 last:border-0 ${
+              className={`w-full text-left px-3 py-3 transition-colors border-b border-at-border/50 last:border-0 ${
                 highlightIdx === i ? 'bg-at-accent-light' : 'hover:bg-at-surface-alt'
               }`}
             >
-              <span className="font-mono text-sm font-semibold text-at-accent min-w-[60px]">
-                {r.ticker}
-              </span>
-              <span className="text-sm text-at-text truncate flex-1">{r.name}</span>
-              <span className="text-[10px] text-at-text-weak px-1.5 py-0.5 bg-at-surface-alt rounded">
-                {r.type === 'ETF' ? 'ETF' : r.exchange}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-sm font-semibold text-at-accent whitespace-nowrap">
+                  {r.ticker}
+                </span>
+                <span className="text-sm text-at-text break-all flex-1 min-w-0">{r.name}</span>
+                <span className="text-[10px] text-at-text-weak px-1.5 py-0.5 bg-at-surface-alt rounded whitespace-nowrap">
+                  {r.type === 'ETF' ? 'ETF' : r.exchange}
+                </span>
+              </div>
             </button>
           ))}
         </div>
       )}
 
       {open && !loading && isSearchable(query) && results.length === 0 && !composingRef.current && (
-        <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-at-border p-3 text-center text-sm text-at-text-weak">
+        <div className="absolute z-50 mt-1 left-0 right-0 w-full min-w-[280px] bg-white rounded-xl shadow-lg border border-at-border p-3 text-center text-sm text-at-text-weak">
           검색 결과가 없습니다
         </div>
       )}

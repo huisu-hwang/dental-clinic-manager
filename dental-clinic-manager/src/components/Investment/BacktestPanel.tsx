@@ -176,11 +176,11 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
       {/* 종목 추가 */}
       <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
         <h2 className="font-semibold text-at-text">종목 선택</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <select
             value={addingMarket}
             onChange={e => setAddingMarket(e.target.value as Market)}
-            className="px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent w-24"
+            className="px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent w-full sm:w-24"
           >
             <option value="KR">국내</option>
             <option value="US">미국</option>
@@ -188,7 +188,7 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
           <TickerSearch
             onSelect={(ticker, name) => addTicker(ticker, name)}
             market={addingMarket}
-            className="flex-1"
+            className="w-full sm:flex-1"
           />
         </div>
 
