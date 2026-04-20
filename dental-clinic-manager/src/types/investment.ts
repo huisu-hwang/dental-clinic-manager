@@ -62,6 +62,7 @@ export type IndicatorType =
   | 'ATR' | 'ADX' | 'CCI'
   | 'WILLR'  // Williams %R
   | 'VOLUME_SMA'
+  | 'FEAR_GREED'  // Fear & Greed Index (0~100, 실시간 시장 심리)
 
 export interface IndicatorConfig {
   id: string          // 예: 'RSI_14', 'SMA_20'

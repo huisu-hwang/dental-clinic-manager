@@ -172,6 +172,92 @@ function calcVolumeSMA(prices: OHLCV[], params: Record<string, number>): number[
   return padLeft(result, prices.length)
 }
 
+/**
+ * Fear & Greed Index (공포/탐욕 지수) - 실시간 시장 심리 0~100 점수
+ *
+ * 합성 방식 (가중 평균):
+ * - RSI 반전 (30%): 낮은 RSI = 공포 (높은 점수 = 탐욕)
+ * - Bollinger %B (25%): 가격의 밴드 내 상대 위치 (0=하단=공포, 1=상단=탐욕)
+ * - 거래량 스파이크 (25%): 평균 대비 급증 = 극단 심리
+ * - 모멘텀 (20%): 최근 N일 수익률 (하락=공포, 상승=탐욕)
+ *
+ * 해석:
+ * - 0~20: 극단 공포 (역행 매수 기회)
+ * - 80~100: 극단 탐욕 (매도/회피)
+ *
+ * @param params { rsiPeriod, bbPeriod, volPeriod, momentumPeriod }
+ */
+function calcFearGreed(prices: OHLCV[], params: Record<string, number>): number[] {
+  const rsiPeriod = params.rsiPeriod || 14
+  const bbPeriod = params.bbPeriod || 20
+  const volPeriod = params.volPeriod || 20
+  const momentumPeriod = params.momentumPeriod || 10
+
+  const closes = prices.map(p => p.close)
+  const volumes = prices.map(p => p.volume)
+
+  // 1. RSI (0~100 그대로 사용, RSI 자체가 탐욕 점수에 가까움)
+  const rsiValues = padLeft(RSI.calculate({ values: closes, period: rsiPeriod }), prices.length) as number[]
+
+  // 2. Bollinger %B: (price - lower) / (upper - lower) × 100
+  const bbResults = BollingerBands.calculate({ values: closes, period: bbPeriod, stdDev: 2 })
+  const bbPercentB = padLeft(
+    bbResults.map(b => {
+      const range = b.upper - b.lower
+      if (range === 0) return 50
+      return Math.max(0, Math.min(100, ((closes[0] - b.lower) / range) * 100))
+    }),
+    prices.length
+  ) as number[]
+  // 실제 각 날짜의 %B를 재계산
+  for (let i = 0; i < prices.length; i++) {
+    const bb = bbResults[i - (prices.length - bbResults.length)]
+    if (bb) {
+      const range = bb.upper - bb.lower
+      bbPercentB[i] = range === 0 ? 50 : Math.max(0, Math.min(100, ((closes[i] - bb.lower) / range) * 100))
+    }
+  }
+
+  // 3. 거래량 스파이크: (현재 거래량 / 평균 거래량) × 50 (1배면 50점, 2배면 100점)
+  const volSMA = padLeft(SMA.calculate({ values: volumes, period: volPeriod }), prices.length) as number[]
+  const volumeScores = prices.map((p, i) => {
+    const avg = volSMA[i]
+    if (!avg || isNaN(avg) || avg === 0) return 50
+    const ratio = p.volume / avg
+    // ratio=1 → 50, ratio>=2 → 100, ratio<=0.5 → 0
+    // 가격이 하락 중이면서 거래량 급증 = 공포 (점수 낮게), 상승 + 거래량 급증 = 탐욕 (점수 높게)
+    const rawScore = Math.max(0, Math.min(100, ratio * 50))
+    // 가격 방향에 따라 부호 적용: 전일 대비 하락이면 공포(반전)
+    if (i > 0 && p.close < prices[i - 1].close) {
+      return 100 - rawScore // 하락 + 거래량↑ = 공포 (낮은 점수)
+    }
+    return rawScore // 상승 + 거래량↑ = 탐욕 (높은 점수)
+  })
+
+  // 4. 모멘텀: 최근 N일 수익률 → 0~100 (±10% 기준)
+  const momentumScores = prices.map((p, i) => {
+    if (i < momentumPeriod) return 50
+    const prev = prices[i - momentumPeriod].close
+    const change = ((p.close - prev) / prev) * 100
+    // -10% → 0, 0% → 50, +10% → 100
+    return Math.max(0, Math.min(100, 50 + change * 5))
+  })
+
+  // 5. 가중 합성
+  const result: number[] = []
+  for (let i = 0; i < prices.length; i++) {
+    const rsi = isNaN(rsiValues[i]) ? 50 : rsiValues[i]
+    const bb = isNaN(bbPercentB[i]) ? 50 : bbPercentB[i]
+    const vol = volumeScores[i]
+    const mom = momentumScores[i]
+
+    const score = rsi * 0.30 + bb * 0.25 + vol * 0.25 + mom * 0.20
+    result[i] = Math.round(Math.max(0, Math.min(100, score)) * 100) / 100
+  }
+
+  return result
+}
+
 // ============================================
 // 지표 계산기 매핑
 // ============================================
@@ -188,6 +274,7 @@ const INDICATOR_CALCULATORS: Record<IndicatorType, (prices: OHLCV[], params: Rec
   CCI: calcCCI,
   WILLR: calcWilliamsR,
   VOLUME_SMA: calcVolumeSMA,
+  FEAR_GREED: calcFearGreed,
 }
 
 // ============================================

@@ -375,4 +375,95 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       takeProfitPercent: 10,
     },
   },
+
+  {
+    id: 'fear-greed-index',
+    name: '📊 공포/탐욕 지수 역행',
+    description: '합성 지수가 극단 공포(≤20)일 때 매수, 극단 탐욕(≥80)일 때 매도',
+    indicators: [
+      { id: 'FEAR_GREED_14_20_20_10', type: 'FEAR_GREED', params: { rsiPeriod: 14, bbPeriod: 20, volPeriod: 20, momentumPeriod: 10 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'FEAR_GREED_14_20_20_10' },
+          operator: '<=',
+          right: { type: 'constant', value: 20 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'FEAR_GREED_14_20_20_10' },
+          operator: '>=',
+          right: { type: 'constant', value: 80 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 8,
+      takeProfitPercent: 15,
+    },
+  },
+
+  {
+    id: 'fear-greed-conservative',
+    name: '🛡️ 공포/탐욕 보수적 진입',
+    description: '공포 지수(≤25) + 가격 반등 확인 (SMA 5일선 상향 돌파)',
+    indicators: [
+      { id: 'FEAR_GREED_14_20_20_10', type: 'FEAR_GREED', params: { rsiPeriod: 14, bbPeriod: 20, volPeriod: 20, momentumPeriod: 10 } },
+      { id: 'SMA_5', type: 'SMA', params: { period: 5 } },
+      { id: 'SMA_20', type: 'SMA', params: { period: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'FEAR_GREED_14_20_20_10' },
+          operator: '<=',
+          right: { type: 'constant', value: 25 },
+        },
+        // 반등 확인: 5일선이 20일선을 상향 돌파
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_5' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'SMA_20' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 탐욕 진입 시 매도
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'FEAR_GREED_14_20_20_10' },
+          operator: '>=',
+          right: { type: 'constant', value: 70 },
+        },
+        // 하락 추세 전환 시 매도
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_5' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'SMA_20' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 12,
+    },
+  },
 ]

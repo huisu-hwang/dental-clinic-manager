@@ -139,7 +139,7 @@ export default function NewStrategyPage() {
             <h2 className="font-semibold text-at-text mb-1">기본 전략</h2>
             <p className="text-xs text-at-text-secondary mb-3">검증된 클래식 기술적 분석 전략</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {PRESET_STRATEGIES.filter(p => !['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce'].includes(p.id)).map(preset => (
+              {PRESET_STRATEGIES.filter(p => !['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce', 'fear-greed-index', 'fear-greed-conservative'].includes(p.id)).map(preset => (
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset)}
@@ -157,7 +157,7 @@ export default function NewStrategyPage() {
             <h2 className="font-semibold text-at-text mb-1">🧠 대중 심리 전략</h2>
             <p className="text-xs text-at-text-secondary mb-3">공포/탐욕 극단 시점을 포착하는 역행(Contrarian) 투자 전략</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {PRESET_STRATEGIES.filter(p => ['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce'].includes(p.id)).map(preset => (
+              {PRESET_STRATEGIES.filter(p => ['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce', 'fear-greed-index', 'fear-greed-conservative'].includes(p.id)).map(preset => (
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset)}
