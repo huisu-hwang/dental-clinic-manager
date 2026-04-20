@@ -1303,13 +1303,18 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
-                  <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumFeature && (
-                    <span className="ml-auto flex-shrink-0">
-                      <span className="inline-block text-[9px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full leading-none group-hover:hidden">비활성</span>
-                      <span className="hidden group-hover:inline-block text-[9px] font-bold bg-gradient-to-r from-amber-400 to-amber-500 text-white px-2 py-0.5 rounded-full leading-none">활성화</span>
-                    </span>
+                  {tab.isPremiumFeature && !isActive ? (
+                    <>
+                      <Icon className="w-5 h-5 flex-shrink-0 text-gray-300 group-hover:hidden" />
+                      <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
+                      <span className="ml-auto text-[9px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full leading-none group-hover:hidden">PRO</span>
+                      <span className="hidden group-hover:flex items-center justify-center w-full text-sm font-semibold text-amber-600">활성화</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                      <span className="truncate">{tab.label}</span>
+                    </>
                   )}
                 </button>
               )
@@ -1332,13 +1337,18 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
-                  <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumFeature && (
-                    <span className="ml-auto flex-shrink-0">
-                      <span className="inline-block text-[9px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full leading-none group-hover:hidden">비활성</span>
-                      <span className="hidden group-hover:inline-block text-[9px] font-bold bg-gradient-to-r from-amber-400 to-amber-500 text-white px-2 py-0.5 rounded-full leading-none">활성화</span>
-                    </span>
+                  {tab.isPremiumFeature && !isActive ? (
+                    <>
+                      <Icon className="w-5 h-5 flex-shrink-0 text-gray-300 group-hover:hidden" />
+                      <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
+                      <span className="ml-auto text-[9px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full leading-none group-hover:hidden">PRO</span>
+                      <span className="hidden group-hover:flex items-center justify-center w-full text-sm font-semibold text-amber-600">활성화</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                      <span className="truncate">{tab.label}</span>
+                    </>
                   )}
                 </button>
               )
@@ -1411,13 +1421,18 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                               }
                             `}
                           >
-                            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
-                            <span className="truncate">{tab.label}</span>
-                            {tab.isPremiumFeature && (
-                              <span className="ml-auto flex-shrink-0">
-                                <span className="inline-block text-[8px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1 py-0.5 rounded-full leading-none group-hover:hidden">비활성</span>
-                                <span className="hidden group-hover:inline-block text-[8px] font-bold bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full leading-none">활성화</span>
-                              </span>
+                            {tab.isPremiumFeature && !isActive ? (
+                              <>
+                                <Icon className="w-4 h-4 flex-shrink-0 text-gray-300 group-hover:hidden" />
+                                <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
+                                <span className="ml-auto text-[8px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1 py-0.5 rounded-full leading-none group-hover:hidden">PRO</span>
+                                <span className="hidden group-hover:flex items-center justify-center w-full text-[13px] font-semibold text-amber-600">활성화</span>
+                              </>
+                            ) : (
+                              <>
+                                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                                <span className="truncate">{tab.label}</span>
+                              </>
                             )}
                           </button>
                         )
