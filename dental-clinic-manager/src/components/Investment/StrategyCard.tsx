@@ -213,12 +213,12 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
               이 전략이 자동으로 매매할 종목을 추가하세요. 전략 활성화 시 이 종목들의 실시간 가격을 감시합니다.
             </p>
 
-            {/* 종목 추가 */}
-            <div className="flex items-center gap-2 mb-3">
+            {/* 종목 추가 - 모바일: 세로 배치, 데스크톱: 가로 배치 */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
               <select
                 value={addingMarket}
                 onChange={e => setAddingMarket(e.target.value as Market)}
-                className="px-3 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm focus:outline-none focus:border-at-accent w-24"
+                className="px-3 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm focus:outline-none focus:border-at-accent w-full sm:w-24"
               >
                 <option value="KR">국내</option>
                 <option value="US">미국</option>
@@ -226,7 +226,7 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
               <TickerSearch
                 onSelect={(ticker, name) => addTicker(ticker, name)}
                 market={addingMarket}
-                className="flex-1"
+                className="w-full sm:flex-1"
               />
             </div>
 
