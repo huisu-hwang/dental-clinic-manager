@@ -84,31 +84,66 @@ export default function RiskSettingsPanel({ riskSettings, onChange }: Props) {
       <h2 className="font-semibold text-at-text mb-1">리스크 관리</h2>
       <p className="text-xs text-at-text-secondary mb-4">손실을 제한하고 포트폴리오를 보호하세요</p>
 
-      <div className="space-y-5">
-        {FIELDS.map(field => (
-          <div key={field.key}>
-            <div className="flex items-baseline justify-between mb-1">
-              <label className="text-sm font-medium text-at-text">{field.label}</label>
-              <span className="text-sm font-mono text-at-accent font-semibold">
-                {riskSettings[field.key]}{field.unit}
-              </span>
+      <div className="space-y-6">
+        {FIELDS.map(field => {
+          const value = riskSettings[field.key]
+          const percent = ((value - field.min) / (field.max - field.min)) * 100
+          return (
+            <div key={field.key}>
+              <div className="flex items-baseline justify-between mb-1">
+                <label className="text-sm font-medium text-at-text">{field.label}</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={value}
+                    onChange={e => {
+                      const v = Number(e.target.value)
+                      if (!Number.isNaN(v)) update(field.key, Math.max(field.min, Math.min(field.max, v)))
+                    }}
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    className="w-20 px-2 py-1 rounded-lg border border-at-border bg-white text-at-text text-sm font-mono text-right focus:outline-none focus:border-at-accent"
+                  />
+                  <span className="text-xs text-at-text-secondary">{field.unit}</span>
+                </div>
+              </div>
+              <p className="text-xs text-at-text-secondary mb-3">{field.description}</p>
+
+              {/* 커스텀 슬라이더 트랙 + 네이티브 input range 오버레이 */}
+              <div className="relative h-6 flex items-center">
+                {/* 배경 트랙 */}
+                <div className="absolute inset-x-0 h-2 bg-at-surface-alt rounded-full border border-at-border" />
+                {/* 채워진 영역 */}
+                <div
+                  className="absolute h-2 bg-at-accent rounded-full"
+                  style={{ width: `${percent}%` }}
+                />
+                {/* Thumb (시각용, pointer-events-none) */}
+                <div
+                  className="absolute w-5 h-5 bg-white border-[3px] border-at-accent rounded-full shadow-sm pointer-events-none"
+                  style={{ left: `calc(${percent}% - 10px)` }}
+                />
+                {/* 실제 인터랙션용 네이티브 range */}
+                <input
+                  type="range"
+                  value={value}
+                  onChange={e => update(field.key, Number(e.target.value))}
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  className="relative w-full h-6 appearance-none bg-transparent cursor-pointer z-10 opacity-0"
+                  aria-label={field.label}
+                />
+              </div>
+
+              <div className="flex justify-between text-[10px] text-at-text-weak mt-1">
+                <span>{field.min}{field.unit}</span>
+                <span>{field.max}{field.unit}</span>
+              </div>
             </div>
-            <p className="text-xs text-at-text-secondary mb-2">{field.description}</p>
-            <input
-              type="range"
-              value={riskSettings[field.key]}
-              onChange={e => update(field.key, Number(e.target.value))}
-              min={field.min}
-              max={field.max}
-              step={field.step}
-              className="w-full h-1.5 bg-at-bg rounded-full appearance-none cursor-pointer accent-at-accent"
-            />
-            <div className="flex justify-between text-[10px] text-at-text-weak mt-0.5">
-              <span>{field.min}{field.unit}</span>
-              <span>{field.max}{field.unit}</span>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
