@@ -1,10 +1,10 @@
 import { BrowserContext, Page } from 'playwright';
 import { ScrapeResult } from './baseScraper.js';
-// 세금계산서는 현재 제외 (추후 구현 예정)
-// import { scrapeTaxInvoiceSales, scrapeTaxInvoicePurchase } from './taxInvoiceScraper.js';
-import { scrapeCashReceiptSales, scrapeCashReceiptPurchase } from './cashReceiptScraper.js';
+// 매출 관련은 덴트웹에서 가져오므로 비활성화 (��후 필요 시 주석 해제)
+// import { scrapeCashReceiptSales } from './cashReceiptScraper.js';
+import { scrapeCashReceiptPurchase } from './cashReceiptScraper.js';
 import { scrapeBusinessCardPurchase } from './businessCardScraper.js';
-import { scrapeCreditCardSales } from './creditCardSalesScraper.js';
+// import { scrapeCreditCardSales } from './creditCardSalesScraper.js';
 import { runProtocolScraper } from '../../protocol/scrapers/index.js';
 import { config } from '../../config.js';
 import { ScrapingSession, getBrowserContext, getHttpSession } from '../../types/scrapingContext.js';
@@ -25,14 +25,14 @@ export type DataType =
 
 type ScraperFn = (ctx: BrowserContext, year: number, month: number, clinicId?: string, sharedPage?: Page) => Promise<ScrapeResult>;
 
-/** Playwright 모드 스크래퍼 매핑 — 세금계산서는 현재 제외 */
+/** Playwright 모드 스크래퍼 매핑 — 매출은 덴트웹에서 가져오므로 매입만 활성화 */
 const PLAYWRIGHT_SCRAPER_MAP: Partial<Record<DataType, ScraperFn>> = {
   // tax_invoice_sales: 추후 구현
   // tax_invoice_purchase: 추후 구현
-  cash_receipt_sales: scrapeCashReceiptSales,
+  // cash_receipt_sales: scrapeCashReceiptSales,  // 덴트웹 매출로 대체
   cash_receipt_purchase: scrapeCashReceiptPurchase,
   business_card_purchase: scrapeBusinessCardPurchase,
-  credit_card_sales: scrapeCreditCardSales,
+  // credit_card_sales: scrapeCreditCardSales,    // 덴트웹 매출로 대체
 };
 
 /**

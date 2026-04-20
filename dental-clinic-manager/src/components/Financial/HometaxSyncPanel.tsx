@@ -49,11 +49,11 @@ interface SyncLog {
 }
 
 const DATA_TYPE_LABELS: Record<string, string> = {
-  // 세금계산서는 현재 제외 (추후 구현 예정)
-  cash_receipt_sales: '현금영수증 매출',
+  // 매출 관련은 덴트웹��서 가���오므로 비활성화 (추후 필요 시 주석 해제)
+  // cash_receipt_sales: '현금영수증 매출',
   cash_receipt_purchase: '현금영수증 매입',
   business_card_purchase: '사업용카드 매입',
-  credit_card_sales: '신용카드 매출',
+  // credit_card_sales: '신용카드 매출',
 }
 
 export default function HometaxSyncPanel({

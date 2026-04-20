@@ -34,11 +34,11 @@ interface RawDataRecord {
 }
 
 const DATA_TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }> = {
-  // 세금계산서는 현재 제외 (추후 구현 예정)
-  cash_receipt_sales: { label: '현금영수증 매출', icon: Receipt, color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
+  // 매출 관련은 덴트웹에서 가져오므로 비활성화 (추후 필요 시 주석 해제)
+  // cash_receipt_sales: { label: '현금영수증 매출', icon: Receipt, color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
   cash_receipt_purchase: { label: '현금영수증 매입', icon: Receipt, color: 'text-orange-600', bgColor: 'bg-orange-100' },
   business_card_purchase: { label: '사업용카드 매입', icon: CreditCard, color: 'text-purple-600', bgColor: 'bg-purple-100' },
-  credit_card_sales: { label: '신용카드 매출', icon: Building2, color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
+  // credit_card_sales: { label: '신용카드 매출', icon: Building2, color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
 }
 
 export default function HometaxDataView({ clinicId, year, month }: HometaxDataViewProps) {

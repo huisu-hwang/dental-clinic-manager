@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 const ALL_DATA_TYPES = [
-  'tax_invoice_sales',
-  'tax_invoice_purchase',
-  'cash_receipt_sales',
+  // 매출 관련은 덴트웹에서 가져오므로 비활성화 (추후 필요 시 주석 해제)
+  // 'tax_invoice_sales',
+  // 'tax_invoice_purchase',
+  // 'cash_receipt_sales',
   'cash_receipt_purchase',
   'business_card_purchase',
-  'credit_card_sales',
+  // 'credit_card_sales',
 ];
 
 // POST: 수동 동기화 요청 (Job 생성)
