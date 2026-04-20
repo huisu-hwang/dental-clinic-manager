@@ -397,11 +397,11 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       return
     }
 
-    // 주민번호 검증 (값이 있을 때만)
+    // 주민번호 앞 7자리 검증 (값이 있을 때만)
     if (editForm.resident_registration_number && editForm.resident_registration_number.trim()) {
       const cleaned = editForm.resident_registration_number.replace(/-/g, '')
-      if (cleaned.length !== 13 || !/^\d{13}$/.test(cleaned)) {
-        setError('주민등록번호는 13자리 숫자여야 합니다.')
+      if (cleaned.length !== 7 || !/^\d{7}$/.test(cleaned)) {
+        setError('주민등록번호 앞 7자리(생년월일6자리+성별1자리)를 입력해주세요.')
         return
       }
     }
@@ -946,18 +946,18 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
               <div>
                 <label className="block text-sm font-medium text-at-text-secondary mb-1">
-                  주민등록번호
+                  주민등록번호 앞 7자리
                 </label>
                 <input
                   type="text"
                   value={editForm.resident_registration_number}
                   onChange={(e) => setEditForm({ ...editForm, resident_registration_number: e.target.value })}
                   className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
-                  placeholder="900101-1234567"
-                  maxLength={14}
+                  placeholder="900101-1"
+                  maxLength={8}
                 />
                 <p className="mt-1 text-xs text-at-text-weak">
-                  13자리 숫자로 입력 (하이픈 포함 가능)
+                  생년월일 6자리 + 성별 1자리 (전체 주민번호는 근로계약서에서 별도 입력)
                 </p>
               </div>
 
