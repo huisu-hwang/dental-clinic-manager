@@ -1266,8 +1266,8 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                                 group flex items-center justify-center py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
                                 ${isActive
                                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm shadow-blue-500/20'
-                                    : tab.isPremiumFeature
-                                      ? 'text-slate-500 hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
+                                    : tab.isPremiumLocked
+                                      ? 'text-slate-300 hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
                                       : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                                 }
                               `}
@@ -1303,9 +1303,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
-                  <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none transition-transform group-hover:scale-110">PRO</span>}
+                  {tab.isPremiumLocked && !isActive ? (
+                    <>
+                      <Icon className="w-5 h-5 flex-shrink-0 text-gray-300 group-hover:hidden" />
+                      <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
+                      <span className="ml-auto text-[9px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full leading-none group-hover:hidden">PRO</span>
+                      <span className="hidden group-hover:flex items-center justify-center w-full text-sm font-semibold text-amber-600">활성화</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                      <span className="truncate">{tab.label}</span>
+                      {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">PRO</span>}
+                    </>
+                  )}
                 </button>
               )
             })}
@@ -1327,9 +1338,20 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                     }
                   `}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
-                  <span className="truncate">{tab.label}</span>
-                  {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none transition-transform group-hover:scale-110">PRO</span>}
+                  {tab.isPremiumLocked && !isActive ? (
+                    <>
+                      <Icon className="w-5 h-5 flex-shrink-0 text-gray-300 group-hover:hidden" />
+                      <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
+                      <span className="ml-auto text-[9px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full leading-none group-hover:hidden">PRO</span>
+                      <span className="hidden group-hover:flex items-center justify-center w-full text-sm font-semibold text-amber-600">활성화</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                      <span className="truncate">{tab.label}</span>
+                      {tab.isPremiumFeature && <span className="ml-auto text-[9px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">PRO</span>}
+                    </>
+                  )}
                 </button>
               )
             })}
@@ -1395,15 +1417,26 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
                               group flex items-center space-x-2.5 py-1.5 px-3 rounded-lg text-[13px] font-medium transition-all duration-200 w-full
                               ${isActive
                                   ? 'bg-at-accent-light text-at-accent'
-                                  : tab.isPremiumFeature
-                                    ? 'text-at-text-secondary hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
+                                  : tab.isPremiumLocked
+                                    ? 'text-gray-400 hover:bg-amber-50 hover:text-amber-700 cursor-pointer'
                                     : 'text-at-text-secondary hover:bg-at-surface-hover hover:text-at-text'
                               }
                             `}
                           >
-                            <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
-                            <span className="truncate">{tab.label}</span>
-                            {tab.isPremiumFeature && <span className="ml-auto text-[8px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1 py-0.5 rounded-full flex-shrink-0 leading-none transition-transform group-hover:scale-110">PRO</span>}
+                            {tab.isPremiumLocked && !isActive ? (
+                              <>
+                                <Icon className="w-4 h-4 flex-shrink-0 text-gray-300 group-hover:hidden" />
+                                <span className="truncate text-gray-400 group-hover:hidden">{tab.label}</span>
+                                <span className="ml-auto text-[8px] font-bold tracking-wider bg-gray-200 text-gray-500 px-1 py-0.5 rounded-full leading-none group-hover:hidden">PRO</span>
+                                <span className="hidden group-hover:flex items-center justify-center w-full text-[13px] font-semibold text-amber-600">활성화</span>
+                              </>
+                            ) : (
+                              <>
+                                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-at-accent' : 'text-at-text-weak group-hover:text-at-text-secondary'}`} />
+                                <span className="truncate">{tab.label}</span>
+                                {tab.isPremiumFeature && <span className="ml-auto text-[8px] font-bold tracking-wider bg-gradient-to-r from-amber-400 to-amber-500 text-white px-1 py-0.5 rounded-full flex-shrink-0 leading-none">PRO</span>}
+                              </>
+                            )}
                           </button>
                         )
                       })}

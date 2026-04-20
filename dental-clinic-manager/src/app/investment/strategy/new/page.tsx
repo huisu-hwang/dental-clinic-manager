@@ -134,15 +134,34 @@ export default function NewStrategyPage() {
       {/* 스텝별 콘텐츠 */}
       {step === 'basic' && (
         <div className="space-y-6">
-          {/* 프리셋 */}
+          {/* 프리셋 - 기본 전략 */}
           <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
-            <h2 className="font-semibold text-at-text mb-3">프리셋 전략</h2>
+            <h2 className="font-semibold text-at-text mb-1">기본 전략</h2>
+            <p className="text-xs text-at-text-secondary mb-3">검증된 클래식 기술적 분석 전략</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {PRESET_STRATEGIES.map(preset => (
+              {PRESET_STRATEGIES.filter(p => !['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce', 'fear-greed-index', 'fear-greed-conservative'].includes(p.id)).map(preset => (
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset)}
                   className="text-left p-4 rounded-xl border border-at-border hover:border-at-accent hover:bg-at-accent-light/30 transition-all"
+                >
+                  <p className="font-medium text-sm text-at-text">{preset.name}</p>
+                  <p className="text-xs text-at-text-secondary mt-1">{preset.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 프리셋 - 대중 심리 전략 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
+            <h2 className="font-semibold text-at-text mb-1">🧠 대중 심리 전략</h2>
+            <p className="text-xs text-at-text-secondary mb-3">공포/탐욕 극단 시점을 포착하는 역행(Contrarian) 투자 전략</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {PRESET_STRATEGIES.filter(p => ['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce', 'fear-greed-index', 'fear-greed-conservative'].includes(p.id)).map(preset => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className="text-left p-4 rounded-xl border border-at-border hover:border-purple-500 hover:bg-purple-50 transition-all"
                 >
                   <p className="font-medium text-sm text-at-text">{preset.name}</p>
                   <p className="text-xs text-at-text-secondary mt-1">{preset.description}</p>

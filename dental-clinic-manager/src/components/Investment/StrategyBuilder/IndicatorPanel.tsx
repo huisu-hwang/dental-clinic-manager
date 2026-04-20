@@ -95,6 +95,13 @@ const TEMPLATES: IndicatorTemplate[] = [
     defaultParams: { period: 20 },
     paramLabels: { period: '기간' },
   },
+  {
+    type: 'FEAR_GREED',
+    label: '😱 공포/탐욕 지수 (F&G)',
+    description: '실시간 시장 심리를 0~100 점수로 합성 (RSI+BB+거래량+모멘텀)',
+    defaultParams: { rsiPeriod: 14, bbPeriod: 20, volPeriod: 20, momentumPeriod: 10 },
+    paramLabels: { rsiPeriod: 'RSI', bbPeriod: 'BB', volPeriod: '거래량', momentumPeriod: '모멘텀' },
+  },
 ]
 
 function generateId(type: IndicatorType, params: Record<string, number>): string {

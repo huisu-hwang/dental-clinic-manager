@@ -30,16 +30,16 @@ interface Props {
 }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  proposed:   { label: '제안',     cls: 'bg-gray-100 text-gray-700' },
-  modified:   { label: '수정됨',   cls: 'bg-amber-100 text-amber-700' },
-  approved:   { label: '승인',     cls: 'bg-emerald-100 text-emerald-700' },
-  rejected:   { label: '반려',     cls: 'bg-rose-100 text-rose-700' },
+  proposed:   { label: '제안',     cls: 'bg-at-surface-alt text-at-text-secondary' },
+  modified:   { label: '수정됨',   cls: 'bg-at-warning-bg text-at-warning' },
+  approved:   { label: '승인',     cls: 'bg-at-success-bg text-at-success' },
+  rejected:   { label: '반려',     cls: 'bg-at-error-bg text-at-error' },
   generating: { label: '생성 중',  cls: 'bg-sky-100 text-sky-700' },
-  scheduled:  { label: '발행 예정', cls: 'bg-violet-100 text-violet-700' },
+  scheduled:  { label: '발행 예정', cls: 'bg-at-accent-light text-at-accent' },
   publishing: { label: '발행 중',  cls: 'bg-indigo-100 text-indigo-700' },
-  published:  { label: '발행됨',   cls: 'bg-green-100 text-green-700' },
-  failed:     { label: '실패',     cls: 'bg-red-100 text-red-700' },
-  review:     { label: '검토 필요', cls: 'bg-yellow-100 text-yellow-800' },
+  published:  { label: '발행됨',   cls: 'bg-at-success-bg text-at-success' },
+  failed:     { label: '실패',     cls: 'bg-at-error-bg text-at-error' },
+  review:     { label: '검토 필요', cls: 'bg-at-warning-bg text-at-warning' },
 }
 
 const CATEGORY_BADGE_CLASSES: Record<string, string> = {
@@ -92,8 +92,8 @@ export default function CalendarItemCard({
   }
 
   return (
-    <div className={`group border rounded-lg p-2.5 bg-white transition-all ${
-      selected ? 'border-blue-400 bg-blue-50/30 ring-1 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
+    <div className={`border rounded-xl p-3 bg-white transition-all duration-200 ${
+      selected ? 'border-at-accent bg-at-accent-light/30 ring-1 ring-at-accent/30' : 'border-at-border hover:shadow-at-card'
     }`}>
       <div className="flex items-start gap-1.5 mb-1.5">
         {onToggleSelect && !isLocked && (
@@ -101,16 +101,16 @@ export default function CalendarItemCard({
             type="checkbox"
             checked={selected || false}
             onChange={() => onToggleSelect(item.id)}
-            className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+            className="mt-0.5 h-3.5 w-3.5 rounded border-at-border text-at-accent focus:ring-at-accent cursor-pointer shrink-0"
           />
         )}
         <div className="flex flex-wrap items-center gap-1 min-w-0 flex-1">
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusBadge.cls}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${statusBadge.cls}`}>
             {statusBadge.label}
           </span>
           {cat && (
             <span
-              className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${
+              className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${
                 CATEGORY_BADGE_CLASSES[cat.color] || 'bg-gray-50 text-gray-700 border-gray-200'
               }`}
             >
@@ -119,14 +119,14 @@ export default function CalendarItemCard({
           )}
           {journey && (
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium"
+              className="text-xs px-1.5 py-0.5 rounded-full bg-at-surface-alt text-at-text-secondary font-medium"
               title={journey.description}
             >
               {journey.label}
             </span>
           )}
           {item.needs_medical_review && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 font-medium inline-flex items-center gap-0.5">
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-at-warning-bg text-at-warning font-medium inline-flex items-center gap-0.5">
               <ExclamationTriangleIcon className="h-3 w-3" />
               심의
             </span>
@@ -140,21 +140,21 @@ export default function CalendarItemCard({
             type="text"
             value={draftTitle}
             onChange={(e) => setDraftTitle(e.target.value)}
-            className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+            className="w-full text-sm border border-at-border rounded-xl px-2 py-1 focus:ring-1 focus:ring-at-accent focus:outline-none"
             placeholder="제목"
           />
           <input
             type="text"
             value={draftKeyword}
             onChange={(e) => setDraftKeyword(e.target.value)}
-            className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+            className="w-full text-xs border border-at-border rounded-xl px-2 py-1 focus:ring-1 focus:ring-at-accent focus:outline-none"
             placeholder="타겟 키워드"
           />
           <div className="flex gap-1">
             <button
               onClick={handleSaveEdit}
               disabled={busy !== null}
-              className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 disabled:opacity-50"
+              className="text-xs bg-at-accent text-white px-2 py-1 rounded-lg hover:bg-at-accent-hover disabled:opacity-50"
             >
               저장
             </button>
@@ -164,7 +164,7 @@ export default function CalendarItemCard({
                 setDraftTitle(item.title)
                 setDraftKeyword(item.keyword || '')
               }}
-              className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+              className="text-xs bg-at-surface-alt text-at-text-secondary px-2 py-1 rounded-lg hover:bg-at-surface-hover"
             >
               취소
             </button>
@@ -172,19 +172,19 @@ export default function CalendarItemCard({
         </div>
       ) : (
         <>
-          <h4 className="text-sm font-semibold text-gray-900 leading-snug mb-1 line-clamp-2">
+          <h4 className="text-sm font-semibold text-at-text leading-snug mb-1 line-clamp-2">
             {item.title}
           </h4>
           {item.keyword && (
-            <p className="text-xs text-gray-500 mb-1">🔎 {item.keyword}</p>
+            <p className="text-xs text-at-text-secondary mb-1">🔎 {item.keyword}</p>
           )}
           {item.estimated_search_volume !== null && item.estimated_search_volume > 0 && (
-            <p className="text-[11px] text-gray-400 mb-1 inline-flex items-center gap-0.5">
+            <p className="text-xs text-at-text-weak mb-1 inline-flex items-center gap-0.5">
               <ChartBarIcon className="h-3 w-3" />월 ~{item.estimated_search_volume.toLocaleString()}회
             </p>
           )}
           {item.planning_rationale && (
-            <p className="text-[11px] text-gray-500 leading-tight mb-2 italic">
+            <p className="text-xs text-at-text-weak leading-tight mb-2 italic">
               💡 {item.planning_rationale}
             </p>
           )}
@@ -192,71 +192,60 @@ export default function CalendarItemCard({
       )}
 
       {!isLocked && !editing && (
-        <div className="flex flex-wrap gap-1 pt-1.5 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity duration-150 max-h-0 group-hover:max-h-20 overflow-hidden">
+        <div className="flex items-center gap-1 pt-1.5 border-t border-at-border">
           {canApprove && (
             <button
               onClick={() => handleAction('approve', onApprove)}
               disabled={busy !== null}
-              className="text-[11px] bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+              className="p-1.5 rounded-lg text-at-success hover:bg-at-success-bg disabled:opacity-50 transition-all duration-200"
               title="승인"
             >
-              <CheckCircleIcon className="h-3 w-3" /> 승인
-            </button>
-          )}
-          {item.status === 'approved' && (
-            <button
-              onClick={() => handleAction('unapprove', () => onUpdate({ status: 'proposed' }))}
-              disabled={busy !== null}
-              className="text-[11px] bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
-              title="승인 취소"
-            >
-              승인 취소
+              <CheckCircleIcon className="h-3.5 w-3.5" />
             </button>
           )}
           <button
             onClick={() => setEditing(true)}
             disabled={busy !== null}
-            className="text-[11px] bg-blue-50 text-blue-700 hover:bg-blue-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+            className="p-1.5 rounded-lg text-at-accent hover:bg-at-accent-light disabled:opacity-50 transition-all duration-200"
             title="수정"
           >
-            <PencilIcon className="h-3 w-3" /> 수정
+            <PencilIcon className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => handleAction('regen', onRegenerate)}
             disabled={busy !== null}
-            className="text-[11px] bg-violet-50 text-violet-700 hover:bg-violet-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+            className="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 disabled:opacity-50 transition-all duration-200"
             title="AI 재생성"
           >
-            <ArrowPathIcon className={`h-3 w-3 ${busy === 'regen' ? 'animate-spin' : ''}`} />
-            재생성
+            <ArrowPathIcon className={`h-3.5 w-3.5 ${busy === 'regen' ? 'animate-spin' : ''}`} />
           </button>
           {!['rejected'].includes(item.status) && (
             <button
               onClick={() => handleAction('reject', onReject)}
               disabled={busy !== null}
-              className="text-[11px] bg-rose-50 text-rose-700 hover:bg-rose-100 px-2 py-1 rounded inline-flex items-center gap-0.5 disabled:opacity-50"
+              className="p-1.5 rounded-lg text-at-error hover:bg-at-error-bg disabled:opacity-50 transition-all duration-200"
               title="반려"
             >
-              <XCircleIcon className="h-3 w-3" /> 반려
+              <XCircleIcon className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       )}
 
       {item.status === 'failed' && item.fail_reason && (
-        <p className="text-[11px] text-rose-600 mt-2 leading-tight">
+        <p className="text-xs text-at-error mt-2 leading-tight">
           ⚠️ {item.fail_reason}
         </p>
       )}
 
       {item.status === 'published' && item.metrics && item.metrics.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+        <div className="mt-2 pt-2 border-t border-at-border space-y-1">
           {item.metrics.map((m) => {
             const measured = new Date(m.measured_at)
             const ago = formatTimeAgo(measured)
             return (
-              <div key={m.platform} className="flex items-center gap-2 flex-wrap text-[11px]">
-                <span className="text-gray-400 font-medium">{platformLabel(m.platform)}</span>
+              <div key={m.platform} className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="text-at-text-secondary font-medium">{platformLabel(m.platform)}</span>
                 {m.views !== null && (
                   <span className="inline-flex items-center gap-0.5 text-blue-600">
                     <EyeIcon className="h-3 w-3" />
@@ -281,7 +270,7 @@ export default function CalendarItemCard({
                     {m.scraps.toLocaleString()}
                   </span>
                 )}
-                <span className="text-gray-400 ml-auto">{ago}</span>
+                <span className="text-at-text-weak ml-auto">{ago}</span>
               </div>
             )
           })}
