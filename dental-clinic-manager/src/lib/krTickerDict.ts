@@ -85,43 +85,52 @@ export const KR_TICKER_DICT: KRTickerEntry[] = [
 ]
 
 /**
- * 한글/영문 쿼리로 국내 종목 검색
+ * 제네릭 종목 딕셔너리 검색 (한글/영문/코드 지원)
  */
-export function searchKRTicker(query: string, limit = 10): KRTickerEntry[] {
+export function searchTickerDict<T extends { ticker: string; name: string; alias?: string[] }>(
+  dict: T[],
+  query: string,
+  limit = 10
+): T[] {
   const q = query.trim().toLowerCase()
   if (q.length < 1) return []
 
-  const scored: { entry: KRTickerEntry; score: number }[] = []
+  const scored: { entry: T; score: number }[] = []
 
-  for (const entry of KR_TICKER_DICT) {
+  for (const entry of dict) {
+    const tickerLower = entry.ticker.toLowerCase()
     // 1. 정확한 코드 일치
-    if (entry.ticker === q) {
+    if (tickerLower === q) {
       return [entry]
     }
     // 2. 코드 접두사 일치
-    if (entry.ticker.startsWith(q)) {
+    if (tickerLower.startsWith(q)) {
       scored.push({ entry, score: 100 - entry.ticker.length })
       continue
     }
-    // 3. 한글 이름 정확히 일치
+    // 3. 이름 정확히 일치
     const nameLower = entry.name.toLowerCase()
     if (nameLower === q) {
       scored.push({ entry, score: 90 })
       continue
     }
-    // 4. 한글 이름 접두사 일치 ("삼성" → 삼성전자, 삼성바이오로직스 등)
+    // 4. 이름 접두사 일치
     if (nameLower.startsWith(q) || entry.name.startsWith(query)) {
       scored.push({ entry, score: 80 - entry.name.length })
       continue
     }
-    // 5. 한글 이름 포함
+    // 5. 이름 포함
     if (nameLower.includes(q) || entry.name.includes(query)) {
       scored.push({ entry, score: 60 - entry.name.length })
       continue
     }
-    // 6. alias 일치
+    // 6. alias 일치 (접두사 우선, 포함은 낮은 점수)
+    if (entry.alias?.some(a => a.toLowerCase().startsWith(q))) {
+      scored.push({ entry, score: 55 })
+      continue
+    }
     if (entry.alias?.some(a => a.toLowerCase().includes(q))) {
-      scored.push({ entry, score: 50 })
+      scored.push({ entry, score: 45 })
       continue
     }
   }
@@ -130,4 +139,11 @@ export function searchKRTicker(query: string, limit = 10): KRTickerEntry[] {
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map(s => s.entry)
+}
+
+/**
+ * 한글/영문 쿼리로 국내 종목 검색
+ */
+export function searchKRTicker(query: string, limit = 10): KRTickerEntry[] {
+  return searchTickerDict(KR_TICKER_DICT, query, limit)
 }
