@@ -885,10 +885,10 @@ export const recallPatientService = {
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
     try {
-      // 현재 환자 정보 조회 (contact_count, campaign_id)
+      // 현재 환자 정보 조회 (contact_count, campaign_id, status)
       const { data: patient } = await supabase
         .from('recall_patients')
-        .select('campaign_id, contact_count')
+        .select('campaign_id, contact_count, status')
         .eq('id', id)
         .single()
 
@@ -904,7 +904,10 @@ export const recallPatientService = {
         updates.recall_datetime = now
         updates.last_contact_date = now
         updates.last_contact_type = contactType
-        updates.contact_count = (patient?.contact_count || 0) + 1
+        // 이전 상태가 pending일 때만 contact_count 증가 (결과 상태 간 수정 시 중복 증가 방지)
+        if (patient?.status === 'pending') {
+          updates.contact_count = (patient?.contact_count || 0) + 1
+        }
       }
 
       const { error } = await supabase

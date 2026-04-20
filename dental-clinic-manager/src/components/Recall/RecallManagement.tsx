@@ -249,6 +249,7 @@ export default function RecallManagement() {
       const previousPatient = { ...patient }
       const now = new Date().toISOString()
       const isContact = newStatus !== 'pending'
+      const wasPending = patient.status === 'pending'
       const contactType = newStatus === 'sms_sent' ? 'sms' : 'call'
 
       setPatients(prev => prev.map(p =>
@@ -259,7 +260,8 @@ export default function RecallManagement() {
             recall_datetime: now,
             last_contact_date: now,
             last_contact_type: contactType as ContactType,
-            contact_count: (p.contact_count || 0) + 1
+            // 이전 상태가 pending일 때만 contact_count 증가 (결과 상태 간 수정 시 중복 증가 방지)
+            ...(wasPending ? { contact_count: (p.contact_count || 0) + 1 } : {})
           } : {})
         } : p
       ))
