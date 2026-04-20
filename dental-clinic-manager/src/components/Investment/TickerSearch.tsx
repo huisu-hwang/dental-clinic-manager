@@ -50,14 +50,32 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
     setOpen(false)
   }, [market])
 
+  /**
+   * 입력값이 "검색 가능한 상태"인지 판단
+   * - 빈 문자열/공백만 있는 경우 false
+   * - 한글 자모(ㄱㄴㄷㅏㅑ 등)만 포함된 경우 false (IME 조합 중)
+   * - 완성형 한글, 영문, 숫자가 있으면 true
+   */
+  const isSearchable = (q: string): boolean => {
+    const trimmed = q.trim()
+    if (trimmed.length < 1) return false
+
+    // 한글 자모 범위: U+3131~U+318F (ㄱ-ㅎ, ㅏ-ㅣ 등)
+    // 완성형 한글: U+AC00~U+D7A3 (가-힣)
+    // 자모만 포함 + 완성형 한글/영문/숫자 없음 → 조합 중
+    const hasCompleted = /[\uAC00-\uD7A3a-zA-Z0-9]/.test(trimmed)
+    return hasCompleted
+  }
+
   const search = useCallback(async (q: string) => {
-    if (q.trim().length < 1) {
+    const trimmed = q.trim()
+    if (trimmed.length < 1) {
       setResults([])
       return
     }
     setLoading(true)
     try {
-      const res = await fetch(`/api/investment/ticker-search?q=${encodeURIComponent(q.trim())}&market=${market}`)
+      const res = await fetch(`/api/investment/ticker-search?q=${encodeURIComponent(trimmed)}&market=${market}`)
       const json = await res.json()
       setResults(json.results || [])
       setOpen(true)
@@ -71,7 +89,17 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
 
   const scheduleSearch = useCallback((val: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => search(val), 350)
+    // 검색 가능한 상태가 아니면 예약 자체를 안 함
+    if (!isSearchable(val)) {
+      setResults([])
+      return
+    }
+    // 한글 타이핑 속도 대응: 700ms debounce (완성된 단어 기다림)
+    debounceRef.current = setTimeout(() => {
+      // 실행 시점에 IME 조합 중이면 스킵 (레이스 대응)
+      if (composingRef.current) return
+      search(val)
+    }, 700)
   }, [search])
 
   const handleInputChange = (val: string) => {
@@ -88,10 +116,13 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
   }
 
   const handleCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
-    composingRef.current = false
     const val = (e.target as HTMLInputElement).value
     setQuery(val)
-    scheduleSearch(val)
+    // React 렌더 사이클과 IME 이벤트 순서 보장을 위해 짧은 지연 후 해제
+    setTimeout(() => {
+      composingRef.current = false
+      scheduleSearch(val)
+    }, 0)
   }
 
   const handleSelect = (result: TickerResult) => {
@@ -191,7 +222,7 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
         </div>
       )}
 
-      {open && !loading && query.trim().length >= 1 && results.length === 0 && !composingRef.current && (
+      {open && !loading && isSearchable(query) && results.length === 0 && !composingRef.current && (
         <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-at-border p-3 text-center text-sm text-at-text-weak">
           검색 결과가 없습니다
         </div>
