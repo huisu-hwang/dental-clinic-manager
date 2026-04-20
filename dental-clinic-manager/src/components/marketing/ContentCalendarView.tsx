@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   CalendarDaysIcon,
   SparklesIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline'
 import {
   TOPIC_CATEGORY_LABELS,
@@ -23,6 +24,7 @@ export default function ContentCalendarView() {
   const [error, setError] = useState<string | null>(null)
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
 
   // ─── 데이터 로드 ───
   const loadCalendars = useCallback(async () => {
@@ -137,6 +139,54 @@ export default function ContentCalendarView() {
     await loadCalendars()
   }
 
+  // ─── 항목 선택 토글 ───
+  const handleToggleSelect = useCallback((itemId: string) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+  }, [])
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedItems(new Set())
+  }, [])
+
+  // ─── 선택된 항목 일괄 작업 ───
+  const handleBatchAction = async (action: 'batch_approve' | 'batch_reject' | 'batch_regenerate') => {
+    if (selectedItems.size === 0 || bulkBusy) return
+    setBulkBusy(action)
+    try {
+      if (action === 'batch_regenerate') {
+        // 재생성은 순차 처리
+        for (const itemId of selectedItems) {
+          await handleRegenerate(itemId)
+        }
+      } else {
+        const res = await fetch('/api/marketing/calendar/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            calendarId: selected?.id,
+            action,
+            itemIds: Array.from(selectedItems),
+          }),
+        })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          throw new Error(j.error || '일괄 작업 실패')
+        }
+      }
+      setSelectedItems(new Set())
+      await loadCalendars()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '일괄 작업 실패')
+    } finally {
+      setBulkBusy(null)
+    }
+  }
+
   // ─── 일괄 작업 ───
   const handleBulk = async (action: 'approve_all' | 'approve_non_review' | 'reject_all') => {
     if (!selected || bulkBusy) return
@@ -192,6 +242,8 @@ export default function ContentCalendarView() {
       for (const it of cal.content_calendar_items || []) {
         if (it.publish_date < startStr || it.publish_date > endStr) continue
         if (seenIds.has(it.id)) continue
+        // 반려된 항목은 캘린더에서 숨김
+        if (it.status === 'rejected') continue
         seenIds.add(it.id)
         collected.push(isSelf ? it : { ...it, _foreign: true })
       }
@@ -353,6 +405,45 @@ export default function ContentCalendarView() {
         </div>
       )}
 
+      {/* 선택된 항목 일괄 작업 바 */}
+      {selectedItems.size > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap gap-2 items-center bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm">
+          <span className="text-sm font-medium text-blue-800">
+            {selectedItems.size}개 선택됨
+          </span>
+          <button
+            onClick={() => handleBatchAction('batch_approve')}
+            disabled={bulkBusy !== null}
+            className="bg-emerald-600 text-white text-xs px-3 py-1.5 rounded hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            <CheckCircleIcon className="h-3.5 w-3.5" />
+            {bulkBusy === 'batch_approve' ? '처리 중...' : '선택 승인'}
+          </button>
+          <button
+            onClick={() => handleBatchAction('batch_regenerate')}
+            disabled={bulkBusy !== null}
+            className="bg-violet-100 text-violet-700 text-xs px-3 py-1.5 rounded hover:bg-violet-200 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            <ArrowPathIcon className={`h-3.5 w-3.5 ${bulkBusy === 'batch_regenerate' ? 'animate-spin' : ''}`} />
+            {bulkBusy === 'batch_regenerate' ? '재생성 중...' : '선택 재생성'}
+          </button>
+          <button
+            onClick={() => handleBatchAction('batch_reject')}
+            disabled={bulkBusy !== null}
+            className="bg-rose-100 text-rose-700 text-xs px-3 py-1.5 rounded hover:bg-rose-200 disabled:opacity-50 inline-flex items-center gap-1"
+          >
+            <XCircleIcon className="h-3.5 w-3.5" />
+            {bulkBusy === 'batch_reject' ? '처리 중...' : '선택 반려'}
+          </button>
+          <button
+            onClick={handleClearSelection}
+            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 ml-auto"
+          >
+            선택 해제
+          </button>
+        </div>
+      )}
+
       {/* 빈 상태 */}
       {!loading && calendars.length === 0 && (
         <div className="text-center py-12 text-gray-500">
@@ -408,6 +499,8 @@ export default function ContentCalendarView() {
                             onReject={isForeign ? noop : () => handleReject(item.id)}
                             onUpdate={isForeign ? noop : (patch) => handleItemUpdate(item.id, patch)}
                             onRegenerate={isForeign ? noop : () => handleRegenerate(item.id)}
+                            selected={selectedItems.has(item.id)}
+                            onToggleSelect={isForeign ? undefined : handleToggleSelect}
                           />
                         </div>
                       )
