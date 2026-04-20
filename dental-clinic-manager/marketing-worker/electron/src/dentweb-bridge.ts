@@ -674,11 +674,9 @@ async function syncSingleMonthRevenue(
 ): Promise<boolean> {
   try {
     const revenue = await getMonthlyRevenue(dbPool, year, month);
-    const total = revenue.insurance_revenue + revenue.non_insurance_revenue + revenue.other_revenue;
 
-    // 수입이 0이면 전송 생략 (성공으로 처리)
-    if (total === 0) return true;
-
+    // 수입이 0이어도 전송하여 revenue_records에 기록을 남김
+    // (전송 생략 시 대시보드가 매번 pending에 재추가하는 무한 루프 발생)
     const url = `${dashboardUrl}/api/dentweb/sync-revenue`;
     const response = await fetchWithRetry(url, {
       method: 'POST',

@@ -76,7 +76,7 @@ async function requestRevenueSyncIfNeeded(
   // pending 목록에 이미 있는지 확인
   const pending = (syncConfig.pending_revenue_months || []) as Array<{ year: number; month: number }>;
   const alreadyPending = pending.some((p: { year: number; month: number }) => p.year === year && p.month === month);
-  if (alreadyPending) return true; // 이미 요청됨
+  if (alreadyPending) return false; // 이미 요청됨 — 워커가 처리할 때까지 배너 미표시
 
   // pending 목록에 추가
   const updated = [...pending, { year, month }];
@@ -85,7 +85,7 @@ async function requestRevenueSyncIfNeeded(
     .update({ pending_revenue_months: updated })
     .eq('id', syncConfig.id);
 
-  return true; // 새로 요청함
+  return true; // 새로 요청함 — 배너 표시 + 폴링 시작
 }
 
 // GET: 재무 요약 조회
