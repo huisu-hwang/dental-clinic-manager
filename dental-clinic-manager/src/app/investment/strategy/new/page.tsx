@@ -15,13 +15,14 @@ import type {
 
 type Step = 'basic' | 'indicators' | 'conditions' | 'risk'
 
+// 투자 일반론 기반 기본값 (2% Rule, 리스크-보상 1:2, 5종목 분산)
 const DEFAULT_RISK: RiskSettings = {
-  maxDailyLossPercent: 2,
-  maxPositions: 3,
-  maxPositionSizePercent: 30,
-  stopLossPercent: 5,
-  takeProfitPercent: 10,
-  maxHoldingDays: 0,
+  maxDailyLossPercent: 2,      // 2% Rule (Van Tharp): 일일 최대 손실 2%
+  maxPositions: 5,              // 5종목 분산 (관리 가능 범위)
+  maxPositionSizePercent: 20,   // 종목당 20% (5종목 × 20% = 100%)
+  stopLossPercent: 7,           // 단기 스윙 기준 7%
+  takeProfitPercent: 15,        // 리스크-보상 1:2 (7 × 2 ≈ 14~15)
+  maxHoldingDays: 30,           // 중기 30일 보유 한도
 }
 
 const EMPTY_GROUP: ConditionGroup = { type: 'group', operator: 'AND', conditions: [] }
