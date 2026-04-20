@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // API 키 인증
+    // API 키 인증 + pending 조회
     const { data: config, error: configError } = await supabase
       .from('dentweb_sync_config')
-      .select('clinic_id, api_key, is_active')
+      .select('id, clinic_id, api_key, is_active, pending_revenue_months')
       .eq('clinic_id', clinic_id)
       .eq('api_key', api_key)
       .single()
@@ -61,6 +61,18 @@ export async function POST(request: NextRequest) {
 
     const total = Math.round((insurance_revenue || 0) + (non_insurance_revenue || 0) + (other_revenue || 0))
     console.log(`[dentweb/sync-revenue] ${year}-${month} 수입 저장 완료: 보험=${insurance_revenue}, 비보험=${non_insurance_revenue}, 기타=${other_revenue}, 합계=${total}`)
+
+    // 해당 월이 pending에 있으면 자동 제거
+    const pending = (config.pending_revenue_months || []) as Array<{ year: number; month: number }>
+    const yearNum = parseInt(year)
+    const monthNum = parseInt(month)
+    if (pending.some(p => p.year === yearNum && p.month === monthNum)) {
+      const remaining = pending.filter(p => !(p.year === yearNum && p.month === monthNum))
+      await supabase
+        .from('dentweb_sync_config')
+        .update({ pending_revenue_months: remaining })
+        .eq('id', config.id)
+    }
 
     return NextResponse.json({
       success: true,
