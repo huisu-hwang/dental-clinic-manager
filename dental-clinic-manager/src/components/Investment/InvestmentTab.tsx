@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import {
-  LayoutDashboard, Link2, Target, TrendingUp, Briefcase,
+  LayoutDashboard, Link2, Target, TrendingUp, TrendingDown, Briefcase,
   Wallet, Activity, AlertCircle, OctagonX, Loader2,
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
 } from 'lucide-react'
@@ -32,6 +32,33 @@ export default function InvestmentTab() {
   const [loading, setLoading] = useState(true)
   const [emergencyStopping, setEmergencyStopping] = useState(false)
   const [backtestStrategyId, setBacktestStrategyId] = useState<string | null>(null)
+  const [balance, setBalance] = useState<{ totalEvaluation: number; totalPnl: number; holdingsCount: number } | null>(null)
+  const [balanceLoading, setBalanceLoading] = useState(false)
+  const [balanceError, setBalanceError] = useState<string | null>(null)
+
+  const loadBalance = useCallback(async () => {
+    setBalanceLoading(true)
+    setBalanceError(null)
+    try {
+      const res = await fetch('/api/investment/balance')
+      const json = await res.json()
+      if (res.ok && json.success && json.data) {
+        setBalance({
+          totalEvaluation: json.data.totalEvaluation || 0,
+          totalPnl: json.data.totalPnl || 0,
+          holdingsCount: (json.data.items || []).length,
+        })
+      } else {
+        setBalance(null)
+        if (res.status !== 404) setBalanceError(json.error || '잔고 조회 실패')
+      }
+    } catch {
+      setBalance(null)
+      setBalanceError('네트워크 오류')
+    } finally {
+      setBalanceLoading(false)
+    }
+  }, [])
 
   const loadData = useCallback(async () => {
     try {
@@ -41,17 +68,23 @@ export default function InvestmentTab() {
         .select('id, is_paper_trading')
         .eq('is_active', true)
         .maybeSingle()
-      setHasCredential(!!data)
+      const connected = !!data
+      setHasCredential(connected)
 
       const res = await fetch('/api/investment/strategies')
       const json = await res.json()
       if (json.data) setStrategies(json.data)
+
+      // 계좌 연결된 경우 잔고도 로드
+      if (connected) {
+        loadBalance()
+      }
     } catch {
       setHasCredential(false)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [loadBalance])
 
   useEffect(() => {
     if (user) loadData()
@@ -129,6 +162,10 @@ export default function InvestmentTab() {
             emergencyStopping={emergencyStopping}
             onEmergencyStop={handleEmergencyStop}
             onNavigate={setSubTab}
+            balance={balance}
+            balanceLoading={balanceLoading}
+            balanceError={balanceError}
+            onRefreshBalance={loadBalance}
           />
         )}
         {subTab === 'connect' && (
@@ -158,13 +195,17 @@ export default function InvestmentTab() {
 // 서브탭 컴포넌트들
 // ============================================
 
-function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergencyStopping, onEmergencyStop, onNavigate }: {
+function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergencyStopping, onEmergencyStop, onNavigate, balance, balanceLoading, balanceError, onRefreshBalance }: {
   hasCredential: boolean | null
   strategies: InvestmentStrategy[]
   activeStrategies: InvestmentStrategy[]
   emergencyStopping: boolean
   onEmergencyStop: () => void
   onNavigate: (tab: SubTab) => void
+  balance: { totalEvaluation: number; totalPnl: number; holdingsCount: number } | null
+  balanceLoading: boolean
+  balanceError: string | null
+  onRefreshBalance: () => void
 }) {
   if (!hasCredential) {
     return (
@@ -189,19 +230,53 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
     )
   }
 
+  const formatCurrency = (n: number) => {
+    if (!Number.isFinite(n)) return '--'
+    return Math.round(n).toLocaleString('ko-KR')
+  }
+  const totalEvalDisplay = balanceLoading ? '...' : (balance ? formatCurrency(balance.totalEvaluation) : '--')
+  const totalPnlDisplay = balanceLoading ? '...' : (balance ? formatCurrency(balance.totalPnl) : '--')
+  const pnlPositive = balance ? balance.totalPnl >= 0 : null
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-at-text">투자 대시보드</h2>
-        <p className="text-sm text-at-text-secondary mt-1">포트폴리오 현황과 활성 전략을 확인하세요</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-at-text">투자 대시보드</h2>
+          <p className="text-sm text-at-text-secondary mt-1">포트폴리오 현황과 활성 전략을 확인하세요</p>
+        </div>
+        {hasCredential && (
+          <button
+            onClick={onRefreshBalance}
+            disabled={balanceLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-at-text-secondary hover:bg-at-surface-alt transition-colors disabled:opacity-50"
+            title="잔고 새로고침"
+          >
+            <Loader2 className={`w-4 h-4 ${balanceLoading ? 'animate-spin' : ''}`} />
+            잔고 새로고침
+          </button>
+        )}
       </div>
+
+      {balanceError && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          잔고 조회 실패: {balanceError}
+        </div>
+      )}
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard title="총 평가금액" value="--" unit="원" icon={Wallet} />
-        <SummaryCard title="오늘 손익" value="--" unit="원" icon={TrendingUp} />
+        <SummaryCard title="총 평가금액" value={totalEvalDisplay} unit="원" icon={Wallet} />
+        <SummaryCard
+          title="총 손익"
+          value={pnlPositive === null ? totalPnlDisplay : `${balance!.totalPnl >= 0 ? '+' : ''}${totalPnlDisplay}`}
+          unit="원"
+          icon={pnlPositive === false ? TrendingDown : TrendingUp}
+          valueColor={pnlPositive === true ? 'text-red-500' : pnlPositive === false ? 'text-blue-500' : undefined}
+        />
+        <SummaryCard title="보유 종목" value={balance ? String(balance.holdingsCount) : '--'} unit="개" icon={Briefcase} />
         <SummaryCard title="활성 전략" value={String(activeStrategies.length)} unit="개" icon={Target} />
-        <SummaryCard title="전체 전략" value={String(strategies.length)} unit="개" icon={Activity} />
       </div>
 
       {/* 긴급 정지 */}
@@ -352,7 +427,7 @@ function StrategySubTab({ strategies, onRefresh, onBacktest }: { strategies: Inv
   )
 }
 
-function SummaryCard({ title, value, unit, icon: Icon }: { title: string; value: string; unit: string; icon: React.ElementType }) {
+function SummaryCard({ title, value, unit, icon: Icon, valueColor }: { title: string; value: string; unit: string; icon: React.ElementType; valueColor?: string }) {
   return (
     <div className="bg-at-surface-alt rounded-2xl p-4 border border-at-border">
       <div className="flex items-center justify-between mb-2">
@@ -360,7 +435,7 @@ function SummaryCard({ title, value, unit, icon: Icon }: { title: string; value:
         <Icon className="w-4 h-4 text-at-text-weak" />
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="text-xl font-bold text-at-text">{value}</span>
+        <span className={`text-xl font-bold ${valueColor || 'text-at-text'}`}>{value}</span>
         <span className="text-xs text-at-text-weak">{unit}</span>
       </div>
     </div>
