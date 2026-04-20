@@ -313,7 +313,7 @@ export default function RoleSelector() {
               Welcome
             </div>
             <h1 className="fade-up-2 text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1] mb-5">
-              먼저, 어느 쪽이신가요?
+              본인의 직급을 선택해 주세요~
             </h1>
             <p className="fade-up-3 text-lg text-slate-600 max-w-xl mx-auto leading-relaxed">
               클리닉 매니저는 역할에 맞춰{' '}
