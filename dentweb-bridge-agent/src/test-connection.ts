@@ -61,18 +61,19 @@ async function main() {
   const tableCount = tables.length
   console.log(`  [OK] ${tableCount} tables found in database`)
 
-  // Check for key DentWeb tables
-  const keyTables = ['PATIENT', 'RECEIPT', 'TREAT_DETAIL', 'RESERVATION']
+  // Check for key DentWeb tables (실제 한글 테이블명)
+  const keyTables = ['TB_환자정보', 'TB_접수목록', 'TB_세부처치내역', 'TB_예약목록', 'TB_치료수가표']
   const foundKeyTables = keyTables.filter(t => tables.includes(t))
   if (foundKeyTables.length > 0) {
     console.log(`  [OK] DentWeb tables found: ${foundKeyTables.join(', ')}`)
+  } else {
+    console.log('  [!] DentWeb core tables not found (expected TB_환자정보 etc.)')
   }
 
   tables.forEach(t => logger.info(`  ${t}`))
 
   // Check key table columns
-  const targetTables = ['PATIENT', 'RECEIPT', 'TREAT_DETAIL', 'RESERVATION']
-  for (const tableName of targetTables) {
+  for (const tableName of keyTables) {
     if (tables.includes(tableName)) {
       logger.info(`\n--- ${tableName} columns ---`)
       const columns = await listColumns(tableName)

@@ -791,6 +791,48 @@ interface DentwebSchemaData {
   writable_tables: string[];
 }
 
+// 스키마 캐시 비어있을 때 최소 DentWeb 정보 (브릿지 미초기화 상태에서도 AI 도구 활성화)
+const DENTWEB_FALLBACK_SCHEMA: DentwebSchemaData = {
+  schema_data: {
+    tables: [
+      { name: 'TB_환자정보', columns: [
+        { name: 'n환자ID', type: 'int' }, { name: 'sz차트번호', type: 'varchar' },
+        { name: 'sz이름', type: 'varchar' }, { name: 'sz휴대폰번호', type: 'varchar' },
+        { name: 'sz생년월일', type: 'varchar' }, { name: 'b성별', type: 'bit' },
+        { name: 'sz최종내원일', type: 'varchar' }, { name: 'sz등록시각', type: 'varchar' },
+        { name: 't수정시각', type: 'datetime' },
+      ]},
+      { name: 'TB_진료비내역', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz진료일', type: 'char' },
+        { name: 'n환자ID', type: 'int' }, { name: 'n총진료비', type: 'int' },
+        { name: 'n공단부담금', type: 'int' }, { name: 'n본인부담금', type: 'int' },
+        { name: 'n비급여진료비', type: 'int' }, { name: 'n카드수납액', type: 'int' },
+        { name: 'n현금수납액', type: 'int' },
+      ]},
+      { name: 'TB_예약목록', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz예약시각', type: 'char' },
+        { name: 'n환자ID', type: 'int' }, { name: 'sz예약내용', type: 'varchar' },
+        { name: 'n이행현황', type: 'tinyint' },
+      ]},
+      { name: 'TB_세부처치내역', columns: [
+        { name: 'nID', type: 'int' }, { name: 'n환자ID', type: 'int' },
+        { name: 'sz진료일', type: 'char' }, { name: 'sz수가코드', type: 'varchar' },
+        { name: 'n금액', type: 'int' }, { name: 'b취소', type: 'bit' },
+      ]},
+      { name: 'TB_치료수가표', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz이름', type: 'varchar' },
+        { name: 'n가격', type: 'int' },
+      ]},
+      { name: 'TB_수입지출장부', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz작성시각', type: 'char' },
+        { name: 'b수입지출', type: 'bit' }, { name: 'n계정항목', type: 'int' },
+        { name: 'n총액', type: 'int' }, { name: 'sz내용', type: 'varchar' },
+      ]},
+    ],
+  },
+  writable_tables: ['TB_포스트잇', 'TB_컴퓨터포스트잇', 'TB_환자메모', 'TB_예약메모'],
+};
+
 // DentWeb 스키마 캐시에서 동적으로 로드
 async function loadDentwebSchema(
   supabase: SupabaseClient,
@@ -902,7 +944,7 @@ async function executeDentwebQuery(
 
     return JSON.stringify({
       source: 'dentweb',
-      error: '브릿지 에이전트 응답 시간 초과 (30초). 원내 PC가 켜져 있는지 확인하세요.',
+      error: '원내 PC 응답 대기 시간(30초)을 초과했습니다. 브릿지 에이전트가 재시작 중이거나 DB 연결이 불안정할 수 있습니다. 잠시 후 다시 시도해주세요.',
     });
   } catch (error) {
     return JSON.stringify({ error: `DentWeb 쿼리 실행 오류: ${String(error)}` });
@@ -1070,8 +1112,16 @@ export async function performAnalysisV2(
   const supabase = createClient(supabaseUrl, supabaseKey);
   const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
 
-  // DentWeb 스키마 로드 (연동이 있으면 시스템 프롬프트에 반영)
-  const dentwebSchema = await loadDentwebSchema(supabase, clinicId);
+  // DentWeb 연동 여부 확인 후 스키마 로드 (캐시 비어있어도 fallback으로 도구 활성화)
+  const { data: syncCfg } = await supabase
+    .from('dentweb_sync_config')
+    .select('is_active')
+    .eq('clinic_id', clinicId)
+    .maybeSingle();
+  const dentwebEnabled = !!syncCfg?.is_active;
+  const dentwebSchema = dentwebEnabled
+    ? (await loadDentwebSchema(supabase, clinicId)) ?? DENTWEB_FALLBACK_SCHEMA
+    : null;
   const systemPrompt = generateSystemPrompt(dentwebSchema);
 
   // DentWeb 연동이 없으면 DentWeb 도구를 제외

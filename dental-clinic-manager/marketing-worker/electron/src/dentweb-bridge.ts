@@ -855,6 +855,8 @@ let realtimeChannel: RealtimeChannel | null = null;
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 let queryApiClient: DentwebApiClient | null = null;
 let cachedWritableTables: string[] = [];
+// 첫 연결 실패 후 재감지로 DB가 붙었을 때 proxy 재시도 여부 판별
+let queryProxyStarted = false;
 
 /** 읽기 쿼리 안전 검증 */
 function validateReadQuery(queryText: string): void {
@@ -940,7 +942,7 @@ async function handleQueryRequest(
 
     // SQL 실행 (30초 타임아웃)
     const sqlRequest = dbPool.request();
-    sqlRequest.timeout = 30000;
+    (sqlRequest as unknown as { timeout: number }).timeout = 30000;
     const result = await sqlRequest.query(request.query_text);
 
     const executionTime = Date.now() - startTime;
@@ -1061,7 +1063,41 @@ function stopQueryProxy(): void {
     pollingInterval = null;
   }
   queryApiClient = null;
+  queryProxyStarted = false;
   log('info', '[DentWeb] Query proxy stopped');
+}
+
+/**
+ * Schema 제출 + 쿼리 프록시를 보장한다.
+ * 첫 연결 실패 후 재감지로 DB가 붙으면 이 함수가 주기 콜백에서 재시도한다.
+ */
+async function ensureQueryProxy(
+  dbPool: sql.ConnectionPool,
+  cfg: ReturnType<typeof getDentwebConfig>
+): Promise<void> {
+  if (queryProxyStarted) return;
+  if (!dbPool.connected || !cfg.clinicId || !cfg.apiKey) return;
+
+  try {
+    queryApiClient = new DentwebApiClient();
+    const { tables, writableTables } = await discoverDentwebSchema(dbPool);
+    cachedWritableTables = writableTables;
+
+    await queryApiClient.submitSchema(
+      cfg.clinicId,
+      cfg.apiKey,
+      { tables },
+      writableTables
+    );
+    log('info', '[DentWeb] Schema submitted to server');
+
+    await startQueryProxy(dbPool, cfg.clinicId, cfg.apiKey, queryApiClient, writableTables);
+    queryProxyStarted = true;
+  } catch (err) {
+    // 실패 시 플래그를 유지하지 않아 다음 주기에 재시도 가능
+    queryProxyStarted = false;
+    throw err;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1251,27 +1287,12 @@ export async function startDentwebSync(): Promise<void> {
   // Run first sync immediately
   await runSync();
 
-  // Schema discovery + query proxy (DB 연결 성공 시에만)
+  // Schema discovery + query proxy (DB 연결 성공 시에만; 실패해도 기존 동기화는 계속 진행)
   if (pool && pool.connected && cfg.clinicId && cfg.apiKey) {
     try {
-      queryApiClient = new DentwebApiClient();
-      const { tables, writableTables } = await discoverDentwebSchema(pool);
-      cachedWritableTables = writableTables;
-
-      // 스키마 정보를 서버로 전송
-      await queryApiClient.submitSchema(
-        cfg.clinicId,
-        cfg.apiKey,
-        { tables },
-        writableTables
-      );
-      log('info', '[DentWeb] Schema submitted to server');
-
-      // 쿼리 프록시 시작 (Realtime 또는 폴링)
-      await startQueryProxy(pool, cfg.clinicId, cfg.apiKey, queryApiClient, writableTables);
+      await ensureQueryProxy(pool, cfg);
     } catch (err) {
       log('warn', `[DentWeb] Schema discovery / query proxy 시작 실패: ${err instanceof Error ? err.message : String(err)}`);
-      // 스키마/프록시 실패해도 기존 동기화는 계속 진행
     }
   }
 
@@ -1279,9 +1300,19 @@ export async function startDentwebSync(): Promise<void> {
   const interval = (getDentwebConfig().syncInterval || 300) * 1000;
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(() => {
-    runSync().catch(err => {
-      log('error', `[DentWeb] 스케줄 동기화 오류: ${err instanceof Error ? err.message : String(err)}`);
-    });
+    runSync()
+      .then(() => {
+        // 첫 시작 때 DB 연결 실패로 proxy skip 된 경우 주기마다 재시도
+        const latestCfg = getDentwebConfig();
+        if (pool && pool.connected && latestCfg.clinicId && latestCfg.apiKey) {
+          ensureQueryProxy(pool, latestCfg).catch(err => {
+            log('warn', `[DentWeb] Query proxy 재시도 실패: ${err instanceof Error ? err.message : String(err)}`);
+          });
+        }
+      })
+      .catch(err => {
+        log('error', `[DentWeb] 스케줄 동기화 오류: ${err instanceof Error ? err.message : String(err)}`);
+      });
   }, interval);
 }
 
