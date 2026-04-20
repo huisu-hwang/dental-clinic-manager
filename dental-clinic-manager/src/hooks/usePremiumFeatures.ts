@@ -6,8 +6,11 @@ import { dataService } from '@/lib/dataService'
 import { PREMIUM_FEATURE_IDS } from '@/config/menuConfig'
 import { getSupabase } from '@/lib/supabase'
 
-// premium-bundle 구독 시 포함되는 기능 ID들
-const PREMIUM_BUNDLE_FEATURES = ['ai-analysis', 'financial', 'marketing'] as const
+// 번들 구독 시 포함되는 기능 ID 매핑
+const BUNDLE_FEATURE_MAP: Record<string, readonly string[]> = {
+  'standard-bundle': ['recall', 'ai-analysis', 'financial'],
+  'premium-bundle': ['recall', 'ai-analysis', 'financial', 'marketing'],
+} as const
 
 export function usePremiumFeatures() {
   const { user } = useAuth()
@@ -54,9 +57,10 @@ export function usePremiumFeatures() {
               const plan = sub.subscription_plans as unknown as { feature_id: string | null } | null
               if (!plan?.feature_id) continue
 
-              if (plan.feature_id === 'premium-bundle') {
-                // premium-bundle → 3개 기능 모두 활성화
-                for (const fid of PREMIUM_BUNDLE_FEATURES) {
+              const bundleFeatures = BUNDLE_FEATURE_MAP[plan.feature_id]
+              if (bundleFeatures) {
+                // 번들 구독 → 포함된 기능 모두 활성화
+                for (const fid of bundleFeatures) {
                   featureIds.add(fid)
                 }
               } else {
