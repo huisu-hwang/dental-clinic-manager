@@ -12,14 +12,71 @@
 import type { Permission } from '@/types/permissions'
 
 // 프리미엄 기능 ID 상수
-export const PREMIUM_FEATURE_IDS = ['ai-analysis', 'financial', 'marketing'] as const
+export const PREMIUM_FEATURE_IDS = ['recall', 'ai-analysis', 'financial', 'marketing', 'investment'] as const
 export type PremiumFeatureId = typeof PREMIUM_FEATURE_IDS[number]
 
 // 프리미엄 기능 라벨 맵
 export const PREMIUM_FEATURE_LABELS: Record<PremiumFeatureId, string> = {
+  'recall': '리콜 관리',
   'ai-analysis': 'AI 데이터 분석',
   'financial': '경영 현황',
   'marketing': '마케팅 자동화',
+  'investment': '주식 자동매매',
+}
+
+// 프리미엄 기능별 데모 오버레이에 표시할 두 가지 플랜 옵션
+export interface PremiumPlanOption {
+  planFeatureId: string   // subscription_plans.feature_id
+  name: string
+  priceLabel: string
+  includes: string[]
+  recommended?: boolean
+}
+
+// 프리미엄 기능 상세 설명 (데모 오버레이에서 사용)
+export const PREMIUM_FEATURE_INFO: Record<PremiumFeatureId, {
+  title: string
+  description: string
+  plans: PremiumPlanOption[]
+}> = {
+  'recall': {
+    title: '리콜 관리',
+    description: '미내원 환자를 자동으로 관리하고 리콜 캠페인을 실행합니다.',
+    plans: [
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'] },
+    ],
+  },
+  'ai-analysis': {
+    title: 'AI 데이터 분석',
+    description: 'AI가 병원 데이터를 분석하여 경영 인사이트를 제공합니다.',
+    plans: [
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'] },
+    ],
+  },
+  'financial': {
+    title: '경영 현황',
+    description: '수입/지출을 체계적으로 관리하고 손익을 분석합니다.',
+    plans: [
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'] },
+    ],
+  },
+  'marketing': {
+    title: '마케팅 자동화',
+    description: '네이버 블로그 임상글을 AI로 자동 생성하고 관리합니다.',
+    plans: [
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'], recommended: true },
+    ],
+  },
+  'investment': {
+    title: '주식 자동매매',
+    description: 'AI 기반 자동매매 전략으로 자산을 운용합니다.',
+    plans: [
+      { planFeatureId: 'investment', name: '주식 자동매매', priceLabel: '수익의 5%', includes: ['AI 자동매매', '전략 백테스트', '실시간 포트폴리오'], recommended: true },
+    ],
+  },
 }
 
 // 메뉴 설정 타입
@@ -235,6 +292,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     categoryId: 'operations',
     order: 14,
     visible: true,
+    premiumFeature: true,
   },
   {
     id: 'financial',
@@ -256,6 +314,20 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     permissions: [],
     categoryId: 'operations',
     order: 16,
+    visible: true,
+    ownerOnly: true,  // 대표 원장 전용
+    premiumFeature: true,  // 프리미엄 기능
+  },
+
+  // === 투자 카테고리 ===
+  {
+    id: 'investment',
+    label: '주식 자동 매매',
+    icon: 'TrendingUp',
+    route: '/dashboard?tab=investment',
+    permissions: [],
+    categoryId: 'investment',
+    order: 16.5,
     visible: true,
     ownerOnly: true,  // 대표 원장 전용
     premiumFeature: true,  // 프리미엄 기능

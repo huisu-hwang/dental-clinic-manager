@@ -716,7 +716,7 @@ export const dataService = {
         recall_booking_names: recallBookingNames.trim() || null,
         consult_proceed: validConsults.filter(c => c.consult_status === 'O').length,
         consult_hold: validConsults.filter(c => c.consult_status === 'X').length,
-        naver_review_count: validGifts.filter(g => g.naver_review === 'O').length,
+        naver_review_count: validGifts.filter(g => g.naver_review !== '미작성').length,
       }
 
       const { error: dailyReportError } = await supabase.from('daily_reports').insert([dailyReport] as any)
@@ -1035,7 +1035,7 @@ export const dataService = {
       const updatedStats = {
         consult_proceed: consultLogs.filter(c => c.consult_status === 'O').length,
         consult_hold: consultLogs.filter(c => c.consult_status === 'X').length,
-        naver_review_count: giftLogs.filter(g => g.naver_review === 'O').length
+        naver_review_count: giftLogs.filter(g => g.naver_review !== '미작성').length
       }
 
       // 일일 보고서 업데이트
@@ -1501,17 +1501,37 @@ export const dataService = {
   },
 
   // 모든 병원 목록 가져오기 (마스터 전용)
+  // 대표원장(owner)이 'active' 상태로 승인된 병원만 반환한다.
+  // pending(승인 대기) 또는 rejected(거절)된 owner의 병원은 목록에서 제외된다.
   async getAllClinics() {
     const supabase = await ensureConnection()
     if (!supabase) throw new Error('Supabase client not available')
 
     try {
+      const { data: activeOwners, error: ownersError } = await supabase
+        .from('users')
+        .select('clinic_id')
+        .eq('role', 'owner')
+        .eq('status', 'active')
+        .not('clinic_id', 'is', null)
+
+      if (ownersError) throw ownersError
+
+      const activeClinicIds = (activeOwners ?? [])
+        .map((u: { clinic_id: string | null }) => u.clinic_id)
+        .filter((id: string | null): id is string => !!id)
+
+      if (activeClinicIds.length === 0) {
+        return { data: [] }
+      }
+
       const { data, error } = await supabase
         .from('clinics')
         .select(`
           *,
           users!users_clinic_id_fkey(count)
         `)
+        .in('id', activeClinicIds)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -1713,48 +1733,44 @@ export const dataService = {
 
   // 사용자 승인 (직원 관리)
   // Database Trigger가 자동으로 승인 이메일을 발송합니다.
-  async approveUser(userId: string, clinicId: string, permissions?: string[]) {
+  // clinic_id가 null인 사용자(예: 시스템 관리자 후보)도 처리한다.
+  async approveUser(userId: string, clinicId: string | null, permissions?: string[]) {
     try {
-      const supabase = await ensureConnection()
+      const res = await fetch('/api/staff/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          userIds: [userId],
+          permissions,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
 
-      console.log('[approveUser] Approving user:', userId)
-
-      // 업데이트 데이터 준비
-      const updateData: any = {
-        status: 'active',
-        approved_at: new Date().toISOString()
+      if (res.status === 403 && data?.error === 'UPGRADE_REQUIRED') {
+        return {
+          upgradeRequired: true,
+          currentPlan: data.currentPlan,
+          currentLimit: data.currentLimit,
+          currentActive: data.currentActive,
+          pendingToApprove: data.pendingToApprove,
+          recommendedPlan: data.recommendedPlan,
+        } as const
       }
 
-      // 권한이 지정된 경우 저장
-      if (permissions && permissions.length > 0) {
-        updateData.permissions = permissions
+      if (!res.ok) {
+        return { error: data?.error ?? '승인 처리에 실패했습니다.' }
       }
-
-      // 사용자 상태를 'active'로 업데이트
-      // Database Trigger (users_approval_notification_trigger)가
-      // 자동으로 Edge Function을 호출하여 승인 이메일을 발송합니다.
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', userId)
-        .eq('clinic_id', clinicId)
-
-      if (error) {
-        console.error('[approveUser] Database error:', error)
-        return { error: error.message }
-      }
-
-      console.log('[approveUser] User approved successfully (email will be sent by trigger)')
-      return { success: true }
+      return { success: true as const }
     } catch (error: unknown) {
-      console.error('[approveUser] Unexpected error:', error)
       const errorMessage = error instanceof Error ? error.message : JSON.stringify(error)
       return { error: errorMessage }
     }
   },
 
   // 사용자 거절 (직원 관리)
-  async rejectUser(userId: string, clinicId: string, reason: string) {
+  // clinic_id가 null인 사용자도 처리할 수 있도록 옵셔널로 받는다.
+  async rejectUser(userId: string, clinicId: string | null, reason: string) {
     try {
       console.log('[rejectUser] Calling Admin API to reject user:', userId)
 

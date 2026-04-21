@@ -5,6 +5,49 @@ import type { AIAnalysisRequest, AIMessage, FileAttachment } from '@/types/aiAna
 
 export const maxDuration = 60; // 최대 60초 실행 허용 (Vercel Pro)
 
+// 백그라운드 처리 지원: 분석 결과를 대화 DB에 직접 저장
+async function saveAnalysisResultToConversation(
+  supabaseUrl: string,
+  supabaseKey: string,
+  conversationId: string,
+  result: { message?: string; error?: string }
+) {
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: conv } = await supabase
+      .from('ai_conversations')
+      .select('messages')
+      .eq('id', conversationId)
+      .single();
+
+    if (!conv?.messages) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const messages = conv.messages as any[];
+    const updatedMessages = messages.map((msg: Record<string, unknown>) => {
+      if (msg.isLoading) {
+        return {
+          ...msg,
+          content: result.error || result.message || '',
+          isLoading: false,
+          ...(result.error && { error: result.error }),
+        };
+      }
+      return msg;
+    });
+
+    await supabase
+      .from('ai_conversations')
+      .update({ messages: updatedMessages })
+      .eq('id', conversationId);
+
+    console.log('[AI Analysis] Result saved to conversation:', conversationId);
+  } catch (saveError) {
+    console.error('[AI Analysis] Failed to save to conversation:', saveError);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 환경 변수 확인
@@ -34,12 +77,13 @@ export async function POST(request: NextRequest) {
 
     // 요청 본문 파싱
     const body = await request.json();
-    const { message, conversationHistory, dateRange, clinicId, attachedFiles } = body as {
+    const { message, conversationHistory, dateRange, clinicId, attachedFiles, conversationId } = body as {
       message: string;
       conversationHistory?: AIMessage[];
       dateRange?: { startDate: string; endDate: string };
       clinicId: string;
       attachedFiles?: FileAttachment[];
+      conversationId?: string;
     };
 
     if (!message || message.trim() === '') {
@@ -85,6 +129,17 @@ export async function POST(request: NextRequest) {
       geminiApiKey,
       clinicId
     );
+
+    // 백그라운드 처리 지원: 분석 결과를 대화 DB에 직접 저장
+    // (사용자가 페이지를 떠나도 결과가 보존됨)
+    if (conversationId) {
+      await saveAnalysisResultToConversation(
+        supabaseUrl,
+        supabaseServiceKey || supabaseAnonKey,
+        conversationId,
+        { message: response.message, error: response.error }
+      );
+    }
 
     if (response.error) {
       return NextResponse.json(

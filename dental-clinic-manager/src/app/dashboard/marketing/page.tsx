@@ -29,6 +29,7 @@ import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 const ClinicalPhotoEditor = dynamic(() => import('@/components/marketing/clinical/ClinicalPhotoEditor'), { ssr: false })
+const ContentCalendarView = dynamic(() => import('@/components/marketing/ContentCalendarView'), { ssr: false })
 import ImageEditModal from '@/components/marketing/ImageEditModal'
 
 type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
@@ -64,9 +65,9 @@ export default function MarketingPage() {
 
   return (
     <PremiumGate featureId="marketing">
-      <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-        {/* 탭 네비게이션 — 연차관리 스타일 */}
-        <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+      <div className="bg-white min-h-screen">
+        {/* 탭 네비게이션 — 상단 고정 */}
+        <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex flex-wrap gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -84,7 +85,7 @@ export default function MarketingPage() {
         </div>
 
         {/* 콘텐츠 */}
-        <div className="tab-content">
+        <div className="tab-content p-4 sm:p-6">
           {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
           {activeTab === 'dashboard' && <DashboardContent />}
           {activeTab === 'posts' && <PostsContent viewPostId={viewPostId} onViewPostHandled={() => setViewPostId(null)} />}
@@ -759,13 +760,7 @@ function PostEditModal({
 
 // ─── 캘린더 ───
 function CalendarContent() {
-  return (
-    <div className="text-center py-12 text-at-text-weak">
-      <CalendarDaysIcon className="h-12 w-12 mx-auto mb-3" />
-      <p className="text-lg font-medium">콘텐츠 캘린더</p>
-      <p className="text-sm mt-1">Phase 3에서 구현 예정</p>
-    </div>
-  )
+  return <ContentCalendarView />
 }
 
 // ─── 플랫폼 설정 필드 정의 ───

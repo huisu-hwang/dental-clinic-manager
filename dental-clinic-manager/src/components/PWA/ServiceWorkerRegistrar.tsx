@@ -69,9 +69,8 @@ export default function ServiceWorkerRegistrar() {
         console.log(`[SW] 업데이트 확인 (${source})`)
         await registration.update()
 
-        // 업데이트 확인 후 대기 중인 SW가 있으면 활성화
+        // 대기 중인 SW가 있으면 배너 표시 (즉시 활성화하지 않음)
         if (registration.waiting) {
-          activateWaitingSW(registration)
           notifyUpdate()
         }
       } catch (err) {
@@ -133,9 +132,8 @@ export default function ServiceWorkerRegistrar() {
           newSW.addEventListener('statechange', () => {
             if (newSW.state === 'installed') {
               if (navigator.serviceWorker.controller) {
-                // 기존 SW가 있는 상태에서 새 SW 설치됨
-                console.log('[SW] 새 버전 설치 완료, 활성화 요청')
-                activateWaitingSW(reg)
+                // 기존 SW가 있는 상태에서 새 SW 설치됨 → 배너 표시 (즉시 활성화 X)
+                console.log('[SW] 새 버전 설치 완료, 배너 표시')
                 notifyUpdate()
               } else {
                 // 최초 설치 (기존 SW 없음)
@@ -145,10 +143,9 @@ export default function ServiceWorkerRegistrar() {
           })
         })
 
-        // 초기 로드 시 이미 대기 중인 SW가 있으면 즉시 활성화
+        // 초기 로드 시 이미 대기 중인 SW가 있으면 배너만 표시 (즉시 활성화 X)
         if (reg.waiting) {
-          console.log('[SW] 이미 대기 중인 새 버전 발견, 활성화')
-          activateWaitingSW(reg)
+          console.log('[SW] 이미 대기 중인 새 버전 발견, 배너 표시')
           notifyUpdate()
         }
 
@@ -176,6 +173,30 @@ export default function ServiceWorkerRegistrar() {
       window.location.reload()
     }
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
+
+    // ─── UpdatePrompt로부터 업데이트 적용 요청 수신 ───
+    // 사용자가 '지금 새로고침' 버튼을 눌렀거나 자동 카운트다운이 끝난 시점에 호출됨.
+    // waiting SW가 있으면 SKIP_WAITING을 보내 controllerchange로 자연스럽게 reload 되고,
+    // 없으면(SW 변경은 없고 빌드 ID만 변경된 케이스) 직접 reload 한다.
+    const handleApplyUpdate = () => {
+      if (refreshing) return
+      if (registration?.waiting) {
+        console.log('[SW] 사용자 요청으로 업데이트 적용')
+        activateWaitingSW(registration)
+        // controllerchange가 발생하지 않는 경우 대비 폴백 (3초 후 강제 reload)
+        setTimeout(() => {
+          if (!refreshing) {
+            refreshing = true
+            window.location.reload()
+          }
+        }, 3000)
+      } else {
+        console.log('[SW] 대기 중인 SW 없음 → 바로 reload')
+        refreshing = true
+        window.location.reload()
+      }
+    }
+    window.addEventListener('pwa-apply-update', handleApplyUpdate)
 
     // ─── 이벤트 핸들러들 ───
 
@@ -253,6 +274,7 @@ export default function ServiceWorkerRegistrar() {
       window.removeEventListener('pageshow', handlePageShow)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('pwa-apply-update', handleApplyUpdate)
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
       if (displayModeQuery) {
         displayModeQuery.removeEventListener('change', () => {})

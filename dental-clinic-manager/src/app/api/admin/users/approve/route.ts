@@ -22,6 +22,8 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { safeErrorMessage } from '@/lib/utils/safeError'
 import { requireMasterAdmin } from '@/lib/auth/requireMasterAdmin'
+import { countActiveEmployees, getSubscription, getPlanById } from '@/lib/subscriptionService'
+import { findPlanByHeadcount, requiresUpgrade } from '@/lib/subscriptionPlans'
 
 function escapeHtml(str: string): string {
   return str
@@ -59,11 +61,32 @@ export async function POST(request: Request) {
     // 요청 바디에서 데이터 추출
     const { userId, clinicId, permissions } = await request.json()
 
-    if (!userId || !clinicId) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'userId and clinicId are required' },
+        { success: false, error: 'userId is required' },
         { status: 400 }
       )
+    }
+
+    // 인원 상한 가드: 승인 전 플랜 한도 초과 여부 확인
+    const targetClinicId = clinicId
+    if (targetClinicId) {
+      const [activeCount, subscription] = await Promise.all([
+        countActiveEmployees(targetClinicId),
+        getSubscription(targetClinicId),
+      ])
+      const currentPlan = subscription?.plan_id ? await getPlanById(subscription.plan_id) : null
+      const currentLimit = currentPlan?.max_users ?? 4
+      if (requiresUpgrade({ currentActive: activeCount, pendingToApprove: 1, currentLimit })) {
+        return NextResponse.json({
+          error: 'UPGRADE_REQUIRED',
+          currentPlan: currentPlan?.name ?? 'free',
+          currentLimit,
+          currentActive: activeCount,
+          pendingToApprove: 1,
+          recommendedPlan: findPlanByHeadcount(activeCount + 1),
+        }, { status: 403 })
+      }
     }
 
     // Admin 클라이언트 생성 (SERVICE_ROLE_KEY 사용)
@@ -74,15 +97,18 @@ export async function POST(request: Request) {
       }
     })
 
-    console.log('[Admin API - Approve User] Approving user:', userId)
+    console.log('[Admin API - Approve User] Approving user:', userId, 'clinicId:', clinicId ?? 'null')
 
     // 1. 사용자 정보 조회 (이메일 발송용)
-    const { data: userData, error: fetchError } = await supabase
+    // clinic_id가 null인 사용자(예: 시스템 관리자 후보)도 처리한다.
+    const fetchQuery = supabase
       .from('users')
       .select('email, name, clinics(name)')
       .eq('id', userId)
-      .eq('clinic_id', clinicId)
-      .single()
+
+    const { data: userData, error: fetchError } = await (
+      clinicId ? fetchQuery.eq('clinic_id', clinicId) : fetchQuery.is('clinic_id', null)
+    ).single()
 
     if (fetchError || !userData) {
       console.error('[Admin API - Approve User] Error fetching user:', fetchError)
@@ -103,11 +129,14 @@ export async function POST(request: Request) {
       updateData.permissions = permissions
     }
 
-    const { error } = await supabase
+    const updateQuery = supabase
       .from('users')
       .update(updateData)
       .eq('id', userId)
-      .eq('clinic_id', clinicId)
+
+    const { error } = await (
+      clinicId ? updateQuery.eq('clinic_id', clinicId) : updateQuery.is('clinic_id', null)
+    )
 
     if (error) {
       console.error('[Admin API - Approve User] Database error:', error)

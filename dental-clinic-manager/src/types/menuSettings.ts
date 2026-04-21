@@ -47,7 +47,8 @@ export const DEFAULT_CATEGORIES: MenuCategorySetting[] = [
   { id: 'work', label: '업무 관리', icon: 'Briefcase', order: 0, visible: true },
   { id: 'community', label: '커뮤니티', icon: 'MessageCircle', order: 1.5, visible: true },
   { id: 'documents', label: '문서 · 자료', icon: 'FolderOpen', order: 1, visible: true },
-  { id: 'operations', label: '운영 관리', icon: 'Settings', order: 2, visible: true }
+  { id: 'operations', label: '운영 관리', icon: 'Settings', order: 2, visible: true },
+  { id: 'investment', label: '투자', icon: 'TrendingUp', order: 3, visible: true },
 ]
 
 // 기본 메뉴 목록 - 중앙 설정에서 가져옴
@@ -135,26 +136,38 @@ export function normalizeMenuSettings(settings: MenuItemSetting[], categories: M
   // 나머지 새 메뉴는 맨 뒤에 추가
   const updatedIds = new Set(validSettings.map(s => s.id))
   const maxOrder = Math.max(...validSettings.map(s => s.order), -1)
+  // 기본 카테고리 ID도 유효한 것으로 간주 (새 카테고리가 추가되면 normalizeCategory에서 자동 병합됨)
+  const defaultCategoryIds = new Set(DEFAULT_CATEGORIES.map(c => c.id))
   const newItems = DEFAULT_MENU_ITEMS
     .filter(item => !updatedIds.has(item.id))
     .map((item, index) => ({
       ...item,
       order: maxOrder + index + 1,
-      // 기본 카테고리가 있고 유효하면 유지, 아니면 해제
-      categoryId: item.categoryId && validCategoryIds.has(item.categoryId) ? item.categoryId : undefined
+      // 기본 카테고리 또는 사용자 카테고리에 있으면 유지
+      categoryId: item.categoryId && (validCategoryIds.has(item.categoryId) || defaultCategoryIds.has(item.categoryId))
+        ? item.categoryId
+        : undefined
     }))
 
   return [...validSettings, ...newItems].sort((a, b) => a.order - b.order)
 }
 
 // 카테고리 설정 정규화
+// 새 기본 카테고리가 추가되면 기존 사용자 설정에도 자동 병합
 export function normalizeCategorySettings(categories: MenuCategorySetting[] | undefined): MenuCategorySetting[] {
   if (!categories || categories.length === 0) {
     return [...DEFAULT_CATEGORIES]
   }
 
-  // 기존 카테고리 유지 (커스텀 카테고리 포함)
-  return categories.sort((a, b) => a.order - b.order)
+  const existingIds = new Set(categories.map(c => c.id))
+  const maxOrder = Math.max(...categories.map(c => c.order), -1)
+
+  // 기본 카테고리 중 기존 설정에 없는 것을 자동 추가
+  const newDefaults = DEFAULT_CATEGORIES
+    .filter(dc => !existingIds.has(dc.id))
+    .map((dc, i) => ({ ...dc, order: maxOrder + i + 1 }))
+
+  return [...categories, ...newDefaults].sort((a, b) => a.order - b.order)
 }
 
 // 고유한 카테고리 ID 생성

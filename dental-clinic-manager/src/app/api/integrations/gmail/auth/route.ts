@@ -22,16 +22,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'clinicId가 필요합니다.' }, { status: 400 });
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI?.trim();
 
     if (!clientId || !redirectUri) {
       console.error('[gmail/auth] GOOGLE_CLIENT_ID 또는 GOOGLE_REDIRECT_URI가 설정되지 않았습니다.');
       return NextResponse.json({ error: 'Google OAuth 설정이 완료되지 않았습니다.' }, { status: 500 });
     }
-
-    console.log('[gmail/auth] DEBUG clientId:', clientId);
-    console.log('[gmail/auth] DEBUG redirectUri:', JSON.stringify(redirectUri));
 
     const state = JSON.stringify({ clinicId, userId: user.id });
     const stateEncoded = Buffer.from(state).toString('base64url');

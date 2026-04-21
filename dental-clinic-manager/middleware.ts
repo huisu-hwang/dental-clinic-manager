@@ -172,6 +172,14 @@ export async function middleware(request: NextRequest) {
   supabaseResponse.headers.set('X-XSS-Protection', '1; mode=block')
   supabaseResponse.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
 
+  // 8. 투자 모듈 전용 보안 헤더 (금융 데이터 보호)
+  const isInvestmentRoute = request.nextUrl.pathname.startsWith('/investment') || request.nextUrl.pathname.startsWith('/api/investment')
+  if (isInvestmentRoute) {
+    supabaseResponse.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; frame-ancestors 'none';")
+    supabaseResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    supabaseResponse.headers.set('Pragma', 'no-cache')
+  }
+
   return supabaseResponse
 }
 

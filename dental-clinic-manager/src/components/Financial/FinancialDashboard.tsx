@@ -14,11 +14,11 @@ import ExpenseForm from './ExpenseForm'
 import HometaxSyncPanel from './HometaxSyncPanel'
 import HometaxDataView from './HometaxDataView'
 import HometaxCredentialsSettings from './HometaxCredentialsSettings'
+// import TaxSettingsForm from './TaxSettingsForm' // 추후 구체화 후 복원
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  PiggyBank,
   Receipt,
   Plus,
   ChevronLeft,
@@ -35,6 +35,7 @@ import {
   ChevronUp,
   Settings,
   RefreshCw,
+  Download,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -55,16 +56,21 @@ export default function FinancialDashboard() {
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
   const [loading, setLoading] = useState(true)
 
+  // 수입 동기화 상태
+  const [syncPending, setSyncPending] = useState(false)
+  const [syncRetryCount, setSyncRetryCount] = useState(0)
+  const [backfillLoading, setBackfillLoading] = useState(false)
+
   // 모달 상태
   const [showRevenueForm, setShowRevenueForm] = useState(false)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
 
-  // 덴트웹 매출 동기화 상태
-  const [revenueSyncing, setRevenueSyncing] = useState(false)
-  const [revenueSyncMessage, setRevenueSyncMessage] = useState<string | null>(null)
-
-  // 탭 상태
-  const [activeTab, setActiveTab] = useState<'status' | 'settings'>('status')
+  // 탭 상태 (URL ?tab=settings 로 진입 시 설정 탭 자동 활성화)
+  const [activeTab, setActiveTab] = useState<'status' | 'settings'>(() => {
+    if (typeof window === 'undefined') return 'status'
+    const params = new URLSearchParams(window.location.search)
+    return params.get('tab') === 'settings' ? 'settings' : 'status'
+  })
 
   // 데이터 로드
   const loadData = async () => {
@@ -78,6 +84,7 @@ export default function FinancialDashboard() {
       const summaryData = await summaryRes.json()
       if (summaryData.success) {
         setSummary(summaryData.data)
+        setSyncPending(!!summaryData.sync_pending)
       }
 
       // 지출 내역 로드
@@ -96,8 +103,48 @@ export default function FinancialDashboard() {
   }
 
   useEffect(() => {
+    setSyncRetryCount(0)
     loadData()
   }, [clinicId, selectedYear, selectedMonth])
+
+  // sync_pending일 때 자동 재조회
+  // 워커 동기화 주기가 최대 5분이므로, 처음 30초는 5초 간격 → 이후 15초 간격으로 최대 5분까지 폴링
+  useEffect(() => {
+    if (!syncPending) return
+    const maxRetries = 26 // 6회(30초) + 20회(300초) = 약 5분 30초
+    if (syncRetryCount >= maxRetries) return
+    const interval = syncRetryCount < 6 ? 5000 : 15000
+    const timer = setTimeout(() => {
+      setSyncRetryCount(prev => prev + 1)
+      loadData()
+    }, interval)
+    return () => clearTimeout(timer)
+  }, [syncPending, syncRetryCount])
+
+  // 과거 데이터 전체 불러오기
+  const handleBackfillRequest = async () => {
+    if (!clinicId) return
+    setBackfillLoading(true)
+    try {
+      const res = await fetch('/api/dentweb/request-revenue-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clinic_id: clinicId, mode: 'backfill' }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        await appAlert(`${result.data.added_count}개월 수입 데이터 동기화를 요청했습니다. 워커에서 처리 후 자동으로 반영됩니다.`)
+        setSyncPending(true)
+        setSyncRetryCount(0)
+      } else {
+        await appAlert(result.error || '요청 실패')
+      }
+    } catch {
+      await appAlert('요청 중 오류가 발생했습니다.')
+    } finally {
+      setBackfillLoading(false)
+    }
+  }
 
   // 월 이동
   const goToPreviousMonth = () => {
@@ -138,70 +185,6 @@ export default function FinancialDashboard() {
     }
   }
 
-  // 덴트웹 매출 동기화
-  const handleRevenueSyncFromDentweb = async () => {
-    if (!clinicId || revenueSyncing) return
-
-    setRevenueSyncing(true)
-    setRevenueSyncMessage(null)
-
-    try {
-      // 1단계: 매출 집계 쿼리 등록
-      const postRes = await fetch('/api/dentweb/revenue-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clinicId }),
-      })
-      const postData = await postRes.json()
-
-      if (!postData.success) {
-        setRevenueSyncMessage(`동기화 실패: ${postData.error}`)
-        setRevenueSyncing(false)
-        return
-      }
-
-      const requestId = postData.requestId
-
-      // 2단계: 결과 폴링 (최대 30초, 2초 간격)
-      let attempts = 0
-      const maxAttempts = 15
-
-      const pollResult = async (): Promise<boolean> => {
-        attempts++
-        const getRes = await fetch(
-          `/api/dentweb/revenue-sync?clinicId=${clinicId}&requestId=${requestId}`
-        )
-        const getData = await getRes.json()
-
-        if (getData.status === 'completed') {
-          setRevenueSyncMessage(getData.message)
-          loadData()
-          return true
-        }
-
-        if (getData.status === 'error') {
-          setRevenueSyncMessage(`동기화 오류: ${getData.error}`)
-          return true
-        }
-
-        if (getData.status === 'pending' && attempts < maxAttempts) {
-          await new Promise(r => setTimeout(r, 2000))
-          return pollResult()
-        }
-
-        setRevenueSyncMessage('브릿지 에이전트 응답 대기 시간이 초과되었습니다. 에이전트가 실행 중인지 확인하세요.')
-        return true
-      }
-
-      await pollResult()
-    } catch (error) {
-      console.error('Revenue sync error:', error)
-      setRevenueSyncMessage('매출 동기화 중 오류가 발생했습니다.')
-    } finally {
-      setRevenueSyncing(false)
-    }
-  }
-
   const profitMargin = summary?.total_revenue
     ? ((summary.pre_tax_profit / summary.total_revenue) * 100).toFixed(1)
     : '0'
@@ -215,55 +198,10 @@ export default function FinancialDashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-      {/* 헤더 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
-            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-at-accent" />
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-at-text">경영 현황</h2>
-            <p className="text-at-text-weak text-xs sm:text-sm hidden sm:block">Financial Dashboard</p>
-          </div>
-        </div>
-
-        {/* Date Selector + DentWeb Sync */}
-        {activeTab === 'status' && (
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border">
-              <button
-                onClick={goToPreviousMonth}
-                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
-              >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-at-text font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm bg-white rounded-xl border border-at-border">
-                {selectedYear}년 {selectedMonth}월
-              </div>
-              <button
-                onClick={goToNextMonth}
-                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
-              >
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
-            <button
-              onClick={handleRevenueSyncFromDentweb}
-              disabled={revenueSyncing}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-medium rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="덴트웹에서 전체 월별 매출 데이터를 가져옵니다"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${revenueSyncing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{revenueSyncing ? '동기화 중...' : '매출 동기화'}</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 서브 탭 네비게이션 */}
-      <div className="bg-at-surface-alt rounded-xl border border-at-border">
-        <nav className="flex space-x-1 p-1.5 sm:p-2 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+    <div className="bg-white min-h-screen">
+      {/* 서브 탭 네비게이션 (sticky) */}
+      <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex items-center justify-between gap-3">
+        <nav className="flex space-x-1 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('status')}
             className={`py-1.5 sm:py-2 px-2.5 sm:px-4 inline-flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all whitespace-nowrap ${
@@ -287,21 +225,31 @@ export default function FinancialDashboard() {
             설정
           </button>
         </nav>
+
+        {/* Date Selector */}
+        {activeTab === 'status' && (
+          <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border flex-shrink-0">
+            <button
+              onClick={goToPreviousMonth}
+              className="p-1.5 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="px-3 py-1 text-at-text font-bold tracking-wide min-w-[100px] text-center text-sm bg-white rounded-xl border border-at-border">
+              {selectedYear}년 {selectedMonth}월
+            </div>
+            <button
+              onClick={goToNextMonth}
+              className="p-1.5 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 매출 동기화 상태 메시지 */}
-      {revenueSyncMessage && (
-        <div className={`p-3 rounded-xl text-sm font-medium ${
-          revenueSyncMessage.includes('실패') || revenueSyncMessage.includes('오류') || revenueSyncMessage.includes('초과')
-            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-        }`}>
-          {revenueSyncMessage}
-        </div>
-      )}
-
       {/* 탭 콘텐츠 */}
-      <div>
+      <div className="p-4 sm:p-6 space-y-6">
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
@@ -310,26 +258,66 @@ export default function FinancialDashboard() {
       ) : activeTab === 'status' ? (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
+          {/* 수입 동기화 안내 배너 */}
+          {syncPending && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="w-5 h-5 text-amber-600 animate-spin" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">
+                    {selectedYear}년 {selectedMonth}월 수입 데이터를 덴트웹에서 불러오는 중...
+                  </p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    워커 동기화 주기에 따라 자동으로 반영됩니다 (최대 수 분 소요)
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={handleBackfillRequest}
+                  disabled={backfillLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-xl hover:bg-amber-700 transition disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {backfillLoading ? '요청 중...' : '과거 전체 불러오기'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Executive Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-3xl shadow-sm border border-at-border p-6 overflow-hidden relative group hover:shadow-md transition-shadow">
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                 <TrendingUp className="w-24 h-24 text-emerald-600 transform translate-x-4 -translate-y-4" />
               </div>
-              <p className="text-sm font-semibold tracking-wider text-at-text uppercase">총 수입</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold tracking-wider text-at-text uppercase">총 수입</p>
+                {summary?.revenue_source_type === 'dentweb' && (
+                  <span className="bg-cyan-100 text-cyan-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">덴트웹 연동</span>
+                )}
+              </div>
               <h3 className="text-3xl font-black text-at-text mt-2 mb-4">
                 {formatCurrency(summary?.total_revenue || 0)}
               </h3>
-              <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
-                <div className="flex flex-col">
-                  <span className="text-at-text">보험수입</span>
-                  <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.insurance_revenue || 0)}</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
+                  <div className="flex flex-col">
+                    <span className="text-at-text">보험수입</span>
+                    <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.insurance_revenue || 0)}</span>
+                  </div>
+                  <div className="h-8 w-px bg-at-border"></div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-at-text">비보험수입</span>
+                    <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.non_insurance_revenue || 0)}</span>
+                  </div>
                 </div>
-                <div className="h-8 w-px bg-at-border"></div>
-                <div className="flex flex-col items-end">
-                  <span className="text-at-text">비보험수입</span>
-                  <span className="text-emerald-700 text-sm mt-0.5">{formatCurrency(summary?.non_insurance_revenue || 0)}</span>
-                </div>
+                {(summary?.other_revenue || 0) > 0 && (
+                  <div className="flex items-center justify-between text-xs font-medium bg-at-surface-alt rounded-xl p-3">
+                    <span className="text-at-text">기타수입</span>
+                    <span className="text-emerald-700 text-sm">{formatCurrency(summary?.other_revenue || 0)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -363,19 +351,7 @@ export default function FinancialDashboard() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl shadow-md p-6 overflow-hidden relative group hover:shadow-lg transition-shadow text-white">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <PiggyBank className="w-24 h-24 text-white transform translate-x-4 -translate-y-4" />
-              </div>
-              <p className="text-sm font-semibold tracking-wider text-purple-200 uppercase">세후 순이익</p>
-              <h3 className="text-3xl font-black mt-2 mb-4">
-                {formatCurrency(summary?.post_tax_profit || 0)}
-              </h3>
-              <div className="flex items-center justify-between text-xs font-medium bg-white/10 rounded-xl p-3 backdrop-blur-sm">
-                <span>예상 납부세액</span>
-                <span className="text-base">{formatCurrency(summary?.actual_tax_paid || 0)}</span>
-              </div>
-            </div>
+            {/* 예상 세후 순이익 카드 — 추후 구체화 후 다시 노출 예정 */}
           </div>
 
           {/* Hometax Integration - Placeholder */}
@@ -456,14 +432,23 @@ export default function FinancialDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-at-border">
-                        {expenses.map(expense => (
+                        {expenses.map(expense => {
+                          const isPayroll = expense.source === 'payroll'
+                          return (
                           <tr key={expense.id} className="hover:bg-at-surface-alt/80 transition-colors group">
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-at-surface-alt text-at-text">
-                                {expense.category?.name ||
-                                  EXPENSE_CATEGORY_LABELS[expense.category?.type as ExpenseCategoryType] ||
-                                  '기타'}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-at-surface-alt text-at-text">
+                                  {expense.category?.name ||
+                                    EXPENSE_CATEGORY_LABELS[expense.category?.type as ExpenseCategoryType] ||
+                                    '기타'}
+                                </span>
+                                {isPayroll && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700" title="급여 명세서에서 자동 생성됨">
+                                    급여 자동
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               <p className="font-medium text-at-text">{expense.description || '-'}</p>
@@ -487,15 +472,22 @@ export default function FinancialDashboard() {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <button
-                                onClick={() => handleDeleteExpense(expense.id)}
-                                className="w-8 h-8 inline-flex items-center justify-center text-at-text hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {isPayroll ? (
+                                <span className="text-[10px] text-at-text-weak" title="급여 명세서에서 관리됩니다">
+                                  급여에서 관리
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleDeleteExpense(expense.id)}
+                                  className="w-8 h-8 inline-flex items-center justify-center text-at-text hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </td>
                           </tr>
-                        ))}
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -539,33 +531,40 @@ export default function FinancialDashboard() {
                 </div>
               )}
 
-              {/* Tax Information */}
-              {summary && (summary.income_tax > 0 || summary.total_tax > 0) && (
+              {/* Estimated Tax Information (올해 누적 기준) */}
+              {summary && (
                 <div className="bg-slate-800 rounded-3xl shadow-sm border border-at-border p-6 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-5">
                     <Calculator className="w-32 h-32" />
                   </div>
-                  <h2 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10">
+                  <h2 className="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
                     <Calculator className="w-5 h-5 text-at-accent" />
-                    예상 세금 정보
+                    예상 세금 (올해 누적)
                   </h2>
+                  <p className="text-xs text-slate-300 mb-6 relative z-10">
+                    1월~{summary?.estimated_elapsed_months || selectedMonth}월 누적 순이익 기준 추정. 설정 탭에서 세무 설정을 업데이트하면 정확도가 높아집니다.
+                  </p>
                   <div className="space-y-4 relative z-10">
                     <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
-                      <span className="text-sm text-at-text">종합소득세</span>
-                      <span className="font-medium text-at-text">{formatCurrency(summary.income_tax)}</span>
+                      <span className="text-sm text-slate-200">누적 순이익</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.ytd_net_income ?? 0)}</span>
                     </div>
                     <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
-                      <span className="text-sm text-at-text">지방소득세</span>
-                      <span className="font-medium text-at-text">{formatCurrency(summary.local_income_tax)}</span>
+                      <span className="text-sm text-slate-200">과세표준 (공제 반영)</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.estimated_taxable_income ?? 0)}</span>
                     </div>
-                    <div className="flex justify-between items-center bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl">
-                      <span className="text-sm text-emerald-300 font-medium">정부 지원</span>
-                      <span className="font-bold text-emerald-400">-{formatCurrency(summary.government_support)}</span>
+                    <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
+                      <span className="text-sm text-slate-200">예상 종합소득세</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.estimated_income_tax ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center bg-slate-700/50 p-3 rounded-2xl">
+                      <span className="text-sm text-slate-200">예상 지방소득세</span>
+                      <span className="font-medium text-white">{formatCurrency(summary.estimated_local_tax ?? 0)}</span>
                     </div>
                     <div className="w-full h-px bg-slate-700 my-2"></div>
                     <div className="flex justify-between items-center px-1">
-                      <span className="text-sm text-rose-300 font-medium">실납부 세금</span>
-                      <span className="text-xl font-black text-white">{formatCurrency(summary.actual_tax_paid)}</span>
+                      <span className="text-sm text-rose-300 font-medium">예상 세금 합계</span>
+                      <span className="text-xl font-black text-white">{formatCurrency(summary.estimated_total_tax ?? 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -599,6 +598,9 @@ export default function FinancialDashboard() {
               현황 조회 탭에서 선택한 월({selectedYear}년 {selectedMonth}월)에 추가됩니다. 다른 월에 입력하려면 현황 조회 탭에서 월을 변경한 뒤 다시 시도하세요.
             </div>
           </div>
+
+          {/* 세무 설정 (예상 세금 계산용) — 추후 구체화 후 다시 노출 예정 */}
+          {/* <TaxSettingsForm clinicId={clinicId} onSaved={loadData} /> */}
 
           {/* 홈택스 인증정보 설정 */}
           <HometaxCredentialsSettings clinicId={clinicId} />

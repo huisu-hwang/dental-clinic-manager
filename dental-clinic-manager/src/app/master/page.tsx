@@ -304,7 +304,7 @@ export default function MasterAdminPage() {
     }
   }
 
-  const handleApproveUser = async (userId: string, clinicId: string) => {
+  const handleApproveUser = async (userId: string, clinicId: string | null) => {
     try {
       const result = await dataService.approveUser(userId, clinicId)
       if (result.success) {
@@ -319,7 +319,7 @@ export default function MasterAdminPage() {
     }
   }
 
-  const handleRejectUser = async (userId: string, clinicId: string) => {
+  const handleRejectUser = async (userId: string, clinicId: string | null) => {
     const reason = await appPrompt('거절 사유를 입력하세요:')
     if (!reason) return
 

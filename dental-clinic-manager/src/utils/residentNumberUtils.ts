@@ -325,3 +325,179 @@ export function getBirthDateFromResidentNumber(value: string): string {
 
   return `${year}-${month}-${day}`
 }
+
+// ============================================
+// 부분 주민번호 (앞 6자리 + 뒷 첫자리 = 7자리) 관련 함수
+// 개인정보보호법 제24조의2에 따라 회원가입 시 전체 주민번호 수집 불가
+// 생년월일 + 성별 구분자만 수집
+// ============================================
+
+/**
+ * Format partial resident number (7 digits) with hyphen
+ * @param value - Raw input
+ * @returns Formatted string (XXXXXX-X) or partial
+ * @example
+ * formatPartialResidentNumber('9001011') // returns '900101-1'
+ */
+export function formatPartialResidentNumber(value: string): string {
+  if (!value) return ''
+
+  const cleaned = value.replace(/[^0-9]/g, '')
+
+  if (cleaned.length <= 6) {
+    return cleaned
+  }
+
+  // 최대 7자리까지만
+  const truncated = cleaned.slice(0, 7)
+  return `${truncated.slice(0, 6)}-${truncated.slice(6)}`
+}
+
+/**
+ * Validate partial resident number (7 digits)
+ * @param value - Partial resident registration number
+ * @returns true if valid format (7 digits)
+ */
+export function validatePartialResidentNumber(value: string): boolean {
+  if (!value) return false
+  const cleaned = value.replace(/[^0-9]/g, '')
+  return cleaned.length === 7
+}
+
+/**
+ * Validate partial resident number with detailed error message
+ * @param value - Partial resident registration number
+ * @returns Object with isValid boolean and error message
+ */
+export function validatePartialResidentNumberWithMessage(value: string): {
+  isValid: boolean
+  error: string | null
+} {
+  if (!value || value.trim() === '') {
+    return {
+      isValid: false,
+      error: '주민등록번호 앞 7자리를 입력해주세요.'
+    }
+  }
+
+  const cleaned = value.replace(/[^0-9]/g, '')
+
+  if (cleaned.length === 0) {
+    return {
+      isValid: false,
+      error: '주민등록번호는 숫자만 입력해주세요.'
+    }
+  }
+
+  if (cleaned.length < 7) {
+    return {
+      isValid: false,
+      error: `주민등록번호 앞 7자리를 입력해주세요. (현재 ${cleaned.length}자리)`
+    }
+  }
+
+  if (cleaned.length > 7) {
+    return {
+      isValid: false,
+      error: '주민등록번호 앞 7자리까지만 입력해주세요.'
+    }
+  }
+
+  // 뒷자리 첫번째가 유효한 성별 코드인지 확인 (1-4)
+  const genderCode = parseInt(cleaned.charAt(6), 10)
+  if (![1, 2, 3, 4].includes(genderCode)) {
+    return {
+      isValid: false,
+      error: '주민등록번호 뒷자리 첫 숫자가 올바르지 않습니다.'
+    }
+  }
+
+  return {
+    isValid: true,
+    error: null
+  }
+}
+
+/**
+ * Auto-format partial resident number as user types (7 digits max)
+ * Automatically adds hyphen after 6th digit
+ * @param value - Current input value
+ * @returns Object with formatted value and cursor position
+ */
+export function autoFormatPartialResidentNumber(
+  value: string,
+  cursorPosition?: number
+): {
+  value: string
+  cursorPosition: number
+} {
+  const cleaned = value.replace(/[^0-9]/g, '')
+  const prevLength = value.length
+
+  let formatted = ''
+  let newCursorPosition = cursorPosition ?? prevLength
+
+  if (cleaned.length <= 6) {
+    formatted = cleaned
+  } else {
+    formatted = cleaned.slice(0, 6) + '-' + cleaned.slice(6, 7)
+
+    if (cursorPosition !== undefined && prevLength < formatted.length) {
+      if (cursorPosition >= 6) {
+        newCursorPosition = cursorPosition + 1
+      }
+    }
+  }
+
+  return {
+    value: formatted,
+    cursorPosition: newCursorPosition
+  }
+}
+
+/**
+ * Check if user has completed personal information required for contracts
+ * Uses partial resident number (7 digits) for profile-level validation
+ * @param user - User object
+ * @returns Object indicating completion status
+ */
+export function checkPersonalInfoCompletionPartial(user: {
+  name?: string
+  phone?: string
+  address?: string
+  resident_registration_number?: string
+}): {
+  isComplete: boolean
+  missingFields: string[]
+  missingFieldLabels: string[]
+} {
+  const missingFields: string[] = []
+  const missingFieldLabels: string[] = []
+
+  if (!user.name || user.name.trim() === '') {
+    missingFields.push('name')
+    missingFieldLabels.push('성명')
+  }
+
+  if (!user.phone || user.phone.trim() === '') {
+    missingFields.push('phone')
+    missingFieldLabels.push('전화번호')
+  }
+
+  if (!user.address || user.address.trim() === '') {
+    missingFields.push('address')
+    missingFieldLabels.push('주소')
+  }
+
+  if (!user.resident_registration_number ||
+      !validatePartialResidentNumber(user.resident_registration_number)) {
+    missingFields.push('resident_registration_number')
+    missingFieldLabels.push('주민등록번호 (앞 7자리)')
+  }
+
+  return {
+    isComplete: missingFields.length === 0,
+    missingFields,
+    missingFieldLabels
+  }
+}

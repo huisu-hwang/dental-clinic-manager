@@ -100,7 +100,7 @@ const GiftList = ({ logs }: { logs: GiftLog[] }) => {
             <td className="px-3 py-2 whitespace-nowrap text-at-text-secondary">{log.gift_type}</td>
             <td className="px-3 py-2 whitespace-nowrap text-at-text-secondary">{log.quantity}</td>
             <td className="px-3 py-2 whitespace-nowrap">
-              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${log.naver_review === 'O' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'}`}>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${log.naver_review !== '미작성' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'}`}>
                 {log.naver_review}
               </span>
             </td>
@@ -336,7 +336,7 @@ export default function StatsContainer({
   }
 
   const openNaverReviewModal = () => {
-    const data = filteredGiftLogs.filter(g => g.naver_review === 'O')
+    const data = filteredGiftLogs.filter(g => g.naver_review !== '미작성')
     setModal({ title: `네이버 리뷰 목록 (${data.length}건)`, item: { kind: 'gift', data } })
   }
 

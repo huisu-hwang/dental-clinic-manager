@@ -64,9 +64,34 @@ if (typeof window !== 'undefined') {
   // → Uninstall detection only works reliably on Android.
   const _isAndroid = /Android/i.test(navigator.userAgent)
 
+  // getInstalledRelatedApps()로 이미 설치된 same-origin PWA 감지 (async)
+  const detectInstalledViaRelatedApps = async (): Promise<boolean> => {
+    if (!('getInstalledRelatedApps' in navigator)) return false
+    try {
+      const apps = await (
+        navigator as unknown as { getInstalledRelatedApps(): Promise<{ platform: string }[]> }
+      ).getInstalledRelatedApps()
+      return apps.length > 0
+    } catch {
+      return false
+    }
+  }
+
   // Capture beforeinstallprompt event globally (before any component mounts)
-  window.addEventListener('beforeinstallprompt', (e) => {
+  window.addEventListener('beforeinstallprompt', async (e) => {
     e.preventDefault()
+
+    // 데스크톱 Chrome: PWA가 이미 설치되어 있어도 이 이벤트가 발생함.
+    // getInstalledRelatedApps()로 실제 설치 상태를 재확인하여 배너를 숨긴다.
+    const alreadyInstalled = await detectInstalledViaRelatedApps()
+    if (alreadyInstalled) {
+      _isInstalled = true
+      _deferredPrompt = null
+      localStorage.setItem(INSTALLED_KEY, 'true')
+      notifyListeners()
+      return
+    }
+
     _deferredPrompt = e as BeforeInstallPromptEvent
 
     // Detect uninstall on Android only:

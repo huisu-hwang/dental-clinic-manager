@@ -313,6 +313,8 @@ export type UserNotificationType =
   | 'protocol_review_rejected'    // 프로토콜 검토 반려 (요청자에게)
   | 'important'                   // 중요 알림
   | 'system'                      // 시스템 알림
+  | 'subscription_upgrade_required'  // 구독 업그레이드 필요 (원장에게)
+  | 'subscription_payment_succeeded' // 결제 성공 후 대기자 승인 안내 (원장에게)
 
 // 사용자 알림 타입 라벨
 export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string> = {
@@ -337,7 +339,9 @@ export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string>
   protocol_review_approved: '프로토콜 검토 승인',
   protocol_review_rejected: '프로토콜 검토 반려',
   important: '중요 알림',
-  system: '시스템 알림'
+  system: '시스템 알림',
+  subscription_upgrade_required: '구독 업그레이드 필요',
+  subscription_payment_succeeded: '결제 완료 · 승인 대기'
 }
 
 // 사용자 알림 아이콘 매핑
@@ -363,7 +367,9 @@ export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> 
   protocol_review_approved: 'check-circle',
   protocol_review_rejected: 'x-circle',
   important: 'exclamation-circle',
-  system: 'bell'
+  system: 'bell',
+  subscription_upgrade_required: 'alert-circle',
+  subscription_payment_succeeded: 'credit-card'
 }
 
 // 사용자 알림 색상 매핑
@@ -389,7 +395,9 @@ export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon:
   protocol_review_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
   protocol_review_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   important: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
-  system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' }
+  system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
+  subscription_upgrade_required: { icon: 'text-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' },
+  subscription_payment_succeeded: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' }
 }
 
 // 사용자 알림 인터페이스
@@ -408,6 +416,7 @@ export interface UserNotification {
   created_at: string
   created_by?: string          // 알림 발생시킨 사용자
   expires_at?: string          // 알림 만료 시간 (선택)
+  metadata?: Record<string, unknown> | null  // 추가 데이터 (JSONB)
 }
 
 // 사용자 알림 생성용 입력 인터페이스

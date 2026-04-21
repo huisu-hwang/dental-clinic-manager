@@ -10,7 +10,7 @@ import StatsContainer from '@/components/Stats/StatsContainer'
 import LogsSection from '@/components/Logs/LogsSection'
 import InventoryManagement from '@/components/Settings/InventoryManagement'
 import GuideSection from '@/components/Guide/GuideSection'
-import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode, BarChart3, BookOpen } from 'lucide-react'
+import { Shield, FileText, Calendar, ClipboardList, BookUser, QrCode } from 'lucide-react'
 import ProtocolManagement from '@/components/Management/ProtocolManagement'
 import MenuSettings from '@/components/Management/MenuSettings'
 import LeaveManagement from '@/components/Leave/LeaveManagement'
@@ -31,12 +31,16 @@ import { RecallManagement } from '@/components/Recall'
 import AIChat from '@/components/AIAnalysis/AIChat'
 import PremiumGate from '@/components/Premium/PremiumGate'
 import TaskChecklistManagement from '@/components/TaskChecklist/TaskChecklistManagement'
+import InvestmentTab from '@/components/Investment/InvestmentTab'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
+import { useUserNotifications } from '@/hooks/useUserNotifications'
 import { dataService } from '@/lib/dataService'
 import { getDatesForPeriod, getCurrentWeekString, getCurrentMonthString } from '@/utils/dateUtils'
 import { getStatsForDateRange } from '@/utils/statsUtils'
 import { inspectDatabase } from '@/utils/dbInspector'
 import type { ConsultRowData, GiftRowData, HappyCallRowData, GiftLog, CashRegisterRowData, ConsultLog, GiftInventory, GiftCategory } from '@/types'
+import PostPaymentApprovalModal from '@/components/Subscription/PostPaymentApprovalModal'
+import PendingApprovalBanner from '@/components/Dashboard/PendingApprovalBanner'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
@@ -125,6 +129,28 @@ export default function DashboardPage() {
     silentRefetch,
     refetchInventory
   } = useSupabaseData(user?.clinic_id ?? null)
+
+  // 결제 성공 알림 감지 → 대기 직원 승인 모달
+  const { notifications, markAsRead } = useUserNotifications({ limit: 20, autoRefresh: true, refreshInterval: 30_000 })
+  const [paymentSuccessModal, setPaymentSuccessModal] = useState<{
+    id: string
+    pendingCount: number
+    newLimit: number
+    newPlanName: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (paymentSuccessModal) return // 이미 표시 중이면 건너뜀
+    const n = notifications.find((x) => x.type === 'subscription_payment_succeeded' && !x.is_read)
+    if (!n) return
+    const md = (n.metadata ?? {}) as { pendingCount?: number; newLimit?: number; newPlanName?: string }
+    setPaymentSuccessModal({
+      id: n.id,
+      pendingCount: Number(md.pendingCount ?? 0),
+      newLimit: Number(md.newLimit ?? 0),
+      newPlanName: String(md.newPlanName ?? ''),
+    })
+  }, [notifications, paymentSuccessModal])
 
   // giftLogs 기반 선물별 총 사용량 계산 (모든 날짜 포함)
   const baseUsageByGift = useMemo(() => {
@@ -371,6 +397,25 @@ export default function DashboardPage() {
 
   return (
     <>
+          {/* 결제 완료 후 대기 직원 자동/개별 승인 모달 */}
+          {paymentSuccessModal && (
+            <PostPaymentApprovalModal
+              open
+              onClose={async () => {
+                if (paymentSuccessModal.id) await markAsRead(paymentSuccessModal.id)
+                setPaymentSuccessModal(null)
+              }}
+              pendingCount={paymentSuccessModal.pendingCount}
+              newLimit={paymentSuccessModal.newLimit}
+              newPlanName={paymentSuccessModal.newPlanName}
+            />
+          )}
+
+          {/* 승인 대기 직원 배너 (owner / master_admin 전용) */}
+          {user?.clinic_id && user?.role && (
+            <PendingApprovalBanner clinicId={user.clinic_id} role={user.role} />
+          )}
+
           {/* 대시보드 홈 */}
           {activeTab === 'home' && (
             <DashboardHome />
@@ -394,17 +439,9 @@ export default function DashboardPage() {
 
           {/* 출근 관리 */}
           {activeTab === 'attendance' && (
-            <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
-              {/* 출근 관리 헤더 */}
-              <div className="flex items-center gap-3 pb-4 border-b border-at-border">
-                <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
-                  <Calendar className="w-4 h-4 text-at-accent" />
-                </div>
-                <h2 className="text-lg font-bold text-at-text">출근 관리</h2>
-              </div>
-
-              {/* 출근 관리 서브 탭 네비게이션 */}
-              <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+            <div className="bg-white min-h-screen">
+              {/* 출근 관리 서브 탭 네비게이션 — 상단 고정 */}
+              <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex flex-wrap gap-2">
                 {canCheckIn && (
                   <button
                     onClick={() => setAttendanceSubTab('checkin')}
@@ -503,7 +540,7 @@ export default function DashboardPage() {
               </div>
 
               {/* 출근 관리 콘텐츠 */}
-              <div>
+              <div className="p-4 sm:p-6">
                 {attendanceSubTab === 'checkin' && canCheckIn && <CheckInOut />}
                 {attendanceSubTab === 'history' && canViewHistory && <AttendanceHistory />}
                 {attendanceSubTab === 'stats' && canViewStats && <AttendanceStats />}
@@ -516,24 +553,16 @@ export default function DashboardPage() {
 
           {/* 연차 관리 */}
           {activeTab === 'leave' && user && (
-            <LeaveManagement currentUser={user} />
+            <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
+              <LeaveManagement currentUser={user} />
+            </div>
           )}
 
           {/* 통계 */}
           {activeTab === 'stats' && (
-            <div className="p-4 sm:p-6 space-y-4 bg-white min-h-screen">
-              {/* 통계 헤더 */}
-              <div className="flex items-center justify-between pb-4 border-b border-at-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
-                    <BarChart3 className="w-4 h-4 text-at-accent" />
-                  </div>
-                  <h2 className="text-lg font-bold text-at-text">통계</h2>
-                </div>
-              </div>
-
-              {/* 통계 서브 탭 네비게이션 */}
-              <div className="flex flex-wrap gap-2 pb-4 border-b border-at-border">
+            <div className="bg-white min-h-screen">
+              {/* 통계 서브 탭 네비게이션 — 상단 고정 */}
+              <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex flex-wrap gap-2">
                 <button
                   onClick={() => setStatsSubTab('weekly')}
                   className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
@@ -590,7 +619,7 @@ export default function DashboardPage() {
               </div>
 
               {/* 통계 콘텐츠 */}
-              <div>
+              <div className="p-4 sm:p-6">
                 {statsSubTab === 'weekly' && (
                   <>
                     <div className="flex justify-end mb-4">
@@ -753,17 +782,19 @@ export default function DashboardPage() {
 
           {/* 상세 기록 */}
           {activeTab === 'logs' && (
-            <LogsSection
-              dailyReports={dailyReports}
-              consultLogs={consultLogs}
-              giftLogs={giftLogs}
-              inventoryLogs={inventoryLogs}
-              cashRegisterLogs={cashRegisterLogs}
-              onDeleteReport={handleDeleteReport}
-              onRecalculateStats={handleRecalculateStats}
-              onUpdateConsultStatus={handleUpdateConsultStatus}
-              canDelete={canDeleteReport}
-            />
+            <div className="p-4 sm:p-6 bg-white min-h-screen">
+              <LogsSection
+                dailyReports={dailyReports}
+                consultLogs={consultLogs}
+                giftLogs={giftLogs}
+                inventoryLogs={inventoryLogs}
+                cashRegisterLogs={cashRegisterLogs}
+                onDeleteReport={handleDeleteReport}
+                onRecalculateStats={handleRecalculateStats}
+                onUpdateConsultStatus={handleUpdateConsultStatus}
+                canDelete={canDeleteReport}
+              />
+            </div>
           )}
 
           {/* 진료 프로토콜 */}
@@ -794,7 +825,9 @@ export default function DashboardPage() {
 
           {/* 환자 리콜 관리 */}
           {activeTab === 'recall' && (
-            <RecallManagement />
+            <PremiumGate featureId="recall">
+              <RecallManagement />
+            </PremiumGate>
           )}
 
           {/* 업무 체크리스트 */}
@@ -833,16 +866,6 @@ export default function DashboardPage() {
           {/* 사용 안내 */}
           {activeTab === 'guide' && (
             <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-              <div className="flex items-center gap-3 pb-4 border-b border-at-border">
-                <div className="w-8 h-8 bg-at-accent-light rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-at-accent" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-at-text">사용 안내</h2>
-                  <p className="text-xs text-at-text-secondary mt-0.5">업무 효율성을 높이는 다양한 기능을 만나보세요.</p>
-                </div>
-              </div>
-
               <main>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {[
@@ -898,6 +921,13 @@ export default function DashboardPage() {
                  </div>
               </footer>
             </div>
+          )}
+
+          {/* 투자 자동매매 */}
+          {activeTab === 'investment' && (
+            <PremiumGate featureId="investment">
+              <InvestmentTab />
+            </PremiumGate>
           )}
 
           {/* 메뉴 설정 */}

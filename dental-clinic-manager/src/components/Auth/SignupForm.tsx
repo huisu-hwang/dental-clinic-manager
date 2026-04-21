@@ -6,11 +6,12 @@ import { dataService } from '@/lib/dataService'
 import { getSupabase } from '@/lib/supabase'
 import { encryptResidentNumber } from '@/utils/encryptionUtils'
 import {
-  validateResidentNumberWithMessage,
-  autoFormatResidentNumber,
-  sanitizeResidentNumberInput
+  validatePartialResidentNumberWithMessage,
+  autoFormatPartialResidentNumber,
 } from '@/utils/residentNumberUtils'
 import { autoFormatPhoneNumber } from '@/utils/phoneUtils'
+import ConsentAgreementSection from '@/components/Auth/ConsentAgreementSection'
+import type { ConsentState, ConsentType } from '@/types/auth'
 
 interface SignupFormProps {
   onBackToLanding: () => void
@@ -52,6 +53,13 @@ export default function SignupForm({
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('');
   const [passwordMatch, setPasswordMatch] = useState({ message: '', color: '' });
+  const [consents, setConsents] = useState<ConsentState>({
+    terms_of_service: false,
+    privacy_collection: false,
+    sensitive_info: false,
+    marketing_email: false,
+    marketing_sms: false,
+  });
 
   // 역할이 변경될 때마다 병원 목록을 가져오거나 초기화합니다.
   useEffect(() => {
@@ -175,10 +183,10 @@ export default function SignupForm({
       return false;
     }
 
-    // 주민등록번호 검증
-    const residentValidation = validateResidentNumberWithMessage(formData.residentNumber);
+    // 주민등록번호 앞 7자리 검증
+    const residentValidation = validatePartialResidentNumberWithMessage(formData.residentNumber);
     if (!residentValidation.isValid) {
-      setError(residentValidation.error || '주민등록번호가 유효하지 않습니다.');
+      setError(residentValidation.error || '주민등록번호 앞 7자리가 유효하지 않습니다.');
       return false;
     }
 
@@ -196,6 +204,20 @@ export default function SignupForm({
         setError('소속될 병원을 선택해주세요.');
         return false;
       }
+    }
+
+    // 필수 약관 동의 검증
+    if (!consents.terms_of_service) {
+      setError('서비스 이용약관에 동의해주세요.');
+      return false;
+    }
+    if (!consents.privacy_collection) {
+      setError('개인정보 수집·이용 동의를 해주세요.');
+      return false;
+    }
+    if (!consents.sensitive_info) {
+      setError('민감정보(주민등록번호 앞 7자리) 수집 동의를 해주세요.');
+      return false;
     }
 
     return true;
@@ -219,6 +241,10 @@ export default function SignupForm({
 
     try {
       console.log('[Signup] Starting signup process...');
+
+      // 회원가입 중 signUp이 세션을 생성할 경우, AuthContext의 SIGNED_IN 핸들러가
+      // 자동 리디렉션을 실행하는 것을 방지하기 위한 플래그 설정
+      sessionStorage.setItem('dental_signing_up', 'true');
 
       // 0. 주민등록번호 암호화
       console.log('[Signup] Encrypting resident registration number...');
@@ -286,6 +312,20 @@ export default function SignupForm({
       } else {
         // 시나리오 B: 기존 병원에 가입 신청
         console.log('[Signup] Creating user profile for existing clinic...');
+
+        // 동일 이메일의 거절된 기존 레코드 정리 (재가입 허용 - email UNIQUE 제약 해결)
+        const { data: existingRejected } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', formData.userId.toLowerCase().trim())
+          .eq('status', 'rejected')
+          .maybeSingle();
+
+        if (existingRejected) {
+          console.log('[Signup] Cleaning up existing rejected record for re-registration:', existingRejected.id);
+          await supabase.from('users').delete().eq('id', existingRejected.id);
+        }
+
         const { error: userProfileError } = await (supabase.from('users') as any).insert({
           id: newUserId,
           clinic_id: selectedClinicId,
@@ -306,7 +346,36 @@ export default function SignupForm({
         }
       }
 
+      // 약관 동의 내역 저장 (SECURITY DEFINER RPC 사용)
+      console.log('[Signup] Saving consent records...');
+      const consentRecords = (Object.entries(consents) as [ConsentType, boolean][]).map(([type, agreed]) => ({
+        consent_type: type,
+        is_agreed: agreed,
+        consent_version: '1.0',
+      }));
+
+      const { error: consentError } = await supabase.rpc('insert_user_consents', {
+        p_user_id: newUserId,
+        p_consents: consentRecords,
+      });
+
+      if (consentError) {
+        // 동의 저장 실패는 가입 자체를 중단시키지 않음 (계정은 생성됨)
+        console.error('[Signup] Consent save error (non-blocking):', consentError);
+      } else {
+        console.log('[Signup] Consent records saved successfully.');
+      }
+
       console.log('[Signup] Signup completed successfully!');
+
+      // signUp이 생성한 세션을 정리하여 AuthContext의 자동 리디렉션 방지
+      // (사용자는 이메일 인증 후 별도로 로그인해야 함)
+      try {
+        await supabase.auth.signOut();
+        console.log('[Signup] Session cleared after signup.');
+      } catch (signOutErr) {
+        console.warn('[Signup] signOut after signup failed (non-blocking):', signOutErr);
+      }
 
       // 역할별 성공 메시지 - 이메일 인증 강조
       setSuccess(`📧 이메일 인증이 필요합니다!\n\n${formData.userId}로 인증 이메일이 발송되었습니다.\n\n아래 버튼을 클릭하여 이메일함에서\n인증 링크를 확인해주세요.\n\n※ 이메일이 보이지 않으면 스팸함을 확인해주세요.`);
@@ -319,7 +388,18 @@ export default function SignupForm({
       // Supabase Auth 에러 메시지를 사용자 친화적 메시지로 변환
       let errorMessage = rawMessage;
       if (rawMessage.includes('User already registered') || rawMessage.includes('already been registered')) {
-        errorMessage = '이미 등록된 이메일 주소입니다. 로그인 페이지에서 로그인하거나 다른 이메일을 사용해주세요.';
+        // 거절된 계정인지 확인 (수정 이전에 거절된 경우 auth 사용자가 남아있을 수 있음)
+        const { data: rejectedRecord } = await supabase
+          .from('users')
+          .select('status')
+          .eq('email', formData.userId.toLowerCase().trim())
+          .eq('status', 'rejected')
+          .maybeSingle();
+        if (rejectedRecord) {
+          errorMessage = '이전에 거절된 가입 신청이 있습니다. 관리자(hiclinic.inc@gmail.com)에게 문의하거나 다른 이메일 주소를 사용해주세요.';
+        } else {
+          errorMessage = '이미 등록된 이메일 주소입니다. 로그인 페이지에서 로그인하거나 다른 이메일을 사용해주세요.';
+        }
       } else if (rawMessage.includes('Password should be at least')) {
         errorMessage = '비밀번호는 6글자 이상이어야 합니다.';
       } else if (rawMessage.includes('Unable to validate email address') || rawMessage.includes('invalid email')) {
@@ -332,6 +412,7 @@ export default function SignupForm({
       setError(errorMessage);
     } finally {
       console.log('[Signup] Finally block - setting loading to false');
+      sessionStorage.removeItem('dental_signing_up');
       setLoading(false);
     }
   };
@@ -436,7 +517,7 @@ export default function SignupForm({
 
               <div>
                 <label htmlFor="residentNumber" className="block text-sm font-medium text-at-text-secondary mb-1">
-                  주민등록번호 * <span className="text-xs text-at-text-weak">(암호화되어 저장됩니다)</span>
+                  주민등록번호 앞 7자리 * <span className="text-xs text-at-text-weak">(생년월일 + 성별)</span>
                 </label>
                 <input
                   type="text"
@@ -444,17 +525,17 @@ export default function SignupForm({
                   name="residentNumber"
                   value={formData.residentNumber}
                   onChange={(e) => {
-                    const formatted = autoFormatResidentNumber(e.target.value);
+                    const formatted = autoFormatPartialResidentNumber(e.target.value);
                     setFormData(prev => ({ ...prev, residentNumber: formatted.value }));
                   }}
                   className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent"
-                  placeholder="123456-7890123"
-                  maxLength={14}
+                  placeholder="900101-1"
+                  maxLength={8}
                   required
                   disabled={loading}
                 />
                 <p className="text-xs text-at-text-weak mt-1">
-                  ※ 근로계약서 작성 시 필요합니다. 암호화되어 안전하게 보관됩니다.
+                  ※ 전체 주민등록번호는 근로계약서 작성 시 별도로 입력합니다.
                 </p>
               </div>
 
@@ -745,6 +826,24 @@ export default function SignupForm({
                 </div>
               </div>
             )}
+
+            {/* 약관 동의 섹션 */}
+            <ConsentAgreementSection
+              consents={consents}
+              onConsentChange={(type: ConsentType, value: boolean) =>
+                setConsents(prev => ({ ...prev, [type]: value }))
+              }
+              onAllConsentChange={(value: boolean) =>
+                setConsents({
+                  terms_of_service: value,
+                  privacy_collection: value,
+                  sensitive_info: value,
+                  marketing_email: value,
+                  marketing_sms: value,
+                })
+              }
+              disabled={loading}
+            />
 
             {error && (
               <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-xl text-sm">

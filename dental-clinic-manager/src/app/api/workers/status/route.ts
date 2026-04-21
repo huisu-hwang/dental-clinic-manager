@@ -20,13 +20,45 @@ async function getLatestWorkerInfo(): Promise<{ version: string | null; releaseD
     });
     if (!res.ok) return { version: cachedLatestVersion, releaseDate: cachedReleaseDate };
     const releases = await res.json();
-    const workerRelease = releases.find((r: { tag_name?: string }) =>
-      r.tag_name?.startsWith('worker-v')
-    );
-    if (workerRelease?.tag_name) {
-      cachedLatestVersion = workerRelease.tag_name.replace('worker-v', '');
-      cachedReleaseDate = workerRelease.published_at || null;
-      cacheTimestamp = Date.now();
+
+    // Electron 워커 릴리즈 식별:
+    // - electron-builder 가 생성하는 에셋 파일명 패턴 `clinic-manager-worker-<ver>-setup.exe` 를 찾는다.
+    // - 과거 `worker-v*` 태그 형식과 신 `v*` 태그 형식을 모두 지원한다.
+    // - 태그에 버전 정보가 있는 경우 우선 사용하고, 없으면 에셋 파일명에서 추출한다.
+    type GhAsset = { name?: string };
+    type GhRelease = { tag_name?: string; published_at?: string; draft?: boolean; assets?: GhAsset[] };
+
+    const workerRelease = (releases as GhRelease[]).find((r) => {
+      if (r.draft) return false;
+      return !!r.assets?.some(
+        (a) => typeof a.name === 'string' && /^clinic-manager-worker-.+-setup\.exe$/.test(a.name)
+      );
+    });
+
+    if (workerRelease) {
+      // 버전 추출: tag_name 에서 우선 시도 (worker-v1.2.3 / v1.2.3 → 1.2.3)
+      let version: string | null = null;
+      if (workerRelease.tag_name) {
+        const tagMatch = workerRelease.tag_name.match(/^(?:worker-)?v?(.+)$/);
+        if (tagMatch) version = tagMatch[1];
+      }
+      // tag_name 에서 못 얻으면 에셋 파일명에서 파싱
+      if (!version && workerRelease.assets) {
+        for (const a of workerRelease.assets) {
+          if (!a.name) continue;
+          const m = a.name.match(/^clinic-manager-worker-(.+?)-setup\.exe$/);
+          if (m) {
+            version = m[1];
+            break;
+          }
+        }
+      }
+
+      if (version) {
+        cachedLatestVersion = version;
+        cachedReleaseDate = workerRelease.published_at || null;
+        cacheTimestamp = Date.now();
+      }
     }
   } catch {
     // GitHub API 실패 시 캐시된 값 반환
@@ -79,7 +111,14 @@ export async function GET(request: NextRequest) {
           .single();
 
         if (controlData) {
-          installed = true;
+          // 주의: marketing_worker_control 테이블은 마이그레이션 시점에 id='main' seed row가
+          // 자동 삽입되므로 "row 존재 여부"만으로는 설치 여부를 판정할 수 없다.
+          // 실제 워커가 한 번이라도 실행되면 worker_version이 기록되거나
+          // watchdog_online=true 로 heartbeat가 올라오므로 이를 설치의 증거로 사용한다.
+          const hasVersion = !!controlData.worker_version;
+          const hasHeartbeat = !!controlData.watchdog_online;
+          installed = hasVersion || hasHeartbeat;
+
           const lastUpdated = controlData.last_updated ? new Date(controlData.last_updated) : null;
           const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
           online = !!(controlData.watchdog_online && isRecent);
@@ -158,11 +197,15 @@ export async function GET(request: NextRequest) {
         if (admin) {
           const { data: controlData } = await admin
             .from('marketing_worker_control')
-            .select('watchdog_online, last_updated')
+            .select('watchdog_online, last_updated, worker_version')
             .eq('id', 'main')
             .single();
           if (controlData) {
-            marketingInstalled = true;
+            // seed row로 인한 오탐 방지: worker_version 또는 watchdog_online 으로 설치 판정
+            const hasVersion = !!controlData.worker_version;
+            const hasHeartbeat = !!controlData.watchdog_online;
+            marketingInstalled = hasVersion || hasHeartbeat;
+
             const lastUpdated = controlData.last_updated ? new Date(controlData.last_updated) : null;
             const isRecent = lastUpdated && (Date.now() - lastUpdated.getTime() < 60_000);
             marketingOnline = !!(controlData.watchdog_online && isRecent);
@@ -188,8 +231,9 @@ export async function GET(request: NextRequest) {
         if (syncConfig) {
           installed = true;
           const lastSync = syncConfig.last_sync_at ? new Date(syncConfig.last_sync_at) : null;
-          // 마지막 동기화가 10분 이내면 온라인으로 판단
-          online = !!(syncConfig.is_active && lastSync && (Date.now() - lastSync.getTime() < 10 * 60 * 1000));
+          // 브릿지 에이전트가 60초 주기로 /api/dentweb/heartbeat 를 호출하여 last_sync_at을 갱신한다.
+          // heartbeat 여유를 감안해 3분(180초) 이내면 온라인으로 판단.
+          online = !!(syncConfig.is_active && lastSync && (Date.now() - lastSync.getTime() < 3 * 60 * 1000));
           lastSyncStatus = syncConfig.last_sync_status;
         }
       }

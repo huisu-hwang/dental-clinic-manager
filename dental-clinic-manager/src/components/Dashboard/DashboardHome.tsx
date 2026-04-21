@@ -24,7 +24,9 @@ import {
   Download,
   Monitor,
   ArrowUpCircle,
+  Users,
 } from 'lucide-react'
+import MyTasksSection from './MyTasksSection'
 
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
@@ -539,7 +541,10 @@ export default function DashboardHome() {
           <div className="flex-1 space-y-4 sm:space-y-5">
             {/* 오늘의 현황 */}
             <div>
-              <h3 className="text-sm font-semibold text-at-text mb-3 tracking-[0.08px]">오늘의 현황</h3>
+              <h3 className="text-sm font-semibold text-at-text mb-3 tracking-[0.08px] flex items-center gap-2">
+                <Sun className="w-4 h-4 text-at-warning" />
+                오늘의 현황
+              </h3>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <button
                   onClick={() => togglePanel(todayActivePanel, 'consult', setTodayActivePanel)}
@@ -648,7 +653,7 @@ export default function DashboardHome() {
                         <div key={g.id ?? i} className="flex items-center gap-2 px-4 py-2 text-sm">
                           <span className="font-medium text-at-text w-16 truncate tracking-[0.08px]">{g.patient_name}</span>
                           <span className="text-at-text-secondary flex-1 truncate tracking-[0.07px]">{g.gift_type} × {g.quantity}</span>
-                          {g.naver_review === 'O' ? (
+                          {g.naver_review !== '미작성' ? (
                             <span className="text-xs bg-at-warning-bg text-at-warning px-2 py-0.5 rounded-full font-medium">리뷰 ✓</span>
                           ) : (
                             <span className="text-xs text-at-text-weak">리뷰 없음</span>
@@ -661,9 +666,15 @@ export default function DashboardHome() {
               )}
             </div>
 
+            {/* 내 업무 (일회성 + 반복 업무 인스턴스) */}
+            <MyTasksSection />
+
             {/* 팀 출퇴근 현황 */}
             <div>
-              <h3 className="text-sm font-semibold text-at-text mb-3 tracking-[0.08px]">팀 출퇴근 현황</h3>
+              <h3 className="text-sm font-semibold text-at-text mb-3 tracking-[0.08px] flex items-center gap-2">
+                <Users className="w-4 h-4 text-at-accent" />
+                팀 출퇴근 현황
+              </h3>
               {attendanceLoading ? (
                 <div className="flex justify-center py-6">
                   <div className="w-6 h-6 border-4 border-at-accent border-t-transparent rounded-full animate-spin"></div>
@@ -779,7 +790,10 @@ export default function DashboardHome() {
             {/* 주간 통계 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-at-text tracking-[0.08px]">주간 통계</h3>
+                <h3 className="text-sm font-semibold text-at-text tracking-[0.08px] flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-at-success" />
+                  주간 통계
+                </h3>
                 <span className="text-xs text-at-text-weak tracking-[0.07px]">
                   {weeklySummary.weekStart.replace(/-/g, '.')} ~ {today.replace(/-/g, '.')}
                 </span>

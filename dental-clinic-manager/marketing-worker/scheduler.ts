@@ -4,7 +4,8 @@ import path from 'path';
 import os from 'os';
 import { CONFIG, isApiMode } from './config.js';
 import { NaverBlogPublisher } from './publisher/naver-blog-publisher.js';
-import { WorkerApiClient, type ScheduledItem } from './api-client.js';
+import { NaverBlogMetricsScraper } from './scraper/naver-blog-metrics.js';
+import { WorkerApiClient, type ScheduledItem, type PostMetricsInput } from './api-client.js';
 
 // ============================================
 // 자동 발행 스케줄러
@@ -131,6 +132,18 @@ export function startScheduler(): void {
       console.error('[Scheduler] 처리 오류:', error);
     }
   });
+
+  // KPI 수집 사이클 — 매 4시간마다 (API 모드에서만)
+  if (isApiMode()) {
+    cron.schedule('0 */4 * * *', async () => {
+      try {
+        await collectPostMetricsCycle();
+      } catch (error) {
+        console.error('[Scheduler] KPI 수집 오류:', error);
+      }
+    });
+    console.log('[Scheduler] KPI 수집 cron 등록 (4시간 간격)');
+  }
 }
 
 /**
@@ -227,10 +240,24 @@ async function publishItemApi(item: ScheduledItem, headless = false): Promise<Sc
         } : undefined, { headless });
       }
 
+      // 대시보드가 변환해 준 naverBlog 페이로드(면책 문구·정제된 태그·카테고리 포함)를 우선 사용
+      const nb = item.naverBlog;
+      if (nb?.warnings?.length) {
+        console.warn(`[Scheduler] naverBlog 변환 경고 (${item.title}):`, nb.warnings.join(' | '));
+      }
+
+      const publishTitle = nb?.title || parsedContent.title;
+      const publishBody = nb?.body || parsedContent.body;
+      const publishTags = (nb?.tags && nb.tags.length > 0)
+        ? nb.tags
+        : (parsedContent.hashtags || []);
+      const publishCategory = nb?.category;
+
       const result = await publisher.publish({
-        title: parsedContent.title,
-        body: parsedContent.body,
-        hashtags: parsedContent.hashtags,
+        title: publishTitle,
+        body: publishBody,
+        category: publishCategory,
+        hashtags: publishTags,
         images: downloadedImages.length > 0 ? downloadedImages : undefined,
       });
 
@@ -442,5 +469,74 @@ export async function stopScheduler(): Promise<void> {
     await publisher.close();
     publisher = null;
   }
+  if (metricsScraper) {
+    await metricsScraper.close();
+    metricsScraper = null;
+  }
   console.log('[Scheduler] 종료');
+}
+
+// ─── KPI 수집 사이클 ───
+
+let metricsScraper: NaverBlogMetricsScraper | null = null;
+
+/**
+ * 측정 큐를 받아 네이버 블로그 메트릭 일괄 스크래핑 → push
+ * - 한 사이클 최대 10건 (Vercel 응답 시간 고려)
+ * - 항목별 5초 간격 (네이버 차단 회피)
+ */
+export async function collectPostMetricsCycle(): Promise<{ scraped: number; failed: number }> {
+  const client = getApiClient();
+  const queue = await client.listMetricsQueue(10);
+
+  if (queue.length === 0) {
+    console.log('[Metrics] 측정 대상 없음');
+    return { scraped: 0, failed: 0 };
+  }
+
+  console.log(`[Metrics] 측정 시작: ${queue.length}건`);
+
+  if (!metricsScraper) {
+    metricsScraper = new NaverBlogMetricsScraper();
+    await metricsScraper.init(true);
+  }
+
+  const results: PostMetricsInput[] = [];
+  let failed = 0;
+
+  for (const it of queue) {
+    const url = it.published_urls?.naverBlog;
+    if (!url || !it.platforms?.naverBlog) {
+      continue;
+    }
+    try {
+      const m = await metricsScraper.scrape(url);
+      results.push({
+        item_id: it.id,
+        platform: 'naver_blog',
+        views: m.views ?? undefined,
+        comments: m.comments ?? undefined,
+        likes: m.likes ?? undefined,
+        scraps: m.scraps ?? undefined,
+        raw_payload: m.raw_payload,
+      });
+      console.log(`[Metrics] ✓ "${it.title}" views=${m.views} likes=${m.likes} comments=${m.comments}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[Metrics] ✗ "${it.title}":`, msg);
+      failed++;
+    }
+    await new Promise((r) => setTimeout(r, 5000)); // 5초 간격
+  }
+
+  if (results.length > 0) {
+    try {
+      const r = await client.pushPostMetrics(results);
+      console.log(`[Metrics] push 완료: ${r.inserted}건`);
+    } catch (e) {
+      console.error('[Metrics] push 실패:', e);
+    }
+  }
+
+  return { scraped: results.length, failed };
 }

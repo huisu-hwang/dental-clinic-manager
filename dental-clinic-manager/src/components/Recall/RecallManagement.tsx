@@ -17,7 +17,8 @@ import {
   ShieldOff,
   Undo2,
   Trash2,
-  Database
+  Database,
+  Loader2
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
@@ -42,7 +43,7 @@ import RecallStats from './RecallStats'
 import RecallSettings from './RecallSettings'
 import RecallDailyLog from './RecallDailyLog'
 import UnmatchedPatientModal from './UnmatchedPatientModal'
-import DentwebImportModal from './DentwebImportModal'
+import { dentwebService } from '@/lib/dentwebSyncService'
 import Toast from '@/components/ui/Toast'
 
 type TabType = 'patients' | 'activity' | 'stats' | 'settings'
@@ -62,8 +63,8 @@ export default function RecallManagement() {
   const [unmatchedModalOpen, setUnmatchedModalOpen] = useState(false)
   const [unmatchedExcludeReason, setUnmatchedExcludeReason] = useState<RecallExcludeReason>('family')
 
-  // 덴트웹 가져오기 모달
-  const [dentwebImportOpen, setDentwebImportOpen] = useState(false)
+  // 덴트웹 동기화 로딩
+  const [isSyncing, setIsSyncing] = useState(false)
 
   // 데이터 상태
   const [patients, setPatients] = useState<RecallPatient[]>([])
@@ -250,6 +251,13 @@ export default function RecallManagement() {
       const isContact = newStatus !== 'pending'
       const contactType = newStatus === 'sms_sent' ? 'sms' : 'call'
 
+      // 하루에 한 번만 연락 횟수 증가 (한국 시간 기준 같은 날짜면 증가시키지 않음)
+      const todayKST = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+      const lastContactKST = patient.last_contact_date
+        ? new Date(patient.last_contact_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+        : null
+      const shouldIncrementCount = isContact && lastContactKST !== todayKST
+
       setPatients(prev => prev.map(p =>
         p.id === patient.id ? {
           ...p,
@@ -258,7 +266,7 @@ export default function RecallManagement() {
             recall_datetime: now,
             last_contact_date: now,
             last_contact_type: contactType as ContactType,
-            contact_count: (p.contact_count || 0) + 1
+            contact_count: shouldIncrementCount ? (p.contact_count || 0) + 1 : (p.contact_count || 0)
           } : {})
         } : p
       ))
@@ -419,6 +427,29 @@ export default function RecallManagement() {
     }
   }
 
+  // 덴트웹 동기화
+  const handleDentwebSync = async () => {
+    setIsSyncing(true)
+    try {
+      const result = await dentwebService.patients.syncToRecall()
+      if (result.success) {
+        const parts: string[] = []
+        if (result.importedCount > 0) parts.push(`신규 ${result.importedCount}명`)
+        if (result.updatedCount > 0) parts.push(`업데이트 ${result.updatedCount}명`)
+        if (result.skippedCount > 0) parts.push(`변경없음 ${result.skippedCount}명`)
+        showToast(`덴트웹 동기화 완료: ${parts.join(', ')} (총 ${result.totalProcessed}건)`, 'success')
+        loadPatients()
+        loadStats()
+      } else {
+        showToast(result.error || '덴트웹 동기화에 실패했습니다.', 'error')
+      }
+    } catch {
+      showToast('덴트웹 동기화 중 오류가 발생했습니다.', 'error')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   // 새로고침
   const handleRefresh = () => {
     loadPatients()
@@ -559,12 +590,17 @@ export default function RecallManagement() {
               </button>
 
               <button
-                onClick={() => setDentwebImportOpen(true)}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+                onClick={handleDentwebSync}
+                disabled={isSyncing}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors text-sm"
               >
-                <Database className="w-4 h-4" />
-                <span className="hidden sm:inline">덴트웹에서 가져오기</span>
-                <span className="sm:hidden">덴트웹</span>
+                {isSyncing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Database className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">{isSyncing ? '동기화 중...' : '덴트웹 동기화'}</span>
+                <span className="sm:hidden">{isSyncing ? '동기화...' : '덴트웹'}</span>
               </button>
 
               {/* 일반 환자 목록: 문자 + 제외 버튼 (항상 표시) */}
@@ -864,19 +900,6 @@ export default function RecallManagement() {
         }}
       />
 
-      {/* 덴트웹 가져오기 모달 */}
-      <DentwebImportModal
-        isOpen={dentwebImportOpen}
-        onClose={() => setDentwebImportOpen(false)}
-        onImportComplete={(importedCount, skippedCount) => {
-          const parts: string[] = []
-          if (importedCount > 0) parts.push(`${importedCount}명 등록`)
-          if (skippedCount > 0) parts.push(`${skippedCount}명 건너뜀 (이미 등록)`)
-          showToast(`덴트웹 가져오기 완료: ${parts.join(', ')}`, 'success')
-          loadPatients()
-          loadStats()
-        }}
-      />
 
       {/* 토스트 */}
       <Toast

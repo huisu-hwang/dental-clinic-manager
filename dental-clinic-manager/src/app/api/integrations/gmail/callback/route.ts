@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
  * Google OAuth2 콜백 - code를 토큰으로 교환하고 DB에 저장
  */
 export async function GET(request: NextRequest) {
-  const baseRedirect = '/dashboard/marketing?tab=settings';
+  const baseRedirect = '/dashboard/financial?tab=settings';
 
   try {
     const { searchParams } = new URL(request.url);
@@ -65,9 +65,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI?.trim();
 
     if (!clientId || !clientSecret || !redirectUri) {
       console.error('[gmail/callback] Google OAuth 환경변수 누락');
@@ -134,25 +134,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(url.toString());
     }
 
-    // clinic_email_integrations에 저장 (upsert)
-    const { error: upsertError } = await admin
-      .from('clinic_email_integrations')
-      .upsert(
-        {
-          clinic_id: clinicId,
-          provider: 'gmail',
-          email_address: emailAddress,
-          access_token_encrypted: encryptedAccessToken,
-          refresh_token_encrypted: encryptedRefreshToken,
-          token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'clinic_id,provider' }
-      );
+    // clinic_email_integrations에 저장 (unique constraint 없으므로 select 후 update/insert)
+    const payload = {
+      clinic_id: clinicId,
+      provider: 'gmail' as const,
+      email_address: emailAddress,
+      encrypted_access_token: encryptedAccessToken,
+      encrypted_refresh_token: encryptedRefreshToken,
+      token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (upsertError) {
-      console.error('[gmail/callback] DB upsert error:', upsertError);
+    const { data: existingRow } = await admin
+      .from('clinic_email_integrations')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('provider', 'gmail')
+      .maybeSingle();
+
+    const saveResult = existingRow
+      ? await admin
+          .from('clinic_email_integrations')
+          .update(payload)
+          .eq('id', existingRow.id)
+      : await admin.from('clinic_email_integrations').insert(payload);
+
+    if (saveResult.error) {
+      console.error('[gmail/callback] DB save error:', saveResult.error);
       const url = new URL(baseRedirect, request.url);
       url.searchParams.set('gmail_error', 'db_error');
       return NextResponse.redirect(url.toString());

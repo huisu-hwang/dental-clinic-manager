@@ -125,12 +125,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '요약 조회에 실패했습니다.' }, { status: 500 });
     }
 
-    // 데이터 타입별 요약 집계 (세금계산서 제외)
+    // 데이터 타입별 요약 집계 (매출은 덴트웹에서 가져오므로 매입만 활성화)
     const summary: Record<string, { count: number; totalAmount: number; scrapedAt: string | null }> = {
-      cash_receipt_sales: { count: 0, totalAmount: 0, scrapedAt: null },
+      // cash_receipt_sales: { count: 0, totalAmount: 0, scrapedAt: null },
       cash_receipt_purchase: { count: 0, totalAmount: 0, scrapedAt: null },
       business_card_purchase: { count: 0, totalAmount: 0, scrapedAt: null },
-      credit_card_sales: { count: 0, totalAmount: 0, scrapedAt: null },
+      // credit_card_sales: { count: 0, totalAmount: 0, scrapedAt: null },
     };
 
     let lastSyncedAt: string | null = null;

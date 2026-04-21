@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   PhotoIcon,
   ExclamationTriangleIcon,
@@ -10,6 +10,7 @@ import {
   XMarkIcon,
   PencilIcon,
   SparklesIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -104,6 +105,20 @@ function resizeImage(file: File, maxWidth: number = 1200): Promise<File> {
   })
 }
 
+function SectionHeader({ number, title, icon: Icon, iconColor = 'text-at-accent', iconBg = 'bg-at-accent-light' }: { number: number; title: string; icon: React.ElementType; iconColor?: string; iconBg?: string }) {
+  return (
+    <div className="flex items-center space-x-3 pb-3 mb-4 border-b border-at-border">
+      <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${iconBg} ${iconColor}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <h3 className="text-base font-semibold text-at-text">
+        <span className="text-at-accent mr-1">{number}.</span>
+        {title}
+      </h3>
+    </div>
+  )
+}
+
 export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormProps) {
   const [procedureType, setProcedureType] = useState('')
   const [procedureDetail, setProcedureDetail] = useState('')
@@ -117,6 +132,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   const [selectedTeeth, setSelectedTeeth] = useState<number[]>([])
   const [photos, setPhotos] = useState<LocalClinicalPhoto[]>([])
   const [editingPhoto, setEditingPhoto] = useState<LocalClinicalPhoto | null>(null)
+  const [isNormalizing, setIsNormalizing] = useState(false)
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -281,13 +297,18 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
 
   // 전체 사진 밝기/색조 통일
   const handleBatchNormalize = async () => {
-    if (photos.length < 2) return
+    if (photos.length < 2 || isNormalizing) return
 
+    setIsNormalizing(true)
     try {
-      // 모든 사진 이미지 로드
+      // 현재 photos 스냅샷 (stale closure 방지)
+      const currentPhotos = photos
+
+      // 모든 사진 이미지 로드 (병렬)
       const loaded = await Promise.all(
-        photos.map(async (p) => ({
+        currentPhotos.map(async (p) => ({
           id: p.id,
+          file: p.file,
           image: await loadImageFromFile(p.file),
         }))
       )
@@ -296,19 +317,23 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
       const { computeBatchNormalization } = await import('./imageUtils')
       const adjustments = computeBatchNormalization(loaded)
 
-      // 각 사진에 보정값 적용
-      for (const [photoId, adj] of adjustments.entries()) {
-        const photo = photos.find((p) => p.id === photoId)
-        if (!photo || (adj.brightness === 0 && adj.contrast === 0)) continue
+      // 각 사진에 보정값 적용 (순차 처리 — 업로드 순서 보장)
+      for (const { id: photoId, image: img } of loaded) {
+        const adj = adjustments.get(photoId)
+        if (!adj) continue
+        // 모든 보정값이 무변경이면 스킵
+        const noChange = adj.brightness === 0 && adj.hueRotate === 0 && adj.saturate === 1
+        if (noChange) continue
 
         try {
-          const img = loaded.find((l) => l.id === photoId)!.image
           const newFile = await applyImageTransforms(img, {
             brightness: adj.brightness,
             contrast: adj.contrast,
             rotation: 0,
             flipH: false,
             flipV: false,
+            hueRotate: adj.hueRotate,
+            saturate: adj.saturate,
           })
           const newPreviewUrl = URL.createObjectURL(newFile)
 
@@ -331,10 +356,17 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           )
         } catch (err) {
           console.error(`사진 ${photoId} 정규화 실패:`, err)
+          setPhotos((prev) =>
+            prev.map((p) =>
+              p.id === photoId ? { ...p, uploading: false, uploadError: '정규화 실패' } : p
+            )
+          )
         }
       }
     } catch (err) {
       console.error('일괄 정규화 실패:', err)
+    } finally {
+      setIsNormalizing(false)
     }
   }
 
@@ -351,8 +383,8 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
   return (
     <div className="space-y-6">
       {/* 시술 정보 */}
-      <div className="bg-white rounded-xl border border-at-border p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-at-text">시술 정보</h3>
+      <div className="space-y-4">
+        <SectionHeader number={2} title="시술 정보" icon={ClipboardDocumentListIcon} iconColor="text-at-accent" iconBg="bg-at-accent-light" />
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -456,34 +488,19 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
             type="checkbox"
             checked={useResearch}
             onChange={(e) => setUseResearch(e.target.checked)}
-            className="w-4 h-4 text-indigo-600 border-at-border rounded"
+            className="w-4 h-4 text-at-accent border-at-border rounded"
           />
           <span className="text-sm text-at-text">논문 인용 포함</span>
         </label>
       </div>
 
       {/* 임상 사진 업로드 - 3단계 */}
-      <div className="bg-white rounded-xl border border-at-border p-6 space-y-5">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-at-text">
-            임상 사진 <span className="text-red-500">*</span>
-          </h3>
-          <div className="flex items-center gap-2">
-            {totalPhotos >= 2 && (
-              <button
-                type="button"
-                onClick={() => handleBatchNormalize()}
-                disabled={isGenerating}
-                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors disabled:opacity-40"
-              >
-                <SparklesIcon className="h-3.5 w-3.5" />
-                밝기/색조 통일
-              </button>
-            )}
-            <span className="text-xs text-at-text">
-              {totalPhotos}/{MAX_TOTAL_PHOTOS}장
-            </span>
-          </div>
+          <SectionHeader number={3} title="임상 사진 *" icon={PhotoIcon} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
+          <span className="text-xs text-at-text">
+            {totalPhotos}/{MAX_TOTAL_PHOTOS}장
+          </span>
         </div>
 
         {PHOTO_CATEGORIES.map((catType) => {
@@ -564,10 +581,10 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
                         <button
                           type="button"
                           onClick={() => setEditingPhoto(photo)}
-                          className="p-1 bg-white/90 rounded shadow-sm hover:bg-indigo-50"
+                          className="p-1 bg-white/90 rounded shadow-sm hover:bg-at-accent-light"
                           title="편집"
                         >
-                          <PencilIcon className="h-3 w-3 text-indigo-500" />
+                          <PencilIcon className="h-3 w-3 text-at-accent" />
                         </button>
                         <button
                           type="button"
@@ -584,7 +601,7 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
 
               {/* 사진 추가 버튼 */}
               {canAdd && (
-                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-at-border rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors">
+                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-at-border rounded-xl cursor-pointer hover:border-at-accent hover:bg-at-accent-light/30 transition-colors">
                   <PhotoIcon className="h-5 w-5 text-at-text" />
                   <span className="text-sm text-at-text">사진 추가</span>
                   <input
@@ -601,6 +618,30 @@ export default function ClinicalForm({ onChange, isGenerating }: ClinicalFormPro
           )
         })}
       </div>
+
+      {/* 밝기/색조 통일 버튼 */}
+      {totalPhotos >= 2 && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => handleBatchNormalize()}
+            disabled={isGenerating || isNormalizing}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-at-accent hover:bg-at-accent-hover disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
+          >
+            {isNormalizing ? (
+              <>
+                <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="h-4 w-4" />
+                밝기/색조 통일 ({totalPhotos}장 일괄 적용)
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* 환자 동의 확인 */}
       <div className={`rounded-xl border-2 p-5 ${

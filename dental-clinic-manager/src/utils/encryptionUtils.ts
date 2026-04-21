@@ -204,10 +204,10 @@ export function secureErase(data: string): void {
 export async function encryptResidentNumber(residentNumber: string): Promise<string | null> {
   if (!residentNumber) return null
 
-  // Validate format before encrypting
+  // Validate format before encrypting (7자리 부분 or 13자리 전체 모두 허용)
   const cleaned = residentNumber.replace(/[^0-9]/g, '')
-  if (cleaned.length !== 13) {
-    throw new Error('Invalid resident registration number format')
+  if (cleaned.length !== 13 && cleaned.length !== 7) {
+    throw new Error('Invalid resident registration number format (must be 7 or 13 digits)')
   }
 
   try {
@@ -227,8 +227,8 @@ export async function encryptResidentNumber(residentNumber: string): Promise<str
 export async function decryptResidentNumber(encryptedData: string): Promise<string | null> {
   if (!encryptedData) return null
 
-  // 평문 주민번호 패턴 체크 (XXXXXX-XXXXXXX 또는 XXXXXXXXXXXXX)
-  const plaintextPattern = /^(\d{6}-\d{7}|\d{13})$/
+  // 평문 주민번호 패턴 체크 (XXXXXX-XXXXXXX, XXXXXXXXXXXXX, XXXXXX-X, XXXXXXX)
+  const plaintextPattern = /^(\d{6}-\d{7}|\d{13}|\d{6}-\d{1}|\d{7})$/
   if (plaintextPattern.test(encryptedData)) {
     console.log('[Decryption] Plaintext resident number detected, returning as-is')
     return encryptedData

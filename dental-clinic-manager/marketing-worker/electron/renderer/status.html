@@ -30,7 +30,17 @@
       flex-shrink: 0;
     }
 
-    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+    .header h1 .version-badge {
+      font-size: 11px;
+      font-weight: 500;
+      color: #d4d4d8;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0;
+    }
     .header .last-updated { font-size: 11px; color: #a1a1aa; }
 
     .body {
@@ -165,9 +175,13 @@
       font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
       font-size: 11px;
       line-height: 1.6;
+      user-select: text;
+      -webkit-user-select: text;
+      cursor: text;
     }
 
-    .log-line { padding: 1px 0; color: #52525b; word-break: break-all; }
+    .log-line { padding: 1px 0; color: #52525b; word-break: break-all; user-select: text; -webkit-user-select: text; }
+    .log-copied-toast { font-size: 11px; color: #16a34a; margin-left: 6px; }
     .log-line.error  { color: #dc2626; }
     .log-line.warn   { color: #d97706; }
     .log-line.info   { color: #0369a1; }
@@ -219,7 +233,10 @@
 </head>
 <body>
   <div class="header">
-    <h1>클리닉 매니저 워커</h1>
+    <h1>
+      클리닉 매니저 워커
+      <span class="version-badge" id="headerVersion">v-</span>
+    </h1>
     <span class="last-updated" id="lastUpdated">불러오는 중...</span>
   </div>
 
@@ -302,8 +319,11 @@
 
     <div class="log-section">
       <div class="log-header">
-        <span>최근 활동 로그</span>
-        <button class="btn-clear" id="btnClearLog">지우기</button>
+        <span>최근 활동 로그<span class="log-copied-toast" id="logCopiedToast" style="display:none;">복사됨</span></span>
+        <div style="display:flex; gap:4px;">
+          <button class="btn-clear" id="btnCopyLog" title="전체 로그를 클립보드에 복사">복사</button>
+          <button class="btn-clear" id="btnClearLog">지우기</button>
+        </div>
       </div>
       <div class="log-body" id="logBody">
         <p class="log-empty">로그를 불러오는 중...</p>
@@ -371,6 +391,9 @@
       });
     }
 
+    // 가장 최근의 원본 로그 라인 (오래된 → 최신 순). 복사 버튼이 사용.
+    var lastLogLines = [];
+
     function refreshLogs() {
       if (!api || !api.getLogs) return;
       api.getLogs().then(function(lines) {
@@ -381,6 +404,8 @@
           logBody.removeChild(logBody.firstChild);
         }
 
+        lastLogLines = lines || [];
+
         if (!lines || lines.length === 0) {
           var empty = document.createElement('p');
           empty.className = 'log-empty';
@@ -389,8 +414,10 @@
           return;
         }
 
+        // 최신 로그가 위로 오도록 역순으로 렌더링
         var fragment = document.createDocumentFragment();
-        lines.forEach(function(line) {
+        for (var i = lines.length - 1; i >= 0; i--) {
+          var line = lines[i];
           var div = document.createElement('div');
           div.className = 'log-line';
           if (line.indexOf('[ERROR]') !== -1)      div.classList.add('error');
@@ -399,13 +426,46 @@
           else if (line.indexOf('[DEBUG]') !== -1) div.classList.add('debug');
           div.textContent = line;
           fragment.appendChild(div);
-        });
+        }
 
         logBody.appendChild(fragment);
-        logBody.scrollTop = logBody.scrollHeight;
+        // 최신이 맨 위에 있으므로 맨 위로 스크롤
+        logBody.scrollTop = 0;
       }).catch(function() {
         // 무시
       });
+    }
+
+    function showCopiedToast() {
+      var toast = document.getElementById('logCopiedToast');
+      if (!toast) return;
+      toast.style.display = 'inline';
+      setTimeout(function() { toast.style.display = 'none'; }, 1500);
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) { /* 무시 */ }
+      document.body.removeChild(ta);
+    }
+
+    function copyAllLogs() {
+      var text = (lastLogLines || []).join('\n');
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showCopiedToast).catch(function() {
+          fallbackCopy(text);
+          showCopiedToast();
+        });
+      } else {
+        fallbackCopy(text);
+        showCopiedToast();
+      }
     }
 
     document.getElementById('btnToggle').addEventListener('click', function() {
@@ -434,7 +494,10 @@
       msg.className = 'log-empty';
       msg.textContent = '로그가 지워졌습니다.';
       logBody.appendChild(msg);
+      lastLogLines = [];
     });
+
+    document.getElementById('btnCopyLog').addEventListener('click', copyAllLogs);
 
     var UPDATE_STATUS_LABELS = {
       'up-to-date': '최신 버전',
@@ -456,7 +519,9 @@
     function refreshVersionInfo() {
       if (!api || !api.getVersionInfo) return;
       api.getVersionInfo().then(function(info) {
-        document.getElementById('currentVersion').textContent = 'v' + (info.currentVersion || '-');
+        var versionText = 'v' + (info.currentVersion || '-');
+        document.getElementById('currentVersion').textContent = versionText;
+        document.getElementById('headerVersion').textContent = versionText;
 
         var latestEl = document.getElementById('latestVersion');
         latestEl.textContent = info.latestVersion ? 'v' + info.latestVersion : '-';

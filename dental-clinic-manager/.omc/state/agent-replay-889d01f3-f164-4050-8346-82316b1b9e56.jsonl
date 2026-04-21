@@ -9,3 +9,4 @@
 {"t":0,"agent":"a3dc4a5","agent_type":"Plan","event":"agent_start","parent_mode":"none"}
 {"t":0,"agent":"a3dc4a5","agent_type":"Plan","event":"agent_stop","success":true,"duration_ms":112659}
 {"t":0,"agent":"af92e32","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"ac03ffd","agent_type":"unknown","event":"agent_stop","success":true}

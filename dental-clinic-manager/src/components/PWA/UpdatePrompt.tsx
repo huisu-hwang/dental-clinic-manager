@@ -29,6 +29,12 @@ export default function UpdatePrompt({ autoReloadDelay = 0 }: UpdatePromptProps)
     return () => window.removeEventListener('pwa-update-available', handleUpdateAvailable)
   }, [autoReloadDelay])
 
+  const handleReload = useCallback(() => {
+    // ServiceWorkerRegistrar에 위임: waiting SW가 있으면 SKIP_WAITING → controllerchange → reload,
+    // 없으면 즉시 reload. (사용자가 카운트다운 도중에도 직접 눌러 즉시 적용 가능)
+    window.dispatchEvent(new CustomEvent('pwa-apply-update'))
+  }, [])
+
   // 자동 새로고침 카운트다운
   useEffect(() => {
     if (!showUpdate || autoReloadDelay <= 0) return
@@ -37,7 +43,7 @@ export default function UpdatePrompt({ autoReloadDelay = 0 }: UpdatePromptProps)
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
-          window.location.reload()
+          handleReload()
           return 0
         }
         return prev - 1
@@ -45,11 +51,7 @@ export default function UpdatePrompt({ autoReloadDelay = 0 }: UpdatePromptProps)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [showUpdate, autoReloadDelay])
-
-  const handleReload = useCallback(() => {
-    window.location.reload()
-  }, [])
+  }, [showUpdate, autoReloadDelay, handleReload])
 
   const handleDismiss = useCallback(() => {
     setShowUpdate(false)

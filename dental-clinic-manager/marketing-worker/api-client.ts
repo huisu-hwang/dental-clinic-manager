@@ -3,6 +3,22 @@
 // 대시보드 API를 통해 DB 작업을 수행 (Supabase 직접 접속 불필요)
 // ============================================
 
+// 대시보드의 platform-adapters/naver-blog.ts 가 만들어주는 변환 페이로드
+// (생성 시각 기준 면책 문구·태그·카테고리 등이 미리 처리되어 있음)
+export interface NaverBlogPayload {
+  title: string;
+  body: string;
+  bodyHtml: string;
+  summary: string;
+  tags: string[];
+  category?: string;
+  disclaimer: string;
+  wordCount: number;
+  keywordCount: number;
+  hashtags: string[];
+  warnings: string[];
+}
+
 export interface ScheduledItem {
   id: string;
   title: string;
@@ -13,6 +29,8 @@ export interface ScheduledItem {
   generated_images: { path: string; prompt: string; fileName?: string }[] | null;
   platforms: Record<string, boolean>;
   clinic_id: string;
+  /** 대시보드가 변환해 보내주는 네이버 블로그 페이로드 (있으면 우선 사용) */
+  naverBlog?: NaverBlogPayload | null;
 }
 
 export interface PlatformConfig {
@@ -99,6 +117,22 @@ export class WorkerApiClient {
     return result.config;
   }
 
+  /** 측정 대상 큐 조회 (마지막 측정 ≥ 6h 또는 미측정) */
+  async listMetricsQueue(limit: number = 20): Promise<MetricsQueueItem[]> {
+    const result = await this.request<{ queue: MetricsQueueItem[] }>(
+      `/post-metrics?limit=${limit}`
+    );
+    return result.queue || [];
+  }
+
+  /** 스크래핑 결과 push */
+  async pushPostMetrics(items: PostMetricsInput[]): Promise<{ inserted: number }> {
+    return this.request('/post-metrics', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  }
+
   /** 발행 로그 기록 + 키워드 이력 */
   async logPublish(params: {
     item_id: string;
@@ -115,4 +149,24 @@ export class WorkerApiClient {
       body: JSON.stringify(params),
     });
   }
+}
+
+export interface MetricsQueueItem {
+  id: string;
+  title: string;
+  publish_date: string;
+  published_urls: Record<string, string> | null;
+  platforms: Record<string, boolean> | null;
+  last_measured_at: string | null;
+}
+
+export interface PostMetricsInput {
+  item_id: string;
+  platform: string;
+  views?: number;
+  comments?: number;
+  likes?: number;
+  scraps?: number;
+  shares?: number;
+  raw_payload?: Record<string, unknown>;
 }

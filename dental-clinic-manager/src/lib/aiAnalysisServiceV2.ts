@@ -52,7 +52,7 @@ const DATABASE_SCHEMA = {
         patient_name: 'VARCHAR(100) (환자 이름)',
         gift_type: 'VARCHAR(100) (선물 종류)',
         quantity: 'INTEGER (수량, 기본값 1)',
-        naver_review: 'VARCHAR(1) (네이버 리뷰 작성 여부: O/X)',
+        naver_review: 'VARCHAR(20) (리뷰 작성 여부: 미작성/네이버/구글/게시판)',
         notes: 'TEXT (비고)',
         created_at: 'TIMESTAMP',
       },
@@ -407,7 +407,7 @@ const queryTableParams: Schema = {
     },
     limit: {
       type: Type.NUMBER,
-      description: '조회할 최대 행 수 (기본: 100)',
+      description: '조회할 최대 행 수 (기본: 500, 최대: 1000). 전체 집계가 필요하면 aggregate_data 도구를 사용하세요.',
     },
   },
   required: ['table_name'],
@@ -518,7 +518,7 @@ async function queryTable(
     limit?: number;
   }
 ): Promise<string> {
-  const { table_name, select_columns, filters, date_range, order_by, limit = 100 } = params;
+  const { table_name, select_columns, filters, date_range, order_by, limit = 500 } = params;
 
   const tableSchema = DATABASE_SCHEMA.tables[table_name as keyof typeof DATABASE_SCHEMA.tables];
   if (!tableSchema) {
@@ -590,8 +590,8 @@ async function queryTable(
       query = query.order(tableSchema.dateColumn, { ascending: false });
     }
 
-    // 제한 적용
-    query = query.limit(limit);
+    // 제한 적용 (최대 1000건)
+    query = query.limit(Math.min(limit, 1000));
 
     const { data, error } = await query;
 
@@ -780,13 +780,184 @@ async function aggregateData(
   }
 }
 
+// DentWeb 스키마 타입
+interface DentwebSchemaData {
+  schema_data: {
+    tables: Array<{
+      name: string;
+      columns: Array<{ name: string; type: string; max_length?: number | null; is_nullable?: string }>;
+    }>;
+  };
+  writable_tables: string[];
+}
+
+// 스키마 캐시 비어있을 때 최소 DentWeb 정보 (브릿지 미초기화 상태에서도 AI 도구 활성화)
+const DENTWEB_FALLBACK_SCHEMA: DentwebSchemaData = {
+  schema_data: {
+    tables: [
+      { name: 'TB_환자정보', columns: [
+        { name: 'n환자ID', type: 'int' }, { name: 'sz차트번호', type: 'varchar' },
+        { name: 'sz이름', type: 'varchar' }, { name: 'sz휴대폰번호', type: 'varchar' },
+        { name: 'sz생년월일', type: 'varchar' }, { name: 'b성별', type: 'bit' },
+        { name: 'sz최종내원일', type: 'varchar' }, { name: 'sz등록시각', type: 'varchar' },
+        { name: 't수정시각', type: 'datetime' },
+      ]},
+      { name: 'TB_진료비내역', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz진료일', type: 'char' },
+        { name: 'n환자ID', type: 'int' }, { name: 'n총진료비', type: 'int' },
+        { name: 'n공단부담금', type: 'int' }, { name: 'n본인부담금', type: 'int' },
+        { name: 'n비급여진료비', type: 'int' }, { name: 'n카드수납액', type: 'int' },
+        { name: 'n현금수납액', type: 'int' },
+      ]},
+      { name: 'TB_예약목록', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz예약시각', type: 'char' },
+        { name: 'n환자ID', type: 'int' }, { name: 'sz예약내용', type: 'varchar' },
+        { name: 'n이행현황', type: 'tinyint' },
+      ]},
+      { name: 'TB_세부처치내역', columns: [
+        { name: 'nID', type: 'int' }, { name: 'n환자ID', type: 'int' },
+        { name: 'sz진료일', type: 'char' }, { name: 'sz수가코드', type: 'varchar' },
+        { name: 'n금액', type: 'int' }, { name: 'b취소', type: 'bit' },
+      ]},
+      { name: 'TB_치료수가표', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz이름', type: 'varchar' },
+        { name: 'n가격', type: 'int' },
+      ]},
+      { name: 'TB_수입지출장부', columns: [
+        { name: 'nID', type: 'int' }, { name: 'sz작성시각', type: 'char' },
+        { name: 'b수입지출', type: 'bit' }, { name: 'n계정항목', type: 'int' },
+        { name: 'n총액', type: 'int' }, { name: 'sz내용', type: 'varchar' },
+      ]},
+    ],
+  },
+  writable_tables: ['TB_포스트잇', 'TB_컴퓨터포스트잇', 'TB_환자메모', 'TB_예약메모'],
+};
+
+// DentWeb 스키마 캐시에서 동적으로 로드
+async function loadDentwebSchema(
+  supabase: SupabaseClient,
+  clinicId: string
+): Promise<DentwebSchemaData | null> {
+  try {
+    const { data, error } = await supabase
+      .from('dentweb_schema_cache')
+      .select('schema_data, writable_tables')
+      .eq('clinic_id', clinicId)
+      .single();
+
+    if (error || !data) return null;
+    return data as DentwebSchemaData;
+  } catch {
+    return null;
+  }
+}
+
+// DentWeb DB 쿼리 프록시 실행
+async function executeDentwebQuery(
+  supabase: SupabaseClient,
+  clinicId: string,
+  queryType: 'read' | 'write',
+  queryText: string
+): Promise<string> {
+  try {
+    // 1. 브릿지 에이전트 온라인 확인
+    const { data: syncConfig } = await supabase
+      .from('dentweb_sync_config')
+      .select('is_active, last_sync_at')
+      .eq('clinic_id', clinicId)
+      .single();
+
+    if (!syncConfig?.is_active) {
+      return JSON.stringify({ error: 'DentWeb 연동이 비활성화되어 있습니다.' });
+    }
+
+    // last_sync_at이 3분 이내인지 확인
+    if (syncConfig.last_sync_at) {
+      const lastSync = new Date(syncConfig.last_sync_at);
+      const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+      if (lastSync < threeMinutesAgo) {
+        return JSON.stringify({ error: '원내 PC(브릿지 에이전트)가 오프라인 상태입니다. PC가 켜져 있고 에이전트가 실행 중인지 확인하세요.' });
+      }
+    }
+
+    // 2. 쿼리 요청 INSERT
+    const { data: request, error: insertError } = await supabase
+      .from('dentweb_query_requests')
+      .insert({
+        clinic_id: clinicId,
+        query_type: queryType,
+        query_text: queryText,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (insertError || !request) {
+      return JSON.stringify({ error: `쿼리 요청 생성 실패: ${insertError?.message}` });
+    }
+
+    // 3. 폴링으로 결과 대기 (2초 간격, 최대 30초)
+    for (let i = 0; i < 15; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const { data: result } = await supabase
+        .from('dentweb_query_results')
+        .select('*')
+        .eq('request_id', request.id)
+        .maybeSingle();
+
+      if (result) {
+        if (result.error_message) {
+          return JSON.stringify({
+            source: 'dentweb',
+            error: result.error_message,
+          });
+        }
+        return JSON.stringify({
+          source: 'dentweb',
+          row_count: result.row_count,
+          execution_time_ms: result.execution_time_ms,
+          data: result.data,
+        });
+      }
+
+      // 요청 상태 확인 (error로 변경되었는지)
+      const { data: reqStatus } = await supabase
+        .from('dentweb_query_requests')
+        .select('status')
+        .eq('id', request.id)
+        .single();
+
+      if (reqStatus?.status === 'error') {
+        return JSON.stringify({
+          source: 'dentweb',
+          error: '쿼리 실행 중 오류가 발생했습니다.',
+        });
+      }
+    }
+
+    // 타임아웃
+    await supabase
+      .from('dentweb_query_requests')
+      .update({ status: 'timeout' })
+      .eq('id', request.id);
+
+    return JSON.stringify({
+      source: 'dentweb',
+      error: '원내 PC 응답 대기 시간(30초)을 초과했습니다. 브릿지 에이전트가 재시작 중이거나 DB 연결이 불안정할 수 있습니다. 잠시 후 다시 시도해주세요.',
+    });
+  } catch (error) {
+    return JSON.stringify({ error: `DentWeb 쿼리 실행 오류: ${String(error)}` });
+  }
+}
+
 // 시스템 프롬프트 생성
-function generateSystemPrompt(): string {
+function generateSystemPrompt(dentwebSchema?: DentwebSchemaData | null): string {
   const tableList = Object.entries(DATABASE_SCHEMA.tables)
     .map(([name, info]) => `- ${name}: ${info.description}`)
     .join('\n');
 
-  return `당신은 치과 병원 데이터 분석 전문가 AI입니다. 사용자의 질문을 분석하고, 필요한 데이터를 데이터베이스에서 조회하여 정확한 답변을 제공합니다.
+  let prompt = `당신은 치과 병원 데이터 분석 전문가 AI입니다. 사용자의 질문을 분석하고, 필요한 데이터를 데이터베이스에서 조회하여 정확한 답변을 제공합니다.
 
 ## 역할
 - 치과 병원의 운영 데이터를 분석하여 의미 있는 인사이트 도출
@@ -818,6 +989,9 @@ ${tableList}
 - "부원장"은 users 테이블에서 role='vice_director'인 사용자입니다.
 - 지각 데이터는 attendance_records 테이블의 late_minutes 컬럼을 확인하세요.
 - 데이터가 없으면 "해당 기간에 데이터가 없습니다"라고 명확히 알려주세요.
+- **query_table 결과의 count가 limit(500)에 근접하면, aggregate_data 도구로 전체 집계를 추가로 수행하세요.**
+- **반드시 한국어로 최종 답변 텍스트를 생성하세요. 빈 응답을 반환하지 마세요.**
+- 데이터 조회가 완료되면 항상 분석 결과를 텍스트로 요약하여 응답하세요.
 
 ## 직원별 데이터 조회 예시
 원장의 출퇴근 기록을 조회하려면:
@@ -839,6 +1013,52 @@ ${tableList}
 - 예: "첨부한 환자 목록과 DB의 리콜 환자를 비교해줘" - 첨부 파일의 환자명/연락처와 recall_patients 테이블을 비교
 - 파일 데이터가 제공된 경우, 해당 데이터를 기반으로 요약, 통계 분석, 인사이트 도출을 수행할 수 있습니다.
 - 파일에 민감한 정보가 있을 수 있으므로 개인정보 보호에 주의하세요.`;
+
+  // DentWeb 스키마가 있으면 DentWeb 섹션 추가
+  if (dentwebSchema && dentwebSchema.schema_data?.tables?.length > 0) {
+    const dentwebTableList = dentwebSchema.schema_data.tables
+      .map((t: DentwebSchemaData['schema_data']['tables'][number]) => `- ${t.name}: ${t.columns.map((c: { name: string; type: string }) => `${c.name}(${c.type})`).join(', ')}`)
+      .join('\n');
+
+    const writableList = dentwebSchema.writable_tables?.length > 0
+      ? dentwebSchema.writable_tables.map((t: string) => `- ${t}`).join('\n')
+      : '- (쓰기 가능한 테이블 없음)';
+
+    prompt += `\n\n## DentWeb DB (원내 치과 프로그램 DB - 실시간 조회)
+
+query_dentweb_db 도구를 사용하면 DentWeb DB에 직접 SQL을 실행할 수 있습니다.
+원내 PC의 브릿지 에이전트를 통해 프록시 실행되며 2-5초 소요됩니다.
+MS-SQL Server 문법을 사용합니다.
+
+### 테이블 목록:
+${dentwebTableList}
+
+### 쓰기 가능 테이블 (포스트잇/메모):
+${writableList}
+→ write_dentweb_postit 도구로 INSERT/UPDATE 가능
+
+### DentWeb 쿼리 작성 시 주의사항:
+- 날짜 컬럼은 주로 varchar(8) 형식 (YYYYMMDD) → LEFT(), CONVERT() 함수 사용
+- MS-SQL Server 문법: TOP (LIMIT 대신), GETDATE(), CONVERT(), LEFT()
+- 대량 조회 시 TOP 1000 필수
+- 한글 컬럼명 사용 (n환자ID, sz이름, sz차트번호 등)
+- 쿼리 실행은 원내 PC를 통해 프록시되므로 응답에 2-5초 소요됨
+- DentWeb DB 데이터와 Supabase 데이터를 교차 분석할 수 있음 (예: 덴트웹 환자 vs 리콜 환자 비교)
+
+### DentWeb 쿼리 예시:
+- 전체 환자 수: SELECT COUNT(*) AS cnt FROM TB_환자정보 WHERE sz이름 IS NOT NULL
+- 최근 내원 환자: SELECT TOP 50 n환자ID, sz이름, sz차트번호, sz최종내원일 FROM TB_환자정보 WHERE sz최종내원일 >= '20260101' ORDER BY sz최종내원일 DESC
+- 오늘 예약: SELECT a.*, p.sz이름 FROM TB_예약목록 a JOIN TB_환자정보 p ON a.n환자ID = p.n환자ID WHERE LEFT(a.sz예약시각, 8) = CONVERT(VARCHAR(8), GETDATE(), 112)`;
+  }
+
+  // 재무 테이블 관련 안내 추가
+  prompt += `\n\n## 재무 데이터 조회 참고
+- revenue_records, expense_records, tax_records는 dateColumn이 없고 year, month 컬럼 사용
+- 날짜 범위 필터 시 date_range 대신 filters로 year, month를 직접 필터링하세요
+  - 예: filters: [{column: "year", operator: "eq", value: "2026"}, {column: "month", operator: "gte", value: "1"}]
+- expense_records는 expense_categories(id, name, type)와 조인 가능`;
+
+  return prompt;
 }
 
 // 도구 호출 처리
@@ -860,6 +1080,22 @@ async function processToolCall(
     case 'aggregate_data':
       return await aggregateData(supabase, clinicId, args as Parameters<typeof aggregateData>[2]);
 
+    case 'query_dentweb_db':
+      return await executeDentwebQuery(
+        supabase,
+        clinicId,
+        'read',
+        args.query as string
+      );
+
+    case 'write_dentweb_postit':
+      return await executeDentwebQuery(
+        supabase,
+        clinicId,
+        'write',
+        args.query as string
+      );
+
     default:
       return JSON.stringify({ error: `Unknown tool: ${name}` });
   }
@@ -876,7 +1112,26 @@ export async function performAnalysisV2(
   const supabase = createClient(supabaseUrl, supabaseKey);
   const genAI = new GoogleGenAI({ apiKey: geminiApiKey });
 
-  const systemPrompt = generateSystemPrompt();
+  // DentWeb 연동 여부 확인 후 스키마 로드 (캐시 비어있어도 fallback으로 도구 활성화)
+  const { data: syncCfg } = await supabase
+    .from('dentweb_sync_config')
+    .select('is_active')
+    .eq('clinic_id', clinicId)
+    .maybeSingle();
+  const dentwebEnabled = !!syncCfg?.is_active;
+  const dentwebSchema = dentwebEnabled
+    ? (await loadDentwebSchema(supabase, clinicId)) ?? DENTWEB_FALLBACK_SCHEMA
+    : null;
+  const systemPrompt = generateSystemPrompt(dentwebSchema);
+
+  // DentWeb 연동이 없으면 DentWeb 도구를 제외
+  const activeTools = dentwebSchema
+    ? geminiTools
+    : [{
+        functionDeclarations: geminiTools[0].functionDeclarations.filter(
+          d => d.name !== 'query_dentweb_db' && d.name !== 'write_dentweb_postit'
+        ),
+      }];
 
   // 대화 내역 구성
   const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
@@ -910,8 +1165,8 @@ export async function performAnalysisV2(
   console.log(`[AI Analysis V2 Gemini] User message: ${request.message}`);
 
   try {
-    // 최대 10번의 도구 호출 반복 (Gemini는 더 많은 반복이 필요할 수 있음)
-    const maxIterations = 10;
+    // 최대 15번의 도구 호출 반복 (복잡한 분석은 더 많은 반복이 필요할 수 있음)
+    const maxIterations = 15;
     let iteration = 0;
 
     while (iteration < maxIterations) {
@@ -923,7 +1178,7 @@ export async function performAnalysisV2(
         contents: contents,
         config: {
           systemInstruction: systemPrompt,
-          tools: geminiTools,
+          tools: activeTools,
           temperature: 1.0, // Gemini 권장 온도
         },
       });
@@ -946,8 +1201,30 @@ export async function performAnalysisV2(
         const textParts = parts.filter(part => part.text);
         const finalText = textParts.map(p => p.text).join('\n');
         console.log('[AI Analysis V2 Gemini] Final response (no more function calls)');
+
+        if (!finalText) {
+          // 빈 응답 시 결론 요약 재요청
+          console.log('[AI Analysis V2 Gemini] Empty response, retrying with summary prompt');
+          contents.push({
+            role: 'user',
+            parts: [{ text: '지금까지 조회한 데이터를 바탕으로 한국어로 분석 결과를 요약해서 답변해주세요.' }],
+          });
+          const retryResponse = await genAI.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents,
+            config: { systemInstruction: systemPrompt, temperature: 1.0 },
+          });
+          const retryText = retryResponse.candidates?.[0]?.content?.parts
+            ?.filter(p => p.text)
+            .map(p => p.text)
+            .join('\n');
+          return {
+            message: retryText || '데이터를 조회했으나 분석 결과를 생성하지 못했습니다. 질문을 더 구체적으로 작성하여 다시 시도해주세요.',
+          };
+        }
+
         return {
-          message: finalText || '분석을 완료할 수 없습니다.',
+          message: finalText,
         };
       }
 
@@ -955,7 +1232,7 @@ export async function performAnalysisV2(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       contents.push(candidate.content as any);
 
-      // Function calls 처리 (Thought Signature 포함)
+      // Function calls 처리
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const functionResponseParts: any[] = [];
 
@@ -963,7 +1240,7 @@ export async function performAnalysisV2(
         if (part.functionCall) {
           const { name, args } = part.functionCall;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const thoughtSignature = (part.functionCall as any).thoughtSignature;
+          const callId = (part.functionCall as any).id || '';
 
           const result = await processToolCall(
             supabase,
@@ -973,12 +1250,19 @@ export async function performAnalysisV2(
           );
           console.log(`[AI Analysis V2 Gemini] Tool result for ${name}:`, result.substring(0, 500));
 
-          // Thought Signature를 포함한 function response 구성
+          // function response 구성 (thoughtSignature는 functionResponse 외부, Part 레벨에 배치)
+          let parsedResult: Record<string, unknown>;
+          try {
+            parsedResult = JSON.parse(result);
+          } catch {
+            parsedResult = { result: result };
+          }
+
           functionResponseParts.push({
             functionResponse: {
+              id: callId,
               name: name || '',
-              response: JSON.parse(result),
-              ...(thoughtSignature && { thoughtSignature }),
+              response: parsedResult,
             },
           });
         }

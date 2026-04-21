@@ -19,6 +19,9 @@ import type {
   TaskPriority,
   TaskComment,
   CreateTaskCommentDto,
+  RecurringTaskTemplate,
+  CreateRecurringTaskTemplateDto,
+  UpdateRecurringTaskTemplateDto,
 } from '@/types/bulletin'
 
 // Helper function to extract error message
@@ -825,6 +828,87 @@ export const taskService = {
   },
 
   /**
+   * 대시보드 홈 위젯용 업무 조회
+   * - 일반 직원: 내가 담당자인 미완료 업무만
+   * - 관리자(includeAssignedByMe=true): 내가 담당자인 업무 + 내가 지시했지만 담당자가 내가 아닌 미완료 업무
+   */
+  async getDashboardTasks(options?: {
+    includeAssignedByMe?: boolean
+  }): Promise<{
+    data: { assignedToMe: Task[]; assignedByMe: Task[] } | null
+    error: string | null
+  }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      const userId = getCurrentUserId()
+      if (!clinicId) throw new Error('Clinic not found')
+      if (!userId) throw new Error('User not found')
+
+      const activeStatuses = ['pending', 'in_progress', 'review', 'on_hold']
+
+      // 내가 담당자인 미완료 업무
+      const { data: toMeRaw, error: toMeError } = await (supabase as any)
+        .from('tasks')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('assignee_id', userId)
+        .in('status', activeStatuses)
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (toMeError) throw toMeError
+
+      let byMeRaw: any[] = []
+      if (options?.includeAssignedByMe) {
+        const { data, error: byMeError } = await (supabase as any)
+          .from('tasks')
+          .select('*')
+          .eq('clinic_id', clinicId)
+          .eq('assigner_id', userId)
+          .neq('assignee_id', userId)
+          .in('status', activeStatuses)
+          .order('due_date', { ascending: true, nullsFirst: false })
+          .order('priority', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (byMeError) throw byMeError
+        byMeRaw = data || []
+      }
+
+      // 사용자 이름 매핑
+      const userIds = [
+        ...(toMeRaw || []).flatMap((t: any) => [t.assignee_id, t.assigner_id]),
+        ...byMeRaw.flatMap((t: any) => [t.assignee_id, t.assigner_id]),
+      ]
+      const nameMap = await getUserNames(supabase, userIds)
+
+      const mapTask = (item: any): Task => ({
+        ...item,
+        assignee_name: nameMap[item.assignee_id] || '알 수 없음',
+        assigner_name: nameMap[item.assigner_id] || '알 수 없음',
+        comments_count: item.comments_count || 0,
+      })
+
+      return {
+        data: {
+          assignedToMe: (toMeRaw || []).map(mapTask),
+          assignedByMe: byMeRaw.map(mapTask),
+        },
+        error: null,
+      }
+    } catch (error) {
+      console.error('[taskService.getDashboardTasks] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 업무 통계 조회
    */
   async getTaskStats(): Promise<{
@@ -1020,12 +1104,278 @@ export const taskCommentService = {
   },
 }
 
+// =====================================================
+// 반복 업무 템플릿 서비스
+// =====================================================
+export const recurringTaskTemplateService = {
+  /**
+   * 반복 업무 템플릿 목록 조회
+   */
+  async listTemplates(options?: {
+    active_only?: boolean
+  }): Promise<{ data: RecurringTaskTemplate[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      let query = (supabase as any)
+        .from('recurring_task_templates')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('is_active', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      if (options?.active_only) {
+        query = query.eq('is_active', true)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+
+      const userIds = (data || []).flatMap((item: any) => [item.assignee_id, item.assigner_id])
+      const nameMap = await getUserNames(supabase, userIds)
+
+      const templates = (data || []).map((item: any) => ({
+        ...item,
+        assignee_name: nameMap[item.assignee_id] || '알 수 없음',
+        assigner_name: nameMap[item.assigner_id] || '알 수 없음',
+      })) as RecurringTaskTemplate[]
+
+      return { data: templates, error: null }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.listTemplates] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 반복 업무 템플릿 생성
+   */
+  async createTemplate(
+    input: CreateRecurringTaskTemplateDto
+  ): Promise<{ data: RecurringTaskTemplate | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      const userId = getCurrentUserId()
+      if (!clinicId) throw new Error('Clinic not found')
+      if (!userId) throw new Error('User not found')
+
+      // 주기별 필수 필드 검증
+      if (input.recurrence_type === 'weekly') {
+        if (input.recurrence_weekday === undefined || input.recurrence_weekday === null) {
+          throw new Error('주간 반복은 요일을 지정해야 합니다.')
+        }
+      } else if (input.recurrence_type === 'monthly') {
+        if (!input.recurrence_day_of_month) {
+          throw new Error('월간 반복은 일자를 지정해야 합니다.')
+        }
+      } else if (input.recurrence_type === 'yearly') {
+        if (!input.recurrence_month || !input.recurrence_day_of_month) {
+          throw new Error('연간 반복은 월과 일을 모두 지정해야 합니다.')
+        }
+      }
+
+      const startDate = input.start_date || new Date().toISOString().split('T')[0]
+
+      const { data, error } = await (supabase as any)
+        .from('recurring_task_templates')
+        .insert({
+          clinic_id: clinicId,
+          title: input.title,
+          description: input.description || null,
+          priority: input.priority || 'medium',
+          assignee_id: input.assignee_id,
+          assigner_id: userId,
+          recurrence_type: input.recurrence_type,
+          recurrence_weekday: input.recurrence_weekday ?? null,
+          recurrence_day_of_month: input.recurrence_day_of_month ?? null,
+          recurrence_month: input.recurrence_month ?? null,
+          start_date: startDate,
+          end_date: input.end_date || null,
+          is_active: true,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.createTemplate] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 반복 업무 템플릿 수정
+   */
+  async updateTemplate(
+    id: string,
+    input: UpdateRecurringTaskTemplateDto
+  ): Promise<{ data: RecurringTaskTemplate | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const updateData: Record<string, any> = {}
+      if (input.title !== undefined) updateData.title = input.title
+      if (input.description !== undefined) updateData.description = input.description || null
+      if (input.priority !== undefined) updateData.priority = input.priority
+      if (input.assignee_id !== undefined) updateData.assignee_id = input.assignee_id
+      if (input.recurrence_type !== undefined) updateData.recurrence_type = input.recurrence_type
+      if (input.recurrence_weekday !== undefined) updateData.recurrence_weekday = input.recurrence_weekday
+      if (input.recurrence_day_of_month !== undefined) updateData.recurrence_day_of_month = input.recurrence_day_of_month
+      if (input.recurrence_month !== undefined) updateData.recurrence_month = input.recurrence_month
+      if (input.start_date !== undefined) updateData.start_date = input.start_date
+      if (input.end_date !== undefined) updateData.end_date = input.end_date || null
+      if (input.is_active !== undefined) updateData.is_active = input.is_active
+
+      const { data, error } = await (supabase as any)
+        .from('recurring_task_templates')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.updateTemplate] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 반복 업무 템플릿 삭제 (과거 인스턴스는 유지됨 — ON DELETE SET NULL)
+   */
+  async deleteTemplate(id: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { error } = await (supabase as any)
+        .from('recurring_task_templates')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.deleteTemplate] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 오늘(또는 지정한 날짜)이 매칭되는 모든 활성 템플릿을 순회해
+   * tasks 테이블에 인스턴스를 upsert. 유니크 인덱스가 중복을 막으므로 멱등적.
+   * 일반 직원도 호출 가능하도록 DB 측에서 SECURITY DEFINER RPC로 구현.
+   */
+  async materializeDueInstances(forDate?: Date): Promise<{ created: number; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const target = forDate || new Date()
+      // YYYY-MM-DD (로컬 타임존 기준)
+      const y = target.getFullYear()
+      const m = String(target.getMonth() + 1).padStart(2, '0')
+      const d = String(target.getDate()).padStart(2, '0')
+      const dateStr = `${y}-${m}-${d}`
+
+      const { data, error } = await (supabase as any).rpc('materialize_recurring_tasks', {
+        p_clinic_id: clinicId,
+        p_date: dateStr,
+      })
+
+      if (error) throw error
+      return { created: Number(data) || 0, error: null }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.materializeDueInstances] Error:', error)
+      return { created: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 치과 기본 반복 업무 템플릿 일괄 등록
+   * 이미 동일 제목의 템플릿이 존재하면 건너뛰고, 신규만 삽입한다.
+   * @returns 신규 등록 건수
+   */
+  async seedDefaultTemplates(): Promise<{ created: number; skipped: number; error: string | null }> {
+    try {
+      const { DEFAULT_RECURRING_TEMPLATES } = await import('@/data/defaultRecurringTemplates')
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      const userId = getCurrentUserId()
+      if (!clinicId) throw new Error('Clinic not found')
+      if (!userId) throw new Error('User not found')
+
+      // 기존 템플릿 제목 목록 조회 (중복 방지)
+      const { data: existing } = await (supabase as any)
+        .from('recurring_task_templates')
+        .select('title')
+        .eq('clinic_id', clinicId)
+
+      const existingTitles = new Set((existing || []).map((t: any) => t.title))
+
+      const toInsert = DEFAULT_RECURRING_TEMPLATES.filter((t) => !existingTitles.has(t.title))
+
+      if (toInsert.length === 0) {
+        return { created: 0, skipped: DEFAULT_RECURRING_TEMPLATES.length, error: null }
+      }
+
+      const rows = toInsert.map((t) => ({
+        clinic_id: clinicId,
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        assignee_id: userId,   // 기본 담당자 = 현재 사용자 (추후 편집)
+        assigner_id: userId,
+        recurrence_type: t.recurrence_type,
+        recurrence_weekday: t.recurrence_weekday ?? null,
+        recurrence_day_of_month: t.recurrence_day_of_month ?? null,
+        recurrence_month: t.recurrence_month ?? null,
+        start_date: new Date().toISOString().split('T')[0],
+        is_active: true,
+      }))
+
+      const { error: insertError } = await (supabase as any)
+        .from('recurring_task_templates')
+        .insert(rows)
+
+      if (insertError) throw insertError
+
+      return {
+        created: toInsert.length,
+        skipped: DEFAULT_RECURRING_TEMPLATES.length - toInsert.length,
+        error: null,
+      }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.seedDefaultTemplates] Error:', error)
+      return { created: 0, skipped: 0, error: extractErrorMessage(error) }
+    }
+  },
+}
+
 // 통합 export
 export const bulletinService = {
   announcements: announcementService,
   documents: documentService,
   tasks: taskService,
   taskComments: taskCommentService,
+  recurringTaskTemplates: recurringTaskTemplateService,
 }
 
 export default bulletinService

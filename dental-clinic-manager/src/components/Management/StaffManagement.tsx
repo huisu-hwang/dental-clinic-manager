@@ -11,6 +11,10 @@ import PermissionSelector from './PermissionSelector'
 import type { Permission } from '@/types/permissions'
 import { decryptResidentNumber, encryptResidentNumber } from '@/utils/encryptionUtils'
 import { appPrompt } from '@/components/ui/AppDialog'
+import UpgradeRequiredModal from '@/components/Subscription/UpgradeRequiredModal'
+import PlanSelectModal from '@/components/Subscription/PlanSelectModal'
+import CardRegistrationModal from '@/components/Subscription/CardRegistrationModal'
+import type { SubscriptionPlan } from '@/types/subscription'
 
 // 섹션 헤더 컴포넌트
 const SectionHeader = ({ number, title, icon: Icon }: { number: number; title: string; icon: React.ElementType }) => (
@@ -78,6 +82,18 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
   // 재입사 처리 모달 상태
   const [rehiringStaff, setRehiringStaff] = useState<UserProfile | null>(null)
+
+  // 업그레이드 필요 모달 상태
+  const [upgradeContext, setUpgradeContext] = useState<null | {
+    currentPlan: string
+    currentLimit: number
+    currentActive: number
+    pendingToApprove: number
+    recommendedPlan: string
+  }>(null)
+  const [planModalOpen, setPlanModalOpen] = useState(false)
+  const [cardModalOpen, setCardModalOpen] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
 
   // 주민번호 마스킹 함수
   const maskResidentNumber = (rrn: string) => {
@@ -192,18 +208,31 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
   const handleApproveRequest = async (requestId: string, permissions?: Permission[]) => {
     if (!currentUser.clinic_id) return
 
+    setError('')
+    setSuccess('')
+
     try {
       const result = await dataService.approveUser(requestId, currentUser.clinic_id, permissions)
 
-      if (result.error) {
-        setError(result.error || '승인 처리에 실패했습니다.')
-      } else {
-        setSuccess('가입 요청이 승인되었습니다.')
-        setShowPermissionModal(false)
-        setSelectedRequest(null)
-        fetchJoinRequests()
-        fetchStaff()
+      if ('upgradeRequired' in result && result.upgradeRequired) {
+        setUpgradeContext({
+          currentPlan: result.currentPlan,
+          currentLimit: result.currentLimit,
+          currentActive: result.currentActive,
+          pendingToApprove: result.pendingToApprove,
+          recommendedPlan: result.recommendedPlan,
+        })
+        return
       }
+      if ('error' in result && result.error) {
+        setError(result.error)
+        return
+      }
+      setSuccess('가입 요청이 승인되었습니다.')
+      setShowPermissionModal(false)
+      setSelectedRequest(null)
+      fetchJoinRequests()
+      fetchStaff()
     } catch (err) {
       console.error('Error:', err)
       setError('승인 처리 중 오류가 발생했습니다.')
@@ -309,6 +338,17 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         setResigningStaff(null)
         fetchStaff()
         fetchResignedStaff()
+
+        // 구독 재조정: 퇴사 후 재직 수가 하위 구간으로 떨어졌으면 다운그레이드 + 부분 환불
+        try {
+          await fetch('/api/subscription/downgrade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: '직원 퇴사' }),
+          })
+        } catch (e) {
+          console.warn('[handleResignUser] 다운그레이드 재조정 실패(무시):', e)
+        }
       }
     } catch (err) {
       console.error('[handleResignUser] 예외 발생:', err)
@@ -357,11 +397,11 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
       return
     }
 
-    // 주민번호 검증 (값이 있을 때만)
+    // 주민번호 앞 7자리 검증 (값이 있을 때만)
     if (editForm.resident_registration_number && editForm.resident_registration_number.trim()) {
       const cleaned = editForm.resident_registration_number.replace(/-/g, '')
-      if (cleaned.length !== 13 || !/^\d{13}$/.test(cleaned)) {
-        setError('주민등록번호는 13자리 숫자여야 합니다.')
+      if (cleaned.length !== 7 || !/^\d{7}$/.test(cleaned)) {
+        setError('주민등록번호 앞 7자리(생년월일6자리+성별1자리)를 입력해주세요.')
         return
       }
     }
@@ -906,18 +946,18 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
 
               <div>
                 <label className="block text-sm font-medium text-at-text-secondary mb-1">
-                  주민등록번호
+                  주민등록번호 앞 7자리
                 </label>
                 <input
                   type="text"
                   value={editForm.resident_registration_number}
                   onChange={(e) => setEditForm({ ...editForm, resident_registration_number: e.target.value })}
                   className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
-                  placeholder="900101-1234567"
-                  maxLength={14}
+                  placeholder="900101-1"
+                  maxLength={8}
                 />
                 <p className="mt-1 text-xs text-at-text-weak">
-                  13자리 숫자로 입력 (하이픈 포함 가능)
+                  생년월일 6자리 + 성별 1자리 (전체 주민번호는 근로계약서에서 별도 입력)
                 </p>
               </div>
 
@@ -1083,6 +1123,38 @@ export default function StaffManagement({ currentUser }: StaffManagementProps) {
         </div>,
         document.body
       )}
+
+      {upgradeContext && (
+        <UpgradeRequiredModal
+          open
+          onClose={() => setUpgradeContext(null)}
+          onPayNow={() => {
+            setUpgradeContext(null)
+            setPlanModalOpen(true)
+          }}
+          context={upgradeContext}
+        />
+      )}
+      <PlanSelectModal
+        isOpen={planModalOpen}
+        onClose={() => setPlanModalOpen(false)}
+        onSelect={(plan) => {
+          setSelectedPlan(plan)
+          setPlanModalOpen(false)
+          setCardModalOpen(true)
+        }}
+      />
+      <CardRegistrationModal
+        isOpen={cardModalOpen}
+        onClose={() => setCardModalOpen(false)}
+        onSuccess={() => {
+          setCardModalOpen(false)
+          // 결제 성공 후 대기 직원 재조회 (Task 11+에서 자동 승인 웹훅이 처리)
+          fetchStaff()
+          fetchJoinRequests()
+        }}
+        selectedPlan={selectedPlan}
+      />
     </div>
   )
 }

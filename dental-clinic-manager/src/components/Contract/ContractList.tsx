@@ -295,18 +295,9 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
 
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-at-accent-light rounded-xl flex items-center justify-center">
-            <FileText className="w-5 h-5 text-at-accent" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-at-text">근로계약서 관리</h2>
-            <p className="text-at-text text-sm">Employment Contract Management</p>
-          </div>
-        </div>
-        {(currentUser.role === 'owner' || currentUser.role === 'manager') && (
+      {/* 액션 버튼 */}
+      {(currentUser.role === 'owner' || currentUser.role === 'manager') && (
+        <div className="flex justify-end">
           <button
             onClick={handleCreateNew}
             className="flex items-center px-4 py-2 bg-at-accent hover:bg-at-accent-hover text-white text-sm font-medium rounded-xl transition-colors"
@@ -314,8 +305,8 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
             <Plus className="w-4 h-4 mr-2" />
             새 계약서 작성
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 필터 영역 */}
       <div className="bg-at-surface-alt rounded-xl p-4">

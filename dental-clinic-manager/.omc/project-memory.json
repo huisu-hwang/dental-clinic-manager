@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1776138650270,
+  "lastScanned": 1774833745840,
   "projectRoot": "/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager",
   "techStack": {
     "languages": [
@@ -81,7 +81,7 @@
       "path": "codef참고문서",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1776138650248,
+      "lastAccessed": 1774833745775,
       "keyFiles": [
         "신용카드 매출자료 조회_20260225.pdf",
         "전자세금계산서 상세_20260225.pdf",
@@ -93,10 +93,9 @@
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
-      "fileCount": 4,
-      "lastAccessed": 1776138650253,
+      "fileCount": 3,
+      "lastAccessed": 1774833745785,
       "keyFiles": [
-        "DESIGN_SYSTEM.md",
         "marketing-automation-plan.md",
         "marketing-implementation-plan.md",
         "naver-blog-guidelines.md"
@@ -106,7 +105,7 @@
       "path": "marketing-worker",
       "purpose": null,
       "fileCount": 14,
-      "lastAccessed": 1776138650253,
+      "lastAccessed": 1774833745786,
       "keyFiles": [
         "api-client.ts",
         "config.ts",
@@ -119,7 +118,7 @@
       "path": "public",
       "purpose": "Public files",
       "fileCount": 6,
-      "lastAccessed": 1776138650254,
+      "lastAccessed": 1774833745788,
       "keyFiles": [
         "file.svg",
         "globe.svg",
@@ -128,37 +127,24 @@
         "vercel.svg"
       ]
     },
-    "qa-screenshots": {
-      "path": "qa-screenshots",
-      "purpose": null,
-      "fileCount": 5,
-      "lastAccessed": 1776138650254,
-      "keyFiles": [
-        "01-landing-page-3004.png",
-        "01-landing-page.png",
-        "01b-landing-hero-viewport.png",
-        "01c-landing-after-wait.png",
-        "02-login-modal.png"
-      ]
-    },
     "scraping-worker": {
       "path": "scraping-worker",
       "purpose": null,
-      "fileCount": 8,
-      "lastAccessed": 1776138650254,
+      "fileCount": 9,
+      "lastAccessed": 1774833745789,
       "keyFiles": [
         "Dockerfile",
         "docker-compose.yml",
+        "ecosystem.config.cjs",
         "package-lock.json",
-        "package.json",
-        "tsconfig.json"
+        "package.json"
       ]
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 60,
-      "lastAccessed": 1776138650254,
+      "lastAccessed": 1774833745791,
       "keyFiles": [
         "LOGIN_SYSTEM_TEST_REPORT.md",
         "apply-clinic-branches-rls.js",
@@ -170,9 +156,10 @@
     "seo-worker": {
       "path": "seo-worker",
       "purpose": null,
-      "fileCount": 4,
-      "lastAccessed": 1776138650255,
+      "fileCount": 5,
+      "lastAccessed": 1774833745792,
       "keyFiles": [
+        "package-lock.json",
         "package.json",
         "tsconfig.json"
       ]
@@ -181,14 +168,14 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1776138650255,
+      "lastAccessed": 1774833745795,
       "keyFiles": []
     },
     "supabase": {
       "path": "supabase",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1776138650255,
+      "lastAccessed": 1774833745798,
       "keyFiles": [
         "DEPLOYMENT_GUIDE.md",
         "SETUP_CONTRACT_TABLES.sql",
@@ -196,18 +183,29 @@
         "patient-recall-schema.sql"
       ]
     },
+    "marketing-worker/dist": {
+      "path": "marketing-worker/dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 19,
+      "lastAccessed": 1774833745801,
+      "keyFiles": [
+        "api-client.d.ts",
+        "api-client.js",
+        "config.d.ts"
+      ]
+    },
     "marketing-worker/node_modules": {
       "path": "marketing-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1776138650255,
+      "lastAccessed": 1774833745802,
       "keyFiles": []
     },
     "scraping-worker/dist": {
       "path": "scraping-worker/dist",
       "purpose": "Distribution/build output",
       "fileCount": 12,
-      "lastAccessed": 1776138650256,
+      "lastAccessed": 1774833745803,
       "keyFiles": [
         "config.d.ts",
         "config.d.ts.map",
@@ -218,21 +216,21 @@
       "path": "scraping-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1776138650257,
+      "lastAccessed": 1774833745805,
       "keyFiles": []
     },
     "seo-worker/node_modules": {
       "path": "seo-worker/node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1776138650257,
+      "lastAccessed": 1774833745807,
       "keyFiles": []
     },
     "seo-worker/src": {
       "path": "seo-worker/src",
       "purpose": "Source code",
       "fileCount": 2,
-      "lastAccessed": 1776138650258,
+      "lastAccessed": 1774833745808,
       "keyFiles": [
         "config.ts",
         "index.ts"
@@ -242,7 +240,7 @@
       "path": "src/app",
       "purpose": "Application code",
       "fileCount": 8,
-      "lastAccessed": 1776138650258,
+      "lastAccessed": 1774833745809,
       "keyFiles": [
         "AuthApp.tsx",
         "favicon.ico",
@@ -252,9 +250,10 @@
     "src/components": {
       "path": "src/components",
       "purpose": "UI components",
-      "fileCount": 1,
-      "lastAccessed": 1776138650258,
+      "fileCount": 2,
+      "lastAccessed": 1774833745811,
       "keyFiles": [
+        "PasswordResetHandler.tsx",
         "WorkerStatusBanner.tsx"
       ]
     },
@@ -262,7 +261,7 @@
       "path": "src/config",
       "purpose": "Configuration files",
       "fileCount": 1,
-      "lastAccessed": 1776138650258,
+      "lastAccessed": 1774833745811,
       "keyFiles": [
         "menuConfig.ts"
       ]
@@ -270,19 +269,19 @@
     "src/lib": {
       "path": "src/lib",
       "purpose": "Library code",
-      "fileCount": 44,
-      "lastAccessed": 1776138650258,
+      "fileCount": 41,
+      "lastAccessed": 1774833745815,
       "keyFiles": [
         "aiAnalysisService.ts",
         "aiAnalysisServiceV2.ts",
-        "apiAuth.ts"
+        "attendanceService.ts"
       ]
     },
     "src/types": {
       "path": "src/types",
       "purpose": "Type definitions",
       "fileCount": 27,
-      "lastAccessed": 1776138650259,
+      "lastAccessed": 1774833745817,
       "keyFiles": [
         "aiAnalysis.ts",
         "attendance.ts",
@@ -292,8 +291,8 @@
     "src/utils": {
       "path": "src/utils",
       "purpose": "Utility functions",
-      "fileCount": 14,
-      "lastAccessed": 1776138650259,
+      "fileCount": 13,
+      "lastAccessed": 1774833745819,
       "keyFiles": [
         "dataValidator.ts",
         "dateUtils.ts",
@@ -303,8 +302,8 @@
     "supabase/migrations": {
       "path": "supabase/migrations",
       "purpose": "Database migrations",
-      "fileCount": 110,
-      "lastAccessed": 1776138650260,
+      "fileCount": 103,
+      "lastAccessed": 1774833745823,
       "keyFiles": [
         "001_multi_tenant_schema.sql",
         "002_clinic_join_requests.sql",
@@ -314,99 +313,303 @@
   },
   "hotPaths": [
     {
-      "path": "src/components/Contract/ContractForm.tsx",
-      "accessCount": 21,
-      "lastAccessed": 1776148525931,
+      "path": "src\\app\\api\\admin\\users\\delete\\route.ts",
+      "accessCount": 14,
+      "lastAccessed": 1775659869036,
       "type": "file"
     },
     {
-      "path": "src/components/Contract/ContractDetail.tsx",
+      "path": "src\\app\\api\\admin\\users\\approve\\route.ts",
+      "accessCount": 13,
+      "lastAccessed": 1775659864594,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\admin\\users\\route.ts",
       "accessCount": 12,
-      "lastAccessed": 1776148733406,
-      "type": "directory"
-    },
-    {
-      "path": "src/app/dashboard/marketing/page.tsx",
-      "accessCount": 10,
-      "lastAccessed": 1776151119457,
+      "lastAccessed": 1775659866061,
       "type": "file"
     },
     {
-      "path": "src/components/marketing/NewPostForm.tsx",
-      "accessCount": 9,
-      "lastAccessed": 1776148803786,
+      "path": "src\\app\\api\\admin\\users\\update\\route.ts",
+      "accessCount": 10,
+      "lastAccessed": 1775659828487,
       "type": "file"
     },
     {
       "path": "src",
-      "accessCount": 6,
-      "lastAccessed": 1776148497689,
+      "accessCount": 8,
+      "lastAccessed": 1775659837569,
       "type": "directory"
     },
     {
-      "path": "src/lib/contractService.ts",
+      "path": "middleware.ts",
+      "accessCount": 7,
+      "lastAccessed": 1775659889604,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\globals.css",
       "accessCount": 6,
-      "lastAccessed": 1776148540647,
+      "lastAccessed": 1775659081248,
       "type": "file"
     },
     {
-      "path": "src/types/contract.ts",
+      "path": "",
+      "accessCount": 6,
+      "lastAccessed": 1775659117017,
+      "type": "directory"
+    },
+    {
+      "path": "src\\app\\api\\auth\\reset-callback\\route.ts",
+      "accessCount": 6,
+      "lastAccessed": 1775659889659,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/src/tray.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775199125002,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\cron\\daily-tasks\\route.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775658334840,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\auth\\check-email\\route.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775659833941,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/src/worker-bridge.ts",
       "accessCount": 4,
-      "lastAccessed": 1776148496421,
+      "lastAccessed": 1774833913163,
       "type": "file"
     },
     {
-      "path": "src/components/marketing/clinical/ClinicalPhotoEditor.tsx",
+      "path": "marketing-worker/electron/src/config-store.ts",
       "accessCount": 4,
-      "lastAccessed": 1776148774533,
+      "lastAccessed": 1774833933261,
       "type": "file"
     },
     {
-      "path": "src/components/marketing/clinical/imageUtils.ts",
+      "path": "src\\lib\\telegramSummaryService.ts",
+      "accessCount": 4,
+      "lastAccessed": 1775657591187,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\cron\\telegram-summary\\route.ts",
+      "accessCount": 4,
+      "lastAccessed": 1775658336663,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/src/logger.ts",
+      "accessCount": 3,
+      "lastAccessed": 1774833790420,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/src/main.ts",
+      "accessCount": 3,
+      "lastAccessed": 1774833908565,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\financial\\parse-file\\route.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775658354059,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ui\\Button.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775659247003,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ui\\Input.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775659250728,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ui\\card.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775659261853,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ui\\dialog.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1775659271635,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/src/setup-window.ts",
       "accessCount": 2,
-      "lastAccessed": 1776148759570,
+      "lastAccessed": 1774833807717,
       "type": "file"
     },
     {
-      "path": "src/utils/documentLegalUtils.ts",
-      "accessCount": 1,
-      "lastAccessed": 1776141184146,
-      "type": "directory"
-    },
-    {
-      "path": "src/components/Contract/TemplateManagement.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776141184903,
-      "type": "directory"
-    },
-    {
-      "path": "src/components/Contract/SignaturePad.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776148503132,
+      "path": "package.json",
+      "accessCount": 2,
+      "lastAccessed": 1775657380310,
       "type": "file"
     },
     {
-      "path": "src/components/Contract/ContractList.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776148503462,
+      "path": "src\\lib\\utils.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775657381111,
       "type": "file"
     },
     {
-      "path": "src/app/dashboard/contracts/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776148519613,
+      "path": "components.json",
+      "accessCount": 2,
+      "lastAccessed": 1775657386457,
       "type": "file"
     },
     {
-      "path": "src/app/dashboard/contracts/[id]/page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1776148519689,
+      "path": "tailwind.config.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775657386642,
       "type": "file"
     },
     {
-      "path": "src/app/dashboard/contracts/new/page.tsx",
+      "path": "marketing-worker/electron/renderer/setup.html",
       "accessCount": 1,
-      "lastAccessed": 1776148519703,
+      "lastAccessed": 1774833868778,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/src/preload.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774833879882,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/package.json",
+      "accessCount": 1,
+      "lastAccessed": 1774833908073,
+      "type": "file"
+    },
+    {
+      "path": "marketing-worker/electron/tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1774833908302,
+      "type": "file"
+    },
+    {
+      "path": "postcss.config.mjs",
+      "accessCount": 1,
+      "lastAccessed": 1775657326199,
+      "type": "file"
+    },
+    {
+      "path": "next.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657326836,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\telegramSummaryCron.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657429691,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\telegram\\groups\\[id]\\trigger-summary\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657430468,
+      "type": "file"
+    },
+    {
+      "path": "src\\types\\telegram.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657430669,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\functions\\telegram-webhook\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657430940,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\telegramBotService.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657434219,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\dashboard\\community\\telegram\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657434683,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\Telegram\\TelegramBoardPostDetail.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657435457,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\Telegram\\AdminTelegramManager.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657435590,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\telegramCategoryService.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657438614,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\Telegram\\TelegramBoardPostList.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657439057,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ui\\StatCard.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657440545,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\layout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657444262,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\dashboard\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657444789,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ui\\AppDialog.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1775657445392,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\hometax\\credentials\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657542742,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\api\\integrations\\gmail\\auth\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1775657542941,
       "type": "file"
     }
   ],

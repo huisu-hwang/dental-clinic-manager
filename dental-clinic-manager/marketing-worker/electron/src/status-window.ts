@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, app } from 'electron';
 import path from 'path';
 import { getStatus as getWorkerStatus, start as startWorker, stop as stopWorker } from './worker-bridge';
 import { getScrapingStatus } from './scraping-bridge';
@@ -28,12 +28,17 @@ export function createStatusWindow(): void {
     height: 500,
     resizable: true,
     frame: true,
-    title: '클리닉 매니저 워커',
+    title: `클리닉 매니저 워커 v${app.getVersion()}`,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
+  });
+
+  // loadFile 후 page가 title을 overwrite하지 않도록 명시적으로 유지
+  statusWindow.on('page-title-updated', (event) => {
+    event.preventDefault();
   });
 
   const htmlPath = path.join(__dirname, '..', 'renderer', 'status.html');

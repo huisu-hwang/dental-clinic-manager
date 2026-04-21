@@ -127,8 +127,26 @@ export interface ExpenseRecord {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+  // 급여 연동
+  source?: 'manual' | 'payroll';
+  payroll_statement_id?: string | null;
   // JOIN 결과
   category?: ExpenseCategory;
+}
+
+// 세무 설정 (경영 현황 예상 세금 계산용)
+export interface ClinicTaxSettings {
+  clinic_id: string;
+  business_type: 'individual' | 'corporate';
+  bookkeeping_type: 'simple' | 'double';
+  dependent_count: number;
+  spouse_deduction: boolean;
+  apply_standard_deduction: boolean;
+  noranumbrella_monthly: number;
+  national_pension_monthly: number;
+  health_insurance_monthly: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // 세금 기록
@@ -212,6 +230,18 @@ export interface FinancialSummary {
   pre_tax_profit: number;
   post_tax_profit: number;
   profit_margin_percent: number;
+
+  // 수입 데이터 출처
+  revenue_source_type?: string | null;
+
+  // 올해 누적 예상 세금 (연간 현황 기반, 월별 응답에도 포함)
+  ytd_net_income?: number;
+  estimated_taxable_income?: number;
+  estimated_income_tax?: number;
+  estimated_local_tax?: number;
+  estimated_total_tax?: number;
+  estimated_post_tax_profit?: number;
+  estimated_elapsed_months?: number;
 
   // 홈택스 연동 데이터 (스크래핑 워커에서 수집)
   hometax_sync?: {

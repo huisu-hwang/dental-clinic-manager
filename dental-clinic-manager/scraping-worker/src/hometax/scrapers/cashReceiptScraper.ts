@@ -16,24 +16,31 @@ async function screenshot(page: Page, label: string): Promise<string> {
   return path;
 }
 
-/** month → 분기 계산 */
-function getQuarter(month: number): number {
-  if (month <= 3) return 1;
-  if (month <= 6) return 2;
-  if (month <= 9) return 3;
-  return 4;
-}
-
-/** 분기 → 기간 문자열 */
-function getQuarterPeriod(year: number, quarter: number): { start: string; end: string } {
-  const startMonth = (quarter - 1) * 3 + 1;
-  const endMonth = quarter * 3;
-  const endDay = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][endMonth];
+/** month → 월별 기간 문자열 (YYYYMMDD) */
+function getMonthPeriod(year: number, month: number): { start: string; end: string } {
+  const lastDay = new Date(year, month, 0).getDate();
   return {
-    start: `${year}${String(startMonth).padStart(2, '0')}01`,
-    end: `${year}${String(endMonth).padStart(2, '0')}${endDay}`,
+    start: `${year}${String(month).padStart(2, '0')}01`,
+    end: `${year}${String(month).padStart(2, '0')}${lastDay}`,
   };
 }
+
+// 분기 관련 헬퍼 (추후 필요 시 복원)
+// function getQuarter(month: number): number {
+//   if (month <= 3) return 1;
+//   if (month <= 6) return 2;
+//   if (month <= 9) return 3;
+//   return 4;
+// }
+// function getQuarterPeriod(year: number, quarter: number): { start: string; end: string } {
+//   const startMonth = (quarter - 1) * 3 + 1;
+//   const endMonth = quarter * 3;
+//   const endDay = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][endMonth];
+//   return {
+//     start: `${year}${String(startMonth).padStart(2, '0')}01`,
+//     end: `${year}${String(endMonth).padStart(2, '0')}${endDay}`,
+//   };
+// }
 
 // 메뉴 ID: 현금영수증 매출내역 누계조회
 const SALES_MENU_ID = 'menuAtag_4606010200';
@@ -298,9 +305,7 @@ export async function scrapeCashReceiptPurchase(
   _clinicId?: string,
   sharedPage?: Page,
 ): Promise<ScrapeResult> {
-  // 사용자 설정 월 기준으로 분기 계산
-  const quarter = getQuarter(month || 1);
-  log.info({ year, month, quarter }, '현금영수증 매입 지출증빙 스크래핑 시작');
+  log.info({ year, month }, '현금영수�� 매입 지출증빙 스크래��� 시작 (월별 조회)');
 
   const doScrape = async (page: Page) => {
     if (!sharedPage) {
@@ -358,8 +363,8 @@ export async function scrapeCashReceiptPurchase(
     }
     await screenshot(page, '2.2-menu-opened');
 
-    // ── Step 2.3: 분기별 클릭 ──
-    log.info({ quarter }, 'Step 2.3: 분기별 클릭');
+    // ── Step 2.3: 월별 조회 기간 설정 ──
+    log.info({ year, month }, 'Step 2.3: 월별 조회 기간 설정');
     await page.waitForTimeout(3000);
 
     // Form 요소 분석 (디버그)
@@ -377,18 +382,18 @@ export async function scrapeCashReceiptPurchase(
     }).catch(() => []);
     log.info({ formElements }, 'Form 요소 분석');
 
-    // "분기별" 라디오/탭/링크 클릭
-    const quarterTabResult = await page.evaluate(() => {
+    // "일별" 또는 "월별" 라디오/탭/링크 클릭 (분기별 대신)
+    const periodTabResult = await page.evaluate(() => {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const doc = (globalThis as any).document;
       const win = globalThis as any;
 
-      // 1차: 라디오 버튼에서 "분기별" 찾기
+      // 1차: 라디오 버튼에서 "일별" 또는 "월별" 찾기
       const radios = doc.querySelectorAll('input[type="radio"]');
       for (const radio of Array.from(radios) as any[]) {
         const label = doc.querySelector(`label[for="${radio.id}"]`);
         const labelText = label?.textContent?.trim() || '';
-        if (labelText.includes('분기') || radio.value?.includes('분기') || radio.value === 'Q') {
+        if (labelText.includes('일별') || radio.value?.includes('일별') || radio.value === 'D') {
           radio.checked = true;
           radio.click();
           radio.dispatchEvent(new win.Event('change', { bubbles: true }));
@@ -396,11 +401,11 @@ export async function scrapeCashReceiptPurchase(
         }
       }
 
-      // 2차: 탭/링크에서 "분기별" 찾기
+      // 2차: 탭/링크에서 "일별" 찾기
       const allClickable = doc.querySelectorAll('a, button, span, div, label, li');
       for (const el of Array.from(allClickable) as any[]) {
         const text = el.textContent?.trim() || '';
-        if (text === '분기별' || text === '분기' || text === '분기별조회') {
+        if (text === '일별' || text === '월별' || text === '일별조회') {
           if (el.offsetParent !== null || el.offsetWidth > 0) {
             el.click();
             return `clicked: ${el.tagName}#${el.id} text="${text}"`;
@@ -408,35 +413,18 @@ export async function scrapeCashReceiptPurchase(
         }
       }
 
-      // 3차: WebSquare selectbox에서 분기 옵션
-      const selects = doc.querySelectorAll('select');
-      for (const sel of Array.from(selects) as any[]) {
-        if (sel.offsetParent === null && sel.offsetWidth === 0) continue;
-        const opts = sel.querySelectorAll('option');
-        for (const opt of Array.from(opts) as any[]) {
-          const optText = opt.textContent?.trim() || '';
-          if (optText.includes('분기')) {
-            sel.value = opt.value;
-            sel.dispatchEvent(new win.Event('change', { bubbles: true }));
-            return `select: ${sel.id} → "${optText}"`;
-          }
-        }
-      }
-
       return 'not_found';
     }).catch(() => 'error');
-    log.info({ quarterTabResult }, '분기별 클릭 결과');
+    log.info({ periodTabResult }, '일별/월별 탭 클릭 결과');
 
     await page.waitForTimeout(2000);
-    await screenshot(page, '2.3-quarter-tab');
+    await screenshot(page, '2.3-period-tab');
 
-    // ── Step 2.4: 조회기간에서 해당 분기인지 확인 ──
-    log.info({ year, quarter }, 'Step 2.4: 조회기간 확인/설정');
+    // ── Step 2.4: 조회기간을 해당 월로 설정 ──
+    const period = getMonthPeriod(year, month);
+    log.info({ year, month, period }, 'Step 2.4: 월별 조회기간 설정');
 
-    const period = getQuarterPeriod(year, quarter);
-    const quarterLabel = `${quarter}분기`;
-
-    // 년도 설정 (오늘 날짜 기준)
+    // 년도 설정
     const yearSet = await page.evaluate((y: number) => {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const doc = (globalThis as any).document;
@@ -478,36 +466,7 @@ export async function scrapeCashReceiptPurchase(
     }, year).catch(() => ['error']);
     log.info({ yearSet }, '년도 설정 결과');
 
-    // 분기 설정 (select에서 해당 분기 선택)
-    const quarterSet = await page.evaluate((q: number) => {
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      const doc = (globalThis as any).document;
-      const win = globalThis as any;
-      const qStr = String(q);
-      const qLabel = `${q}분기`;
-      const results: string[] = [];
-
-      const selects = doc.querySelectorAll('select');
-      for (const el of Array.from(selects) as any[]) {
-        if (el.offsetParent === null && el.offsetWidth === 0) continue;
-        const opts = el.querySelectorAll('option');
-        for (const opt of Array.from(opts) as any[]) {
-          const optVal = opt.value || '';
-          const optText = opt.textContent?.trim() || '';
-          if (optVal === qStr || optText === qLabel || optText.includes(`${q}분기`) || optVal === `Q${q}` || optText === `${q}/4분기`) {
-            el.value = opt.value;
-            el.dispatchEvent(new win.Event('change', { bubbles: true }));
-            results.push(`select: ${el.id} → ${opt.value} (${optText})`);
-            break;
-          }
-        }
-      }
-
-      return results.length > 0 ? results : ['no_quarter_field_found'];
-    }, quarter).catch(() => ['error']);
-    log.info({ quarterSet, quarterLabel }, '분기 설정 결과');
-
-    // 기간 입력 필드가 있으면 직접 설정 (YYYYMMDD 형식)
+    // 기간 입력 필드에 해당 월 시작일~말일 설정 (YYYYMMDD 형식)
     const periodSet = await page.evaluate((p: { start: string; end: string }) => {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const doc = (globalThis as any).document;
@@ -528,23 +487,21 @@ export async function scrapeCashReceiptPurchase(
       if (dateInputs.length >= 2) {
         const setter = win.Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')?.set;
         // 시작일
-        const startVal = p.start;
-        if (setter) setter.call(dateInputs[0], startVal);
-        else dateInputs[0].value = startVal;
+        if (setter) setter.call(dateInputs[0], p.start);
+        else dateInputs[0].value = p.start;
         dateInputs[0].dispatchEvent(new win.Event('change', { bubbles: true }));
-        results.push(`start: ${dateInputs[0].id} → ${startVal}`);
+        results.push(`start: ${dateInputs[0].id} → ${p.start}`);
 
         // 종료일
-        const endVal = p.end;
-        if (setter) setter.call(dateInputs[1], endVal);
-        else dateInputs[1].value = endVal;
+        if (setter) setter.call(dateInputs[1], p.end);
+        else dateInputs[1].value = p.end;
         dateInputs[1].dispatchEvent(new win.Event('change', { bubbles: true }));
-        results.push(`end: ${dateInputs[1].id} → ${endVal}`);
+        results.push(`end: ${dateInputs[1].id} → ${p.end}`);
       }
 
       return results.length > 0 ? results : ['no_date_fields_found'];
     }, period).catch(() => ['error']);
-    log.info({ periodSet, period }, '기간 설정 결과');
+    log.info({ periodSet, period }, '월별 기간 설정 결과');
 
     await page.waitForTimeout(1000);
     await screenshot(page, '2.4-period-set');
@@ -666,7 +623,7 @@ export async function scrapeCashReceiptPurchase(
     ? await doScrape(sharedPage)
     : await withPage(context, doScrape);
 
-  log.info({ year, month, quarter, count: records.length }, '현금영수증 매입 지출증빙 스크래핑 완료');
+  log.info({ year, month, count: records.length }, '현금영수증 매입 지출증빙 스크래핑 완료 (월별)');
 
   return {
     dataType: 'cash_receipt_purchase',

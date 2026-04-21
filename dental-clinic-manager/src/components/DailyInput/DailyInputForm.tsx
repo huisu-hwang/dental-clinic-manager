@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Calendar, Users, Phone, PhoneOff, HeartHandshake, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote, Package, Clock } from 'lucide-react'
+import { Calendar, Users, Phone, PhoneOff, HeartHandshake, Gift, FileText, Save, RotateCcw, RefreshCw, ExternalLink, Banknote, Package, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ConsultTable from './ConsultTable'
 import GiftTable from './GiftTable'
@@ -52,7 +52,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     { patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }
   ])
   const [giftRows, setGiftRows] = useState<GiftRowData[]>([
-    { patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }
+    { patient_name: '', gift_type: '없음', quantity: 1, naver_review: '미작성', notes: '' }
   ])
   const [happyCallRows, setHappyCallRows] = useState<HappyCallRowData[]>([
     { patient_name: '', treatment: '', notes: '' }
@@ -82,7 +82,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   // 폼 데이터 리셋
   const resetFormData = useCallback(() => {
     setConsultRows([{ patient_name: '', consult_content: '', consult_status: 'O', remarks: '' }])
-    setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
+    setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: '미작성', notes: '' }])
     setHappyCallRows([{ patient_name: '', treatment: '', notes: '' }])
     setCashRegisterData({
       prev_bill_50000: 0, prev_bill_10000: 0, prev_bill_5000: 0, prev_bill_1000: 0, prev_coin_500: 0, prev_coin_100: 0,
@@ -186,12 +186,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
               patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
               gift_type: typeof log.gift_type === 'string' ? log.gift_type : '없음',
               quantity: loadedQty,
-              naver_review: (log.naver_review as 'O' | 'X') || 'X',
+              naver_review: (log.naver_review as '미작성' | '네이버' | '구글' | '게시판') || '미작성',
               notes: typeof log.notes === 'string' ? log.notes : ''
             }
           }))
         } else {
-          setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: 'X', notes: '' }])
+          setGiftRows([{ patient_name: '', gift_type: '없음', quantity: 1, naver_review: '미작성', notes: '' }])
         }
 
         if (happyCallLogs.length > 0) {
@@ -272,6 +272,15 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       setReportDate(newDate)
     }
   }
+
+  const handleDateShift = (days: number) => {
+    const current = new Date(reportDate)
+    current.setDate(current.getDate() + days)
+    const shifted = current.toISOString().split('T')[0]
+    handleDateChange(shifted)
+  }
+
+  const isToday = reportDate === getTodayString()
 
   useEffect(() => {
     if (!currentUser?.clinic_id) {
@@ -809,18 +818,48 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
         {/* 기본 정보 */}
         <div>
           <SectionHeader number={1} title="기본 정보" icon={Calendar} />
-          <div className="max-w-xs">
+          <div>
             <label htmlFor="report-date" className="block text-sm font-medium text-at-text mb-1.5">
               보고 일자
             </label>
-            <input
-              type="date"
-              id="report-date"
-              className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
-              value={reportDate}
-              onChange={(e) => handleDateChange(e.target.value)}
-              disabled={loading || !canCreate}
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleDateShift(-1)}
+                disabled={loading}
+                className="flex items-center justify-center w-9 h-9 border border-at-border rounded-xl text-at-text-weak hover:text-at-text hover:bg-at-surface-alt transition-colors disabled:opacity-40"
+                title="이전 날"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <input
+                type="date"
+                id="report-date"
+                className="px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
+                value={reportDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+                disabled={loading || !canCreate}
+              />
+              <button
+                type="button"
+                onClick={() => handleDateShift(1)}
+                disabled={loading || isToday}
+                className="flex items-center justify-center w-9 h-9 border border-at-border rounded-xl text-at-text-weak hover:text-at-text hover:bg-at-surface-alt transition-colors disabled:opacity-40"
+                title="다음 날"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              {!isToday && (
+                <button
+                  type="button"
+                  onClick={() => handleDateChange(getTodayString())}
+                  disabled={loading}
+                  className="px-3 py-2 text-sm font-medium text-at-accent bg-at-accent-light hover:bg-at-tag border border-at-border rounded-xl transition-colors disabled:opacity-40"
+                >
+                  오늘
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

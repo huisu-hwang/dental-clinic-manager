@@ -5,6 +5,8 @@
 
 import { ensureConnection } from './supabase/connectionCheck'
 import { userNotificationService } from './userNotificationService'
+import { countKoreanHolidaysInRange, getKoreanHolidays, getKoreanHolidayName, isWeekend } from '@/utils/koreanHolidays'
+import { DEFAULT_WORK_SCHEDULE, DAY_OF_WEEK_TO_NAME } from '@/types/workSchedule'
 import type {
   LeavePolicy,
   LeaveType,
@@ -77,9 +79,9 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
   const yearsOfService = diffDays / 365
 
-  // 1년 미만: 월 1일 (최대 11일) - 기본 계산 (만근 여부 확인 없이)
+  // 1년 미만: 입사일 기준 매월 동일 날짜가 지날 때마다 1일 (최대 11일)
   if (yearsOfService < 1) {
-    const monthsWorked = Math.floor(diffDays / 30)
+    const monthsWorked = countFullMonthsFromHireDate(hireDate, referenceDate)
     return Math.min(monthsWorked, 11)
   }
 
@@ -87,6 +89,35 @@ export function calculateAnnualLeaveDays(hireDate: Date, referenceDate: Date = n
   // 3년 이상부터 1일 추가 시작
   const extraDays = Math.floor((yearsOfService - 1) / 2)
   return Math.min(15 + extraDays, 25)
+}
+
+/**
+ * 입사일 기준으로 완전히 경과한 월 수 계산
+ * 예: 입사일 1/15 → 2/15 이후 1개월, 3/15 이후 2개월...
+ */
+function countFullMonthsFromHireDate(hireDate: Date, referenceDate: Date): number {
+  let months = 0
+  const hire = new Date(hireDate)
+  const ref = new Date(referenceDate)
+
+  // 입사일로부터 1개월씩 더해가며 기준일과 비교
+  let nextDate = new Date(hire)
+  while (months < 11) {
+    // 다음 월 동일 날짜 계산
+    nextDate = new Date(hire.getFullYear(), hire.getMonth() + months + 1, hire.getDate())
+
+    // 만약 해당 월에 입사일 날짜가 없으면 (예: 1/31 입사 → 2/28) 월말로 조정
+    const expectedMonth = (hire.getMonth() + months + 1) % 12
+    if (nextDate.getMonth() !== expectedMonth) {
+      // 해당 월의 마지막 날로 조정
+      nextDate = new Date(hire.getFullYear(), hire.getMonth() + months + 2, 0)
+    }
+
+    if (nextDate > ref) break
+    months++
+  }
+
+  return months
 }
 
 /**
@@ -111,33 +142,57 @@ export function calculateAnnualLeaveDaysWithUnpaidCheck(
     return Math.min(15 + extraDays, 25)
   }
 
-  // 1년 미만: 각 월별로 만근 여부 확인
+  // 1년 미만: 입사일 기준 매월 동일 날짜가 지날 때마다 연차 발생
+  // 해당 기간에 무급휴가를 사용한 달은 연차가 발생하지 않음
   let earnedDays = 0
   const hire = new Date(hireDate)
   const ref = new Date(referenceDate)
 
-  // 입사일부터 현재까지 각 월을 순회
-  let checkDate = new Date(hire)
+  // 입사일부터 매월 동일 날짜를 기준으로 순회
+  for (let monthIdx = 0; monthIdx < 11; monthIdx++) {
+    // 입사일로부터 (monthIdx+1)개월 후 날짜 계산
+    let monthAnniversary = new Date(hire.getFullYear(), hire.getMonth() + monthIdx + 1, hire.getDate())
 
-  while (earnedDays < 11) { // 최대 11일
-    // 해당 월의 마지막 날 계산
-    const monthEnd = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 0)
+    // 해당 월에 입사일 날짜가 없으면 (예: 1/31 → 2/28) 월말로 조정
+    const expectedMonth = (hire.getMonth() + monthIdx + 1) % 12
+    if (monthAnniversary.getMonth() !== expectedMonth) {
+      monthAnniversary = new Date(hire.getFullYear(), hire.getMonth() + monthIdx + 2, 0)
+    }
 
-    // 아직 해당 월이 완전히 지나지 않았으면 중단
-    if (monthEnd > ref) {
+    // 아직 해당 월 기념일이 지나지 않았으면 중단
+    if (monthAnniversary > ref) {
       break
     }
 
-    // 해당 월의 키 생성 (YYYY-MM)
-    const monthKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}`
-
-    // 해당 월에 무급휴가 사용이 없으면 연차 1일 부여
-    if (!unpaidLeaveByMonth[monthKey] || unpaidLeaveByMonth[monthKey] === 0) {
-      earnedDays++
+    // 해당 기간(monthIdx번째 ~ monthIdx+1번째 월) 중 무급휴가가 있었는지 확인
+    // 기간 시작: 입사일 + monthIdx개월, 기간 종료: monthAnniversary
+    let periodStart: Date
+    if (monthIdx === 0) {
+      periodStart = new Date(hire)
+    } else {
+      periodStart = new Date(hire.getFullYear(), hire.getMonth() + monthIdx, hire.getDate())
+      const expectedStartMonth = (hire.getMonth() + monthIdx) % 12
+      if (periodStart.getMonth() !== expectedStartMonth) {
+        periodStart = new Date(hire.getFullYear(), hire.getMonth() + monthIdx + 1, 0)
+      }
     }
 
-    // 다음 달로 이동
-    checkDate = new Date(checkDate.getFullYear(), checkDate.getMonth() + 1, 1)
+    // 해당 기간에 포함되는 월 키들을 확인
+    let hasUnpaid = false
+    const checkMonth = new Date(periodStart)
+    while (checkMonth <= monthAnniversary) {
+      const monthKey = `${checkMonth.getFullYear()}-${String(checkMonth.getMonth() + 1).padStart(2, '0')}`
+      if (unpaidLeaveByMonth[monthKey] && unpaidLeaveByMonth[monthKey] > 0) {
+        hasUnpaid = true
+        break
+      }
+      checkMonth.setMonth(checkMonth.getMonth() + 1)
+    }
+
+    // 해당 기간에 무급휴가 사용이 없으면 연차 1일 부여
+    if (!hasUnpaid) {
+      earnedDays++
+    }
   }
 
   return earnedDays
@@ -588,6 +643,13 @@ export const leaveService = {
 
       const today = new Date().toISOString().split('T')[0]
 
+      // 병원 차감 설정 조회 (한 번만)
+      const { data: holidaySettings } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
       // 각 직원별로 현재 연차 기간 데이터만 조회
       const result = await Promise.all(allUsers.map(async (user: any) => {
         const periodYear = userPeriodYears[user.id]
@@ -632,6 +694,42 @@ export const leaveService = {
           }
         }
 
+        // 법정 공휴일 / 병원 지정 휴무일 차감 일수 계산 (구분 표시용)
+        let publicHolidayDeductDays = 0
+        let clinicHolidayDeductDays = 0
+        const calcEndDate = leavePeriod.endDate < today ? leavePeriod.endDate : today
+
+        if (holidaySettings?.deduct_public_holidays) {
+          publicHolidayDeductDays = countKoreanHolidaysInRange(leavePeriod.startDate, calcEndDate)
+        }
+
+        if (holidaySettings?.deduct_clinic_holidays) {
+          // 자동 차감: 아직 수동 적용 안 된 병원 지정 휴무일
+          const { data: unappliedHolidays } = await (supabase as any)
+            .from('clinic_holidays')
+            .select('deduct_days')
+            .eq('clinic_id', clinicId)
+            .eq('is_applied', false)
+            .eq('deduct_from_annual', true)
+            .gte('start_date', leavePeriod.startDate)
+            .lte('start_date', calcEndDate)
+
+          clinicHolidayDeductDays += (unappliedHolidays || [])
+            .reduce((sum: number, h: any) => sum + (h.deduct_days || 0), 0)
+        }
+
+        // 수동 적용된 병원 지정 휴무일 차감 (leave_adjustments에서 [병원휴무] 태그)
+        const { data: clinicHolidayAdjustments } = await (supabase as any)
+          .from('leave_adjustments')
+          .select('days')
+          .eq('user_id', user.id)
+          .eq('year', periodYear)
+          .eq('adjustment_type', 'deduct')
+          .like('reason', '%[병원휴무]%')
+
+        clinicHolidayDeductDays += (clinicHolidayAdjustments || [])
+          .reduce((sum: number, adj: any) => sum + adj.days, 0)
+
         return {
           ...balance,
           user_name: user.name,
@@ -640,6 +738,8 @@ export const leaveService = {
           pending_by_type: pendingByType,
           leave_period_start: leavePeriod.startDate,
           leave_period_end: leavePeriod.endDate,
+          public_holiday_deduct_days: publicHolidayDeductDays,
+          clinic_holiday_deduct_days: clinicHolidayDeductDays,
         }
       }))
 
@@ -652,6 +752,89 @@ export const leaveService = {
     } catch (error) {
       console.error('[leaveService.getAllEmployeeBalances] Error:', error)
       return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 공휴일/병원 휴무일 차감 상세 내역 조회 (직원 클릭 시 상세 표시용)
+   * - 법정 공휴일: 연차 기간 내 평일 공휴일 날짜 + 이름 목록
+   * - 병원 지정 휴무일: 미적용 clinic_holidays + [병원휴무] 조정 내역
+   */
+  async getHolidayDeductionDetails(params: {
+    userId: string
+    periodStart: string
+    periodEnd: string
+    periodYear: number
+  }): Promise<{
+    publicHolidays: Array<{ date: string; name: string }>
+    clinicHolidays: Array<{ holiday_name: string; start_date: string; deduct_days: number }>
+    clinicHolidayAdjustments: Array<{ reason: string; days: number }>
+    error: string | null
+  }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const today = new Date().toISOString().split('T')[0]
+      const calcEndDate = params.periodEnd < today ? params.periodEnd : today
+
+      // 병원 차감 설정 조회
+      const { data: holidaySettings } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
+      const publicHolidays: Array<{ date: string; name: string }> = []
+      const clinicHolidays: Array<{ holiday_name: string; start_date: string; deduct_days: number }> = []
+      const clinicHolidayAdjustments: Array<{ reason: string; days: number }> = []
+
+      // 법정 공휴일 날짜 목록
+      if (holidaySettings?.deduct_public_holidays) {
+        const startYear = parseInt(params.periodStart.substring(0, 4))
+        const endYear = parseInt(calcEndDate.substring(0, 4))
+        for (let year = startYear; year <= endYear; year++) {
+          const holidays = getKoreanHolidays(year)
+          for (const holidayDate of holidays) {
+            if (holidayDate >= params.periodStart && holidayDate <= calcEndDate && !isWeekend(holidayDate)) {
+              publicHolidays.push({ date: holidayDate, name: getKoreanHolidayName(holidayDate) })
+            }
+          }
+        }
+      }
+
+      // 병원 지정 휴무일 (미적용, 자동 차감분)
+      if (holidaySettings?.deduct_clinic_holidays) {
+        const { data: unappliedHolidays } = await (supabase as any)
+          .from('clinic_holidays')
+          .select('holiday_name, start_date, deduct_days')
+          .eq('clinic_id', clinicId)
+          .eq('is_applied', false)
+          .eq('deduct_from_annual', true)
+          .gte('start_date', params.periodStart)
+          .lte('start_date', calcEndDate)
+
+        clinicHolidays.push(...(unappliedHolidays || []))
+      }
+
+      // 수동 적용된 병원 지정 휴무일 조정 내역 (설정 무관하게 항상 조회)
+      const { data: adjustments } = await (supabase as any)
+        .from('leave_adjustments')
+        .select('reason, days')
+        .eq('user_id', params.userId)
+        .eq('year', params.periodYear)
+        .eq('adjustment_type', 'deduct')
+        .like('reason', '%[병원휴무]%')
+
+      clinicHolidayAdjustments.push(...(adjustments || []))
+
+      return { publicHolidays, clinicHolidays, clinicHolidayAdjustments, error: null }
+    } catch (error) {
+      console.error('[leaveService.getHolidayDeductionDetails] Error:', error)
+      return { publicHolidays: [], clinicHolidays: [], clinicHolidayAdjustments: [], error: extractErrorMessage(error) }
     }
   },
 
@@ -754,11 +937,47 @@ export const leaveService = {
         return sum
       }, 0)
 
-      // 차감된 연차 (used_days에 더함)
-      const deductedDays = (adjustments || []).reduce((sum: number, adj: any) => {
+      // 수동 차감된 연차 (leave_adjustments 기반)
+      const manualDeductedDays = (adjustments || []).reduce((sum: number, adj: any) => {
         if (adj.adjustment_type === 'deduct') return sum + adj.days
         return sum
       }, 0)
+
+      // 병원 휴무일/법정 공휴일 자동 차감 계산
+      let publicHolidayDeductDays = 0
+      let clinicHolidayAutoDeductDays = 0
+
+      const { data: holidaySettings } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (holidaySettings?.deduct_public_holidays) {
+        // 연차 기간 내 이미 지난 날짜까지의 법정 공휴일 수 (주말 제외)
+        const calcEndDate = periodEndDate < today ? periodEndDate : today
+        publicHolidayDeductDays = countKoreanHolidaysInRange(periodStartDate, calcEndDate)
+      }
+
+      if (holidaySettings?.deduct_clinic_holidays) {
+        // 아직 수동 적용(is_applied=false)되지 않은 병원 지정 휴무일 중
+        // deduct_from_annual=true인 항목을 자동으로 차감
+        const calcEndDate = periodEndDate < today ? periodEndDate : today
+        const { data: unappliedHolidays } = await (supabase as any)
+          .from('clinic_holidays')
+          .select('deduct_days')
+          .eq('clinic_id', clinicId)
+          .eq('is_applied', false)
+          .eq('deduct_from_annual', true)
+          .gte('start_date', periodStartDate)
+          .lte('start_date', calcEndDate)
+
+        clinicHolidayAutoDeductDays = (unappliedHolidays || [])
+          .reduce((sum: number, h: any) => sum + (h.deduct_days || 0), 0)
+      }
+
+      // 총 차감 = 수동 차감 + 법정 공휴일 자동 차감 + 병원 휴무일 자동 차감
+      const deductedDays = manualDeductedDays + publicHolidayDeductDays + clinicHolidayAutoDeductDays
 
       // 승인됐지만 아직 시작 날짜가 지나지 않은 연차 (사용 예정으로 표시)
       // 주의: 승인 대기(status='pending')는 대기에 포함하지 않음
@@ -1984,10 +2203,82 @@ export const leaveService = {
       return { data: [], error: extractErrorMessage(error) }
     }
   },
+
+  // ============================================
+  // 병원 휴무일/공휴일 차감 정책 설정
+  // ============================================
+
+  /**
+   * 병원의 휴무일/공휴일 차감 설정 조회
+   */
+  async getClinicHolidaySettings(): Promise<{
+    data: { deduct_public_holidays: boolean; deduct_clinic_holidays: boolean } | null
+    error: string | null
+  }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { data, error } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .select('deduct_public_holidays, deduct_clinic_holidays')
+        .eq('clinic_id', clinicId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+
+      return {
+        data: data || { deduct_public_holidays: false, deduct_clinic_holidays: false },
+        error: null,
+      }
+    } catch (error) {
+      console.error('[leaveService.getClinicHolidaySettings] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 병원의 휴무일/공휴일 차감 설정 저장 (upsert)
+   */
+  async upsertClinicHolidaySettings(settings: {
+    deduct_public_holidays: boolean
+    deduct_clinic_holidays: boolean
+  }): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { error } = await (supabase as any)
+        .from('clinic_holiday_settings')
+        .upsert(
+          {
+            clinic_id: clinicId,
+            deduct_public_holidays: settings.deduct_public_holidays,
+            deduct_clinic_holidays: settings.deduct_clinic_holidays,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'clinic_id' }
+        )
+
+      if (error) throw error
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.upsertClinicHolidaySettings] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
 }
 
 /**
- * 주말 제외 근무일 계산
+ * 병원 근무일 기준 일수 계산 (DEFAULT_WORK_SCHEDULE 기준)
+ * 토요일 근무 병원은 토요일도 근무일로 포함
  */
 function calculateWorkingDays(startDate: Date, endDate: Date): number {
   let days = 0
@@ -1995,7 +2286,8 @@ function calculateWorkingDays(startDate: Date, endDate: Date): number {
 
   while (current <= endDate) {
     const dayOfWeek = current.getDay()
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    const dayName = DAY_OF_WEEK_TO_NAME[dayOfWeek]
+    if (DEFAULT_WORK_SCHEDULE[dayName]?.isWorking) {
       days++
     }
     current.setDate(current.getDate() + 1)

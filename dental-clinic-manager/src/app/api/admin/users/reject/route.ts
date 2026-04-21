@@ -46,9 +46,9 @@ export async function POST(request: Request) {
     // 요청 바디에서 데이터 추출
     const { userId, clinicId, reason } = await request.json()
 
-    if (!userId || !clinicId || !reason) {
+    if (!userId || !reason) {
       return NextResponse.json(
-        { success: false, error: 'userId, clinicId, and reason are required' },
+        { success: false, error: 'userId and reason are required' },
         { status: 400 }
       )
     }
@@ -61,18 +61,22 @@ export async function POST(request: Request) {
       }
     })
 
-    console.log('[Admin API - Reject User] Rejecting user:', userId)
+    console.log('[Admin API - Reject User] Rejecting user:', userId, 'clinicId:', clinicId ?? 'null')
     console.log('[Admin API - Reject User] Reason:', reason)
 
     // 사용자 상태 업데이트 (users 테이블에는 review_note 컬럼이 없음)
-    const { error } = await supabase
+    // clinic_id가 null인 사용자도 처리할 수 있도록 조건을 분기한다.
+    const updateQuery = supabase
       .from('users')
       .update({
         status: 'rejected',
         approved_at: new Date().toISOString(),
       })
       .eq('id', userId)
-      .eq('clinic_id', clinicId)
+
+    const { error } = await (
+      clinicId ? updateQuery.eq('clinic_id', clinicId) : updateQuery.is('clinic_id', null)
+    )
 
     if (error) {
       console.error('[Admin API - Reject User] Database error:', error)
@@ -80,6 +84,14 @@ export async function POST(request: Request) {
         { success: false, error: safeErrorMessage(error, 'Admin API - reject user') },
         { status: 500 }
       )
+    }
+
+    // auth.users 삭제 - 거절된 사용자가 동일 이메일로 재가입할 수 있도록
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId)
+    if (authDeleteError) {
+      console.warn('[Admin API - Reject User] Could not delete auth user (non-fatal):', authDeleteError.message)
+    } else {
+      console.log('[Admin API - Reject User] Auth user deleted successfully')
     }
 
     console.log('[Admin API - Reject User] User rejected successfully')

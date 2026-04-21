@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateCalendar, type CalendarRequest } from '@/lib/marketing/calendar-generator';
 
+// Vercel 서버리스 함수 타임아웃 확장
+// 월간 캘린더 생성은 Anthropic Claude(6144 tokens) + 네이버 SearchAd/DataLab + Gemini 임베딩을
+// 직렬로 호출하므로 기본 60초로는 부족하여 504(Gateway Timeout) 발생
+export const maxDuration = 120;
+
 // 캘린더 목록 조회
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +44,49 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
     if (error) throw error;
 
-    return NextResponse.json({ data });
+    // 발행됨 상태 항목의 최신 metrics 일괄 조회 → 카드별 매핑
+    type CalendarRow = { id: string; content_calendar_items?: { id: string; status: string }[] };
+    const calendarRows = (data as unknown as CalendarRow[] | null) || [];
+    const allItemIds = calendarRows
+      .flatMap((c) => c.content_calendar_items || [])
+      .filter((i) => i.status === 'published')
+      .map((i) => i.id);
+
+    let metricsMap: Record<string, {
+      platform: string; views: number | null; comments: number | null;
+      likes: number | null; scraps: number | null; measured_at: string;
+    }[]> = {};
+    if (allItemIds.length > 0) {
+      const { data: metricsRows } = await supabase
+        .from('content_post_metrics_latest')
+        .select('*')
+        .in('item_id', allItemIds);
+
+      metricsMap = (metricsRows || []).reduce((acc, m) => {
+        const id = m.item_id as string;
+        if (!acc[id]) acc[id] = [];
+        acc[id].push({
+          platform: m.platform as string,
+          views: m.views as number | null,
+          comments: m.comments as number | null,
+          likes: m.likes as number | null,
+          scraps: m.scraps as number | null,
+          measured_at: m.measured_at as string,
+        });
+        return acc;
+      }, {} as typeof metricsMap);
+    }
+
+    // 각 캘린더의 항목에 metrics 부착
+    const enriched = calendarRows.map((cal) => ({
+      ...cal,
+      content_calendar_items: (cal.content_calendar_items || []).map((it) => ({
+        ...it,
+        metrics: metricsMap[it.id] || [],
+      })),
+    }));
+
+    return NextResponse.json({ data: enriched });
   } catch (error) {
     console.error('[API] calendar GET:', error);
     return NextResponse.json({ error: '캘린더 조회 실패' }, { status: 500 });
