@@ -2043,17 +2043,26 @@ export const leaveService = {
         throw new Error('원장만 휴무일을 삭제할 수 있습니다.')
       }
 
-      // 이미 적용된 휴무일인지 확인
-      const { data: holiday } = await (supabase as any)
-        .from('clinic_holidays')
-        .select('is_applied')
-        .eq('id', holidayId)
-        .single()
+      // 이미 연차에 적용된 경우 관련 leave_adjustments 먼저 롤백
+      const { data: applications } = await (supabase as any)
+        .from('holiday_leave_applications')
+        .select('leave_adjustment_id')
+        .eq('clinic_holiday_id', holidayId)
 
-      if (holiday?.is_applied) {
-        throw new Error('이미 연차에 적용된 휴무일은 삭제할 수 없습니다.')
+      const adjustmentIds = (applications || [])
+        .map((app: any) => app.leave_adjustment_id)
+        .filter((id: string | null): id is string => Boolean(id))
+
+      if (adjustmentIds.length > 0) {
+        const { error: adjDeleteError } = await (supabase as any)
+          .from('leave_adjustments')
+          .delete()
+          .in('id', adjustmentIds)
+
+        if (adjDeleteError) throw adjDeleteError
       }
 
+      // clinic_holidays 삭제 (holiday_leave_applications는 CASCADE로 자동 삭제됨)
       const { error } = await (supabase as any)
         .from('clinic_holidays')
         .delete()
