@@ -251,6 +251,13 @@ export default function RecallManagement() {
       const isContact = newStatus !== 'pending'
       const contactType = newStatus === 'sms_sent' ? 'sms' : 'call'
 
+      // 하루에 한 번만 연락 횟수 증가 (한국 시간 기준 같은 날짜면 증가시키지 않음)
+      const todayKST = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+      const lastContactKST = patient.last_contact_date
+        ? new Date(patient.last_contact_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+        : null
+      const shouldIncrementCount = isContact && lastContactKST !== todayKST
+
       setPatients(prev => prev.map(p =>
         p.id === patient.id ? {
           ...p,
@@ -259,7 +266,7 @@ export default function RecallManagement() {
             recall_datetime: now,
             last_contact_date: now,
             last_contact_type: contactType as ContactType,
-            contact_count: (p.contact_count || 0) + 1
+            contact_count: shouldIncrementCount ? (p.contact_count || 0) + 1 : (p.contact_count || 0)
           } : {})
         } : p
       ))
