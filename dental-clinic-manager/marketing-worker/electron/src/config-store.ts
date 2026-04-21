@@ -1,4 +1,7 @@
 import Store from 'electron-store';
+import { app } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // ============================================
 // 설정 저장소 (electron-store 기반)
@@ -67,38 +70,69 @@ export interface UpdateMeta {
   updateStatus: string;
 }
 
-const store = new Store<StoreSchema>({
-  name: 'clinic-manager-worker',
-  defaults: {
-    dashboardUrl: 'https://www.hi-clinic.co.kr',
-    workerApiKey: '',
-    autoStart: true,
-    autoUpdate: true,
-    headless: true,
-    isConfigured: false,
-    lastUpdateCheck: '',
-    lastUpdatedAt: '',
-    installedAt: '',
-    currentVersionReleasedAt: '',
-    latestVersion: '',
-    updateStatus: 'up-to-date',
-    githubToken: '',
-    // DentWeb bridge defaults
-    dentwebEnabled: false,
-    dentwebDbServer: 'localhost',
-    dentwebDbPort: 1433,
-    dentwebDbDatabase: 'DENTWEBDB',
-    dentwebDbAuthType: 'windows',
-    dentwebDbUser: '',
-    dentwebDbPassword: '',
-    dentwebClinicId: '',
-    dentwebApiKey: '',
-    dentwebSyncInterval: 300,
-    dentwebLastSyncDate: '',
-    dentwebLastSyncStatus: '',
-    dentwebLastSyncPatientCount: 0,
-  },
-});
+const storeDefaults: StoreSchema = {
+  dashboardUrl: 'https://www.hi-clinic.co.kr',
+  workerApiKey: '',
+  autoStart: true,
+  autoUpdate: true,
+  headless: true,
+  isConfigured: false,
+  lastUpdateCheck: '',
+  lastUpdatedAt: '',
+  installedAt: '',
+  currentVersionReleasedAt: '',
+  latestVersion: '',
+  updateStatus: 'up-to-date',
+  githubToken: '',
+  // DentWeb bridge defaults
+  dentwebEnabled: false,
+  dentwebDbServer: 'localhost',
+  dentwebDbPort: 1433,
+  dentwebDbDatabase: 'DENTWEBDB',
+  dentwebDbAuthType: 'windows',
+  dentwebDbUser: '',
+  dentwebDbPassword: '',
+  dentwebClinicId: '',
+  dentwebApiKey: '',
+  dentwebSyncInterval: 300,
+  dentwebLastSyncDate: '',
+  dentwebLastSyncStatus: '',
+  dentwebLastSyncPatientCount: 0,
+};
+
+function createStore(): Store<StoreSchema> {
+  try {
+    return new Store<StoreSchema>({
+      name: 'clinic-manager-worker',
+      defaults: storeDefaults,
+    });
+  } catch (err) {
+    // 설정 파일이 손상된 경우: 백업 후 삭제하고 재생성
+    console.error('[config-store] 설정 파일 손상 감지, 초기화 진행:', err);
+    try {
+      const userDataPath = app.getPath('userData');
+      const configPath = path.join(userDataPath, 'clinic-manager-worker.json');
+      if (fs.existsSync(configPath)) {
+        const backupPath = configPath + '.corrupt.' + Date.now();
+        fs.renameSync(configPath, backupPath);
+        console.log(`[config-store] 손상된 파일 백업: ${backupPath}`);
+      }
+    } catch (backupErr) {
+      console.error('[config-store] 백업 실패, 파일 직접 삭제 시도:', backupErr);
+      try {
+        const userDataPath = app.getPath('userData');
+        const configPath = path.join(userDataPath, 'clinic-manager-worker.json');
+        fs.unlinkSync(configPath);
+      } catch { /* 무시 */ }
+    }
+    return new Store<StoreSchema>({
+      name: 'clinic-manager-worker',
+      defaults: storeDefaults,
+    });
+  }
+}
+
+const store = createStore();
 
 /**
  * 첫 실행 여부 확인
