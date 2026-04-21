@@ -885,10 +885,10 @@ export const recallPatientService = {
     if (!supabase) return { success: false, error: 'Database connection not available' }
 
     try {
-      // 현재 환자 정보 조회 (contact_count, campaign_id)
+      // 현재 환자 정보 조회 (contact_count, campaign_id, last_contact_date)
       const { data: patient } = await supabase
         .from('recall_patients')
-        .select('campaign_id, contact_count')
+        .select('campaign_id, contact_count, last_contact_date')
         .eq('id', id)
         .single()
 
@@ -904,7 +904,15 @@ export const recallPatientService = {
         updates.recall_datetime = now
         updates.last_contact_date = now
         updates.last_contact_type = contactType
-        updates.contact_count = (patient?.contact_count || 0) + 1
+
+        // 하루에 한 번만 연락 횟수 증가 (한국 시간 기준 같은 날짜에 이미 기록이 있으면 증가시키지 않음)
+        const todayKST = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+        const lastContactKST = patient?.last_contact_date
+          ? new Date(patient.last_contact_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+          : null
+        if (lastContactKST !== todayKST) {
+          updates.contact_count = (patient?.contact_count || 0) + 1
+        }
       }
 
       const { error } = await supabase
