@@ -34,6 +34,7 @@ import {
   ChevronDown,
   ChevronUp,
   Settings,
+  RefreshCw,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -57,6 +58,10 @@ export default function FinancialDashboard() {
   // 모달 상태
   const [showRevenueForm, setShowRevenueForm] = useState(false)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
+
+  // 덴트웹 매출 동기화 상태
+  const [revenueSyncing, setRevenueSyncing] = useState(false)
+  const [revenueSyncMessage, setRevenueSyncMessage] = useState<string | null>(null)
 
   // 탭 상태
   const [activeTab, setActiveTab] = useState<'status' | 'settings'>('status')
@@ -133,6 +138,70 @@ export default function FinancialDashboard() {
     }
   }
 
+  // 덴트웹 매출 동기화
+  const handleRevenueSyncFromDentweb = async () => {
+    if (!clinicId || revenueSyncing) return
+
+    setRevenueSyncing(true)
+    setRevenueSyncMessage(null)
+
+    try {
+      // 1단계: 매출 집계 쿼리 등록
+      const postRes = await fetch('/api/dentweb/revenue-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clinicId }),
+      })
+      const postData = await postRes.json()
+
+      if (!postData.success) {
+        setRevenueSyncMessage(`동기화 실패: ${postData.error}`)
+        setRevenueSyncing(false)
+        return
+      }
+
+      const requestId = postData.requestId
+
+      // 2단계: 결과 폴링 (최대 30초, 2초 간격)
+      let attempts = 0
+      const maxAttempts = 15
+
+      const pollResult = async (): Promise<boolean> => {
+        attempts++
+        const getRes = await fetch(
+          `/api/dentweb/revenue-sync?clinicId=${clinicId}&requestId=${requestId}`
+        )
+        const getData = await getRes.json()
+
+        if (getData.status === 'completed') {
+          setRevenueSyncMessage(getData.message)
+          loadData()
+          return true
+        }
+
+        if (getData.status === 'error') {
+          setRevenueSyncMessage(`동기화 오류: ${getData.error}`)
+          return true
+        }
+
+        if (getData.status === 'pending' && attempts < maxAttempts) {
+          await new Promise(r => setTimeout(r, 2000))
+          return pollResult()
+        }
+
+        setRevenueSyncMessage('브릿지 에이전트 응답 대기 시간이 초과되었습니다. 에이전트가 실행 중인지 확인하세요.')
+        return true
+      }
+
+      await pollResult()
+    } catch (error) {
+      console.error('Revenue sync error:', error)
+      setRevenueSyncMessage('매출 동기화 중 오류가 발생했습니다.')
+    } finally {
+      setRevenueSyncing(false)
+    }
+  }
+
   const profitMargin = summary?.total_revenue
     ? ((summary.pre_tax_profit / summary.total_revenue) * 100).toFixed(1)
     : '0'
@@ -159,23 +228,34 @@ export default function FinancialDashboard() {
           </div>
         </div>
 
-        {/* Date Selector */}
+        {/* Date Selector + DentWeb Sync */}
         {activeTab === 'status' && (
-          <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border self-start sm:self-auto">
-            <button
-              onClick={goToPreviousMonth}
-              className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-at-text font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm bg-white rounded-xl border border-at-border">
-              {selectedYear}년 {selectedMonth}월
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <div className="flex items-center gap-1 bg-at-surface-alt p-1 rounded-xl border border-at-border">
+              <button
+                onClick={goToPreviousMonth}
+                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+              >
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <div className="px-3 sm:px-5 py-1 sm:py-1.5 text-at-text font-bold tracking-wide min-w-[100px] sm:min-w-[130px] text-center text-sm bg-white rounded-xl border border-at-border">
+                {selectedYear}년 {selectedMonth}월
+              </div>
+              <button
+                onClick={goToNextMonth}
+                className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+              >
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
             </div>
             <button
-              onClick={goToNextMonth}
-              className="p-1.5 sm:p-2 hover:bg-white rounded-xl transition-all duration-200 text-at-text"
+              onClick={handleRevenueSyncFromDentweb}
+              disabled={revenueSyncing}
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-medium rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="덴트웹에서 전체 월별 매출 데이터를 가져옵니다"
             >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${revenueSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{revenueSyncing ? '동기화 중...' : '매출 동기화'}</span>
             </button>
           </div>
         )}
@@ -208,6 +288,17 @@ export default function FinancialDashboard() {
           </button>
         </nav>
       </div>
+
+      {/* 매출 동기화 상태 메시지 */}
+      {revenueSyncMessage && (
+        <div className={`p-3 rounded-xl text-sm font-medium ${
+          revenueSyncMessage.includes('실패') || revenueSyncMessage.includes('오류') || revenueSyncMessage.includes('초과')
+            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+        }`}>
+          {revenueSyncMessage}
+        </div>
+      )}
 
       {/* 탭 콘텐츠 */}
       <div>

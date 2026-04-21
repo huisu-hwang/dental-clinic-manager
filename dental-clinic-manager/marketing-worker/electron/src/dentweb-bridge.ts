@@ -264,6 +264,53 @@ async function detectSqlServer(): Promise<boolean> {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Revenue aggregation                                                */
+/* ------------------------------------------------------------------ */
+
+async function getMonthlyRevenue(pool: sql.ConnectionPool) {
+  // TB_진료비내역에서 월별 보험/비보험 매출 집계
+  // 올해 1월 1일부터 현재까지
+  const currentYear = new Date().getFullYear();
+  const startDate = `${currentYear}0101`;
+  const result = await pool.request().query(`
+    SELECT
+      LEFT(sz진료일, 4) AS [year],
+      SUBSTRING(sz진료일, 5, 2) AS [month],
+      SUM(ISNULL(n공단부담금, 0) + ISNULL(n본인부담금, 0)) AS insurance_revenue,
+      SUM(ISNULL(n비급여진료비, 0)) AS non_insurance_revenue,
+      COUNT(*) AS record_count
+    FROM TB_진료비내역
+    WHERE sz진료일 >= '${startDate}'
+      AND sz진료일 <= CONVERT(char(8), GETDATE(), 112)
+    GROUP BY LEFT(sz진료일, 4), SUBSTRING(sz진료일, 5, 2)
+    ORDER BY LEFT(sz진료일, 4), SUBSTRING(sz진료일, 5, 2)
+  `);
+  return result.recordset;
+}
+
+async function syncRevenueToServer(revenueData: Record<string, unknown>[]): Promise<{ success: boolean; error?: string }> {
+  const cfg = getDentwebConfig();
+  const { dashboardUrl } = getConfig();
+  const url = `${dashboardUrl}/api/dentweb/revenue-sync/push`;
+
+  try {
+    const response = await fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinic_id: cfg.clinicId,
+        api_key: cfg.apiKey,
+        revenue_data: revenueData,
+      }),
+    });
+    return await response.json() as { success: boolean; error?: string };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main sync loop                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -319,12 +366,28 @@ async function runSync(): Promise<void> {
     const result = await syncPatientsToServer(patients, syncType);
 
     if (result.success) {
-      log('info', `[DentWeb] 동기화 완료: 총 ${result.total_records}, 신규 ${result.new_records}, 수정 ${result.updated_records}`);
+      log('info', `[DentWeb] 환자 동기화 완료: 총 ${result.total_records}, 신규 ${result.new_records}, 수정 ${result.updated_records}`);
       setConfig({
         dentwebLastSyncDate: new Date().toISOString(),
         dentwebLastSyncStatus: 'success',
         dentwebLastSyncPatientCount: result.total_records || 0,
       });
+
+      // 매출 데이터 동기화
+      try {
+        const revenueData = await getMonthlyRevenue(pool!);
+        if (revenueData.length > 0) {
+          const revResult = await syncRevenueToServer(revenueData);
+          if (revResult.success) {
+            log('info', `[DentWeb] 매출 동기화 완료: ${revenueData.length}개월`);
+          } else {
+            log('warn', `[DentWeb] 매출 동기화 실패: ${revResult.error}`);
+          }
+        }
+      } catch (revErr) {
+        log('warn', `[DentWeb] 매출 동기화 오류 (환자 동기화는 정상): ${revErr instanceof Error ? revErr.message : String(revErr)}`);
+      }
+
       setStatus('polling');
     } else {
       log('error', `[DentWeb] 동기화 실패: ${result.error}`);
