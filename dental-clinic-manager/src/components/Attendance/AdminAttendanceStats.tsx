@@ -304,6 +304,27 @@ export default function AdminAttendanceStats() {
   const handleSaveEdit = async () => {
     if (!editingRecord || !user) return
 
+    // 미래 시간 저장 차단: 퇴근 시간이 현재보다 미래이면 저장 불가
+    const checkInIso = editFormData.check_in_time
+      ? timeInputToIso(editFormData.check_in_time, editingRecord.work_date)
+      : undefined
+    const checkOutIso = editFormData.check_out_time
+      ? timeInputToIso(editFormData.check_out_time, editingRecord.work_date)
+      : undefined
+    const nowMs = Date.now()
+    if (checkOutIso && new Date(checkOutIso).getTime() > nowMs) {
+      setEditError('퇴근 시간은 현재 시간보다 이후로 저장할 수 없습니다.')
+      return
+    }
+    if (checkInIso && new Date(checkInIso).getTime() > nowMs) {
+      setEditError('출근 시간은 현재 시간보다 이후로 저장할 수 없습니다.')
+      return
+    }
+    if (checkInIso && checkOutIso && new Date(checkOutIso).getTime() <= new Date(checkInIso).getTime()) {
+      setEditError('퇴근 시간은 출근 시간 이후여야 합니다.')
+      return
+    }
+
     setIsSaving(true)
     setEditError(null)
 
@@ -313,12 +334,8 @@ export default function AdminAttendanceStats() {
 
       const result = await attendanceService.editAttendanceRecord({
         record_id: editingRecord.id,
-        check_in_time: editFormData.check_in_time
-          ? timeInputToIso(editFormData.check_in_time, editingRecord.work_date)
-          : undefined,
-        check_out_time: editFormData.check_out_time
-          ? timeInputToIso(editFormData.check_out_time, editingRecord.work_date)
-          : undefined,
+        check_in_time: checkInIso,
+        check_out_time: checkOutIso,
         status: editFormData.status,
         notes: editFormData.notes,
         edited_by: user.id,

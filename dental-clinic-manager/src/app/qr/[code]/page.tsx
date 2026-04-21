@@ -115,6 +115,17 @@ export default function QRAttendancePage() {
 
       // 출근한 상태 → 퇴근 확인 화면 표시
       if (todayRecord?.check_in_time && !todayRecord?.check_out_time) {
+        // 출근 직후 재스캔(중복 인식/사용자 오인식) 방지: 5분 이내면 퇴근 확인 대신 이미 출근 처리됨 안내
+        const RECENT_CHECKIN_GRACE_MS = 5 * 60 * 1000
+        const checkInAgeMs = Date.now() - new Date(todayRecord.check_in_time).getTime()
+        if (checkInAgeMs >= 0 && checkInAgeMs < RECENT_CHECKIN_GRACE_MS) {
+          setStatus('success')
+          setMessage('이미 출근 처리되었습니다.')
+          setActionType('check-in')
+          isProcessing.current = false
+          return
+        }
+
         setCheckInTime(todayRecord.check_in_time)
         setStatus('confirm-checkout')
         isProcessing.current = false
@@ -146,9 +157,19 @@ export default function QRAttendancePage() {
           setMessage('오늘 이미 퇴근하셨습니다.')
           setActionType('error')
         } else if (result.record?.check_in_time) {
-          // 동시 요청 등으로 이미 출근 처리된 경우 → 퇴근 확인 화면
-          setCheckInTime(result.record.check_in_time)
-          setStatus('confirm-checkout')
+          // 동시 요청 등으로 이미 출근 처리된 경우
+          const RECENT_CHECKIN_GRACE_MS = 5 * 60 * 1000
+          const checkInAgeMs = Date.now() - new Date(result.record.check_in_time).getTime()
+          if (checkInAgeMs >= 0 && checkInAgeMs < RECENT_CHECKIN_GRACE_MS) {
+            // 방금 출근 처리됨 → 성공 화면으로 안내
+            setStatus('success')
+            setMessage('출근 처리되었습니다.')
+            setActionType('check-in')
+          } else {
+            // 기존에 출근만 된 상태 → 퇴근 확인 화면
+            setCheckInTime(result.record.check_in_time)
+            setStatus('confirm-checkout')
+          }
         } else {
           setStatus('error')
           setMessage(result.message || '출근 처리 실패')
