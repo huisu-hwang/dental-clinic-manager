@@ -214,8 +214,8 @@ export default function OwnerLanding() {
 
             <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-slate-700/50 shadow-xl">
               <p className="text-xl text-slate-200 leading-relaxed text-center">
-                이 시간에 실장은{' '}
-                <span className="text-amber-400 font-semibold">상담 한 건을 더</span> 받을 수 있었습니다.
+                반복 업무에 쓰는 에너지를 줄여{' '}
+                <span className="text-amber-400 font-semibold">상담에 집중</span>할 수 있게 해주세요.
               </p>
             </div>
           </StoryBlock>
