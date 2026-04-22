@@ -41,10 +41,12 @@ export async function GET(request: NextRequest) {
     const calendarIds = calendars.map((c: { id: string }) => c.id);
 
     // Step 2: 캘린더 ID 기반으로 글 목록 조회
+    // "글 관리"에는 실제 본문이 생성된 글만 표시 (proposed/approved 등 본문 없는 항목 제외)
     let query = supabase
       .from('content_calendar_items')
       .select('*')
       .in('calendar_id', calendarIds)
+      .not('generated_content', 'is', null)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
