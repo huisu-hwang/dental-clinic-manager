@@ -109,7 +109,7 @@ const ownerFaqs = [
   { q: '데이터는 안전한가요?', a: '글로벌 클라우드 인프라에서 암호화되어 저장되며, 자동 백업으로 손실 없이 보관됩니다.' },
   { q: '직원 권한 설정이 가능한가요?', a: '원장·부원장·실장·팀장·일반 직원 등 역할별 권한을 세분화해 설정할 수 있습니다.' },
   { q: '기존 데이터 이전이 가능한가요?', a: 'Excel 파일 등을 통한 기존 데이터 이전을 지원합니다.' },
-  { q: '프리미엄 패키지는 무엇이 다른가요?', a: '기본 기능은 그대로 사용 가능하며, 월 ₩499,000에 AI 데이터 분석·경영현황 대시보드·마케팅 자동화(네이버 블로그)가 포함됩니다.' },
+  { q: '프리미엄 패키지는 무엇이 다른가요?', a: '기본 기능은 그대로 사용 가능하며, 유료 기능으로 AI 데이터 분석·경영현황 대시보드·마케팅 자동화(네이버 블로그)가 포함됩니다.' },
 ]
 
 export default function OwnerLanding() {
@@ -308,7 +308,7 @@ export default function OwnerLanding() {
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-400/20 to-orange-400/20 border border-amber-400/30 text-amber-300 font-bold text-xs tracking-wider uppercase rounded-full mb-4">
-              <SparklesIcon className="w-4 h-4" /> PREMIUM · 월 ₩499,000
+              <SparklesIcon className="w-4 h-4" /> PREMIUM · 유료 기능
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               경영자의 시간을 위해 준비된 한 단계 더
