@@ -241,8 +241,8 @@ export default function OwnerLanding() {
                 <div className="text-4xl mb-4">🔁</div>
                 <h3 className="font-bold text-at-text mb-2">Before</h3>
                 <p className="text-at-text-secondary">
-                  반복 업무에 <span className="text-red-500 font-semibold">70%</span>의 집중력 소진,
-                  상담·매출에는 30%만 남습니다.
+                  반복 업무에 <span className="text-red-500 font-semibold">집중력과 체력이 소진</span>되면
+                  상담, 리콜에 쓸 에너지가 부족해집니다.
                 </p>
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-at-border shadow-at-card">
@@ -250,7 +250,7 @@ export default function OwnerLanding() {
                 <h3 className="font-bold text-at-text mb-2">After</h3>
                 <p className="text-at-text-secondary">
                   업무는 시스템이 처리하고, 실장은{' '}
-                  <span className="text-at-accent font-semibold">상담·해피콜·매출 관리</span>에 집중합니다.
+                  <span className="text-at-accent font-semibold">상담, 리콜</span>에 집중합니다.
                 </p>
               </div>
             </div>
