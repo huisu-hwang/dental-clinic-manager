@@ -42,7 +42,6 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
   const [applications, setApplications] = useState<Record<string, any[]>>({})
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [applying, setApplying] = useState<string | null>(null)
 
   // 폼 데이터
   const [formData, setFormData] = useState({
@@ -156,8 +155,12 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
     }
   }
 
-  const handleDelete = async (holidayId: string) => {
-    if (!await appConfirm('이 휴무일을 삭제하시겠습니까?')) return
+  const handleDelete = async (holidayId: string, isApplied: boolean) => {
+    const message = isApplied
+      ? '이 휴무일을 삭제하시겠습니까?\n직원들에게 차감된 연차가 모두 복구됩니다.'
+      : '이 휴무일을 삭제하시겠습니까?'
+
+    if (!await appConfirm(message)) return
 
     const result = await leaveService.deleteClinicHoliday(holidayId)
     if (result.error) {
@@ -165,28 +168,8 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
     } else {
       setSuccess('휴무일이 삭제되었습니다.')
       loadHolidays()
-    }
-    setTimeout(() => {
-      setError('')
-      setSuccess('')
-    }, 3000)
-  }
-
-  const handleApply = async (holidayId: string) => {
-    if (!await appConfirm('이 휴무일을 직원들의 연차에 적용하시겠습니까?\n적용 후에는 취소할 수 없습니다.')) return
-
-    setApplying(holidayId)
-    const result = await leaveService.applyHolidayToLeave(holidayId)
-
-    if (result.error) {
-      setError(result.error)
-    } else {
-      setSuccess(`${result.appliedCount}명의 직원에게 연차가 적용되었습니다.`)
-      loadHolidays()
-      loadApplications(holidayId)
       onSuccess?.()
     }
-    setApplying(null)
     setTimeout(() => {
       setError('')
       setSuccess('')
@@ -548,40 +531,16 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                   {/* 액션 버튼 */}
                   {isOwner && (
                     <div className="flex justify-end space-x-2 pt-2">
-                      {!holiday.is_applied && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDelete(holiday.id)
-                            }}
-                            className="px-3 py-1.5 text-sm font-medium text-at-error bg-white border border-red-200 rounded-xl hover:bg-at-error-bg flex items-center"
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            삭제
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleApply(holiday.id)
-                            }}
-                            disabled={applying === holiday.id}
-                            className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 flex items-center"
-                          >
-                            {applying === holiday.id ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
-                                적용 중...
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                연차에 적용
-                              </>
-                            )}
-                          </button>
-                        </>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(holiday.id, holiday.is_applied)
+                        }}
+                        className="px-3 py-1.5 text-sm font-medium text-at-error bg-white border border-red-200 rounded-xl hover:bg-at-error-bg flex items-center"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        삭제
+                      </button>
                     </div>
                   )}
                 </div>
