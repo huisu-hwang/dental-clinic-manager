@@ -8,6 +8,7 @@ import { aiSuggestionService } from '@/lib/aiSuggestionService'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   AI_SUGGESTION_STATUS_LABELS,
+  AI_SUGGESTION_PROGRESS_LABELS,
   type AiSuggestionTask,
   type AiSuggestionTaskStatus,
 } from '@/types/community'
@@ -150,6 +151,43 @@ export default function SuggestionControlPanel({ postId }: SuggestionControlPane
       <p className="text-sm text-at-text-secondary mb-4">
         이 제안을 AI가 코드로 구현하고 PR을 생성합니다.
       </p>
+
+      {status === 'running' && task?.progress_step && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 border border-blue-200 text-sm text-blue-800 mb-3">
+          <Loader2 className="w-4 h-4 mt-0.5 shrink-0 animate-spin" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium">
+              {AI_SUGGESTION_PROGRESS_LABELS[task.progress_step] || task.progress_step}
+              {task.progress_detail?.iteration && task.progress_detail?.maxIterations && (
+                <span className="ml-1 text-blue-600 font-normal">
+                  ({task.progress_detail.iteration}/{task.progress_detail.maxIterations})
+                </span>
+              )}
+              {typeof task.progress_detail?.buildRetry === 'number' && task.progress_detail.buildRetry > 0 && (
+                <span className="ml-1 text-blue-600 font-normal">
+                  (재시도 {task.progress_detail.buildRetry})
+                </span>
+              )}
+            </div>
+            {task.progress_detail?.currentFile && (
+              <div className="text-xs text-blue-700 mt-0.5 truncate font-mono">
+                📝 {task.progress_detail.currentFile}
+              </div>
+            )}
+            {task.progress_detail?.message && (
+              <div className="text-xs text-blue-700 mt-0.5 break-words">
+                {task.progress_detail.message}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {task?.branch_name && (
+        <div className="text-xs text-at-text-weak mb-2 font-mono truncate">
+          🌿 {task.branch_name}
+        </div>
+      )}
 
       {task?.pr_url && (
         <a
