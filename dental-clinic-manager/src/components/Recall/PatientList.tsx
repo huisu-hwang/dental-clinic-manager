@@ -39,6 +39,7 @@ import type {
 import {
   RECALL_STATUS_LABELS,
   RECALL_STATUS_COLORS,
+  RECALL_STATUS_DESCRIPTIONS,
   MANUAL_STATUS_OPTIONS,
   GENDER_LABELS,
   EXCLUDE_REASON_LABELS,
@@ -613,6 +614,7 @@ export default function PatientList({
                         <button
                           key={status}
                           onClick={() => handleStatusChange(patient, status)}
+                          title={`${RECALL_STATUS_LABELS[status]} — ${RECALL_STATUS_DESCRIPTIONS[status]}`}
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
                             patient.status === status
                               ? `${RECALL_STATUS_COLORS[status]} ring-2 ring-offset-1 ring-current`
@@ -625,7 +627,10 @@ export default function PatientList({
                       ))}
                       {/* 문자발송 상태는 자동으로만 설정됨 - 표시만 */}
                       {patient.status === 'sms_sent' && (
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ring-2 ring-offset-1 ring-current ${RECALL_STATUS_COLORS['sms_sent']}`}>
+                        <span
+                          title={`${RECALL_STATUS_LABELS['sms_sent']} — ${RECALL_STATUS_DESCRIPTIONS['sms_sent']}`}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ring-2 ring-offset-1 ring-current ${RECALL_STATUS_COLORS['sms_sent']}`}
+                        >
                           {STATUS_ICONS['sms_sent']}
                           {RECALL_STATUS_LABELS['sms_sent']}
                         </span>

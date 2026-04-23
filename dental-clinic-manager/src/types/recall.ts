@@ -353,6 +353,18 @@ export const RECALL_STATUS_LABELS: Record<PatientRecallStatus, string> = {
   invalid_number: '없는번호'
 }
 
+export const RECALL_STATUS_DESCRIPTIONS: Record<PatientRecallStatus, string> = {
+  pending: '아직 연락하지 않음',
+  sms_sent: '안내 문자 발송 완료',
+  appointment_made: '내원 예약 확정',
+  appointment_pending: '예약 일정 미확정',
+  already_booked: '이미 예약이 있는 환자',
+  no_answer: '전화를 받지 않음',
+  call_rejected: '통화를 거부함',
+  visit_refused: '내원 의사 없음',
+  invalid_number: '전화번호가 유효하지 않음'
+}
+
 export const RECALL_STATUS_COLORS: Record<PatientRecallStatus, string> = {
   pending: 'bg-gray-100 text-gray-700',
   sms_sent: 'bg-blue-100 text-blue-700',
