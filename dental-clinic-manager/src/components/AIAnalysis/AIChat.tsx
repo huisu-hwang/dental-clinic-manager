@@ -86,18 +86,25 @@ export default function AIChat({ clinicId }: AIChatProps) {
     }
   }, [inputValue]);
 
-  // 대화 목록 불러오기
+  // 대화 목록 불러오기 + 최근 대화 자동 복원
   useEffect(() => {
-    loadConversations();
+    loadConversations({ autoRestore: true });
   }, []);
 
-  const loadConversations = async () => {
+  const loadConversations = async (options?: { autoRestore?: boolean }) => {
     try {
       setIsLoadingConversations(true);
       const response = await fetch('/api/ai-conversations');
       if (response.ok) {
         const data = await response.json();
-        setConversations(data.conversations || []);
+        const convs: ConversationSummary[] = data.conversations || [];
+        setConversations(convs);
+
+        // 페이지 진입 시 가장 최근 대화 자동 복원
+        // loadConversation() 내부에서 진행 중(isLoading)이면 자동으로 폴링 재개됨
+        if (options?.autoRestore && convs.length > 0) {
+          await loadConversation(convs[0].id);
+        }
       }
     } catch (err) {
       console.error('Failed to load conversations:', err);
