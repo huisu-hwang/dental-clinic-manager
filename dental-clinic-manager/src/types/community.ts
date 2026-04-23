@@ -264,6 +264,25 @@ export function buildCategoryColors(categories: CommunityCategoryItem[]): Record
 // =====================================================
 export type AiSuggestionTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
 
+export type AiSuggestionProgressStep =
+  | 'initializing'
+  | 'creating_worktree'
+  | 'analyzing'
+  | 'editing'
+  | 'building'
+  | 'rebuilding'
+  | 'committing'
+  | 'pushing'
+  | 'creating_pr'
+
+export interface AiSuggestionProgressDetail {
+  iteration?: number
+  maxIterations?: number
+  currentFile?: string
+  buildRetry?: number
+  message?: string
+}
+
 export interface AiSuggestionTask {
   id: string
   post_id: string
@@ -277,6 +296,8 @@ export interface AiSuggestionTask {
   requested_by?: string | null
   started_at?: string | null
   completed_at?: string | null
+  progress_step?: AiSuggestionProgressStep | null
+  progress_detail?: AiSuggestionProgressDetail | null
   created_at: string
   updated_at: string
 }
@@ -287,4 +308,16 @@ export const AI_SUGGESTION_STATUS_LABELS: Record<AiSuggestionTaskStatus, string>
   completed: '완료',
   failed: '실패',
   cancelled: '취소됨',
+}
+
+export const AI_SUGGESTION_PROGRESS_LABELS: Record<AiSuggestionProgressStep, string> = {
+  initializing: '초기화 중',
+  creating_worktree: 'worktree 생성 중',
+  analyzing: 'Claude 분석 중',
+  editing: '파일 수정 중',
+  building: '빌드 검증 중',
+  rebuilding: '빌드 재시도 중',
+  committing: '커밋 생성 중',
+  pushing: '원격 푸시 중',
+  creating_pr: 'PR 생성 중',
 }

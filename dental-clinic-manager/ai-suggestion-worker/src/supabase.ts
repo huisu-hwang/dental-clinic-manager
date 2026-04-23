@@ -1,6 +1,25 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getConfig } from './config.js';
 
+export type AiSuggestionProgressStep =
+  | 'initializing'
+  | 'creating_worktree'
+  | 'analyzing'
+  | 'editing'
+  | 'building'
+  | 'rebuilding'
+  | 'committing'
+  | 'pushing'
+  | 'creating_pr';
+
+export interface AiSuggestionProgressDetail {
+  iteration?: number;
+  maxIterations?: number;
+  currentFile?: string;
+  buildRetry?: number;
+  message?: string;
+}
+
 export interface AiSuggestionTask {
   id: string;
   post_id: string;
@@ -15,6 +34,8 @@ export interface AiSuggestionTask {
   completed_at?: string | null;
   created_at?: string;
   requested_by?: string | null;
+  progress_step?: AiSuggestionProgressStep | null;
+  progress_detail?: AiSuggestionProgressDetail | null;
 }
 
 export interface CommunityPost {
@@ -75,8 +96,47 @@ export type TaskPatch = Partial<
     | 'error_message'
     | 'started_at'
     | 'completed_at'
+    | 'progress_step'
+    | 'progress_detail'
   >
 >;
+
+/**
+ * 진행 단계 업데이트 (최소 3초 간격 throttle).
+ * 같은 taskId로 너무 자주 호출되면 Realtime 이벤트 폭주를 막기 위해 스킵.
+ * force=true면 throttle 무시.
+ */
+const lastProgressAt = new Map<string, number>();
+const PROGRESS_THROTTLE_MS = 3000;
+
+export async function updateProgress(
+  taskId: string,
+  step: AiSuggestionProgressStep,
+  detail: AiSuggestionProgressDetail | null = null,
+  opts: { force?: boolean } = {}
+): Promise<void> {
+  const now = Date.now();
+  const last = lastProgressAt.get(taskId) || 0;
+  if (!opts.force && now - last < PROGRESS_THROTTLE_MS) {
+    return;
+  }
+  lastProgressAt.set(taskId, now);
+
+  try {
+    const { error } = await getSupabase()
+      .from('ai_suggestion_tasks')
+      .update({
+        progress_step: step,
+        progress_detail: detail,
+      })
+      .eq('id', taskId);
+    if (error) {
+      console.warn('[supabase] updateProgress error:', error.message);
+    }
+  } catch (err) {
+    console.warn('[supabase] updateProgress throw:', (err as Error).message);
+  }
+}
 
 export async function updateTask(taskId: string, patch: TaskPatch): Promise<AiSuggestionTask | null> {
   const { data, error } = await getSupabase()

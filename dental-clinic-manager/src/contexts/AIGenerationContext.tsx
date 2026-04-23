@@ -130,37 +130,54 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
         const decoder = new TextDecoder()
         let buffer = ''
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        // idle timeout: 서버가 90초간 어떤 chunk도 보내지 않으면 hang으로 판단하고 abort
+        // (서버는 5초 간격 heartbeat 송신; 90초는 단계 전환 사이 안전 마진)
+        const IDLE_TIMEOUT_MS = 90000
+        let idleTimer: ReturnType<typeof setTimeout> | null = null
+        const resetIdleTimer = () => {
+          if (idleTimer) clearTimeout(idleTimer)
+          idleTimer = setTimeout(() => {
+            try { abortController.abort() } catch { /* noop */ }
+          }, IDLE_TIMEOUT_MS)
+        }
+        resetIdleTimer()
 
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || ''
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            resetIdleTimer()
 
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            try {
-              const data = JSON.parse(line.slice(6))
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
 
-              if (data.heartbeat) continue
-              if (data.error) throw new Error(data.error)
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              try {
+                const data = JSON.parse(line.slice(6))
 
-              if (data.progress !== undefined) setGenerationProgress(data.progress)
-              if (data.step) setGenerationStep(data.step)
+                if (data.heartbeat) continue
+                if (data.error) throw new Error(data.error)
 
-              if (data.result) {
-                const result: GeneratedResultType = data.result
-                setGeneratedResult(result)
-                // 콜백으로 결과 전달 (폼이 마운트되어 있으면)
-                onResultCallback.current?.(result)
-              }
-            } catch (parseErr) {
-              if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
-                throw parseErr
+                if (data.progress !== undefined) setGenerationProgress(data.progress)
+                if (data.step) setGenerationStep(data.step)
+
+                if (data.result) {
+                  const result: GeneratedResultType = data.result
+                  setGeneratedResult(result)
+                  // 콜백으로 결과 전달 (폼이 마운트되어 있으면)
+                  onResultCallback.current?.(result)
+                }
+              } catch (parseErr) {
+                if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
+                  throw parseErr
+                }
               }
             }
           }
+        } finally {
+          if (idleTimer) clearTimeout(idleTimer)
         }
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return

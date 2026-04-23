@@ -3,7 +3,7 @@ import { execa } from 'execa';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { getConfig } from './config.js';
-import type { CommunityPost } from './supabase.js';
+import { updateProgress, type CommunityPost, type AiSuggestionProgressStep } from './supabase.js';
 
 export interface ClaudeRunInput {
   worktreePath: string;
@@ -370,10 +370,19 @@ export async function runClaude(input: ClaudeRunInput): Promise<ClaudeRunResult>
   let finalSummary = '';
   let finalModifiedFiles: string[] = [];
   let stoppedReason: ClaudeRunResult['stoppedReason'] = 'max_iterations';
+  let currentFile: string | undefined;
+
+  // 빌드 재시도 호출이면 rebuilding 유지, 그 외엔 analyzing으로 진행
+  const baseStep: AiSuggestionProgressStep = input.followUpInstruction ? 'rebuilding' : 'analyzing';
 
   while (iterations < MAX_ITERATIONS) {
     iterations += 1;
     console.log(`[claudeRunner] iteration ${iterations}/${MAX_ITERATIONS}`);
+    await updateProgress(input.taskId, baseStep, {
+      iteration: iterations,
+      maxIterations: MAX_ITERATIONS,
+      currentFile,
+    });
 
     let response: Anthropic.Message;
     try {
@@ -461,6 +470,11 @@ export async function runClaude(input: ClaudeRunInput): Promise<ClaudeRunResult>
           content: 'OK: report_unable 접수',
         });
         continue;
+      }
+
+      // 파일 수정 도구면 currentFile 갱신 (UI 실시간 표시용)
+      if ((tu.name === 'write_file' || tu.name === 'edit_file') && typeof (tu.input as { path?: unknown })?.path === 'string') {
+        currentFile = String((tu.input as { path: string }).path);
       }
 
       const result = await execTool(

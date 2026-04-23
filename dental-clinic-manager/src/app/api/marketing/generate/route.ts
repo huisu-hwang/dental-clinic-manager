@@ -10,17 +10,23 @@ import { transformToThreads } from '@/lib/marketing/platform-adapters/threads';
 import type { ContentGenerateOptions, PlatformContent, SeoKeywordMiningResult, ClinicalPhotoInput } from '@/types/marketing';
 
 // Vercel 서버리스 함수 타임아웃 확장 (Claude + Gemini API 호출 소요 시간 대응)
-export const maxDuration = 120;
+// SNS 변환까지 활성화 시 텍스트(60s) + 메인 이미지(40s) + 플랫폼 이미지×3(40s) 합산 가능 → 300초 확보
+export const maxDuration = 300;
 
 // AI 글 생성 (SSE 스트리밍으로 진행 상태 전송)
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
 
+  // controller가 닫힌 후에도 enqueue 시도 시 TypeError 발생 → 안전하게 무시
   const sendEvent = (
     controller: ReadableStreamDefaultController,
     data: object
   ) => {
-    controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+    try {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+    } catch {
+      /* stream already closed (client aborted) */
+    }
   };
 
   // 요청 바디를 스트림 시작 전에 파싱
@@ -205,7 +211,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // 1단계: 텍스트 생성 (Claude)
+        // 1단계: 텍스트 생성 (Claude) — 30~60초 소요
         sendEvent(controller, {
           progress: 5,
           step: 'AI가 글을 작성하고 있습니다...',
@@ -214,7 +220,14 @@ export async function POST(request: NextRequest) {
         // 임상 사진 데이터 추출
         const clinicalPhotos: ClinicalPhotoInput[] = body.clinical?.photos || [];
 
+        // 텍스트 생성 중에도 5초마다 heartbeat 송신 (클라이언트 idle timeout 방지)
+        keepalive = setInterval(() => {
+          sendEvent(controller, { heartbeat: true });
+        }, 5000);
+
         const result = await generateContent(options, userData.clinic_id, undefined, generationSessionId, seoKeywordData, clinicalPhotos.length > 0 ? clinicalPhotos : undefined);
+
+        if (keepalive) { clearInterval(keepalive); keepalive = null; }
 
         sendEvent(controller, {
           progress: 55,
@@ -271,21 +284,25 @@ export async function POST(request: NextRequest) {
 
           sendEvent(controller, {
             progress: 60,
-            step: `이미지 ${imageMarkers.length}개를 생성하고 있습니다...`,
+            step: `이미지 ${imageMarkers.length}개를 생성하고 있습니다... (0/${imageMarkers.length})`,
           });
 
-          // Keepalive: 이미지 생성 중 5초마다 heartbeat 전송
+          // Keepalive: 이미지 생성 중 5초마다 heartbeat 전송 (브라우저/프록시 idle timeout 방지)
+          // (글 작성 단계 keepalive가 이미 정리되었으므로 여기서 재시작)
+          if (keepalive) clearInterval(keepalive);
           keepalive = setInterval(() => {
-            try {
-              sendEvent(controller, { heartbeat: true });
-            } catch { /* stream closed */ }
+            sendEvent(controller, { heartbeat: true });
           }, 5000);
 
-          // 병렬 생성 (개별 55초 타임아웃)
+          // 병렬 생성 (개별 90초 타임아웃 — Gemini 응답 35~50초 안전 마진)
+          // 완료된 순서대로 progress 업데이트하여 사용자에게 실시간 진행 표시
+          let completedCount = 0;
+          const progressStart = 60;
+          const progressEnd = 90;
           const imagePromises = imageMarkers.map(async (marker) => {
             try {
               const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('이미지 생성 타임아웃')), 55000)
+                setTimeout(() => reject(new Error('이미지 생성 타임아웃 (90s)')), 90000)
               );
               const { imageBase64, fileName } = await Promise.race([
                 generateBlogImage(marker.prompt, options.imageStyle, options.referenceImageBase64, userData.clinic_id, undefined, options.imageVisualStyle, generationSessionId, userData.clinic_id),
@@ -324,11 +341,21 @@ export async function POST(request: NextRequest) {
             } catch (imgError) {
               console.error(`[API] 이미지 생성 실패: "${marker.prompt}"`, imgError);
               return null;
+            } finally {
+              completedCount += 1;
+              const ratio = completedCount / imageMarkers.length;
+              const progress = Math.round(progressStart + (progressEnd - progressStart) * ratio);
+              try {
+                sendEvent(controller, {
+                  progress,
+                  step: `이미지 생성 중... (${completedCount}/${imageMarkers.length})`,
+                });
+              } catch { /* stream closed */ }
             }
           });
 
           const imageResults = await Promise.allSettled(imagePromises);
-          clearInterval(keepalive);
+          if (keepalive) { clearInterval(keepalive); keepalive = null; }
 
           const generatedImages = imageResults
             .filter((r): r is PromiseFulfilledResult<{ fileName: string; prompt: string; path: string } | null> =>

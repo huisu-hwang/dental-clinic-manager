@@ -3,6 +3,7 @@ import {
   claimTask,
   getPostById,
   getTaskById,
+  updateProgress,
   updateTask,
   type AiSuggestionTask,
 } from './supabase.js';
@@ -116,11 +117,13 @@ export async function runTask(task: AiSuggestionTask): Promise<boolean> {
         checkCancelled();
 
         // 3. worktree 생성
+        await updateProgress(taskId, 'creating_worktree', null, { force: true });
         await createWorktree(taskId);
         checkCancelled();
 
         // 4. Claude에게 구현 위임
         console.log('[taskRunner] Claude 코드 수정 시작...');
+        await updateProgress(taskId, 'analyzing', { message: 'Claude가 코드를 분석하고 수정합니다' }, { force: true });
         const claudeResult = await runClaude({
           worktreePath: wtPath,
           post,
@@ -142,12 +145,14 @@ export async function runTask(task: AiSuggestionTask): Promise<boolean> {
 
         // 5. 빌드 검증 (실패 시 Claude에게 재수정 요청)
         console.log('[taskRunner] 빌드 검증 시작...');
+        await updateProgress(taskId, 'building', { message: 'npm run build 실행 중' }, { force: true });
         const buildResult = await verifyBuild(
           wtPath,
           cfg.maxBuildRetries,
           async (attempt, _stdout, stderr) => {
             checkCancelled();
             console.log(`[taskRunner] 빌드 실패 → Claude에게 수정 요청 (시도 ${attempt})`);
+            await updateProgress(taskId, 'rebuilding', { buildRetry: attempt, message: '빌드 에러 수정 중' }, { force: true });
             const errSnippet = stderr.slice(-4000);
             const followUp = `이전 시도에서 \`npm run build\`가 실패했습니다. 아래 에러 로그를 참고하여 빌드가 통과하도록 수정해주세요.\n\n\`\`\`\n${errSnippet}\n\`\`\``;
             const retry = await runClaude({
@@ -173,14 +178,17 @@ export async function runTask(task: AiSuggestionTask): Promise<boolean> {
 
         // 6. commit + push
         console.log('[taskRunner] commit & push...');
+        await updateProgress(taskId, 'committing', null, { force: true });
         const commitResult = await commitAndPush(wtPath, post, taskId, claudeResult.summary);
         if (!commitResult) {
           throw new Error('커밋할 변경사항이 없습니다.');
         }
+        await updateProgress(taskId, 'pushing', null, { force: true });
         checkCancelled();
 
         // 7. PR 생성
         console.log('[taskRunner] PR 생성...');
+        await updateProgress(taskId, 'creating_pr', null, { force: true });
         const prResult = await createPullRequest({
           cwd: wtPath,
           branch: commitResult.branchName,
@@ -198,6 +206,8 @@ export async function runTask(task: AiSuggestionTask): Promise<boolean> {
           commit_sha: commitResult.commitSha,
           completed_at: new Date().toISOString(),
           worker_log: trimLog(claudeResult.summary),
+          progress_step: null,
+          progress_detail: null,
         });
 
         success = true;
@@ -216,6 +226,8 @@ export async function runTask(task: AiSuggestionTask): Promise<boolean> {
         status: cancelled ? 'cancelled' : 'failed',
         error_message: msg.slice(0, 4000),
         completed_at: new Date().toISOString(),
+        progress_step: null,
+        progress_detail: null,
       });
     } catch (updateErr) {
       console.error('[taskRunner] 상태 업데이트 실패:', updateErr);

@@ -98,12 +98,12 @@ export function initAutoUpdater(): void {
       // 최신 버전이 서버에 업로드된 시각
       currentVersionReleasedAt: info.releaseDate || '',
     });
-    notify('클리닉 매니저 워커 업데이트', `v${info.version} 다운로드 완료. 10초 후 자동 재시작됩니다.`);
+    notify('클리닉 매니저 워커 업데이트', `v${info.version} 다운로드 완료. 10초 후 자동 설치됩니다.`);
     isManualCheck = false;
 
-    // 10초 후 자동 재시작 (사용자에게 알림 볼 시간 제공)
+    // 10초 후 자동 설치 (사용자에게 알림 볼 시간 제공, UI 없이 silent 설치 후 재실행)
     setTimeout(() => {
-      log('info', '[Updater] 자동 재시작 시작...');
+      log('info', '[Updater] 자동 설치 시작...');
       try {
         // graceful shutdown 콜백 실행
         for (const cb of shutdownCallbacks) {
@@ -112,7 +112,9 @@ export function initAutoUpdater(): void {
       } catch (err) {
         log('error', `[Updater] Shutdown 콜백 오류: ${err instanceof Error ? err.message : String(err)}`);
       }
-      autoUpdater.quitAndInstall(false, true);
+      // isSilent=true: NSIS /S 플래그 전달 → 업데이트 시 설치 마법사 UI 숨김
+      // isForceRunAfter=true: 설치 완료 후 앱 자동 재실행
+      autoUpdater.quitAndInstall(true, true);
     }, 10000);
   });
 
