@@ -156,21 +156,33 @@ export const communityProfileService = {
 
   /**
    * 닉네임 사용 가능 여부 확인
+   * @param nickname 확인할 닉네임
+   * @param excludeSelf true면 현재 사용자 본인의 닉네임은 중복 대상에서 제외 (변경 시 사용)
    */
-  async checkNicknameAvailable(nickname: string): Promise<{ available: boolean; error: string | null }> {
+  async checkNicknameAvailable(nickname: string, excludeSelf = false): Promise<{ available: boolean; error: string | null }> {
     try {
       const supabase = await ensureConnection()
       if (!supabase) throw new Error('Database connection failed')
 
       const { data, error } = await (supabase as any)
         .from('community_profiles')
-        .select('id')
+        .select('id, user_id')
         .eq('nickname', nickname)
         .maybeSingle()
 
       if (error) throw error
 
-      return { available: !data, error: null }
+      if (!data) return { available: true, error: null }
+
+      // 본인 프로필은 중복으로 보지 않음 (닉네임 변경 시 같은 값 허용)
+      if (excludeSelf) {
+        const currentUserId = getCurrentUserId()
+        if (currentUserId && data.user_id === currentUserId) {
+          return { available: true, error: null }
+        }
+      }
+
+      return { available: false, error: null }
     } catch (error) {
       console.error('[communityProfileService.checkNicknameAvailable] Error:', error)
       return { available: false, error: extractErrorMessage(error) }

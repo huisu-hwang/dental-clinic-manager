@@ -1,14 +1,15 @@
 'use client'
 
-import { User, MessageSquare, FileText, AlertTriangle } from 'lucide-react'
+import { MessageSquare, FileText, AlertTriangle, Pencil } from 'lucide-react'
 import type { CommunityProfile } from '@/types/community'
 
 interface ProfileCardProps {
   profile: CommunityProfile
   compact?: boolean
+  onEditNickname?: () => void
 }
 
-export default function ProfileCard({ profile, compact = false }: ProfileCardProps) {
+export default function ProfileCard({ profile, compact = false, onEditNickname }: ProfileCardProps) {
   // 아바타 색상 생성 (seed 기반)
   const getAvatarColor = (seed: string) => {
     const colors = [
@@ -42,8 +43,21 @@ export default function ProfileCard({ profile, compact = false }: ProfileCardPro
         <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center`}>
           <span className="text-white text-lg font-bold">{initial}</span>
         </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-at-text">{profile.nickname}</h3>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-semibold text-at-text truncate">{profile.nickname}</h3>
+            {onEditNickname && (
+              <button
+                type="button"
+                onClick={onEditNickname}
+                className="p-1 text-at-text-weak hover:text-at-accent rounded-lg hover:bg-at-surface-alt transition-colors flex-shrink-0"
+                aria-label="닉네임 변경"
+                title="닉네임 변경"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           {profile.bio && (
             <p className="text-sm text-at-text-secondary mt-0.5">{profile.bio}</p>
           )}

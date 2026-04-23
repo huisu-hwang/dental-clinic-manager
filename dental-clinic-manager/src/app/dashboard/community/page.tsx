@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Shield } from 'lucide-react'
+import { Shield, Pencil } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { communityProfileService } from '@/lib/communityService'
 import type { CommunityProfile, CommunityPost } from '@/types/community'
 import { useCommunityCategories } from '@/hooks/useCommunityCategories'
 import NicknameSetupModal from '@/components/Community/NicknameSetupModal'
+import NicknameChangeModal from '@/components/Community/NicknameChangeModal'
 import CommunityPostList from '@/components/Community/CommunityPostList'
 import CommunityPostDetail from '@/components/Community/CommunityPostDetail'
 import CommunityPostForm from '@/components/Community/CommunityPostForm'
@@ -28,6 +29,7 @@ export default function CommunityPage() {
   const [profile, setProfile] = useState<CommunityProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [showNicknameSetup, setShowNicknameSetup] = useState(false)
+  const [showNicknameChange, setShowNicknameChange] = useState(false)
 
   // 뷰 상태
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -115,11 +117,45 @@ export default function CommunityPage() {
       {/* 닉네임 설정 모달 */}
       {showNicknameSetup && <NicknameSetupModal onComplete={handleNicknameComplete} />}
 
+      {/* 닉네임 변경 모달 */}
+      {showNicknameChange && profile && (
+        <NicknameChangeModal
+          currentNickname={profile.nickname}
+          onClose={() => setShowNicknameChange(false)}
+          onComplete={(updated) => {
+            setProfile(updated)
+            setShowNicknameChange(false)
+          }}
+        />
+      )}
+
       <div className="flex gap-6">
         {/* 메인 영역 */}
         <div className="flex-1">
+          <div className="flex justify-end gap-2 mb-4 xl:hidden">
+            {profile && (
+              <button
+                onClick={() => setShowNicknameChange(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-at-surface-alt hover:bg-at-border text-at-text-secondary text-xs font-medium transition-colors"
+                title="닉네임 변경"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[120px]">{profile.nickname}</span>
+              </button>
+            )}
+            {user?.role === 'master_admin' && (
+              <button
+                onClick={() => router.push('/dashboard/community/admin')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-at-surface-alt hover:bg-at-border text-at-text-secondary text-xs font-medium transition-colors"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">관리</span>
+              </button>
+            )}
+          </div>
+
           {user?.role === 'master_admin' && (
-            <div className="flex justify-end mb-4">
+            <div className="hidden xl:flex justify-end mb-4">
               <button
                 onClick={() => router.push('/dashboard/community/admin')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-at-surface-alt hover:bg-at-border text-at-text-secondary text-xs font-medium transition-colors"
@@ -174,7 +210,12 @@ export default function CommunityPage() {
 
         {/* 우측 사이드바 (데스크톱) */}
         <div className="hidden xl:block w-72 space-y-4">
-          {profile && <ProfileCard profile={profile} />}
+          {profile && (
+            <ProfileCard
+              profile={profile}
+              onEditNickname={() => setShowNicknameChange(true)}
+            />
+          )}
           <PopularPostsSidebar onPostClick={handlePostClick} labelMap={labelMap} />
         </div>
       </div>
