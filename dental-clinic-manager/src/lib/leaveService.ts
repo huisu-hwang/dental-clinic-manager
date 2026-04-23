@@ -2029,6 +2029,64 @@ export const leaveService = {
   },
 
   /**
+   * 병원 휴무일 수정
+   */
+  async updateClinicHoliday(
+    holidayId: string,
+    input: {
+      holiday_name: string
+      holiday_type: 'company' | 'public' | 'special'
+      start_date: string
+      end_date: string
+      deduct_from_annual: boolean
+      deduct_days?: number
+      apply_to_all: boolean
+      excluded_roles?: string[]
+      description?: string
+    }
+  ): Promise<{ data: any; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      if (user.role !== 'owner') {
+        throw new Error('원장만 휴무일을 수정할 수 있습니다.')
+      }
+
+      const totalDays = calculateWorkingDays(new Date(input.start_date), new Date(input.end_date))
+
+      const { data, error } = await (supabase as any)
+        .from('clinic_holidays')
+        .update({
+          holiday_name: input.holiday_name,
+          holiday_type: input.holiday_type,
+          start_date: input.start_date,
+          end_date: input.end_date,
+          total_days: totalDays,
+          deduct_from_annual: input.deduct_from_annual,
+          deduct_days: input.deduct_days ?? totalDays,
+          apply_to_all: input.apply_to_all,
+          excluded_roles: input.excluded_roles || [],
+          description: input.description || null,
+        })
+        .eq('id', holidayId)
+        .eq('clinic_id', user.clinic_id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[leaveService.updateClinicHoliday] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 병원 휴무일 삭제
    */
   async deleteClinicHoliday(holidayId: string): Promise<{ success: boolean; error: string | null }> {

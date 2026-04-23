@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Building2, Plus, Trash2, Calendar, Users, AlertCircle, CheckCircle, Info, ChevronDown, ChevronUp } from 'lucide-react'
+import { Building2, Plus, Trash2, Pencil, Calendar, Users, AlertCircle, CheckCircle, Info, ChevronDown, ChevronUp } from 'lucide-react'
 import { leaveService } from '@/lib/leaveService'
 import { UserProfile } from '@/contexts/AuthContext'
 import { appConfirm } from '@/components/ui/AppDialog'
@@ -38,6 +38,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
   const [loading, setLoading] = useState(true)
   const [holidays, setHolidays] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null)
   const [expandedHoliday, setExpandedHoliday] = useState<string | null>(null)
   const [applications, setApplications] = useState<Record<string, any[]>>({})
   const [error, setError] = useState('')
@@ -93,6 +94,38 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
     }
   }
 
+  const resetForm = () => {
+    setFormData({
+      holiday_name: '',
+      holiday_type: 'company',
+      start_date: '',
+      end_date: '',
+      deduct_from_annual: true,
+      deduct_days: '',
+      apply_to_all: true,
+      excluded_roles: [],
+      description: '',
+    })
+    setEditingHolidayId(null)
+    setShowForm(false)
+  }
+
+  const handleEditStart = (holiday: any) => {
+    setFormData({
+      holiday_name: holiday.holiday_name || '',
+      holiday_type: (holiday.holiday_type as 'company' | 'public' | 'special') || 'company',
+      start_date: holiday.start_date || '',
+      end_date: holiday.end_date || '',
+      deduct_from_annual: !!holiday.deduct_from_annual,
+      deduct_days: holiday.deduct_days !== null && holiday.deduct_days !== undefined ? String(holiday.deduct_days) : '',
+      apply_to_all: holiday.apply_to_all !== false,
+      excluded_roles: holiday.excluded_roles || [],
+      description: holiday.description || '',
+    })
+    setEditingHolidayId(holiday.id)
+    setShowForm(true)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -112,7 +145,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
     }
 
     try {
-      const result = await leaveService.createClinicHoliday({
+      const payload = {
         holiday_name: formData.holiday_name,
         holiday_type: formData.holiday_type,
         start_date: formData.start_date,
@@ -122,30 +155,23 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
         apply_to_all: formData.apply_to_all,
         excluded_roles: formData.excluded_roles,
         description: formData.description || undefined,
-      })
+      }
+
+      const result = editingHolidayId
+        ? await leaveService.updateClinicHoliday(editingHolidayId, payload)
+        : await leaveService.createClinicHoliday(payload)
 
       if (result.error) {
         setError(result.error)
       } else {
-        setSuccess('휴무일이 등록되었습니다.')
-        setFormData({
-          holiday_name: '',
-          holiday_type: 'company',
-          start_date: '',
-          end_date: '',
-          deduct_from_annual: true,
-          deduct_days: '',
-          apply_to_all: true,
-          excluded_roles: [],
-          description: '',
-        })
-        setShowForm(false)
+        setSuccess(editingHolidayId ? '휴무일이 수정되었습니다.' : '휴무일이 등록되었습니다.')
+        resetForm()
         loadHolidays()
         onSuccess?.()
       }
     } catch (err) {
-      console.error('Error creating holiday:', err)
-      setError('휴무일 등록 중 오류가 발생했습니다.')
+      console.error('Error saving holiday:', err)
+      setError(editingHolidayId ? '휴무일 수정 중 오류가 발생했습니다.' : '휴무일 등록 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
       setTimeout(() => {
@@ -206,7 +232,14 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
         </div>
         {isOwner && (
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (showForm) {
+                resetForm()
+              } else {
+                setEditingHolidayId(null)
+                setShowForm(true)
+              }
+            }}
             className="px-3 py-1.5 text-sm font-medium text-white bg-orange-500 rounded-xl hover:bg-orange-600 flex items-center"
           >
             <Plus className="w-4 h-4 mr-1" />
@@ -243,10 +276,12 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
         </div>
       </div>
 
-      {/* 휴무일 등록 폼 */}
+      {/* 휴무일 등록/수정 폼 */}
       {showForm && isOwner && (
         <form onSubmit={handleSubmit} className="border border-at-border rounded-xl p-4 space-y-4 bg-at-surface-alt">
-          <h4 className="font-medium text-at-text">새 휴무일 등록</h4>
+          <h4 className="font-medium text-at-text">
+            {editingHolidayId ? '휴무일 수정' : '새 휴무일 등록'}
+          </h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -375,7 +410,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
           <div className="flex justify-end space-x-2">
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={resetForm}
               className="px-4 py-2 text-sm font-medium text-at-text bg-white border border-at-border rounded-xl hover:bg-at-surface-alt"
             >
               취소
@@ -385,7 +420,7 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
               disabled={loading}
               className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-xl hover:bg-orange-600 disabled:opacity-50"
             >
-              {loading ? '등록 중...' : '등록'}
+              {loading ? (editingHolidayId ? '수정 중...' : '등록 중...') : (editingHolidayId ? '수정' : '등록')}
             </button>
           </div>
         </form>
@@ -540,6 +575,16 @@ export default function ClinicHolidayManager({ currentUser, year, onSuccess }: C
                       >
                         <Trash2 className="w-4 h-4 mr-1" />
                         삭제
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditStart(holiday)
+                        }}
+                        className="px-3 py-1.5 text-sm font-medium text-orange-600 bg-white border border-orange-200 rounded-xl hover:bg-orange-50 flex items-center"
+                      >
+                        <Pencil className="w-4 h-4 mr-1" />
+                        수정
                       </button>
                     </div>
                   )}

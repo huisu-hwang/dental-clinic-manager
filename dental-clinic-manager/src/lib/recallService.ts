@@ -894,25 +894,31 @@ export const recallPatientService = {
 
       const now = new Date().toISOString()
       const contactType: ContactType = status === 'sms_sent' ? 'sms' : 'call'
+      const todayKST = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+      const lastContactKST = patient?.last_contact_date
+        ? new Date(patient.last_contact_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+        : null
 
-      const updates: Partial<RecallPatient> = {
+      const updates: Record<string, unknown> = {
         status
       }
 
-      // pending이 아닌 경우에만 연락 기록 및 recall_datetime 업데이트
       if (status !== 'pending') {
+        // 연락 상태로 변경: 연락 기록 및 recall_datetime 업데이트
         updates.recall_datetime = now
         updates.last_contact_date = now
         updates.last_contact_type = contactType
 
         // 하루에 한 번만 연락 횟수 증가 (한국 시간 기준 같은 날짜에 이미 기록이 있으면 증가시키지 않음)
-        const todayKST = new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-        const lastContactKST = patient?.last_contact_date
-          ? new Date(patient.last_contact_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-          : null
         if (lastContactKST !== todayKST) {
           updates.contact_count = (patient?.contact_count || 0) + 1
         }
+      } else if (lastContactKST === todayKST) {
+        // 리콜 전으로 되돌리는 경우 + 오늘 증가된 연락 기록이 있으면 완전히 롤백
+        updates.contact_count = Math.max(0, (patient?.contact_count || 0) - 1)
+        updates.last_contact_date = null
+        updates.last_contact_type = null
+        updates.recall_datetime = null
       }
 
       const { error } = await supabase
