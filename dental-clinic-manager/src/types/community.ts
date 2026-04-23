@@ -258,3 +258,33 @@ export function buildCategoryColors(categories: CommunityCategoryItem[]): Record
   categories.forEach((cat) => { colors[cat.slug] = `${cat.color_bg} ${cat.color_text}` })
   return colors
 }
+
+// =====================================================
+// AI 자동 구현 태스크
+// =====================================================
+export type AiSuggestionTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+
+export interface AiSuggestionTask {
+  id: string
+  post_id: string
+  status: AiSuggestionTaskStatus
+  branch_name?: string | null
+  pr_url?: string | null
+  pr_number?: number | null
+  commit_sha?: string | null
+  worker_log?: string | null
+  error_message?: string | null
+  requested_by?: string | null
+  started_at?: string | null
+  completed_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const AI_SUGGESTION_STATUS_LABELS: Record<AiSuggestionTaskStatus, string> = {
+  pending: '대기중',
+  running: '처리중',
+  completed: '완료',
+  failed: '실패',
+  cancelled: '취소됨',
+}

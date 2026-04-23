@@ -1,0 +1,24 @@
+{
+  "name": "ai-suggestion-worker",
+  "version": "1.0.0",
+  "description": "자유게시판 제안 사항 자동 구현 워커 (Claude Agent SDK + Supabase Realtime)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.79.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "dotenv": "^16.4.7",
+    "execa": "^9.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
