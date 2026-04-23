@@ -8,6 +8,7 @@ import type { CommunityPost, CommunityPoll } from '@/types/community'
 import { COMMUNITY_CATEGORY_LABELS, COMMUNITY_CATEGORY_COLORS } from '@/types/community'
 import ProfileCard from './ProfileCard'
 import PostActions from './PostActions'
+import SuggestionControlPanel from './SuggestionControlPanel'
 import ContentProtectionWrapper from './ContentProtectionWrapper'
 import WatermarkOverlay from './WatermarkOverlay'
 import CommentList from './CommentList'
@@ -164,6 +165,13 @@ export default function CommunityPostDetail({
           {poll && myProfileId && (
             <div className="mt-6">
               <PollDisplay poll={poll} profileId={myProfileId} onVoted={fetchPost} />
+            </div>
+          )}
+
+          {/* AI 자동 구현 (제안 카테고리 전용) */}
+          {post.category === 'suggestion' && (
+            <div className="mt-6">
+              <SuggestionControlPanel postId={post.id} />
             </div>
           )}
 

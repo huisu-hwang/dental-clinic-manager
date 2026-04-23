@@ -512,13 +512,23 @@ export default function AIChat({ clinicId }: AIChatProps) {
           <>
             {/* 사이드바 헤더 */}
             <div className="p-4 border-b border-at-border">
-              <Button
-                onClick={handleNewChat}
-                className="w-full bg-at-accent hover:bg-at-accent-hover text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                새 대화
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleNewChat}
+                  className="flex-1 bg-at-accent hover:bg-at-accent-hover text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  새 대화
+                </Button>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="shrink-0 p-2 rounded-lg border border-at-border hover:bg-at-surface-alt transition-colors"
+                  aria-label="대화 목록 접기"
+                  title="대화 목록 접기"
+                >
+                  <ChevronLeft className="w-4 h-4 text-at-text-weak" />
+                </button>
+              </div>
             </div>
 
             {/* 대화 목록 */}
@@ -652,24 +662,21 @@ export default function AIChat({ clinicId }: AIChatProps) {
         )}
       </div>
 
-      {/* 사이드바 토글 버튼 */}
-      <button
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white border border-at-border rounded-r-lg p-1.5 shadow-at-card hover:bg-at-surface-alt transition-colors"
-        style={{ marginLeft: isSidebarOpen ? '288px' : '0' }}
-      >
-        {isSidebarOpen ? (
-          <ChevronLeft className="w-4 h-4 text-at-text-weak" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-at-text-weak" />
-        )}
-      </button>
-
       {/* 메인 채팅 영역 */}
       <div className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-at-border">
           <div className="flex items-center space-x-3">
+            {!isSidebarOpen && (
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 rounded-lg border border-at-border hover:bg-at-surface-alt transition-colors"
+                aria-label="대화 목록 펼치기"
+                title="대화 목록 펼치기"
+              >
+                <ChevronRight className="w-4 h-4 text-at-text-weak" />
+              </button>
+            )}
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-at-accent-light text-at-accent">
               <Sparkles className="w-4 h-4" />
             </div>

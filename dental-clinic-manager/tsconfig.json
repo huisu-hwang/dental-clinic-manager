@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "./supabase", "./scraping-worker", "./marketing-worker", "./seo-worker"]
+  "exclude": ["node_modules", "./supabase", "./scraping-worker", "./marketing-worker", "./seo-worker", "./ai-suggestion-worker"]
 }
