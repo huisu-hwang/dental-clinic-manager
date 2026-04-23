@@ -42,7 +42,7 @@ export interface CommunityPost {
   id: string;
   title: string;
   content: string;
-  author_id?: string | null;
+  profile_id?: string | null;
   created_at?: string;
 }
 
@@ -74,7 +74,7 @@ export async function getTaskById(taskId: string): Promise<AiSuggestionTask | nu
 export async function getPostById(postId: string): Promise<CommunityPost | null> {
   const { data, error } = await getSupabase()
     .from('community_posts')
-    .select('id, title, content, author_id, created_at')
+    .select('id, title, content, profile_id, created_at')
     .eq('id', postId)
     .maybeSingle();
   if (error) {

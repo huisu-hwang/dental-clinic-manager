@@ -1250,10 +1250,17 @@ export async function performAnalysisV2(
           );
           console.log(`[AI Analysis V2 Gemini] Tool result for ${name}:`, result.substring(0, 500));
 
-          // function response 구성 (thoughtSignature는 functionResponse 외부, Part 레벨에 배치)
+          // function response 구성
+          // Gemini API는 response 필드가 반드시 객체(Record)여야 함
+          // 배열이나 원시 타입이면 "cannot start list" 오류 발생 → 객체로 감싸기
           let parsedResult: Record<string, unknown>;
           try {
-            parsedResult = JSON.parse(result);
+            const parsed = JSON.parse(result);
+            if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+              parsedResult = { result: parsed };
+            } else {
+              parsedResult = parsed;
+            }
           } catch {
             parsedResult = { result: result };
           }
