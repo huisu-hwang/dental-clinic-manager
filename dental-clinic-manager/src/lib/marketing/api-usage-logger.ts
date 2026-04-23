@@ -9,7 +9,7 @@ export interface LogApiUsageParams {
   clinicId: string;
   postId?: string;
   generationSessionId: string;
-  apiProvider: 'anthropic' | 'google';
+  apiProvider: 'anthropic' | 'google' | 'openai';
   model: string;
   callType:
     | 'text_generation'
@@ -101,6 +101,7 @@ export async function getOrSeedCostSettings(clinicId: string): Promise<CostSetti
       { clinic_id: clinicId, model: 'claude-sonnet-4-6', input_price_per_1m: 3.0, output_price_per_1m: 15.0, image_price_per_call: 0 },
       { clinic_id: clinicId, model: 'claude-haiku-4-5', input_price_per_1m: 0.8, output_price_per_1m: 4.0, image_price_per_call: 0 },
       { clinic_id: clinicId, model: 'gemini-3.0-flash', input_price_per_1m: 0, output_price_per_1m: 0, image_price_per_call: 0.04 },
+      { clinic_id: clinicId, model: 'gpt-image-2', input_price_per_1m: 0, output_price_per_1m: 0, image_price_per_call: 0.04 },
       { clinic_id: clinicId, model: 'exchange_rate', input_price_per_1m: 0, output_price_per_1m: 0, image_price_per_call: 0, usd_to_krw: 1380 },
     ];
     await admin.from('marketing_cost_settings').upsert(defaults, { onConflict: 'clinic_id,model', ignoreDuplicates: true });

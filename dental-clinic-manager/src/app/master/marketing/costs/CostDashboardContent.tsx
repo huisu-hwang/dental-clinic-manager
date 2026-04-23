@@ -8,6 +8,7 @@ import CostSummaryCards from './CostSummaryCards'
 import CostChart from './CostChart'
 import CostTable from './CostTable'
 import CostSettings from './CostSettings'
+import ImageProviderSelector from './ImageProviderSelector'
 
 interface Props {
   embedded?: boolean
@@ -35,7 +36,8 @@ export default function CostDashboardContent({ embedded }: Props) {
           <div className="xl:col-span-2">
             <CostTable />
           </div>
-          <div className="xl:col-span-1">
+          <div className="xl:col-span-1 space-y-6">
+            <ImageProviderSelector />
             <CostSettings />
           </div>
         </div>
@@ -71,7 +73,8 @@ export default function CostDashboardContent({ embedded }: Props) {
           <div className="xl:col-span-2">
             <CostTable />
           </div>
-          <div className="xl:col-span-1">
+          <div className="xl:col-span-1 space-y-6">
+            <ImageProviderSelector />
             <CostSettings />
           </div>
         </div>

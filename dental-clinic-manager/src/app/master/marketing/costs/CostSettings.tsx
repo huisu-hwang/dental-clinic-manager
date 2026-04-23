@@ -15,6 +15,7 @@ const MODEL_LABELS: Record<string, string> = {
   'claude-sonnet-4-6': 'Claude Sonnet 4.6',
   'claude-haiku-4-5': 'Claude Haiku 4.5',
   'gemini-3.0-flash': 'Gemini 3.0 Flash',
+  'gpt-image-2': 'OpenAI gpt-image-2',
   'exchange_rate': '환율 설정',
 }
 
@@ -151,7 +152,7 @@ export default function CostSettings() {
             )}
 
             {/* 이미지 모델: 건당 단가 */}
-            {s.model.startsWith('gemini') && (
+            {(s.model.startsWith('gemini') || s.model.startsWith('gpt-image')) && (
               <div>
                 <label className="text-[10px] text-at-text-weak block mb-0.5">이미지 1건당 ($)</label>
                 <input

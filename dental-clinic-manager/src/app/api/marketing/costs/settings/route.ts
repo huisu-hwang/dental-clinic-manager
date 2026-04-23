@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS = [
   { model: 'claude-sonnet-4-6', input_price_per_1m: 3.0, output_price_per_1m: 15.0, image_price_per_call: 0, usd_to_krw: 1380 },
   { model: 'claude-haiku-4-5', input_price_per_1m: 0.8, output_price_per_1m: 4.0, image_price_per_call: 0, usd_to_krw: 1380 },
   { model: 'gemini-3.0-flash', input_price_per_1m: 0, output_price_per_1m: 0, image_price_per_call: 0.04, usd_to_krw: 1380 },
+  { model: 'gpt-image-2', input_price_per_1m: 0, output_price_per_1m: 0, image_price_per_call: 0.04, usd_to_krw: 1380 },
   { model: 'exchange_rate', input_price_per_1m: 0, output_price_per_1m: 0, image_price_per_call: 0, usd_to_krw: 1380 },
 ];
 

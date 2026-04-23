@@ -1,18 +1,26 @@
 import { GoogleGenAI } from '@google/genai';
+import OpenAI, { toFile } from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import { logApiUsage } from './api-usage-logger';
+import { getImageProvider, type ImageProvider } from './image-provider-setting';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
-// AI 이미지 생성 (Gemini 3.0 Flash)
+// AI 이미지 생성 (Gemini 3.0 Flash / OpenAI gpt-image-2)
+// - 마스터가 선택한 프로바이더로 디스패치
 // - 블로그 본문의 [IMAGE: 설명] 마커에서 이미지 생성
 // - 한글 파일명 자동 생성
 // ============================================
 
+const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
+const GEMINI_LOG_MODEL = 'gemini-3.0-flash';
+const OPENAI_IMAGE_MODEL = 'gpt-image-2';
+
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -146,25 +154,28 @@ export async function generateBlogImage(
   fullPrompt += getImageStyleInstruction(imageStyle);
   fullPrompt += getVisualStyleInstruction(imageVisualStyle);
 
-  // 1. Gemini로 이미지 생성
-  const geminiStart = Date.now();
-  const { imageBase64, usageMetadata } = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
-  const geminiDurationMs = Date.now() - geminiStart;
+  // 1. 선택된 프로바이더로 이미지 생성
+  const provider = await getImageProvider();
+  const apiStart = Date.now();
+  const result = await dispatchImageGeneration(provider, fullPrompt, imageStyle, referenceImageBase64);
+  const apiDurationMs = Date.now() - apiStart;
 
   if (generationSessionId && resolvedClinicId) {
     logApiUsage({
       clinicId: resolvedClinicId,
       generationSessionId,
-      apiProvider: 'google',
-      model: 'gemini-3.0-flash',
+      apiProvider: result.apiProvider,
+      model: result.model,
       callType: 'image_generation',
-      inputTokens: usageMetadata?.promptTokenCount ?? 0,
-      outputTokens: usageMetadata?.candidatesTokenCount ?? 0,
-      totalTokens: usageMetadata?.totalTokenCount ?? 0,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      totalTokens: result.totalTokens,
       success: true,
-      durationMs: geminiDurationMs,
+      durationMs: apiDurationMs,
     });
   }
+
+  const imageBase64 = result.imageBase64;
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt, generationSessionId, resolvedClinicId);
@@ -213,28 +224,29 @@ export async function generatePlatformImage(
   }
   fullPrompt += styleInstruction + visualInstruction;
 
-  const geminiStart = Date.now();
-  const { imageBase64, usageMetadata } = await generateImageWithGemini(fullPrompt, imageStyle, referenceImageBase64);
-  const geminiDurationMs = Date.now() - geminiStart;
+  const provider = await getImageProvider();
+  const apiStart = Date.now();
+  const result = await dispatchImageGeneration(provider, fullPrompt, imageStyle, referenceImageBase64, platform);
+  const apiDurationMs = Date.now() - apiStart;
 
   if (generationSessionId && generationClinicId) {
     logApiUsage({
       clinicId: generationClinicId,
       generationSessionId,
-      apiProvider: 'google',
-      model: 'gemini-3.0-flash',
+      apiProvider: result.apiProvider,
+      model: result.model,
       callType: 'platform_image',
-      inputTokens: usageMetadata?.promptTokenCount ?? 0,
-      outputTokens: usageMetadata?.candidatesTokenCount ?? 0,
-      totalTokens: usageMetadata?.totalTokenCount ?? 0,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      totalTokens: result.totalTokens,
       success: true,
-      durationMs: geminiDurationMs,
+      durationMs: apiDurationMs,
     });
   }
 
   const fileName = await generateImageFileName(`${platform}_${prompt}`, generationSessionId, generationClinicId);
 
-  return { imageBase64, fileName };
+  return { imageBase64: result.imageBase64, fileName };
 }
 
 // ─── 기본 이미지 프롬프트 (DB 미조회 시 폴백) ───
@@ -281,6 +293,47 @@ export async function generateImagesFromMarkers(
   return results;
 }
 
+// ─── 프로바이더 디스패처 ───
+
+interface DispatchResult {
+  imageBase64: string;
+  apiProvider: 'google' | 'openai';
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
+async function dispatchImageGeneration(
+  provider: ImageProvider,
+  prompt: string,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
+  platform?: SocialPlatform,
+): Promise<DispatchResult> {
+  if (provider === 'openai') {
+    const { imageBase64, usage } = await generateImageWithOpenAI(prompt, imageStyle, referenceImageBase64, platform);
+    return {
+      imageBase64,
+      apiProvider: 'openai',
+      model: OPENAI_IMAGE_MODEL,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      totalTokens: usage.totalTokens,
+    };
+  }
+
+  const { imageBase64, usageMetadata } = await generateImageWithGemini(prompt, imageStyle, referenceImageBase64);
+  return {
+    imageBase64,
+    apiProvider: 'google',
+    model: GEMINI_LOG_MODEL,
+    inputTokens: usageMetadata?.promptTokenCount ?? 0,
+    outputTokens: usageMetadata?.candidatesTokenCount ?? 0,
+    totalTokens: usageMetadata?.totalTokenCount ?? 0,
+  };
+}
+
 // ─── Gemini 3.0 Flash API 호출 ───
 
 interface GeminiResult {
@@ -321,7 +374,7 @@ async function generateImageWithGemini(
     }
 
     const response = await genai.models.generateContent({
-      model: 'gemini-3.1-flash-image-preview',
+      model: GEMINI_IMAGE_MODEL,
       contents,
       config: {
         responseModalities: ['image', 'text'],
@@ -346,6 +399,78 @@ async function generateImageWithGemini(
     throw new Error('응답에 이미지가 포함되지 않았습니다');
   } catch (error) {
     console.error('[ImageGen] Gemini API 오류:', error);
+    throw error;
+  }
+}
+
+// ─── OpenAI gpt-image-2 API 호출 ───
+
+interface OpenAIImageResult {
+  imageBase64: string;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+}
+
+// gpt-image-2 지원 사이즈에 플랫폼 매핑
+function resolveOpenAIImageSize(platform?: SocialPlatform): '1024x1024' | '1536x1024' | '1024x1536' {
+  if (platform === 'facebook') return '1536x1024'; // 가로형
+  return '1024x1024'; // 정사각형 (기본)
+}
+
+async function generateImageWithOpenAI(
+  prompt: string,
+  imageStyle?: ImageStyleOption,
+  referenceImageBase64?: string,
+  platform?: SocialPlatform,
+): Promise<OpenAIImageResult> {
+  const size = resolveOpenAIImageSize(platform);
+
+  try {
+    let b64: string | undefined;
+    let usage: { input_tokens?: number; output_tokens?: number; total_tokens?: number } | undefined;
+
+    if (imageStyle === 'use_own_image' && referenceImageBase64) {
+      // 참조 이미지 기반 편집
+      const imageFile = await toFile(
+        Buffer.from(referenceImageBase64, 'base64'),
+        'reference.png',
+        { type: 'image/png' },
+      );
+      const response = await openai.images.edit({
+        model: OPENAI_IMAGE_MODEL,
+        image: imageFile,
+        prompt,
+        size,
+        n: 1,
+      });
+      b64 = response.data?.[0]?.b64_json;
+      usage = (response as { usage?: typeof usage }).usage;
+    } else {
+      const response = await openai.images.generate({
+        model: OPENAI_IMAGE_MODEL,
+        prompt,
+        size,
+        n: 1,
+      });
+      b64 = response.data?.[0]?.b64_json;
+      usage = (response as { usage?: typeof usage }).usage;
+    }
+
+    if (!b64) throw new Error('응답에 이미지가 포함되지 않았습니다');
+
+    return {
+      imageBase64: b64,
+      usage: {
+        inputTokens: usage?.input_tokens ?? 0,
+        outputTokens: usage?.output_tokens ?? 0,
+        totalTokens: usage?.total_tokens ?? 0,
+      },
+    };
+  } catch (error) {
+    console.error('[ImageGen] OpenAI API 오류:', error);
     throw error;
   }
 }
