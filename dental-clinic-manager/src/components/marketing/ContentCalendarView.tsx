@@ -14,6 +14,7 @@ import {
   type ContentCalendarItem,
 } from '@/types/marketing'
 import CalendarItemCard from './CalendarItemCard'
+import CalendarItemDetailPanel from './CalendarItemDetailPanel'
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -25,6 +26,7 @@ export default function ContentCalendarView() {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState<string | null>(null)
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+  const [openedItemId, setOpenedItemId] = useState<string | null>(null)
 
   // ─── 데이터 로드 ───
   const loadCalendars = useCallback(async () => {
@@ -60,7 +62,6 @@ export default function ContentCalendarView() {
     setGenerating(true)
     setError(null)
     try {
-      // offsetMonths=0(이번 달): 오늘부터 1달, offsetMonths>0: 그 달 1일부터
       const today = new Date()
       const target =
         offsetMonths === 0
@@ -159,7 +160,6 @@ export default function ContentCalendarView() {
     setBulkBusy(action)
     try {
       if (action === 'batch_regenerate') {
-        // 재생성은 순차 처리
         for (const itemId of selectedItems) {
           await handleRegenerate(itemId)
         }
@@ -225,7 +225,6 @@ export default function ContentCalendarView() {
   }, [selected])
 
   // ─── 월간 그리드 (날짜별 항목) ───
-  // 선택된 캘린더 항목 + 같은 기간에 걸친 다른 캘린더의 항목(이미 생성/발행된 글)도 함께 표시
   const grid = useMemo(() => {
     if (!selected) return null
 
@@ -242,7 +241,6 @@ export default function ContentCalendarView() {
       for (const it of cal.content_calendar_items || []) {
         if (it.publish_date < startStr || it.publish_date > endStr) continue
         if (seenIds.has(it.id)) continue
-        // 반려된 항목은 캘린더에서 숨김
         if (it.status === 'rejected') continue
         seenIds.add(it.id)
         collected.push(isSelf ? it : { ...it, _foreign: true })
@@ -258,10 +256,8 @@ export default function ContentCalendarView() {
       list.push(it)
       byDate.set(it.publish_date, list)
     }
-    // 시작주 일요일로 보정
     const firstSunday = new Date(start)
     firstSunday.setDate(firstSunday.getDate() - firstSunday.getDay())
-    // 종료주 토요일로 보정
     const lastSaturday = new Date(end)
     lastSaturday.setDate(lastSaturday.getDate() + (6 - lastSaturday.getDay()))
 
@@ -278,6 +274,28 @@ export default function ContentCalendarView() {
     }
     return cells
   }, [selected, calendars])
+
+  // ─── 상세 패널에 표시할 항목 찾기 ───
+  const openedItem = useMemo<(ContentCalendarItem & { _foreign?: boolean }) | null>(() => {
+    if (!openedItemId) return null
+    for (const cal of calendars) {
+      for (const it of cal.content_calendar_items || []) {
+        if (it.id === openedItemId) {
+          const isForeign = selected ? cal.id !== selected.id : false
+          return isForeign ? { ...it, _foreign: true } : it
+        }
+      }
+    }
+    return null
+  }, [openedItemId, calendars, selected])
+
+  const handleOpenDetail = useCallback((id: string) => {
+    setOpenedItemId(id)
+  }, [])
+
+  const handleClosePanel = useCallback(() => {
+    setOpenedItemId(null)
+  }, [])
 
   return (
     <div className="space-y-4">
@@ -448,45 +466,6 @@ export default function ContentCalendarView() {
         </div>
       )}
 
-      {/* 선택된 항목 일괄 작업 바 */}
-      {selectedItems.size > 0 && (
-        <div className="sticky top-0 z-10 flex flex-wrap gap-2 items-center bg-blue-50 border border-blue-300 rounded-lg p-3 shadow-sm">
-          <span className="text-sm font-medium text-blue-800">
-            {selectedItems.size}개 선택됨
-          </span>
-          <button
-            onClick={() => handleBatchAction('batch_approve')}
-            disabled={bulkBusy !== null}
-            className="bg-emerald-600 text-white text-xs px-3 py-1.5 rounded hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-1"
-          >
-            <CheckCircleIcon className="h-3.5 w-3.5" />
-            {bulkBusy === 'batch_approve' ? '처리 중...' : '선택 승인'}
-          </button>
-          <button
-            onClick={() => handleBatchAction('batch_regenerate')}
-            disabled={bulkBusy !== null}
-            className="bg-violet-100 text-violet-700 text-xs px-3 py-1.5 rounded hover:bg-violet-200 disabled:opacity-50 inline-flex items-center gap-1"
-          >
-            <ArrowPathIcon className={`h-3.5 w-3.5 ${bulkBusy === 'batch_regenerate' ? 'animate-spin' : ''}`} />
-            {bulkBusy === 'batch_regenerate' ? '재생성 중...' : '선택 재생성'}
-          </button>
-          <button
-            onClick={() => handleBatchAction('batch_reject')}
-            disabled={bulkBusy !== null}
-            className="bg-rose-100 text-rose-700 text-xs px-3 py-1.5 rounded hover:bg-rose-200 disabled:opacity-50 inline-flex items-center gap-1"
-          >
-            <XCircleIcon className="h-3.5 w-3.5" />
-            {bulkBusy === 'batch_reject' ? '처리 중...' : '선택 반려'}
-          </button>
-          <button
-            onClick={handleClearSelection}
-            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 ml-auto"
-          >
-            선택 해제
-          </button>
-        </div>
-      )}
-
       {/* 빈 상태 */}
       {!loading && calendars.length === 0 && (
         <div className="text-center py-12 text-at-text-weak">
@@ -529,7 +508,6 @@ export default function ContentCalendarView() {
                   <div className="space-y-1">
                     {cell.items.map((item) => {
                       const isForeign = (item as ContentCalendarItem & { _foreign?: boolean })._foreign
-                      const noop = () => {}
                       return (
                         <div
                           key={item.id}
@@ -538,10 +516,7 @@ export default function ContentCalendarView() {
                         >
                           <CalendarItemCard
                             item={item}
-                            onApprove={isForeign ? noop : () => handleApprove(item.id)}
-                            onReject={isForeign ? noop : () => handleReject(item.id)}
-                            onUpdate={isForeign ? noop : (patch) => handleItemUpdate(item.id, patch)}
-                            onRegenerate={isForeign ? noop : () => handleRegenerate(item.id)}
+                            onOpenDetail={handleOpenDetail}
                             selected={selectedItems.has(item.id)}
                             onToggleSelect={isForeign ? undefined : handleToggleSelect}
                           />
@@ -555,6 +530,17 @@ export default function ContentCalendarView() {
           </div>
         </div>
       )}
+
+      {/* 상세 사이드패널 */}
+      <CalendarItemDetailPanel
+        item={openedItem}
+        isForeign={openedItem?._foreign}
+        onClose={handleClosePanel}
+        onApprove={() => (openedItem ? handleApprove(openedItem.id) : Promise.resolve())}
+        onReject={() => (openedItem ? handleReject(openedItem.id) : Promise.resolve())}
+        onUpdate={(patch) => (openedItem ? handleItemUpdate(openedItem.id, patch) : Promise.resolve())}
+        onRegenerate={() => (openedItem ? handleRegenerate(openedItem.id) : Promise.resolve())}
+      />
     </div>
   )
 }

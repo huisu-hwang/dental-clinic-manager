@@ -74,8 +74,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   const [specialNotes, setSpecialNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
-  const [hasExternalUpdate, setHasExternalUpdate] = useState(false)  // 다른 사용자의 변경 감지
   const isSavingRef = useRef(false)  // 현재 저장 중인지 확인 (자신의 저장은 무시)
+  const isRefreshingRef = useRef(false)  // 새로고침 중/직후 분할 Realtime 이벤트 무시용
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)  // 분할 이벤트 묶기용 debounce 타이머
+  const pendingExternalUpdateRef = useRef(false)  // 사용자 입력 중 보류된 외부 업데이트
+  const formRef = useRef<HTMLDivElement>(null)  // 포커스 판정용 폼 컨테이너
+  const performAutoRefreshRef = useRef<() => Promise<void> | void>(() => {})  // 최신 자동 새로고침 함수 참조
   const router = useRouter()
   const isReadOnly = hasExistingData ? !canEdit : !canCreate
 
@@ -299,7 +303,45 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     }
   }, [giftRows, reportDate, onGiftRowsChange])
 
-  // Realtime 구독: 다른 사용자의 변경사항 감지
+  // 실제 자동 새로고침 수행: Realtime 이벤트에 의해 호출됨
+  // 한 트랜잭션의 분할 이벤트를 debounce로 묶고, 재로드 후 2초간 후속 이벤트를 무시한다.
+  useEffect(() => {
+    performAutoRefreshRef.current = async () => {
+      if (isSavingRef.current || isRefreshingRef.current) return
+      pendingExternalUpdateRef.current = false
+      isRefreshingRef.current = true
+      try {
+        await loadDataForDate(reportDate)
+      } finally {
+        setTimeout(() => {
+          isRefreshingRef.current = false
+        }, 2000)
+      }
+    }
+  }, [loadDataForDate, reportDate])
+
+  // 폼 내부 입력 요소에 포커스가 있으면 사용자 입력 보호 차원에서 자동 반영 보류
+  // 포커스가 폼 밖으로 빠져나갈 때 보류된 업데이트 반영
+  useEffect(() => {
+    const form = formRef.current
+    if (!form) return
+    const handleFocusOut = () => {
+      // 포커스 이동 완료 후 판정 (다른 입력 요소로 이동한 경우 대기 유지)
+      setTimeout(() => {
+        const active = document.activeElement as HTMLElement | null
+        const stillEditing = !!active && !!formRef.current?.contains(active)
+          && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA'
+              || active.tagName === 'SELECT' || active.isContentEditable)
+        if (pendingExternalUpdateRef.current && !stillEditing) {
+          performAutoRefreshRef.current?.()
+        }
+      }, 50)
+    }
+    form.addEventListener('focusout', handleFocusOut)
+    return () => form.removeEventListener('focusout', handleFocusOut)
+  }, [])
+
+  // Realtime 구독: 다른 사용자의 변경사항 자동 반영
   useEffect(() => {
     if (!currentUser?.clinic_id || !reportDate) {
       return
@@ -311,6 +353,33 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     }
 
     console.log('[DailyInputForm] Setting up Realtime subscription for date:', reportDate)
+
+    // 분할 도착하는 Realtime 이벤트(한 트랜잭션의 다수 테이블/row 변경)를 debounce로 묶어 한 번에 반영
+    const scheduleAutoRefresh = () => {
+      if (autoRefreshTimerRef.current) {
+        clearTimeout(autoRefreshTimerRef.current)
+      }
+      autoRefreshTimerRef.current = setTimeout(() => {
+        autoRefreshTimerRef.current = null
+        const active = document.activeElement as HTMLElement | null
+        const isEditing = !!active && !!formRef.current?.contains(active)
+          && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA'
+              || active.tagName === 'SELECT' || active.isContentEditable)
+        if (isEditing) {
+          // 사용자가 입력 중이면 덮어쓰기 방지 - blur 시 반영
+          pendingExternalUpdateRef.current = true
+        } else {
+          performAutoRefreshRef.current?.()
+        }
+      }, 800)
+    }
+
+    const handleExternalChange = (tableName: string, changedDate: string | undefined) => {
+      if (isSavingRef.current || isRefreshingRef.current) return
+      if (changedDate !== reportDate) return
+      console.log(`[DailyInputForm] External update detected for ${tableName}`)
+      scheduleAutoRefresh()
+    }
 
     // 해당 날짜의 데이터 변경 감지
     const channel = supabase
@@ -324,18 +393,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           filter: `clinic_id=eq.${currentUser.clinic_id}`
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          // 자신이 저장 중인 경우는 무시
-          if (isSavingRef.current) return
-
-          // 해당 날짜의 변경인지 확인
           const newRecord = payload.new as { date?: string } | null
           const oldRecord = payload.old as { date?: string } | null
-          const changedDate = newRecord?.date || oldRecord?.date
-
-          if (changedDate === reportDate) {
-            console.log('[DailyInputForm] External update detected for daily_reports')
-            setHasExternalUpdate(true)
-          }
+          handleExternalChange('daily_reports', newRecord?.date || oldRecord?.date)
         }
       )
       .on(
@@ -347,16 +407,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           filter: `clinic_id=eq.${currentUser.clinic_id}`
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (isSavingRef.current) return
-
           const newRecord = payload.new as { date?: string } | null
           const oldRecord = payload.old as { date?: string } | null
-          const changedDate = newRecord?.date || oldRecord?.date
-
-          if (changedDate === reportDate) {
-            console.log('[DailyInputForm] External update detected for consult_logs')
-            setHasExternalUpdate(true)
-          }
+          handleExternalChange('consult_logs', newRecord?.date || oldRecord?.date)
         }
       )
       .on(
@@ -368,16 +421,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           filter: `clinic_id=eq.${currentUser.clinic_id}`
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (isSavingRef.current) return
-
           const newRecord = payload.new as { date?: string } | null
           const oldRecord = payload.old as { date?: string } | null
-          const changedDate = newRecord?.date || oldRecord?.date
-
-          if (changedDate === reportDate) {
-            console.log('[DailyInputForm] External update detected for gift_logs')
-            setHasExternalUpdate(true)
-          }
+          handleExternalChange('gift_logs', newRecord?.date || oldRecord?.date)
         }
       )
       .on(
@@ -389,16 +435,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           filter: `clinic_id=eq.${currentUser.clinic_id}`
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (isSavingRef.current) return
-
           const newRecord = payload.new as { date?: string } | null
           const oldRecord = payload.old as { date?: string } | null
-          const changedDate = newRecord?.date || oldRecord?.date
-
-          if (changedDate === reportDate) {
-            console.log('[DailyInputForm] External update detected for happy_call_logs')
-            setHasExternalUpdate(true)
-          }
+          handleExternalChange('happy_call_logs', newRecord?.date || oldRecord?.date)
         }
       )
       .on(
@@ -410,16 +449,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           filter: `clinic_id=eq.${currentUser.clinic_id}`
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (isSavingRef.current) return
-
           const newRecord = payload.new as { report_date?: string } | null
           const oldRecord = payload.old as { report_date?: string } | null
-          const changedDate = newRecord?.report_date || oldRecord?.report_date
-
-          if (changedDate === reportDate) {
-            console.log('[DailyInputForm] External update detected for special_notes_history')
-            setHasExternalUpdate(true)
-          }
+          handleExternalChange('special_notes_history', newRecord?.report_date || oldRecord?.report_date)
         }
       )
       .on(
@@ -431,16 +463,9 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           filter: `clinic_id=eq.${currentUser.clinic_id}`
         },
         (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
-          if (isSavingRef.current) return
-
           const newRecord = payload.new as { date?: string } | null
           const oldRecord = payload.old as { date?: string } | null
-          const changedDate = newRecord?.date || oldRecord?.date
-
-          if (changedDate === reportDate) {
-            console.log('[DailyInputForm] External update detected for cash_register_logs')
-            setHasExternalUpdate(true)
-          }
+          handleExternalChange('cash_register_logs', newRecord?.date || oldRecord?.date)
         }
       )
       .subscribe((status: string, err?: Error) => {
@@ -458,14 +483,12 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
     return () => {
       console.log('[DailyInputForm] Cleaning up Realtime subscription')
       supabase.removeChannel(channel)
+      if (autoRefreshTimerRef.current) {
+        clearTimeout(autoRefreshTimerRef.current)
+        autoRefreshTimerRef.current = null
+      }
     }
   }, [currentUser?.clinic_id, reportDate])
-
-  // 외부 변경 감지 시 자동 새로고침
-  const handleRefreshData = useCallback(() => {
-    setHasExternalUpdate(false)
-    loadDataForDate(reportDate)
-  }, [loadDataForDate, reportDate])
 
   const handleSave = async (e?: React.MouseEvent) => {
     if (e) {
@@ -486,7 +509,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
 
     setLoading(true)  // 저장 버튼 비활성화 (중복 클릭 방지)
     isSavingRef.current = true  // 자신의 저장 중에는 외부 변경 감지 무시
-    setHasExternalUpdate(false)  // 저장 시 외부 변경 알림 초기화
+    pendingExternalUpdateRef.current = false  // 저장 시 보류된 외부 업데이트 초기화
     console.log(`[DailyInputForm] handleSave - Using ${USE_NEW_ARCHITECTURE ? 'NEW' : 'OLD'} architecture`)
 
     try {
@@ -648,7 +671,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
       // 데이터가 있으면 저장 먼저 수행
       setLoading(true)
       isSavingRef.current = true
-      setHasExternalUpdate(false)
+      pendingExternalUpdateRef.current = false
 
       try {
         if (USE_NEW_ARCHITECTURE) {
@@ -769,7 +792,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
   )
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
+    <div ref={formRef} className="p-4 sm:p-6 space-y-6 bg-white min-h-screen">
       {/* 보고서 헤더 */}
       <div className="flex items-center justify-between pb-4 border-b border-at-border">
         <div className="flex items-center gap-3">
@@ -791,27 +814,6 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           )}
         </div>
       </div>
-
-      {/* 외부 변경 알림 배너 */}
-      {hasExternalUpdate && (
-        <div className="bg-at-warning-bg border-b border-amber-200 px-4 sm:px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <RefreshCw className="w-4 h-4 text-at-warning" />
-              <span className="text-sm text-amber-800">
-                다른 사용자가 이 보고서를 수정했습니다.
-              </span>
-            </div>
-            <button
-              onClick={handleRefreshData}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-xl transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              새로고침
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 보고서 본문 */}
       <div className="space-y-4 sm:space-y-6">

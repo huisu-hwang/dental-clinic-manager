@@ -41,19 +41,53 @@ export default function ServiceWorkerRegistrar() {
     let currentBuildId: string | null = null
     let lastUpdateCheck = 0
     let refreshing = false
+    let pendingUpdate = false  // 새 버전 감지됐으나 사용자 입력 중이라 적용 보류
 
-    // ─── 업데이트 알림 발송 ───
-    const notifyUpdate = () => {
-      window.dispatchEvent(new CustomEvent('pwa-update-available'))
+    // ─── 사용자 입력 보호 판정 ───
+    // 사용자가 입력 필드에 포커스를 두고 있으면 reload로 입력 내용이 유실되므로 보류
+    const isUserEditing = (): boolean => {
+      const el = document.activeElement as HTMLElement | null
+      if (!el) return false
+      const tag = el.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
     }
 
-    // ─── 대기 중인 SW 활성화 ───
-    const activateWaitingSW = (reg: ServiceWorkerRegistration) => {
-      const waiting = reg.waiting
-      if (waiting) {
-        console.log('[SW] 대기 중인 서비스 워커 활성화 요청')
-        waiting.postMessage({ type: 'SKIP_WAITING' })
+    // ─── 업데이트 실제 적용 ───
+    const applyUpdateNow = () => {
+      if (refreshing) return
+      pendingUpdate = false
+      if (registration?.waiting) {
+        console.log('[SW] 자동 업데이트 적용 (waiting SW → SKIP_WAITING)')
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+        // controllerchange가 발생하지 않는 경우 대비 폴백 (3초 후 강제 reload)
+        setTimeout(() => {
+          if (!refreshing) {
+            refreshing = true
+            window.location.reload()
+          }
+        }, 3000)
+      } else {
+        console.log('[SW] 자동 업데이트 적용 (직접 reload)')
+        refreshing = true
+        window.location.reload()
       }
+    }
+
+    // ─── 자동 업데이트 스케줄링 ───
+    // 사용자 입력 중이면 pendingUpdate로 표시하고 focusout/visibility hidden 시 적용
+    const scheduleAutoUpdate = () => {
+      pendingUpdate = true
+      if (!isUserEditing()) {
+        applyUpdateNow()
+      } else {
+        console.log('[SW] 새 버전 감지 — 사용자 입력 중이라 적용 보류')
+      }
+    }
+
+    const tryApplyPendingUpdate = () => {
+      if (!pendingUpdate) return
+      if (isUserEditing()) return
+      applyUpdateNow()
     }
 
     // ─── SW 업데이트 확인 (쓰로틀링) ───
@@ -69,9 +103,8 @@ export default function ServiceWorkerRegistrar() {
         console.log(`[SW] 업데이트 확인 (${source})`)
         await registration.update()
 
-        // 대기 중인 SW가 있으면 배너 표시 (즉시 활성화하지 않음)
         if (registration.waiting) {
-          notifyUpdate()
+          scheduleAutoUpdate()
         }
       } catch (err) {
         // 네트워크 오류 등은 무시 (오프라인 상태일 수 있음)
@@ -104,9 +137,9 @@ export default function ServiceWorkerRegistrar() {
           currentBuildId = newBuildId
           try { localStorage.setItem('pwa-build-id', newBuildId) } catch {}
 
-          // SW 업데이트 트리거
+          // SW 업데이트 트리거 후 자동 적용
           await checkSWUpdate('version-change')
-          notifyUpdate()
+          scheduleAutoUpdate()
         }
       } catch {
         // 네트워크 오류 무시
@@ -132,9 +165,9 @@ export default function ServiceWorkerRegistrar() {
           newSW.addEventListener('statechange', () => {
             if (newSW.state === 'installed') {
               if (navigator.serviceWorker.controller) {
-                // 기존 SW가 있는 상태에서 새 SW 설치됨 → 배너 표시 (즉시 활성화 X)
-                console.log('[SW] 새 버전 설치 완료, 배너 표시')
-                notifyUpdate()
+                // 기존 SW가 있는 상태에서 새 SW 설치됨 → 자동 적용 (입력 중이면 보류)
+                console.log('[SW] 새 버전 설치 완료, 자동 적용 시도')
+                scheduleAutoUpdate()
               } else {
                 // 최초 설치 (기존 SW 없음)
                 console.log('[SW] 서비스 워커 최초 설치 완료')
@@ -143,10 +176,10 @@ export default function ServiceWorkerRegistrar() {
           })
         })
 
-        // 초기 로드 시 이미 대기 중인 SW가 있으면 배너만 표시 (즉시 활성화 X)
+        // 초기 로드 시 이미 대기 중인 SW가 있으면 자동 적용 시도
         if (reg.waiting) {
-          console.log('[SW] 이미 대기 중인 새 버전 발견, 배너 표시')
-          notifyUpdate()
+          console.log('[SW] 이미 대기 중인 새 버전 발견, 자동 적용 시도')
+          scheduleAutoUpdate()
         }
 
         // iOS PWA: localStorage의 이전 빌드 ID와 비교
@@ -174,37 +207,25 @@ export default function ServiceWorkerRegistrar() {
     }
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
 
-    // ─── UpdatePrompt로부터 업데이트 적용 요청 수신 ───
-    // 사용자가 '지금 새로고침' 버튼을 눌렀거나 자동 카운트다운이 끝난 시점에 호출됨.
-    // waiting SW가 있으면 SKIP_WAITING을 보내 controllerchange로 자연스럽게 reload 되고,
-    // 없으면(SW 변경은 없고 빌드 ID만 변경된 케이스) 직접 reload 한다.
-    const handleApplyUpdate = () => {
-      if (refreshing) return
-      if (registration?.waiting) {
-        console.log('[SW] 사용자 요청으로 업데이트 적용')
-        activateWaitingSW(registration)
-        // controllerchange가 발생하지 않는 경우 대비 폴백 (3초 후 강제 reload)
-        setTimeout(() => {
-          if (!refreshing) {
-            refreshing = true
-            window.location.reload()
-          }
-        }, 3000)
-      } else {
-        console.log('[SW] 대기 중인 SW 없음 → 바로 reload')
-        refreshing = true
-        window.location.reload()
-      }
+    // ─── 사용자 입력 보호 훅 ───
+    // 포커스가 입력 요소 밖으로 나가는 순간 보류된 업데이트 적용
+    const handleFocusOut = () => {
+      // 다른 입력 요소로 포커스 이동한 경우는 계속 보류
+      setTimeout(tryApplyPendingUpdate, 50)
     }
-    window.addEventListener('pwa-apply-update', handleApplyUpdate)
+    document.addEventListener('focusout', handleFocusOut)
 
     // ─── 이벤트 핸들러들 ───
 
     // 1. 앱이 포그라운드로 돌아올 때 (모든 플랫폼)
+    //    탭이 백그라운드로 가는 순간도 안전한 적용 시점
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkSWUpdate('visibility-change')
         checkVersionAPI()
+      } else {
+        // hidden 상태면 입력 중일 수 없으므로 보류된 업데이트를 조용히 적용
+        tryApplyPendingUpdate()
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -271,10 +292,10 @@ export default function ServiceWorkerRegistrar() {
       clearInterval(versionPollInterval)
       clearTimeout(initialVersionCheck)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      document.removeEventListener('focusout', handleFocusOut)
       window.removeEventListener('pageshow', handlePageShow)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('focus', handleFocus)
-      window.removeEventListener('pwa-apply-update', handleApplyUpdate)
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
       if (displayModeQuery) {
         displayModeQuery.removeEventListener('change', () => {})

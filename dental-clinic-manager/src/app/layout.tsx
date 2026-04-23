@@ -4,7 +4,6 @@ import { AIGenerationProvider } from "@/contexts/AIGenerationContext";
 import { AppDialogRoot } from "@/components/ui/AppDialog";
 import ServiceWorkerRegistrar from "@/components/PWA/ServiceWorkerRegistrar";
 import AIGenerationFloating from "@/components/marketing/AIGenerationFloating";
-import UpdatePrompt from "@/components/PWA/UpdatePrompt";
 import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://hi-clinic.co.kr'
@@ -67,7 +66,6 @@ export default function RootLayout({
         <AuthProvider>
           <AIGenerationProvider>
             <ServiceWorkerRegistrar />
-            <UpdatePrompt autoReloadDelay={5000} />
             {children}
             <AIGenerationFloating />
             <AppDialogRoot />
