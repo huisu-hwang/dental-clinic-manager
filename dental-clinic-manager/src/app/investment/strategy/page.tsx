@@ -93,10 +93,10 @@ export default function StrategyListPage() {
         <div className="space-y-3">
           {strategies.map(s => (
             <div key={s.id} className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-at-text">{s.name}</h3>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-at-text break-all">{s.name}</h3>
                     <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
                       s.is_active
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
@@ -109,15 +109,15 @@ export default function StrategyListPage() {
                     </span>
                   </div>
                   {s.description && (
-                    <p className="text-xs text-at-text-secondary mt-1">{s.description}</p>
+                    <p className="text-xs text-at-text-secondary mt-1 break-words">{s.description}</p>
                   )}
-                  <div className="flex items-center gap-4 mt-2 text-xs text-at-text-weak">
+                  <div className="flex items-center gap-x-4 gap-y-1 mt-2 text-xs text-at-text-weak flex-wrap">
                     <span>시간프레임: {s.timeframe}</span>
                     <span>지표: {(s.indicators as unknown[]).length}개</span>
                     <span>자동화: {LEVEL_LABELS[s.automation_level] || s.automation_level}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     onClick={() => setBacktestStrategyId(s.id)}
                     className="p-2 rounded-lg hover:bg-at-bg transition-colors text-at-text-secondary"
@@ -141,8 +141,8 @@ export default function StrategyListPage() {
                   </button>
                   <button
                     onClick={() => deleteStrategy(s.id)}
-                    className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-400"
-                    title="삭제"
+                    className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={s.is_active ? '활성 전략은 삭제 전 비활성화 필요' : '삭제'}
                     disabled={s.is_active}
                   >
                     <Trash2 className="w-4 h-4" />
