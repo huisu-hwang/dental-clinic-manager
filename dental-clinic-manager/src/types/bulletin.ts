@@ -144,8 +144,8 @@ export interface CreateTaskCommentDto {
   content: string
 }
 
-// 게시판 탭 타입
-export type BulletinTab = 'announcements' | 'documents' | 'tasks'
+// 게시판 탭 타입 ('tasks'는 /dashboard/tasks로 분리됨)
+export type BulletinTab = 'announcements' | 'documents'
 
 // 공지사항 카테고리 라벨
 export const ANNOUNCEMENT_CATEGORY_LABELS: Record<AnnouncementCategory, string> = {
