@@ -504,7 +504,7 @@ export const userNotificationService = {
       type: 'task_assigned',
       title: '새 업무가 할당되었습니다',
       content: `${assignerName}님이 "${taskTitle}" 업무를 할당했습니다`,
-      link: `/dashboard/bulletin?tab=tasks&taskId=${taskId}`,
+      link: `/dashboard/tasks?taskId=${taskId}`,
       reference_type: 'task',
       reference_id: taskId,
     })
@@ -525,7 +525,7 @@ export const userNotificationService = {
       type: 'task_completed',
       title: '업무가 완료되었습니다',
       content: `${assigneeName}님이 "${taskTitle}" 업무를 완료했습니다`,
-      link: `/dashboard/bulletin?tab=tasks&taskId=${taskId}`,
+      link: `/dashboard/tasks?taskId=${taskId}`,
       reference_type: 'task',
       reference_id: taskId,
     })

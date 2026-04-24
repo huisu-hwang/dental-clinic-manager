@@ -5,19 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Megaphone,
   FolderOpen,
-  ListTodo,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import AnnouncementList from '@/components/Bulletin/AnnouncementList'
 import DocumentList from '@/components/Bulletin/DocumentList'
-import TaskList from '@/components/Bulletin/TaskList'
 import type { BulletinTab } from '@/types/bulletin'
 
 // 서브 탭 설정
 const subTabs = [
   { id: 'announcements', label: '공지사항', icon: Megaphone },
   { id: 'documents', label: '문서 모음', icon: FolderOpen },
-  { id: 'tasks', label: '업무 지시', icon: ListTodo },
 ] as const
 
 export default function BulletinPage() {
@@ -30,10 +27,17 @@ export default function BulletinPage() {
   // URL에서 탭 파라미터 읽기
   useEffect(() => {
     const tab = searchParams.get('tab')
-    if (tab && ['announcements', 'documents', 'tasks'].includes(tab)) {
+    // '업무 지시'는 /dashboard/tasks로 분리됨 — 기존 링크 호환성 유지
+    if (tab === 'tasks') {
+      const taskId = searchParams.get('taskId')
+      const target = taskId ? `/dashboard/tasks?taskId=${taskId}` : '/dashboard/tasks'
+      router.replace(target)
+      return
+    }
+    if (tab && ['announcements', 'documents'].includes(tab)) {
       setActiveTab(tab as BulletinTab)
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   // 탭 변경 시 URL 업데이트 (같은 탭 클릭 시 목록으로 복귀)
   const handleTabChange = (tab: BulletinTab) => {
@@ -97,7 +101,6 @@ export default function BulletinPage() {
           <>
             {activeTab === 'announcements' && <AnnouncementList canCreate={isAdmin} />}
             {activeTab === 'documents' && <DocumentList canCreate={isAdmin} />}
-            {activeTab === 'tasks' && <TaskList canCreate={isAdmin} />}
           </>
         )}
       </div>
