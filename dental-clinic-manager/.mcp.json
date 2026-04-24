@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "suggestion-inbox": {
+      "command": "/opt/homebrew/bin/bun",
+      "args": [
+        "run",
+        "--env-file=/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/ai-suggestion-channel/.env",
+        "/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/ai-suggestion-channel/src/suggestion-channel.ts"
+      ],
+      "cwd": "/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/ai-suggestion-channel"
+    }
+  }
+}

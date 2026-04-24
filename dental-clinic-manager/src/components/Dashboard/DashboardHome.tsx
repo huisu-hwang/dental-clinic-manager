@@ -591,7 +591,7 @@ export default function DashboardHome() {
                           <span className="font-medium text-at-text w-16 truncate tracking-[0.08px]">{c.patient_name}</span>
                           <span className="text-at-text-secondary flex-1 truncate tracking-[0.07px]">{c.consult_content}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.consult_status === 'O' ? 'bg-at-success-bg text-at-success' : 'bg-at-error-bg text-at-error'}`}>
-                            {c.consult_status === 'O' ? '✓ 성공' : '✗ 보류'}
+                            {c.consult_status === 'O' ? '✓ 성공' : c.consult_status === '△' ? '△ 미결정' : '✗ 보류'}
                           </span>
                         </div>
                       ))}

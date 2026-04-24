@@ -168,7 +168,7 @@ export default function DailyInputForm({ giftInventory, giftCategories = [], gif
           setConsultRows(consultLogs.map(log => ({
             patient_name: typeof log.patient_name === 'string' ? log.patient_name : '',
             consult_content: typeof log.consult_content === 'string' ? log.consult_content : '',
-            consult_status: (log.consult_status as 'O' | 'X') || 'O',
+            consult_status: (log.consult_status as 'O' | 'X' | '△') || 'O',
             remarks: typeof log.remarks === 'string' ? log.remarks : ''
           })))
         } else {

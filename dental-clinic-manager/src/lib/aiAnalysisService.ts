@@ -31,7 +31,7 @@ const DATABASE_SCHEMA: DatabaseSchema = {
         { name: 'date', type: 'date', description: '상담 날짜' },
         { name: 'patient_name', type: 'text', description: '환자 이름' },
         { name: 'consult_content', type: 'text', description: '상담 내용' },
-        { name: 'consult_status', type: 'text', description: '상담 상태 (O: 진행, X: 보류)' },
+        { name: 'consult_status', type: 'text', description: '상담 상태 (O: 진행, X: 보류, △: 미결정)' },
         { name: 'remarks', type: 'text', description: '비고' },
       ],
     },

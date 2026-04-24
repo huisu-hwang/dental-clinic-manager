@@ -37,7 +37,7 @@ const DATABASE_SCHEMA = {
         date: 'DATE (상담 날짜)',
         patient_name: 'VARCHAR(100) (환자 이름)',
         consult_content: 'TEXT (상담 내용)',
-        consult_status: 'VARCHAR(1) (상담 상태: O=진행, X=보류)',
+        consult_status: 'TEXT (상담 상태: O=진행, X=보류, △=미결정)',
         hold_reason: 'TEXT (보류 사유)',
         created_at: 'TIMESTAMP',
       },
