@@ -16,7 +16,7 @@ export interface ConsultLog {
   date: string;
   patient_name: string;
   consult_content: string;
-  consult_status: 'O' | 'X';
+  consult_status: 'O' | 'X' | '△';
   remarks: string;
   clinic_id?: string | null;
 }
@@ -109,7 +109,7 @@ export interface Stats {
 export interface ConsultRowData {
   patient_name: string;
   consult_content: string;
-  consult_status: 'O' | 'X';
+  consult_status: 'O' | 'X' | '△';
   remarks: string;
 }
 

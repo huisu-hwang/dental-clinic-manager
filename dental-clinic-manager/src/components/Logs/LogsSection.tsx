@@ -41,7 +41,7 @@ export default function LogsSection({
   canDelete
 }: LogsSectionProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('daily')
-  const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete'>('all')
+  const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete' | 'undecided'>('all')
   const [consultSearch, setConsultSearch] = useState('')
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
   const [giftSearch, setGiftSearch] = useState('')
@@ -91,6 +91,7 @@ export default function LogsSection({
     if (consultFilter === 'all') return true
     if (consultFilter === 'completed') return log.consult_status === 'O'
     if (consultFilter === 'incomplete') return log.consult_status === 'X'
+    if (consultFilter === 'undecided') return log.consult_status === '△'
     return true
   })
 
@@ -227,6 +228,16 @@ export default function LogsSection({
                 >
                   진행보류 ({consultLogs.filter(log => log.consult_status === 'X').length})
                 </button>
+                <button
+                  onClick={() => setConsultFilter('undecided')}
+                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
+                    consultFilter === 'undecided'
+                      ? 'bg-at-warning text-white'
+                      : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
+                  }`}
+                >
+                  미결정 ({consultLogs.filter(log => log.consult_status === '△').length})
+                </button>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -276,18 +287,24 @@ export default function LogsSection({
                       <td className="p-2 sm:p-3">{log.patient_name}</td>
                       <td className="p-2 sm:p-3">{log.consult_content}</td>
                       <td className="p-2 sm:p-3 whitespace-nowrap">
-                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium ${
-                          log.consult_status === 'O' || recentlyUpdatedIds.has(log.id!)
+                        {(() => {
+                          const isCompleted = log.consult_status === 'O' || recentlyUpdatedIds.has(log.id!)
+                          const isUndecided = log.consult_status === '△' && !recentlyUpdatedIds.has(log.id!)
+                          const badgeClass = isCompleted
                             ? 'bg-at-success-bg text-at-success'
                             : 'bg-at-warning-bg text-at-warning'
-                        }`}>
-                          {log.consult_status === 'O' || recentlyUpdatedIds.has(log.id!) ? '진행완료' : '진행보류'}
-                        </span>
+                          const label = isCompleted ? '진행완료' : isUndecided ? '미결정' : '진행보류'
+                          return (
+                            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium ${badgeClass}`}>
+                              {label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="p-2 sm:p-3">{log.remarks}</td>
                       {onUpdateConsultStatus && (
                         <td className="p-2 sm:p-3 text-center">
-                          {log.consult_status === 'X' && !recentlyUpdatedIds.has(log.id!) ? (
+                          {(log.consult_status === 'X' || log.consult_status === '△') && !recentlyUpdatedIds.has(log.id!) ? (
                             <button
                               onClick={() => log.id && handleUpdateStatus(log.id)}
                               disabled={updatingId !== null}
