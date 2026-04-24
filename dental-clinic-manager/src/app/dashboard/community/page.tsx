@@ -131,7 +131,7 @@ export default function CommunityPage() {
 
       <div className="flex gap-6">
         {/* 메인 영역 */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex justify-end gap-2 mb-4 xl:hidden">
             {profile && (
               <button

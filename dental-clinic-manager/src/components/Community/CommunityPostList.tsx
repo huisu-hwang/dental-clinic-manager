@@ -102,7 +102,7 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
     <div className="space-y-4">
       {/* 상단 액션 바 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => { setSort('latest'); setPage(1) }}
             className={`text-sm font-medium px-3 py-1 rounded-xl ${sort === 'latest' ? 'bg-at-text text-white' : 'text-at-text-weak hover:bg-at-surface-hover'}`}
