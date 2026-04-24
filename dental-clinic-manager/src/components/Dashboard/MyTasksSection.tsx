@@ -152,8 +152,7 @@ export default function MyTasksSection() {
   }
 
   const openDetail = (task: Task) => {
-    // 기존 업무 지시 페이지의 상세 모달을 재사용하기 위해 쿼리 파라미터로 전달
-    router.push(`/dashboard/bulletin?tab=tasks&taskId=${task.id}`)
+    router.push(`/dashboard/tasks?taskId=${task.id}`)
   }
 
   const renderActions = (task: Task) => {

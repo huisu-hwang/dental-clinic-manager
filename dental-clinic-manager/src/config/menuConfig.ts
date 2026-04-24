@@ -187,6 +187,16 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     order: 6.5,
     visible: true,
   },
+  {
+    id: 'task-directive',
+    label: '업무 지시',
+    icon: 'ListTodo',
+    route: '/dashboard/tasks',
+    permissions: [],
+    categoryId: 'work',
+    order: 6.7,
+    visible: true,
+  },
 
   // === 중간 고정 메뉴 ===
   {

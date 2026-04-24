@@ -33,6 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/dashboard/marketing')) return 'marketing'
     if (pathname.startsWith('/dashboard/contracts')) return 'contracts'
     if (pathname.startsWith('/dashboard/attendance')) return 'attendance'
+    if (pathname.startsWith('/dashboard/tasks')) return 'task-directive'
     if (pathname.startsWith('/dashboard/bulletin')) return 'bulletin'
     if (pathname.startsWith('/dashboard/community/telegram')) return 'community-groups'
     if (pathname.startsWith('/dashboard/community')) return 'community-board'
