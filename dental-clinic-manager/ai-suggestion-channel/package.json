@@ -1,0 +1,19 @@
+{
+  "name": "ai-suggestion-channel",
+  "version": "0.1.0",
+  "description": "자유게시판 제안 사항을 Claude Code 세션으로 푸시하는 Channel (MCP)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/suggestion-channel.ts",
+    "typecheck": "bun --bun tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.49.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}
