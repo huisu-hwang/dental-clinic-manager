@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
 import { PREMIUM_FEATURE_INFO } from '@/config/menuConfig'
 import type { PremiumFeatureId, PremiumPlanOption } from '@/config/menuConfig'
-import { Sparkles, Check, CreditCard } from 'lucide-react'
+import { Sparkles, Check, CreditCard, X } from 'lucide-react'
 import CardRegistrationModal from '@/components/Subscription/CardRegistrationModal'
 import type { SubscriptionPlan } from '@/types/subscription'
 
@@ -14,9 +15,20 @@ interface PremiumGateProps {
 }
 
 export default function PremiumGate({ featureId, children }: PremiumGateProps) {
+  const router = useRouter()
   const { hasPremiumFeature, isLoading } = usePremiumFeatures()
   const [showPayment, setShowPayment] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
+  const [dismissed, setDismissed] = useState(false)
+
+  function handleClose() {
+    setDismissed(true)
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/dashboard')
+    }
+  }
 
   if (isLoading) {
     return (
@@ -28,6 +40,10 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
 
   if (hasPremiumFeature(featureId)) {
     return <>{children}</>
+  }
+
+  if (dismissed) {
+    return null
   }
 
   const info = PREMIUM_FEATURE_INFO[featureId]
@@ -63,17 +79,27 @@ export default function PremiumGate({ featureId, children }: PremiumGateProps) {
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
             {/* 헤더 */}
             <div className="bg-gradient-to-r from-amber-400 to-amber-500 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-white">{info.title}</h2>
-                    <span className="text-[10px] font-bold tracking-wider bg-white/25 text-white px-2 py-0.5 rounded-full">PRO</span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-5 h-5 text-white" />
                   </div>
-                  <p className="text-sm text-white/80">{info.description}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-bold text-white truncate">{info.title}</h2>
+                      <span className="text-[10px] font-bold tracking-wider bg-white/25 text-white px-2 py-0.5 rounded-full flex-shrink-0">PRO</span>
+                    </div>
+                    <p className="text-sm text-white/80 truncate">{info.description}</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  aria-label="닫기"
+                  className="flex-shrink-0 rounded-lg p-2 text-white/90 hover:bg-white/20 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
