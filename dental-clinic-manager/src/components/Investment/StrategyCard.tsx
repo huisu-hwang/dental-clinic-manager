@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import {
-  Play, Pause, Trash2, BarChart3, ChevronDown, ChevronUp,
-  Plus, X, CheckCircle2, AlertCircle, Target, Eye,
+  Play, Pause, Trash2, BarChart3, ChevronDown, ChevronUp, Edit3,
+  X, CheckCircle2, AlertCircle, Target, Eye,
 } from 'lucide-react'
 import TickerSearch from './TickerSearch'
 import type { InvestmentStrategy, Market } from '@/types/investment'
@@ -105,10 +106,10 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
       {/* 상단 헤더 */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-at-text">{strategy.name}</h3>
+            <h3 className="font-semibold text-at-text break-all">{strategy.name}</h3>
             <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
               strategy.is_active
                 ? 'bg-green-50 text-at-success border border-green-200'
@@ -121,18 +122,25 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
               Level {strategy.automation_level} ({strategy.automation_level === 1 ? '알림만' : '완전자동'})
             </span>
           </div>
-          {strategy.description && <p className="text-xs text-at-text-secondary mt-1">{strategy.description}</p>}
-          <div className="flex items-center gap-4 mt-2 text-xs text-at-text-weak">
+          {strategy.description && <p className="text-xs text-at-text-secondary mt-1 break-words">{strategy.description}</p>}
+          <div className="flex items-center gap-x-4 gap-y-1 mt-2 text-xs text-at-text-weak flex-wrap">
             <span>지표 {(strategy.indicators as unknown[]).length}개</span>
             <span className="flex items-center gap-1">
               <Eye className="w-3 h-3" /> 감시 종목 {watchlistLoading ? '...' : `${watchlist.length}개`}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
           <button onClick={() => onBacktest(strategy.id)} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary" title="백테스트">
             <BarChart3 className="w-4 h-4" />
           </button>
+          <Link
+            href={`/investment/strategy/${strategy.id}/edit`}
+            className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary"
+            title="수정"
+          >
+            <Edit3 className="w-4 h-4" />
+          </Link>
           <button
             onClick={toggleActive}
             disabled={toggling}
@@ -150,7 +158,7 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
           <button onClick={deleteStrategy} disabled={strategy.is_active} className="p-2 rounded-lg hover:bg-red-50 transition-colors text-at-error/60 hover:text-at-error disabled:opacity-40 disabled:cursor-not-allowed" title="삭제">
             <Trash2 className="w-4 h-4" />
           </button>
-          <button onClick={() => setExpanded(e => !e)} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary ml-1" title={expanded ? '접기' : '펼치기'}>
+          <button onClick={() => setExpanded(e => !e)} className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors text-at-text-secondary" title={expanded ? '접기' : '펼치기'}>
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
