@@ -46,7 +46,7 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
         </span>
       </div>
       {/* 제목 */}
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+      <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden">
         <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${colors[post.category] || 'bg-at-surface-alt text-at-text-secondary'}`}>
           {labels[post.category] || post.category}
         </span>
@@ -61,12 +61,12 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
           return isToday ? <span className="flex-shrink-0 px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">N</span> : null
         })()}
         {(post.comment_count ?? 0) > 0 && (
-          <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
+          <span className="hidden sm:flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
             <MessageSquare className="w-3 h-3" />{post.comment_count}
           </span>
         )}
         {(post.like_count ?? 0) > 0 && (
-          <span className="flex items-center gap-0.5 text-xs text-red-400 flex-shrink-0">
+          <span className="hidden sm:flex items-center gap-0.5 text-xs text-red-400 flex-shrink-0">
             <Heart className={`w-3 h-3 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />{post.like_count}
           </span>
         )}
