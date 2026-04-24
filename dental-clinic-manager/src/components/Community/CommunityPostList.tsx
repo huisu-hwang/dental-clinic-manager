@@ -186,14 +186,14 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-2xl border border-at-border shadow-at-card">
+          <div className="bg-white rounded-2xl border border-at-border shadow-at-card overflow-hidden">
             {/* 테이블 헤더 */}
-            <div className="flex items-center px-4 py-2 border-b border-at-border bg-at-surface-alt text-xs font-medium text-at-text-weak">
+            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border-b border-at-border bg-at-surface-alt text-xs font-medium text-at-text-weak">
               <div className="w-5 flex-shrink-0" />
               <div className="hidden sm:block w-20 flex-shrink-0 text-center">분류</div>
               <div className="flex-1 min-w-0 text-center">제목</div>
               <div className="hidden sm:block w-20 text-center flex-shrink-0">작성자</div>
-              <div className="w-20 text-center flex-shrink-0">작성일</div>
+              <div className="w-12 sm:w-20 text-center flex-shrink-0">작성일</div>
               <div className="hidden sm:block w-12 text-center flex-shrink-0">조회</div>
             </div>
             {posts.map((post) => (
