@@ -131,6 +131,8 @@ export default function SuggestionControlPanel({ postId }: SuggestionControlPane
   const statusLabel = status ? AI_SUGGESTION_STATUS_LABELS[status] : null
   const statusBadgeClass = status ? STATUS_BADGE_CLASSES[status] : ''
 
+  if (!isMasterAdmin) return null
+
   return (
     <div className="bg-white rounded-2xl border border-at-border p-4 sm:p-6 shadow-at-card">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
