@@ -40,9 +40,13 @@ export default function PostActions({
         size="sm"
         onClick={handleLike}
         disabled={liking}
-        className={isLiked ? 'text-red-500 border-at-border bg-at-error-bg' : ''}
+        className={
+          isLiked
+            ? 'text-at-error border-at-error bg-at-error-bg hover:bg-at-error-bg hover:text-at-error'
+            : 'text-at-text-secondary hover:text-at-error hover:border-at-error hover:bg-at-error-bg'
+        }
       >
-        <Heart className={`w-4 h-4 mr-1.5 ${isLiked ? 'fill-red-500' : ''}`} />
+        <Heart className={`w-4 h-4 mr-1.5 ${isLiked ? 'fill-at-error' : ''}`} />
         좋아요 {likeCount > 0 && likeCount}
       </Button>
       <Button
@@ -50,13 +54,22 @@ export default function PostActions({
         size="sm"
         onClick={handleBookmark}
         disabled={bookmarking}
-        className={isBookmarked ? 'text-at-warning border-at-border bg-at-warning-bg' : ''}
+        className={
+          isBookmarked
+            ? 'text-at-warning border-at-warning bg-at-warning-bg hover:bg-at-warning-bg hover:text-at-warning'
+            : 'text-at-text-secondary hover:text-at-warning hover:border-at-warning hover:bg-at-warning-bg'
+        }
       >
-        <Bookmark className={`w-4 h-4 mr-1.5 ${isBookmarked ? 'fill-yellow-500' : ''}`} />
+        <Bookmark className={`w-4 h-4 mr-1.5 ${isBookmarked ? 'fill-at-warning' : ''}`} />
         스크랩 {bookmarkCount > 0 && bookmarkCount}
       </Button>
       <div className="flex-1" />
-      <Button variant="outline" size="sm" onClick={onReport} className="text-at-text-weak">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onReport}
+        className="text-at-error border-at-error/40 hover:text-at-error hover:border-at-error hover:bg-at-error-bg"
+      >
         <Flag className="w-4 h-4 mr-1.5" />신고
       </Button>
     </div>
