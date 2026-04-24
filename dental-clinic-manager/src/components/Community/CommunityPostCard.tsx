@@ -29,7 +29,7 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
   return (
     <div
       onClick={() => onClick(post)}
-      className={`flex items-center px-4 py-3 hover:bg-at-surface-hover cursor-pointer transition-colors border-b border-at-border last:border-b-0 border-l-2 ${
+      className={`flex items-center gap-2 px-3 sm:px-4 py-3 hover:bg-at-surface-hover cursor-pointer transition-colors border-b border-at-border last:border-b-0 border-l-2 overflow-hidden ${
         post.is_pinned ? 'border-l-red-400 bg-at-error-bg/30' : 'border-l-transparent'
       }`}
     >
@@ -53,12 +53,12 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
         {post.has_poll && (
           <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 flex-shrink-0">투표</span>
         )}
-        <span className="text-sm text-at-text truncate">{post.title}</span>
+        <span className="flex-1 min-w-0 text-sm text-at-text truncate">{post.title}</span>
         {(() => {
           const created = new Date(post.created_at)
           const now = new Date()
           const isToday = created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth() && created.getDate() === now.getDate()
-          return isToday ? <span className="flex-shrink-0 ml-1 px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">N</span> : null
+          return isToday ? <span className="flex-shrink-0 px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">N</span> : null
         })()}
         {(post.comment_count ?? 0) > 0 && (
           <span className="flex items-center gap-0.5 text-xs text-sky-500 flex-shrink-0">
@@ -76,7 +76,7 @@ export default function CommunityPostCard({ post, onClick, labelMap, colorMap }:
         {post.profile?.nickname || '익명'}
       </div>
       {/* 작성일 */}
-      <div className="w-20 text-center text-sm text-at-text-secondary flex-shrink-0">
+      <div className="w-12 sm:w-20 text-center text-xs sm:text-sm text-at-text-secondary flex-shrink-0">
         {formatDate(post.created_at)}
       </div>
       {/* 조회수 */}
