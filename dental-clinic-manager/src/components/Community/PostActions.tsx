@@ -42,8 +42,8 @@ export default function PostActions({
         disabled={liking}
         className={
           isLiked
-            ? 'text-at-error border-at-error bg-at-error-bg hover:bg-at-error-bg hover:text-at-error'
-            : 'text-at-text-secondary hover:text-at-error hover:border-at-error hover:bg-at-error-bg'
+            ? 'bg-at-error-bg text-at-error border-at-error hover:bg-at-error-bg hover:text-at-error'
+            : 'bg-white text-at-text-secondary hover:bg-at-error-bg hover:text-at-error hover:border-at-error'
         }
       >
         <Heart className={`w-4 h-4 mr-1.5 ${isLiked ? 'fill-at-error' : ''}`} />
@@ -56,8 +56,8 @@ export default function PostActions({
         disabled={bookmarking}
         className={
           isBookmarked
-            ? 'text-at-warning border-at-warning bg-at-warning-bg hover:bg-at-warning-bg hover:text-at-warning'
-            : 'text-at-text-secondary hover:text-at-warning hover:border-at-warning hover:bg-at-warning-bg'
+            ? 'bg-at-warning-bg text-at-warning border-at-warning hover:bg-at-warning-bg hover:text-at-warning'
+            : 'bg-white text-at-text-secondary hover:bg-at-warning-bg hover:text-at-warning hover:border-at-warning'
         }
       >
         <Bookmark className={`w-4 h-4 mr-1.5 ${isBookmarked ? 'fill-at-warning' : ''}`} />
@@ -68,7 +68,7 @@ export default function PostActions({
         variant="outline"
         size="sm"
         onClick={onReport}
-        className="text-at-error border-at-error/40 hover:text-at-error hover:border-at-error hover:bg-at-error-bg"
+        className="bg-white text-at-error border-at-error/40 hover:bg-at-error-bg hover:text-at-error hover:border-at-error"
       >
         <Flag className="w-4 h-4 mr-1.5" />신고
       </Button>
