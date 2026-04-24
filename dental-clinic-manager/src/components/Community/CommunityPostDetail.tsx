@@ -168,7 +168,7 @@ export default function CommunityPostDetail({
             </div>
           )}
 
-          {/* AI 자동 구현 (제안 카테고리 전용) */}
+          {/* AI 자동 구현 (제안 카테고리 · master_admin 전용) */}
           {post.category === 'suggestion' && (
             <div className="mt-6">
               <SuggestionControlPanel postId={post.id} />
