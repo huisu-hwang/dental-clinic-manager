@@ -41,6 +41,13 @@ export type DocumentCategory =
   | 'reference'     // 참고자료
   | 'other'         // 기타
 
+// 첨부파일 항목
+export interface DocumentAttachment {
+  url: string
+  name: string
+  size: number
+}
+
 // 문서
 export interface Document {
   id: string
@@ -48,9 +55,10 @@ export interface Document {
   title: string
   description?: string
   category: DocumentCategory
-  file_url?: string            // 첨부파일 URL
-  file_name?: string           // 첨부파일명
-  file_size?: number           // 파일 크기 (bytes)
+  attachments?: DocumentAttachment[]  // 다중 첨부파일 (신규)
+  file_url?: string            // 첨부파일 URL (구 단일 컬럼, 하위 호환용)
+  file_name?: string           // 첨부파일명 (구 단일 컬럼, 하위 호환용)
+  file_size?: number           // 파일 크기 bytes (구 단일 컬럼, 하위 호환용)
   content?: string             // 텍스트 콘텐츠 (에디터로 작성한 경우)
   author_id: string
   author_name?: string
@@ -65,10 +73,29 @@ export interface CreateDocumentDto {
   title: string
   description?: string
   category: DocumentCategory
-  file_url?: string
-  file_name?: string
-  file_size?: number
+  attachments?: DocumentAttachment[]
+  // 단일 컬럼은 서비스에서 자동 동기화하므로 외부에서 직접 설정하지 않음
   content?: string
+}
+
+// 구 단일 첨부 컬럼을 attachments 배열 형태로 정규화
+export const normalizeDocumentAttachments = (doc: {
+  attachments?: DocumentAttachment[] | null
+  file_url?: string | null
+  file_name?: string | null
+  file_size?: number | null
+}): DocumentAttachment[] => {
+  if (Array.isArray(doc.attachments) && doc.attachments.length > 0) {
+    return doc.attachments
+  }
+  if (doc.file_url && doc.file_name) {
+    return [{
+      url: doc.file_url,
+      name: doc.file_name,
+      size: doc.file_size || 0,
+    }]
+  }
+  return []
 }
 
 // 업무 상태

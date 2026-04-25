@@ -431,6 +431,9 @@ export const documentService = {
       if (!clinicId) throw new Error('Clinic not found')
       if (!userId) throw new Error('User not found')
 
+      const attachments = Array.isArray(input.attachments) ? input.attachments : []
+      const firstAttachment = attachments[0]
+
       const { data, error } = await (supabase as any)
         .from('documents')
         .insert({
@@ -438,9 +441,10 @@ export const documentService = {
           title: input.title,
           description: input.description || null,
           category: input.category,
-          file_url: input.file_url || null,
-          file_name: input.file_name || null,
-          file_size: input.file_size || null,
+          attachments,
+          file_url: firstAttachment?.url || null,
+          file_name: firstAttachment?.name || null,
+          file_size: firstAttachment?.size || null,
           content: input.content || null,
           author_id: userId,
         })
@@ -464,17 +468,25 @@ export const documentService = {
       const supabase = await ensureConnection()
       if (!supabase) throw new Error('Database connection failed')
 
+      const updatePayload: Record<string, unknown> = {
+        ...(input.title && { title: input.title }),
+        ...(input.description !== undefined && { description: input.description }),
+        ...(input.category && { category: input.category }),
+        ...(input.content !== undefined && { content: input.content }),
+      }
+
+      if (input.attachments !== undefined) {
+        const attachments = Array.isArray(input.attachments) ? input.attachments : []
+        const firstAttachment = attachments[0]
+        updatePayload.attachments = attachments
+        updatePayload.file_url = firstAttachment?.url || null
+        updatePayload.file_name = firstAttachment?.name || null
+        updatePayload.file_size = firstAttachment?.size || null
+      }
+
       const { data, error } = await (supabase as any)
         .from('documents')
-        .update({
-          ...(input.title && { title: input.title }),
-          ...(input.description !== undefined && { description: input.description }),
-          ...(input.category && { category: input.category }),
-          ...(input.file_url !== undefined && { file_url: input.file_url }),
-          ...(input.file_name !== undefined && { file_name: input.file_name }),
-          ...(input.file_size !== undefined && { file_size: input.file_size }),
-          ...(input.content !== undefined && { content: input.content }),
-        })
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single()
