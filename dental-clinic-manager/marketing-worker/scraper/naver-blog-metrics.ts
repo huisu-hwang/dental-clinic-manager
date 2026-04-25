@@ -1,4 +1,5 @@
-import { chromium, type Browser, type Page } from 'playwright';
+import { type Browser, type Page } from 'playwright';
+import { launchChromiumWithAutoInstall } from '../utils/playwright-launch.js';
 
 // ============================================
 // 네이버 블로그 KPI 스크래퍼
@@ -19,7 +20,7 @@ export class NaverBlogMetricsScraper {
   private browser: Browser | null = null;
 
   async init(headless: boolean = true): Promise<void> {
-    this.browser = await chromium.launch({
+    this.browser = await launchChromiumWithAutoInstall({
       headless,
       args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
     });

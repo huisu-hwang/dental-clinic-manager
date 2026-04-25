@@ -25,6 +25,7 @@ import type {
 import PremiumGate from '@/components/Premium/PremiumGate'
 import NewPostForm from '@/components/marketing/NewPostForm'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
+import WorkerStatusBanner from '@/components/marketing/WorkerStatusBanner'
 import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
@@ -86,6 +87,7 @@ export default function MarketingPage() {
 
         {/* 콘텐츠 */}
         <div className="tab-content p-4 sm:p-6">
+          <WorkerStatusBanner />
           {activeTab === 'newpost' && <NewPostForm onClose={() => setActiveTab('dashboard')} />}
           {activeTab === 'dashboard' && <DashboardContent />}
           {activeTab === 'posts' && <PostsContent viewPostId={viewPostId} onViewPostHandled={() => setViewPostId(null)} />}
