@@ -262,19 +262,19 @@ export default function DayTradingContent() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <MetricCard
               label="총 수익률"
-              value={`${(result.metrics.totalReturn * 100).toFixed(2)}%`}
+              value={`${result.metrics.totalReturn.toFixed(2)}%`}
               positive={result.metrics.totalReturn > 0}
               icon={result.metrics.totalReturn > 0 ? TrendingUp : TrendingDown}
             />
             <MetricCard
               label="Buy & Hold"
-              value={`${(result.buyHold.totalReturn * 100).toFixed(2)}%`}
+              value={`${result.buyHold.totalReturn.toFixed(2)}%`}
               positive={result.buyHold.totalReturn > 0}
             />
             <MetricCard
               label="승률"
-              value={`${(result.metrics.winRate * 100).toFixed(1)}%`}
-              positive={result.metrics.winRate >= 0.5}
+              value={`${result.metrics.winRate.toFixed(1)}%`}
+              positive={result.metrics.winRate >= 50}
             />
             <MetricCard
               label="총 거래"
@@ -287,7 +287,7 @@ export default function DayTradingContent() {
             />
             <MetricCard
               label="Max Drawdown"
-              value={`${(result.metrics.maxDrawdown * 100).toFixed(2)}%`}
+              value={`${result.metrics.maxDrawdown.toFixed(2)}%`}
               positive={false}
             />
             <MetricCard
@@ -331,7 +331,7 @@ export default function DayTradingContent() {
                         {t.pnl > 0 ? '+' : ''}{t.pnl.toFixed(0)}
                       </td>
                       <td className={`px-3 py-2 text-right font-mono ${t.pnlPercent > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {t.pnlPercent > 0 ? '+' : ''}{(t.pnlPercent * 100).toFixed(2)}%
+                        {t.pnlPercent > 0 ? '+' : ''}{t.pnlPercent.toFixed(2)}%
                       </td>
                       <td className="px-3 py-2 text-right font-mono">{t.holdingDays}</td>
                     </tr>

@@ -401,7 +401,7 @@ export default function CompareContent() {
                       <td className={`px-3 py-2 text-right font-mono ${bhRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
                         {bhRet > 0 ? '+' : ''}{bhRet.toFixed(2)}%
                       </td>
-                      <td className="px-3 py-2 text-right font-mono">{(r.metrics.winRate * 100).toFixed(1)}%</td>
+                      <td className="px-3 py-2 text-right font-mono">{r.metrics.winRate.toFixed(1)}%</td>
                       <td className="px-3 py-2 text-right font-mono">{r.metrics.totalTrades}</td>
                       <td className="px-3 py-2 text-right font-mono">{r.metrics.sharpeRatio.toFixed(2)}</td>
                       <td className="px-3 py-2 text-right font-mono text-blue-500">{r.metrics.maxDrawdown.toFixed(2)}%</td>
@@ -473,7 +473,7 @@ export default function CompareContent() {
                   <p className="font-medium">최고 성과: {results[0].strategyName}</p>
                   <p className="mt-0.5">
                     총 수익률 <span className="font-mono font-semibold">{results[0].metrics.totalReturn > 0 ? '+' : ''}{results[0].metrics.totalReturn.toFixed(2)}%</span>,
-                    {' '}승률 {(results[0].metrics.winRate * 100).toFixed(1)}%, Sharpe {results[0].metrics.sharpeRatio.toFixed(2)}
+                    {' '}승률 {results[0].metrics.winRate.toFixed(1)}%, Sharpe {results[0].metrics.sharpeRatio.toFixed(2)}
                   </p>
                 </div>
               </div>
