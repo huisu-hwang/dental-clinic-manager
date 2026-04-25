@@ -307,6 +307,7 @@ export default function DayTradingContent() {
               <table className="w-full text-xs">
                 <thead className="bg-at-surface-alt">
                   <tr>
+                    <th className="px-3 py-2 text-left font-medium text-at-text-secondary">종목</th>
                     <th className="px-3 py-2 text-left font-medium text-at-text-secondary">진입</th>
                     <th className="px-3 py-2 text-left font-medium text-at-text-secondary">청산</th>
                     <th className="px-3 py-2 text-right font-medium text-at-text-secondary">수량</th>
@@ -320,6 +321,7 @@ export default function DayTradingContent() {
                 <tbody>
                   {result.trades.slice(0, 50).map((t, i) => (
                     <tr key={i} className="border-t border-at-border">
+                      <td className="px-3 py-2 font-mono font-semibold text-at-text">{t.ticker}</td>
                       <td className="px-3 py-2 font-mono text-at-text-secondary">{t.entryDate.slice(5, 16)}</td>
                       <td className="px-3 py-2 font-mono text-at-text-secondary">{t.exitDate.slice(5, 16)}</td>
                       <td className="px-3 py-2 text-right font-mono">{t.quantity}</td>

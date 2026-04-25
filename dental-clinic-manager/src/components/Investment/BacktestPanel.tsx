@@ -436,6 +436,7 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-at-text-secondary border-b border-at-border">
+                      <th className="text-left py-2 px-2">종목</th>
                       <th className="text-left py-2 px-2">진입일</th>
                       <th className="text-left py-2 px-2">청산일</th>
                       <th className="text-right py-2 px-2">진입가</th>
@@ -449,6 +450,7 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
                   <tbody>
                     {selectedResult.trades.map((t, i) => (
                       <tr key={i} className="border-b border-at-border/50 hover:bg-at-surface-alt transition-colors">
+                        <td className="py-2 px-2 font-mono font-semibold text-at-text">{t.ticker}</td>
                         <td className="py-2 px-2 font-mono">{t.entryDate}</td>
                         <td className="py-2 px-2 font-mono">{t.exitDate}</td>
                         <td className="py-2 px-2 text-right font-mono">{t.entryPrice.toLocaleString()}</td>
