@@ -16,6 +16,7 @@ import {
   X,
   Loader2,
   Zap,
+  GitCompare,
 } from 'lucide-react'
 import type { InvestmentTab } from '@/types/investment'
 import Footer from '@/components/Layout/Footer'
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'connect', label: '계좌 연결', icon: Link2, href: '/investment/connect' },
   { id: 'strategy', label: '전략 관리', icon: Target, href: '/investment/strategy' },
   { id: 'daytrading', label: '단타 (분봉)', icon: Zap, href: '/investment/daytrading' },
+  { id: 'compare', label: '전략 비교', icon: GitCompare, href: '/investment/compare' },
   { id: 'trading', label: '자동매매', icon: TrendingUp, href: '/investment/trading' },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase, href: '/investment/portfolio' },
 ]
