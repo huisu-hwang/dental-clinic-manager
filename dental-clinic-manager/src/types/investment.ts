@@ -63,6 +63,8 @@ export type IndicatorType =
   | 'WILLR'  // Williams %R
   | 'VOLUME_SMA'
   | 'FEAR_GREED'  // Fear & Greed Index (0~100, 실시간 시장 심리)
+  | 'SMART_MONEY'  // 스마트머니 매집/분산 지표 (-100~+100, 중기)
+  | 'DAILY_SMART_MONEY_PULSE'  // 일일 스마트머니 펄스 (-100~+100, 단기)
 
 export interface IndicatorConfig {
   id: string          // 예: 'RSI_14', 'SMA_20'
