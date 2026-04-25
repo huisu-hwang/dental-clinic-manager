@@ -63,6 +63,17 @@ export type IndicatorType =
   | 'WILLR'  // Williams %R
   | 'VOLUME_SMA'
   | 'FEAR_GREED'  // Fear & Greed Index (0~100, 실시간 시장 심리)
+  | 'SMART_MONEY'  // 스마트머니 매집/분산 지표 (-100~+100, 중기)
+  | 'DAILY_SMART_MONEY_PULSE'  // 일일 스마트머니 펄스 (-100~+100, 단기)
+  // ===== 단타(Day Trading) 전용 분봉 지표 =====
+  | 'VWAP'              // Volume Weighted Average Price (당일 누적 거래량 가중 평균가)
+  | 'OPENING_RANGE'     // ORB (Opening Range Breakout) - 시초 N분 고/저
+  | 'LARGE_BLOCK'       // 대형 거래 감지 (현재 봉 거래량 / 최근 N봉 평균 비율)
+  | 'CLOSING_PRESSURE'  // 장 마감 압박 (마감 N봉 거래량 점유율 %)
+  | 'INTRADAY_PULSE'    // 분봉판 일일 펄스 (-100~+100)
+
+/** 전략 모드: swing(일봉/스윙) vs daytrading(분봉/단타) */
+export type StrategyMode = 'swing' | 'daytrading'
 
 export interface IndicatorConfig {
   id: string          // 예: 'RSI_14', 'SMA_20'
@@ -146,6 +157,8 @@ export interface InvestmentStrategy {
   description: string | null
   target_market: Market
   timeframe: Timeframe
+  /** 전략 모드 (옵셔널, 미설정 시 'swing'으로 간주) */
+  mode?: StrategyMode
   indicators: IndicatorConfig[]
   buy_conditions: ConditionGroup
   sell_conditions: ConditionGroup
@@ -162,6 +175,8 @@ export interface StrategyInput {
   description?: string
   targetMarket: Market
   timeframe: Timeframe
+  /** 전략 모드 (옵셔널, 미설정 시 'swing'으로 간주) */
+  mode?: StrategyMode
   indicators: IndicatorConfig[]
   buyConditions: ConditionGroup
   sellConditions: ConditionGroup
@@ -447,6 +462,8 @@ export interface PresetStrategy {
   id: string
   name: string
   description: string
+  /** 전략 모드 (옵셔널, 미설정 시 'swing'으로 간주) */
+  mode?: StrategyMode
   indicators: IndicatorConfig[]
   buyConditions: ConditionGroup
   sellConditions: ConditionGroup

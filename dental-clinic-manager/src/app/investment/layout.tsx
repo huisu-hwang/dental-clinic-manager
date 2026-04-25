@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Loader2,
+  Zap,
 } from 'lucide-react'
 import type { InvestmentTab } from '@/types/investment'
 import Footer from '@/components/Layout/Footer'
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard, href: '/investment' },
   { id: 'connect', label: '계좌 연결', icon: Link2, href: '/investment/connect' },
   { id: 'strategy', label: '전략 관리', icon: Target, href: '/investment/strategy' },
+  { id: 'daytrading', label: '단타 (분봉)', icon: Zap, href: '/investment/daytrading' },
   { id: 'trading', label: '자동매매', icon: TrendingUp, href: '/investment/trading' },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase, href: '/investment/portfolio' },
 ]
