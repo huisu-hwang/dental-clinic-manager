@@ -8,9 +8,34 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2 } from 'lucide-react'
+import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
-import type { InvestmentStrategy, Market, BacktestMetrics, EquityCurvePoint, BacktestTrade } from '@/types/investment'
+import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
+import type {
+  InvestmentStrategy, Market, BacktestMetrics, EquityCurvePoint, BacktestTrade,
+  PresetStrategy, IndicatorConfig, ConditionGroup, RiskSettings,
+} from '@/types/investment'
+
+/** 비교 가능한 단일 항목 (사용자 저장 전략 또는 프리셋) */
+interface SelectableItem {
+  key: string  // 'user:<uuid>' 또는 'preset:<id>'
+  source: 'user' | 'preset'
+  name: string
+  description?: string
+  indicatorCount: number
+  isActive?: boolean
+  // 백테스트 호출용 데이터
+  strategyId?: string
+  preset?: {
+    indicators: IndicatorConfig[]
+    buyConditions: ConditionGroup
+    sellConditions: ConditionGroup
+    riskSettings?: Partial<RiskSettings>
+  }
+}
+
+// 단타 전용 프리셋 ID (일봉 비교에서 제외)
+const DAYTRADING_PRESET_IDS = new Set(['day-vwap-bounce', 'day-orb-breakout', 'day-closing-pressure'])
 
 // 일정한 색상 팔레트 (최대 6개 전략 비교) — Tailwind JIT가 인식하도록 클래스 전체 명시
 const COLORS = [
@@ -72,17 +97,49 @@ export default function CompareContent() {
 
   useEffect(() => { loadStrategies() }, [loadStrategies])
 
-  // 선택된 전략들의 시장 일치 확인 (다른 시장은 동시 비교 의미 약함)
-  const filteredStrategies = useMemo(
-    () => strategies.filter(s => s.target_market === market),
+  // 사용자 저장 전략 (시장 일치)
+  const userItems = useMemo<SelectableItem[]>(
+    () => strategies
+      .filter(s => s.target_market === market)
+      .map(s => ({
+        key: `user:${s.id}`,
+        source: 'user' as const,
+        name: s.name,
+        description: s.description || undefined,
+        indicatorCount: Array.isArray(s.indicators) ? s.indicators.length : 0,
+        isActive: s.is_active,
+        strategyId: s.id,
+      })),
     [strategies, market]
   )
 
-  const toggleStrategy = (id: string) => {
+  // 프리셋 전략 (단타 제외 = 일봉 swing)
+  const presetItems = useMemo<SelectableItem[]>(
+    () => PRESET_STRATEGIES
+      .filter(p => !DAYTRADING_PRESET_IDS.has(p.id))
+      .map((p: PresetStrategy) => ({
+        key: `preset:${p.id}`,
+        source: 'preset' as const,
+        name: p.name,
+        description: p.description,
+        indicatorCount: p.indicators.length,
+        preset: {
+          indicators: p.indicators,
+          buyConditions: p.buyConditions,
+          sellConditions: p.sellConditions,
+          riskSettings: p.riskSettings,
+        },
+      })),
+    []
+  )
+
+  const allItems = useMemo(() => [...userItems, ...presetItems], [userItems, presetItems])
+
+  const toggleStrategy = (key: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else if (next.size < MAX_COMPARE) next.add(id)
+      if (next.has(key)) next.delete(key)
+      else if (next.size < MAX_COMPARE) next.add(key)
       else alert(`최대 ${MAX_COMPARE}개까지 비교할 수 있습니다`)
       return next
     })
@@ -101,27 +158,31 @@ export default function CompareContent() {
     setError(null)
     setResults([])
 
-    const ids = Array.from(selectedIds)
-    const promises = ids.map(async (strategyId): Promise<BacktestResultItem> => {
-      const strat = strategies.find(s => s.id === strategyId)
+    const keys = Array.from(selectedIds)
+    const promises = keys.map(async (key): Promise<BacktestResultItem> => {
+      const item = allItems.find(it => it.key === key)
+      const name = item?.name || key
+      const body: Record<string, unknown> = {
+        ticker: ticker.trim(),
+        market,
+        startDate,
+        endDate,
+        initialCapital,
+      }
+      if (item?.source === 'user') body.strategyId = item.strategyId
+      else if (item?.source === 'preset') body.preset = item.preset
+
       try {
         const res = await fetch('/api/investment/backtest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            strategyId,
-            ticker: ticker.trim(),
-            market,
-            startDate,
-            endDate,
-            initialCapital,
-          }),
+          body: JSON.stringify(body),
         })
         const json = await res.json()
         if (!res.ok || !json.data) {
           return {
-            strategyId,
-            strategyName: strat?.name || strategyId,
+            strategyId: key,
+            strategyName: name,
             metrics: emptyMetrics(),
             trades: [],
             equityCurve: [],
@@ -129,8 +190,8 @@ export default function CompareContent() {
           }
         }
         return {
-          strategyId,
-          strategyName: strat?.name || strategyId,
+          strategyId: key,
+          strategyName: name,
           metrics: json.data.metrics,
           trades: json.data.trades || [],
           equityCurve: json.data.equityCurve || [],
@@ -138,8 +199,8 @@ export default function CompareContent() {
         }
       } catch (err) {
         return {
-          strategyId,
-          strategyName: strat?.name || strategyId,
+          strategyId: key,
+          strategyName: name,
           metrics: emptyMetrics(),
           trades: [],
           equityCurve: [],
@@ -149,7 +210,6 @@ export default function CompareContent() {
     })
 
     const allResults = await Promise.all(promises)
-    // 수익률 내림차순 정렬
     allResults.sort((a, b) => (b.metrics?.totalReturn ?? -Infinity) - (a.metrics?.totalReturn ?? -Infinity))
     setResults(allResults)
     setRunning(false)
@@ -277,56 +337,52 @@ export default function CompareContent() {
           <span className="text-xs text-at-text-secondary">{selectedIds.size}/{MAX_COMPARE} 선택됨 ({market})</span>
         </div>
 
-        {loadingStrategies ? (
-          <p className="text-sm text-at-text-secondary py-4 text-center">전략 목록 불러오는 중...</p>
-        ) : filteredStrategies.length === 0 ? (
-          <div className="text-center py-6 text-at-text-secondary text-sm">
-            <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
-            <p>{market === 'KR' ? '국내' : '미국'} 시장 전략이 없습니다</p>
-            <p className="text-xs mt-1">전략 관리 페이지에서 먼저 생성해주세요</p>
+        {/* 내 전략 그룹 */}
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-2">
+            <User className="w-4 h-4 text-at-accent" />
+            <h3 className="text-sm font-semibold text-at-text">내 전략 ({market === 'KR' ? '국내' : '미국'})</h3>
+            <span className="text-xs text-at-text-weak">{userItems.length}개</span>
           </div>
-        ) : (
+          {loadingStrategies ? (
+            <p className="text-sm text-at-text-secondary py-4 text-center">전략 목록 불러오는 중...</p>
+          ) : userItems.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-at-border bg-at-surface-alt p-4 text-center text-xs text-at-text-secondary">
+              <AlertCircle className="w-5 h-5 mx-auto mb-1 opacity-40" />
+              {market === 'KR' ? '국내' : '미국'} 시장 저장 전략이 없습니다. 아래 프리셋으로 바로 비교하실 수 있어요.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {userItems.map(item => (
+                <SelectableCard
+                  key={item.key}
+                  item={item}
+                  selectedIds={selectedIds}
+                  onToggle={toggleStrategy}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 프리셋 그룹 */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-4 h-4 text-purple-500" />
+            <h3 className="text-sm font-semibold text-at-text">프리셋 전략</h3>
+            <span className="text-xs text-at-text-weak">저장 없이 즉시 비교 · {presetItems.length}개</span>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {filteredStrategies.map(s => {
-              const isSelected = selectedIds.has(s.id)
-              const orderIndex = isSelected ? Array.from(selectedIds).indexOf(s.id) : -1
-              const color = orderIndex >= 0 ? COLORS[orderIndex % COLORS.length] : null
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => toggleStrategy(s.id)}
-                  className={`text-left p-3 rounded-xl border-2 transition-colors ${
-                    isSelected
-                      ? `${color?.border ?? 'border-at-accent'} ${color?.light ?? 'bg-at-accent-light'}`
-                      : 'border-at-border bg-at-surface hover:border-at-accent/50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-at-text text-sm break-all">{s.name}</p>
-                      {s.description && (
-                        <p className="text-xs text-at-text-secondary mt-0.5 line-clamp-1">{s.description}</p>
-                      )}
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-at-bg text-at-text-weak">
-                          지표 {(s.indicators as unknown[]).length}개
-                        </span>
-                        {s.is_active && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">활성</span>
-                        )}
-                      </div>
-                    </div>
-                    {isSelected && color && (
-                      <span className={`flex-shrink-0 w-6 h-6 rounded-full ${color.bg} text-white text-xs font-bold flex items-center justify-center`}>
-                        {orderIndex + 1}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              )
-            })}
+            {presetItems.map(item => (
+              <SelectableCard
+                key={item.key}
+                item={item}
+                selectedIds={selectedIds}
+                onToggle={toggleStrategy}
+              />
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="mt-4 flex items-center gap-3">
           <button
@@ -482,6 +538,51 @@ export default function CompareContent() {
         </section>
       )}
     </div>
+  )
+}
+
+function SelectableCard({ item, selectedIds, onToggle }: {
+  item: SelectableItem
+  selectedIds: Set<string>
+  onToggle: (key: string) => void
+}) {
+  const isSelected = selectedIds.has(item.key)
+  const orderIndex = isSelected ? Array.from(selectedIds).indexOf(item.key) : -1
+  const color = orderIndex >= 0 ? COLORS[orderIndex % COLORS.length] : null
+  return (
+    <button
+      onClick={() => onToggle(item.key)}
+      className={`text-left p-3 rounded-xl border-2 transition-colors ${
+        isSelected
+          ? `${color?.border ?? 'border-at-accent'} ${color?.light ?? 'bg-at-accent-light'}`
+          : 'border-at-border bg-at-surface hover:border-at-accent/50'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-at-text text-sm break-all">{item.name}</p>
+          {item.description && (
+            <p className="text-xs text-at-text-secondary mt-0.5 line-clamp-1">{item.description}</p>
+          )}
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-at-bg text-at-text-weak">
+              지표 {item.indicatorCount}개
+            </span>
+            {item.source === 'preset' && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">프리셋</span>
+            )}
+            {item.isActive && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">활성</span>
+            )}
+          </div>
+        </div>
+        {isSelected && color && (
+          <span className={`flex-shrink-0 w-6 h-6 rounded-full ${color.bg} text-white text-xs font-bold flex items-center justify-center`}>
+            {orderIndex + 1}
+          </span>
+        )}
+      </div>
+    </button>
   )
 }
 
