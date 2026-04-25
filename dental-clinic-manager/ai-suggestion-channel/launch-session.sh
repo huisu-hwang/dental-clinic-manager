@@ -36,6 +36,23 @@ if ! "$TMUX" has-session -t "$SESSION" 2>/dev/null; then
   # `; sleep 60` 꼬리는 claude가 exit해도 세션이 즉시 닫히지 않게 완충 (디버깅용)
   "$TMUX" new-session -d -s "$SESSION" -c "$REPO" \
     "$CLAUDE $CLAUDE_ARGS; echo 'claude exited, sleeping 60s for inspection'; sleep 60"
+
+  # --dangerously-load-development-channels 확인 프롬프트 자동 승인
+  # (stdin 없는 detached 세션에서 수동 개입 없이 통과하기 위함)
+  for i in 1 2 3 4 5 6; do
+    sleep 5
+    pane=$("$TMUX" capture-pane -t "$SESSION" -p -S -30 2>/dev/null || true)
+    if echo "$pane" | grep -q "Loading development channels"; then
+      echo "[launch-session] $(date) auto-approving development channels prompt (iter $i)"
+      "$TMUX" send-keys -t "$SESSION" Enter
+      break
+    fi
+    # claude가 이미 정상 기동돼 "Listening for channel messages" 상태면 종료
+    if echo "$pane" | grep -q "Listening for channel messages"; then
+      echo "[launch-session] $(date) claude is ready (iter $i), no prompt needed"
+      break
+    fi
+  done
 else
   echo "[launch-session] $(date) tmux session '$SESSION' already running — attaching monitor"
 fi
