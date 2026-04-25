@@ -625,4 +625,158 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       takeProfitPercent: 12,
     },
   },
+
+  // ============================================
+  // 단타 (Day Trading) 전략 - 분봉 기반
+  // ============================================
+
+  {
+    id: 'day-vwap-bounce',
+    name: '⚡ VWAP 반등 단타',
+    description: '[단타/5분봉] 가격이 VWAP 아래에서 RSI 과매도 시 반등 매수, RSI 과열 또는 펄스 약화 시 청산',
+    mode: 'daytrading',
+    indicators: [
+      { id: 'VWAP', type: 'VWAP', params: {} },
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+      { id: 'INTRADAY_PULSE_20', type: 'INTRADAY_PULSE', params: { volPeriod: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // RSI 과매도 (VWAP 아래에서 과매도 → 반등 가능성)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 35 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // RSI 과열 → 익절
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 60 },
+        },
+        // 분봉 펄스 0선 하향 이탈 → 약세 전환
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'INTRADAY_PULSE_20' },
+          operator: 'crossUnder',
+          right: { type: 'constant', value: 0 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 1.5,
+      takeProfitPercent: 2.5,
+      maxHoldingDays: 12, // 5분봉 12봉 = 60분
+    },
+  },
+
+  {
+    id: 'day-orb-breakout',
+    name: '🚀 Opening Range Breakout 단타',
+    description: '[단타/5분봉] 장 시작 30분 고점 돌파 추정(강한 매집 펄스) 시 매수, 펄스 약화 시 청산',
+    mode: 'daytrading',
+    indicators: [
+      { id: 'OPENING_RANGE_6', type: 'OPENING_RANGE', params: { numBars: 6 } }, // 5분봉 6봉 = 30분
+      { id: 'INTRADAY_PULSE_20', type: 'INTRADAY_PULSE', params: { volPeriod: 20 } },
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 강한 매집 펄스 = ORB 돌파 추정 (가격-ORB.high 직접 비교는 현재 조건 트리 미지원)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'INTRADAY_PULSE_20' },
+          operator: '>',
+          right: { type: 'constant', value: 40 },
+        },
+        // 과열 아님 (RSI 75 미만)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 75 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 펄스 약화 → 돌파 동력 소실
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'INTRADAY_PULSE_20' },
+          operator: '<',
+          right: { type: 'constant', value: 0 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 1.5,
+      takeProfitPercent: 3,
+      maxHoldingDays: 24, // 5분봉 24봉 = 2시간
+    },
+  },
+
+  {
+    id: 'day-closing-pressure',
+    name: '🌙 마감 매집 단타',
+    description: '[단타/5분봉] 장 마감 30분 거래량 급증 + 매집 펄스 강세 시 매수, 다음날 시가 청산',
+    mode: 'daytrading',
+    indicators: [
+      { id: 'CLOSING_PRESSURE_6', type: 'CLOSING_PRESSURE', params: { lastNumBars: 6 } }, // 5분봉 6봉 = 30분
+      { id: 'LARGE_BLOCK_20', type: 'LARGE_BLOCK', params: { period: 20 } },
+      { id: 'INTRADAY_PULSE_20', type: 'INTRADAY_PULSE', params: { volPeriod: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 마감 거래량 점유율이 평균보다 비정상적으로 높음
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'CLOSING_PRESSURE_6' },
+          operator: '>',
+          right: { type: 'constant', value: 25 },
+        },
+        // 매집 펄스 강세
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'INTRADAY_PULSE_20' },
+          operator: '>',
+          right: { type: 'constant', value: 30 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 펄스 강한 분산 → 청산
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'INTRADAY_PULSE_20' },
+          operator: '<',
+          right: { type: 'constant', value: -30 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 1.5,
+      takeProfitPercent: 2,
+      maxHoldingDays: 6, // 5분봉 6봉 ≈ 다음 거래일 시가 도달 전 청산
+    },
+  },
 ]
