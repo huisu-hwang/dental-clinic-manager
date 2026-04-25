@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '잘못된 요청 형식입니다' }, { status: 400 })
   }
 
-  const { strategyId, preset, ticker, market, startDate, endDate, initialCapital } = body
+  const { strategyId, preset, ticker, market, startDate, endDate, initialCapital, useFullCapital } = body
 
   if (!ticker || typeof ticker !== 'string') {
     return NextResponse.json({ error: '종목 코드가 필요합니다' }, { status: 400 })
@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
       initialCapital: capital,
       market: market as Market,
       ticker: ticker as string,
+      useFullCapital: useFullCapital === true,
     }, controller.signal)
 
     clearTimeout(timeout)

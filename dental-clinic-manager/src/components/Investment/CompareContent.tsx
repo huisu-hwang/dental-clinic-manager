@@ -170,6 +170,9 @@ export default function CompareContent() {
         startDate,
         endDate,
         initialCapital,
+        // 비교 정확도를 위해 모든 전략을 동일 조건으로 실행:
+        // 자본 100% 매수 + 매도 후 회수액 전액 재투자 (복리)
+        useFullCapital: true,
       }
       if (item?.source === 'user') body.strategyId = item.strategyId
       else if (item?.source === 'preset') body.preset = item.preset
@@ -254,6 +257,19 @@ export default function CompareContent() {
         <p className="text-sm text-at-text-secondary mt-1">
           하나의 종목에 대해 여러 전략을 동시에 백테스트하여 성과를 비교합니다. 최대 {MAX_COMPARE}개까지 동시 비교.
         </p>
+      </div>
+
+      {/* 비교 모드 안내 */}
+      <div className="rounded-xl bg-purple-50 border border-purple-200 p-3 text-xs text-purple-900 flex items-start gap-2">
+        <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-purple-600" />
+        <div>
+          <p className="font-medium mb-0.5">정확한 비교를 위한 동일 조건</p>
+          <p className="text-purple-800">
+            매수 시 가용 현금 100%를 모두 투입하고, 매도 후 회수된 금액을 다음 매수에 전액 재투자합니다(복리 반영).
+            전략의 <code className="px-1 py-0.5 bg-purple-100 rounded">maxPositionSizePercent</code> 리스크 설정은
+            <strong> 비교에서만 무시</strong>되어, 순수 매매 시그널의 성과 차이를 비교할 수 있도록 합니다.
+          </p>
+        </div>
       </div>
 
       {/* 설정 폼 */}

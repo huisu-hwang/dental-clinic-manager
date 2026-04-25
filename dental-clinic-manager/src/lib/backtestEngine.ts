@@ -48,6 +48,12 @@ export interface BacktestParams {
   initialCapital: number
   market: Market
   ticker: string
+  /**
+   * true이면 매수 시 maxPositionSizePercent를 무시하고 가용 cash 100%를 투입.
+   * 매도 후 회수된 자본도 다음 매수에 전액 재사용 (복리).
+   * 전략 비교 페이지처럼 자본 활용 차이를 제거하고 순수 시그널 성과만 비교할 때 사용.
+   */
+  useFullCapital?: boolean
 }
 
 export interface BuyHoldResult {
@@ -85,6 +91,7 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
   const {
     prices, indicators, buyConditions, sellConditions,
     riskSettings, initialCapital, market, ticker,
+    useFullCapital = false,
   } = params
 
   if (prices.length < 2) {
@@ -162,8 +169,10 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
         if (buySignal) {
           // 당일 시가에 매수 체결
           const entryPrice = bar.open
-          // 리스크 설정: 종목당 최대 비중
-          const maxInvestment = cash * (riskSettings.maxPositionSizePercent / 100)
+          // useFullCapital=true이면 가용 cash 100% 사용. 아니면 maxPositionSizePercent 적용.
+          const maxInvestment = useFullCapital
+            ? cash
+            : cash * (riskSettings.maxPositionSizePercent / 100)
           const investAmount = Math.min(cash, maxInvestment)
           const buyFee = investAmount * commissionRate.buyCommission
           const affordableAmount = investAmount - buyFee
