@@ -17,9 +17,9 @@ REPO="/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager"
 TMUX="/opt/homebrew/bin/tmux"
 CLAUDE="/Users/hhs/.local/bin/claude"
 
-# Claude CLI: --dangerously-load-development-channels + acceptEdits 모드
-# settings.local.json의 allow 리스트가 Bash 허용 범위를 좁게 제어
-CLAUDE_ARGS="--dangerously-load-development-channels server:suggestion-inbox --permission-mode acceptEdits"
+# Claude CLI: --dangerously-load-development-channels + bypassPermissions 모드
+# 모든 권한 확인을 건너뛰며, 무인 환경에서 즉시 작업을 수행
+CLAUDE_ARGS="--dangerously-load-development-channels server:suggestion-inbox --permission-mode bypassPermissions"
 
 # 필수 바이너리 체크
 for bin in "$TMUX" "$CLAUDE"; do
