@@ -120,47 +120,33 @@ export default function InvestmentTab() {
     )
   }
 
-  // 백테스트 인라인 표시
-  if (backtestStrategyId) {
-    return (
-      <div className="bg-white min-h-screen">
-        <div className="p-4 sm:p-6">
-          <BacktestPanel
-            strategyId={backtestStrategyId}
-            onBack={() => setBacktestStrategyId(null)}
-          />
-        </div>
-      </div>
-    )
-  }
+  // 인라인 뷰 모드 (백테스트 또는 새 전략 만들기)
+  const inInlineView = backtestStrategyId !== null || creatingStrategy
 
-  // 새 전략 만들기 인라인 표시
-  if (creatingStrategy) {
-    return (
-      <div className="bg-white min-h-screen">
-        <div className="p-4 sm:p-6">
-          <StrategyBuilder
-            onCancel={() => setCreatingStrategy(false)}
-            onSaved={() => { setCreatingStrategy(false); loadData() }}
-          />
-        </div>
-      </div>
-    )
+  const handleTabChange = (id: SubTab) => {
+    // 다른 탭 클릭 시 인라인 모드 자동 종료
+    if (inInlineView) {
+      setBacktestStrategyId(null)
+      setCreatingStrategy(false)
+    }
+    setSubTab(id)
   }
 
   return (
     <div className="bg-white min-h-screen">
-      {/* 서브메뉴 탭 - 근태/마케팅 페이지와 동일 패턴 */}
+      {/* 서브메뉴 탭 - 항상 표시 (인라인 뷰에서도) */}
       <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3">
         <div className="flex flex-wrap gap-2">
           {SUB_TABS.map(tab => {
             const Icon = tab.icon
+            // 인라인 뷰에서는 어느 탭도 active 표시 안 함 (모드를 명확히 구분)
+            const isActive = !inInlineView && subTab === tab.id
             return (
               <button
                 key={tab.id}
-                onClick={() => setSubTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
-                  subTab === tab.id
+                  isActive
                     ? 'bg-at-accent-light text-at-accent'
                     : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                 }`}
@@ -175,7 +161,22 @@ export default function InvestmentTab() {
 
       {/* 서브탭 콘텐츠 */}
       <div className="p-4 sm:p-6">
-        {subTab === 'dashboard' && (
+        {/* 인라인 뷰 우선 (백테스트 / 새 전략) */}
+        {backtestStrategyId && (
+          <BacktestPanel
+            strategyId={backtestStrategyId}
+            onBack={() => setBacktestStrategyId(null)}
+          />
+        )}
+        {creatingStrategy && (
+          <StrategyBuilder
+            onCancel={() => setCreatingStrategy(false)}
+            onSaved={() => { setCreatingStrategy(false); loadData() }}
+          />
+        )}
+
+        {/* 일반 탭 콘텐츠 (인라인 뷰가 아닐 때만) */}
+        {!inInlineView && subTab === 'dashboard' && (
           <DashboardSubTab
             hasCredential={hasCredential}
             strategies={strategies}
@@ -190,10 +191,10 @@ export default function InvestmentTab() {
             onRefresh={loadData}
           />
         )}
-        {subTab === 'connect' && (
+        {!inInlineView && subTab === 'connect' && (
           <ConnectContent onCredentialChange={loadData} />
         )}
-        {subTab === 'strategy' && (
+        {!inInlineView && subTab === 'strategy' && (
           <StrategySubTab
             strategies={strategies}
             onRefresh={loadData}
@@ -202,16 +203,16 @@ export default function InvestmentTab() {
             onCreateNew={() => setCreatingStrategy(true)}
           />
         )}
-        {subTab === 'daytrading' && (
+        {!inInlineView && subTab === 'daytrading' && (
           <DayTradingContent />
         )}
-        {subTab === 'compare' && (
+        {!inInlineView && subTab === 'compare' && (
           <CompareContent />
         )}
-        {subTab === 'trading' && (
+        {!inInlineView && subTab === 'trading' && (
           <TradingContent />
         )}
-        {subTab === 'portfolio' && (
+        {!inInlineView && subTab === 'portfolio' && (
           <div className="max-w-md mx-auto text-center py-12">
             <div className="w-16 h-16 rounded-2xl bg-at-surface-alt flex items-center justify-center mx-auto mb-4">
               <Briefcase className="w-8 h-8 text-at-text-weak" />
