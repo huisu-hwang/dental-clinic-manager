@@ -2,27 +2,16 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight, Sparkles, Settings2, Shield, Zap } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Sparkles, Settings2, Zap } from 'lucide-react'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import IndicatorPanel from '@/components/Investment/StrategyBuilder/IndicatorPanel'
 import ConditionBuilder from '@/components/Investment/StrategyBuilder/ConditionBuilder'
-import RiskSettingsPanel from '@/components/Investment/StrategyBuilder/RiskSettingsPanel'
 import type {
   Market, Timeframe, AutomationLevel,
-  IndicatorConfig, ConditionGroup, RiskSettings, PresetStrategy,
+  IndicatorConfig, ConditionGroup, PresetStrategy,
 } from '@/types/investment'
 
-type Step = 'basic' | 'indicators' | 'conditions' | 'risk'
-
-// 투자 일반론 기반 기본값 (2% Rule, 리스크-보상 1:2, 5종목 분산)
-const DEFAULT_RISK: RiskSettings = {
-  maxDailyLossPercent: 2,      // 2% Rule (Van Tharp): 일일 최대 손실 2%
-  maxPositions: 5,              // 5종목 분산 (관리 가능 범위)
-  maxPositionSizePercent: 20,   // 종목당 20% (5종목 × 20% = 100%)
-  stopLossPercent: 7,           // 단기 스윙 기준 7%
-  takeProfitPercent: 15,        // 리스크-보상 1:2 (7 × 2 ≈ 14~15)
-  maxHoldingDays: 30,           // 중기 30일 보유 한도
-}
+type Step = 'basic' | 'indicators' | 'conditions'
 
 const EMPTY_GROUP: ConditionGroup = { type: 'group', operator: 'AND', conditions: [] }
 
@@ -47,7 +36,6 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
   const [indicators, setIndicators] = useState<IndicatorConfig[]>([])
   const [buyConditions, setBuyConditions] = useState<ConditionGroup>(EMPTY_GROUP)
   const [sellConditions, setSellConditions] = useState<ConditionGroup>(EMPTY_GROUP)
-  const [riskSettings, setRiskSettings] = useState<RiskSettings>(DEFAULT_RISK)
 
   const handleCancel = () => {
     if (onCancel) {
@@ -63,7 +51,6 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
     setIndicators(preset.indicators)
     setBuyConditions(preset.buyConditions)
     setSellConditions(preset.sellConditions)
-    setRiskSettings({ ...DEFAULT_RISK, ...preset.riskSettings })
     setStep('indicators')
   }
 
@@ -85,7 +72,6 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
           indicators,
           buyConditions,
           sellConditions,
-          riskSettings,
           automationLevel,
         }),
       })
@@ -110,7 +96,6 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
     { id: 'basic', label: '기본 설정', icon: <Settings2 className="w-4 h-4" /> },
     { id: 'indicators', label: '지표 선택', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'conditions', label: '매매 조건', icon: <Zap className="w-4 h-4" /> },
-    { id: 'risk', label: '리스크 관리', icon: <Shield className="w-4 h-4" /> },
   ]
 
   const currentIndex = steps.findIndex(s => s.id === step)
@@ -316,29 +301,12 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
             onChange={setSellConditions}
             indicators={indicators}
           />
+          <div className="bg-at-accent-light/40 border border-at-accent/30 rounded-xl p-4 text-xs text-at-text-secondary">
+            손절·일일 손실 제한 등 안전 장치는 <span className="font-semibold text-at-accent">자동매매 &gt; 자동매매 설정</span>에서 한 번만 설정하면 모든 전략에 동일하게 적용됩니다.
+          </div>
           <div className="flex gap-3">
             <button
               onClick={() => setStep('indicators')}
-              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-surface-alt transition-colors"
-            >
-              이전
-            </button>
-            <button
-              onClick={() => setStep('risk')}
-              className="flex-1 py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover transition-colors"
-            >
-              다음: 리스크 관리
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 'risk' && (
-        <div className="space-y-4">
-          <RiskSettingsPanel riskSettings={riskSettings} onChange={setRiskSettings} />
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStep('conditions')}
               className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-surface-alt transition-colors"
             >
               이전

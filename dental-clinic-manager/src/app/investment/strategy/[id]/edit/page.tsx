@@ -3,27 +3,18 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ChevronRight, Sparkles, Settings2, Shield, Zap, AlertCircle } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Sparkles, Settings2, Zap, AlertCircle } from 'lucide-react'
 import IndicatorPanel from '@/components/Investment/StrategyBuilder/IndicatorPanel'
 import ConditionBuilder from '@/components/Investment/StrategyBuilder/ConditionBuilder'
-import RiskSettingsPanel from '@/components/Investment/StrategyBuilder/RiskSettingsPanel'
 import type {
   InvestmentStrategy,
   Market, Timeframe, AutomationLevel,
-  IndicatorConfig, ConditionGroup, RiskSettings,
+  IndicatorConfig, ConditionGroup,
 } from '@/types/investment'
 
-type Step = 'basic' | 'indicators' | 'conditions' | 'risk'
+type Step = 'basic' | 'indicators' | 'conditions'
 
 const EMPTY_GROUP: ConditionGroup = { type: 'group', operator: 'AND', conditions: [] }
-const DEFAULT_RISK: RiskSettings = {
-  maxDailyLossPercent: 2,
-  maxPositions: 5,
-  maxPositionSizePercent: 20,
-  stopLossPercent: 7,
-  takeProfitPercent: 15,
-  maxHoldingDays: 30,
-}
 
 export default function EditStrategyPage() {
   const params = useParams<{ id: string }>()
@@ -45,7 +36,6 @@ export default function EditStrategyPage() {
   const [indicators, setIndicators] = useState<IndicatorConfig[]>([])
   const [buyConditions, setBuyConditions] = useState<ConditionGroup>(EMPTY_GROUP)
   const [sellConditions, setSellConditions] = useState<ConditionGroup>(EMPTY_GROUP)
-  const [riskSettings, setRiskSettings] = useState<RiskSettings>(DEFAULT_RISK)
 
   // 기존 전략 로드
   useEffect(() => {
@@ -70,7 +60,6 @@ export default function EditStrategyPage() {
         setIndicators(found.indicators || [])
         setBuyConditions(found.buy_conditions || EMPTY_GROUP)
         setSellConditions(found.sell_conditions || EMPTY_GROUP)
-        setRiskSettings({ ...DEFAULT_RISK, ...(found.risk_settings || {}) })
         setIsActive(!!found.is_active)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : '불러오기 실패')
@@ -93,7 +82,6 @@ export default function EditStrategyPage() {
         id: strategyId,
         name: name.trim(),
         description: description.trim() || null,
-        riskSettings,
         automationLevel,
       }
       // 비활성 전략일 때만 불변 필드 전송 (활성 전략에서는 API가 거부)
@@ -127,7 +115,6 @@ export default function EditStrategyPage() {
     { id: 'basic', label: '기본 설정', icon: <Settings2 className="w-4 h-4" /> },
     { id: 'indicators', label: '지표 선택', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'conditions', label: '매매 조건', icon: <Zap className="w-4 h-4" /> },
-    { id: 'risk', label: '리스크 관리', icon: <Shield className="w-4 h-4" /> },
   ]
   const currentIndex = steps.findIndex(s => s.id === step)
 
@@ -190,7 +177,7 @@ export default function EditStrategyPage() {
           <div className="text-sm">
             <p className="font-medium text-at-warning">활성 중인 전략입니다</p>
             <p className="text-at-text-secondary mt-1">
-              이름/설명/리스크/자동화 수준만 수정할 수 있습니다. 시장·시간프레임·지표·매매 조건을 바꾸려면 먼저 목록 페이지에서 전략을 비활성화해주세요.
+              이름/설명/자동화 수준만 수정할 수 있습니다. 시장·시간프레임·지표·매매 조건을 바꾸려면 먼저 목록 페이지에서 전략을 비활성화해주세요.
             </p>
           </div>
         </div>
@@ -359,29 +346,12 @@ export default function EditStrategyPage() {
               indicators={indicators}
             />
           </div>
+          <div className="bg-at-accent-light/40 border border-at-accent/30 rounded-xl p-4 text-xs text-at-text-secondary">
+            손절·일일 손실 제한 등 안전 장치는 <span className="font-semibold text-at-accent">자동매매 &gt; 자동매매 설정</span>에서 한 번만 설정하면 모든 전략에 동일하게 적용됩니다.
+          </div>
           <div className="flex gap-3">
             <button
               onClick={() => setStep('indicators')}
-              className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-surface-alt transition-colors"
-            >
-              이전
-            </button>
-            <button
-              onClick={() => setStep('risk')}
-              className="flex-1 py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover transition-colors"
-            >
-              다음: 리스크 관리
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 'risk' && (
-        <div className="space-y-4">
-          <RiskSettingsPanel riskSettings={riskSettings} onChange={setRiskSettings} />
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStep('conditions')}
               className="flex-1 py-3 border border-at-border text-at-text rounded-xl font-medium hover:bg-at-surface-alt transition-colors"
             >
               이전

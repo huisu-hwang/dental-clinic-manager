@@ -147,6 +147,36 @@ export interface RiskSettings {
 }
 
 // ============================================
+// 사용자별 자동매매 설정 (user_investment_settings)
+// ============================================
+
+/** DB Row */
+export interface UserInvestmentSettings {
+  user_id: string
+  daily_loss_limit_enabled: boolean
+  daily_loss_limit_percent: number
+  entry_stop_loss_enabled: boolean
+  entry_stop_loss_percent: number
+  created_at: string
+  updated_at: string
+}
+
+/** API/UI에서 사용하는 camelCase 형태 */
+export interface UserInvestmentSettingsInput {
+  dailyLossLimitEnabled: boolean
+  dailyLossLimitPercent: number
+  entryStopLossEnabled: boolean
+  entryStopLossPercent: number
+}
+
+export const DEFAULT_USER_INVESTMENT_SETTINGS: UserInvestmentSettingsInput = {
+  dailyLossLimitEnabled: false,
+  dailyLossLimitPercent: 5,
+  entryStopLossEnabled: false,
+  entryStopLossPercent: 3,
+}
+
+// ============================================
 // 투자 전략 (investment_strategies)
 // ============================================
 
@@ -180,8 +210,19 @@ export interface StrategyInput {
   indicators: IndicatorConfig[]
   buyConditions: ConditionGroup
   sellConditions: ConditionGroup
-  riskSettings: RiskSettings
+  /** @deprecated 사용자별 자동매매 설정으로 이전됨. 하위 호환을 위해 유지. */
+  riskSettings?: RiskSettings
   automationLevel: AutomationLevel
+}
+
+/** 백테스트 등 기존 로직 호환을 위한 무효화된 RiskSettings (모든 안전장치 비활성) */
+export const NOOP_RISK_SETTINGS: RiskSettings = {
+  maxDailyLossPercent: 0,
+  maxPositions: 1,
+  maxPositionSizePercent: 100,
+  stopLossPercent: 0,
+  takeProfitPercent: 0,
+  maxHoldingDays: 0,
 }
 
 // ============================================

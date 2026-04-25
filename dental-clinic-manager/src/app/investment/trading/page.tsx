@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Activity, Send, ArrowUpCircle, ArrowDownCircle, Clock, Loader2, ArrowLeft } from 'lucide-react'
 import type { TradeOrder, Market, OrderType, OrderMethod } from '@/types/investment'
+import TradingSettingsPanel from '@/components/Investment/TradingSettingsPanel'
 
 export default function TradingPage() {
   const [orders, setOrders] = useState<TradeOrder[]>([])
@@ -216,6 +217,9 @@ export default function TradingPage() {
               <p className="text-xs mt-1">전략을 활성화하면 실시간 매매 현황이 표시됩니다</p>
             </div>
           </div>
+
+          {/* 자동매매 설정 */}
+          <TradingSettingsPanel />
 
           {/* 최근 주문 내역 */}
           <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
