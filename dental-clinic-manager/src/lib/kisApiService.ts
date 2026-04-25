@@ -70,20 +70,30 @@ function getBaseUrl(isPaperTrading: boolean): string {
  */
 export async function getAccessToken(
   credentialId: string,
-  credential: KISCredential
+  credential: KISCredential,
+  forceRefresh = false
 ): Promise<string> {
-  // 1. 메모리 캐시 확인 (만료 1시간 전이면 유효)
-  const cached = tokenCache.get(credentialId)
-  if (cached && cached.expiresAt > Date.now() + 3600_000) {
-    return cached.token
+  // 강제 갱신 시 캐시 무효화 후 KIS에서 새로 발급
+  if (forceRefresh) {
+    tokenCache.delete(credentialId)
   }
 
-  // 2. 이미 갱신 중이면 동일 Promise 재사용
-  const existing = tokenLocks.get(credentialId)
-  if (existing) return existing
+  // 1. 메모리 캐시 확인 (만료 1시간 전이면 유효)
+  if (!forceRefresh) {
+    const cached = tokenCache.get(credentialId)
+    if (cached && cached.expiresAt > Date.now() + 3600_000) {
+      return cached.token
+    }
+  }
+
+  // 2. 이미 갱신 중이면 동일 Promise 재사용 (단, 강제 갱신은 별도 진행)
+  if (!forceRefresh) {
+    const existing = tokenLocks.get(credentialId)
+    if (existing) return existing
+  }
 
   // 3. 새로 발급 (DB 캐시 확인 → API 호출)
-  const refreshPromise = refreshToken(credentialId, credential)
+  const refreshPromise = refreshToken(credentialId, credential, forceRefresh)
   tokenLocks.set(credentialId, refreshPromise)
 
   try {
@@ -95,10 +105,11 @@ export async function getAccessToken(
 
 async function refreshToken(
   credentialId: string,
-  credential: KISCredential
+  credential: KISCredential,
+  forceRefresh = false
 ): Promise<string> {
-  // 2-1. DB 캐시 확인 (만료 1시간 전이면 유효)
-  const dbToken = await loadTokenFromDb(credentialId)
+  // 2-1. DB 캐시 확인 (forceRefresh 시 건너뜀, 만료 1시간 전까지만 유효)
+  const dbToken = forceRefresh ? null : await loadTokenFromDb(credentialId)
   if (dbToken && dbToken.expiresAt > Date.now() + 3600_000) {
     // 메모리 캐시에도 저장
     tokenCache.set(credentialId, dbToken)
@@ -386,14 +397,16 @@ export interface KRBalanceItem {
   pnlRate: number
 }
 
-export async function getKRBalance(
-  credentialId: string,
-  credential: KISCredential,
-  accountNumber: string
-): Promise<{ items: KRBalanceItem[]; totalEvaluation: number; totalPnl: number }> {
-  const token = await getAccessToken(credentialId, credential)
-  const baseUrl = getBaseUrl(credential.isPaperTrading)
+/** KIS 토큰 만료 메시지 코드 (재시도 트리거) */
+const TOKEN_EXPIRED_MSG_CD = 'EGW00123'
 
+function isTokenExpiredResponse(text: string, json?: { msg_cd?: string }): boolean {
+  if (json?.msg_cd === TOKEN_EXPIRED_MSG_CD) return true
+  return text.includes(TOKEN_EXPIRED_MSG_CD) || text.includes('기간이 만료된 token')
+}
+
+async function fetchKRBalance(token: string, credential: KISCredential, accountNumber: string) {
+  const baseUrl = getBaseUrl(credential.isPaperTrading)
   const queryParams = new URLSearchParams({
     CANO: accountNumber.substring(0, 8),
     ACNT_PRDT_CD: accountNumber.substring(8, 10) || '01',
@@ -421,14 +434,62 @@ export async function getKRBalance(
     }
   )
 
-  if (!response.ok) {
-    throw new Error(`KIS 잔고 조회 실패 (${response.status})`)
+  const bodyText = await response.text()
+  let json: KRBalanceJson | null = null
+  try {
+    json = bodyText ? (JSON.parse(bodyText) as KRBalanceJson) : null
+  } catch {
+    json = null
+  }
+  return { response, bodyText, json }
+}
+
+interface KRBalanceJson {
+  rt_cd?: string
+  msg_cd?: string
+  msg1?: string
+  output1?: Record<string, string>[]
+  output2?: Record<string, string>[]
+}
+
+export async function getKRBalance(
+  credentialId: string,
+  credential: KISCredential,
+  accountNumber: string
+): Promise<{ items: KRBalanceItem[]; totalEvaluation: number; totalPnl: number }> {
+  let token = await getAccessToken(credentialId, credential)
+  let { response, bodyText, json } = await fetchKRBalance(token, credential, accountNumber)
+
+  // 토큰 만료 감지 시 1회 강제 갱신 후 재시도
+  // (DB 캐시는 만료 전이라 유효해 보이지만, KIS 서버 측에서 무효화된 경우 발생)
+  const tokenExpired =
+    (!response.ok || (json && json.rt_cd !== '0')) && isTokenExpiredResponse(bodyText, json ?? undefined)
+  if (tokenExpired) {
+    console.warn('[KIS getKRBalance] token expired, force-refreshing and retrying once')
+    invalidateToken(credentialId)
+    token = await getAccessToken(credentialId, credential, true)
+    ;({ response, bodyText, json } = await fetchKRBalance(token, credential, accountNumber))
   }
 
-  const json = await response.json()
+  if (!response.ok) {
+    console.error('[KIS getKRBalance] HTTP error', {
+      status: response.status,
+      isPaperTrading: credential.isPaperTrading,
+      cano: accountNumber.substring(0, 8),
+      acntPrdtCd: accountNumber.substring(8, 10) || '01',
+      bodyPreview: bodyText.slice(0, 500),
+    })
+    throw new Error(`KIS 잔고 조회 실패 (HTTP ${response.status}): ${bodyText.slice(0, 200) || '응답 본문 없음'}`)
+  }
 
-  if (json.rt_cd !== '0') {
-    throw new Error(`KIS 잔고 조회 실패: [${json.msg_cd}] ${json.msg1}`)
+  if (!json || json.rt_cd !== '0') {
+    console.error('[KIS getKRBalance] business error', {
+      rt_cd: json?.rt_cd,
+      msg_cd: json?.msg_cd,
+      msg1: json?.msg1,
+      isPaperTrading: credential.isPaperTrading,
+    })
+    throw new Error(`KIS 잔고 조회 실패: [${json?.msg_cd ?? 'UNKNOWN'}] ${json?.msg1 ?? '응답 파싱 실패'}`)
   }
 
   const output1 = json.output1 || []
