@@ -5,11 +5,13 @@ import { Target, Plus, Play, Pause, Trash2, BarChart3, Edit3 } from 'lucide-reac
 import Link from 'next/link'
 import type { InvestmentStrategy } from '@/types/investment'
 import BacktestPanel from '@/components/Investment/BacktestPanel'
+import StrategyBuilder from '@/components/Investment/StrategyBuilder/StrategyBuilder'
 
 export default function StrategyListPage() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loading, setLoading] = useState(true)
   const [backtestStrategyId, setBacktestStrategyId] = useState<string | null>(null)
+  const [creatingStrategy, setCreatingStrategy] = useState(false)
 
   const loadStrategies = useCallback(async () => {
     try {
@@ -57,6 +59,16 @@ export default function StrategyListPage() {
     )
   }
 
+  // 새 전략 만들기 인라인 렌더링
+  if (creatingStrategy) {
+    return (
+      <StrategyBuilder
+        onCancel={() => setCreatingStrategy(false)}
+        onSaved={() => { setCreatingStrategy(false); loadStrategies() }}
+      />
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -64,13 +76,13 @@ export default function StrategyListPage() {
           <h1 className="text-xl font-bold text-at-text">전략 관리</h1>
           <p className="text-sm text-at-text-secondary mt-1">매매 전략을 생성하고 백테스트하세요</p>
         </div>
-        <Link
-          href="/investment/strategy/new"
+        <button
+          onClick={() => setCreatingStrategy(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-at-accent text-white rounded-xl text-sm font-medium hover:bg-at-accent-hover transition-colors"
         >
           <Plus className="w-4 h-4" />
           새 전략 만들기
-        </Link>
+        </button>
       </div>
 
       {loading ? (
