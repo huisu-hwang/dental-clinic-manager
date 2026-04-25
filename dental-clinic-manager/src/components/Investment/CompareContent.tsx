@@ -7,8 +7,8 @@
  * 기존 /api/investment/backtest를 N번 병렬 호출.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import type {
@@ -37,6 +37,9 @@ interface SelectableItem {
 // 단타 전용 프리셋 ID (일봉 비교에서 제외)
 const DAYTRADING_PRESET_IDS = new Set(['day-vwap-bounce', 'day-orb-breakout', 'day-closing-pressure'])
 
+// 비교 전략 수 상한 (안전 마진. 사용자/프리셋 합계가 이를 넘으면 한 번에 N개씩 분할 호출 권장)
+const MAX_COMPARE = 50
+
 // 일정한 색상 팔레트 (최대 6개 전략 비교) — Tailwind JIT가 인식하도록 클래스 전체 명시
 const COLORS = [
   { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-blue-600', dot: 'bg-blue-500', light: 'bg-blue-50', stroke: 'stroke-blue-500' },
@@ -57,8 +60,6 @@ interface BacktestResultItem {
   error?: string
 }
 
-const MAX_COMPARE = 6
-
 export default function CompareContent() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loadingStrategies, setLoadingStrategies] = useState(true)
@@ -76,6 +77,7 @@ export default function CompareContent() {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<BacktestResultItem[]>([])
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
   const loadStrategies = useCallback(async () => {
     try {
@@ -332,9 +334,31 @@ export default function CompareContent() {
 
       {/* 전략 선택 */}
       <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="font-semibold text-at-text">📋 비교할 전략 선택</h2>
-          <span className="text-xs text-at-text-secondary">{selectedIds.size}/{MAX_COMPARE} 선택됨 ({market})</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-at-text-secondary">{selectedIds.size}개 선택됨 ({market})</span>
+            <button
+              onClick={() => {
+                const total = userItems.length + presetItems.length
+                if (selectedIds.size === total) {
+                  setSelectedIds(new Set())
+                } else {
+                  const all = new Set<string>()
+                  for (const it of userItems) all.add(it.key)
+                  for (const it of presetItems) all.add(it.key)
+                  if (all.size > MAX_COMPARE) {
+                    alert(`전략이 ${all.size}개로 너무 많습니다. 최대 ${MAX_COMPARE}개까지만 동시 비교 가능합니다.`)
+                    return
+                  }
+                  setSelectedIds(all)
+                }
+              }}
+              className="text-xs text-at-accent hover:underline"
+            >
+              {selectedIds.size === userItems.length + presetItems.length ? '전체 해제' : '전체 선택'}
+            </button>
+          </div>
         </div>
 
         {/* 내 전략 그룹 */}
@@ -415,6 +439,7 @@ export default function CompareContent() {
             <table className="w-full text-xs">
               <thead className="bg-at-surface-alt">
                 <tr>
+                  <th className="px-2 py-2 w-8"></th>
                   <th className="px-3 py-2 text-left font-medium text-at-text-secondary">순위</th>
                   <th className="px-3 py-2 text-left font-medium text-at-text-secondary">전략</th>
                   <th className="px-3 py-2 text-right font-medium text-at-text-secondary">수익률</th>
@@ -432,6 +457,7 @@ export default function CompareContent() {
                   if (r.error) {
                     return (
                       <tr key={r.strategyId} className="border-t border-at-border bg-red-50/30">
+                        <td></td>
                         <td className="px-3 py-2"><span className={`inline-block w-5 h-5 rounded-full ${color.dot}`} /></td>
                         <td className="px-3 py-2 font-medium text-at-text">{r.strategyName}</td>
                         <td colSpan={7} className="px-3 py-2 text-red-700 text-xs">⚠️ {r.error}</td>
@@ -440,29 +466,54 @@ export default function CompareContent() {
                   }
                   const totalRet = r.metrics.totalReturn
                   const bhRet = r.buyHold?.totalReturn ?? 0
+                  const isExpanded = expandedIds.has(r.strategyId)
+                  const hasTrades = r.trades.length > 0
                   return (
-                    <tr key={r.strategyId} className="border-t border-at-border hover:bg-at-surface-alt">
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full ${color.bg} text-white text-[10px] font-bold`}>
-                          {i + 1}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 font-medium text-at-text">
-                        {i === 0 && <Trophy className="w-3 h-3 text-amber-500 inline mr-1" />}
-                        {r.strategyName}
-                      </td>
-                      <td className={`px-3 py-2 text-right font-mono font-semibold ${totalRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
-                        {totalRet > 0 ? '+' : ''}{totalRet.toFixed(2)}%
-                      </td>
-                      <td className={`px-3 py-2 text-right font-mono ${bhRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
-                        {bhRet > 0 ? '+' : ''}{bhRet.toFixed(2)}%
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono">{r.metrics.winRate.toFixed(1)}%</td>
-                      <td className="px-3 py-2 text-right font-mono">{r.metrics.totalTrades}</td>
-                      <td className="px-3 py-2 text-right font-mono">{r.metrics.sharpeRatio.toFixed(2)}</td>
-                      <td className="px-3 py-2 text-right font-mono text-blue-500">{r.metrics.maxDrawdown.toFixed(2)}%</td>
-                      <td className="px-3 py-2 text-right font-mono">{r.metrics.profitFactor.toFixed(2)}</td>
-                    </tr>
+                    <Fragment key={r.strategyId}>
+                      <tr
+                        className={`border-t border-at-border hover:bg-at-surface-alt ${hasTrades ? 'cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (!hasTrades) return
+                          setExpandedIds(prev => {
+                            const next = new Set(prev)
+                            if (next.has(r.strategyId)) next.delete(r.strategyId)
+                            else next.add(r.strategyId)
+                            return next
+                          })
+                        }}
+                      >
+                        <td className="px-2 py-2 text-at-text-weak">
+                          {hasTrades && (isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full ${color.bg} text-white text-[10px] font-bold`}>
+                            {i + 1}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-medium text-at-text">
+                          {i === 0 && <Trophy className="w-3 h-3 text-amber-500 inline mr-1" />}
+                          {r.strategyName}
+                        </td>
+                        <td className={`px-3 py-2 text-right font-mono font-semibold ${totalRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                          {totalRet > 0 ? '+' : ''}{totalRet.toFixed(2)}%
+                        </td>
+                        <td className={`px-3 py-2 text-right font-mono ${bhRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                          {bhRet > 0 ? '+' : ''}{bhRet.toFixed(2)}%
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.winRate.toFixed(1)}%</td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.totalTrades}</td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.sharpeRatio.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-blue-500">{r.metrics.maxDrawdown.toFixed(2)}%</td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.profitFactor.toFixed(2)}</td>
+                      </tr>
+                      {isExpanded && hasTrades && (
+                        <tr className={`border-t border-at-border ${color.light}`}>
+                          <td colSpan={10} className="p-3">
+                            <TradesMiniTable trades={r.trades} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   )
                 })}
               </tbody>
@@ -536,6 +587,55 @@ export default function CompareContent() {
             </div>
           )}
         </section>
+      )}
+    </div>
+  )
+}
+
+/** 전략별 매매 내역 미니 표 — expandable row 안에 표시 */
+function TradesMiniTable({ trades }: { trades: BacktestTrade[] }) {
+  const limit = 50
+  const shown = trades.slice(0, limit)
+  return (
+    <div className="overflow-x-auto rounded-lg border border-at-border bg-white">
+      <table className="w-full text-[11px]">
+        <thead className="bg-at-surface-alt">
+          <tr className="text-at-text-secondary">
+            <th className="px-2 py-1.5 text-left font-medium">종목</th>
+            <th className="px-2 py-1.5 text-left font-medium">진입일</th>
+            <th className="px-2 py-1.5 text-left font-medium">청산일</th>
+            <th className="px-2 py-1.5 text-right font-medium">진입가</th>
+            <th className="px-2 py-1.5 text-right font-medium">청산가</th>
+            <th className="px-2 py-1.5 text-right font-medium">수량</th>
+            <th className="px-2 py-1.5 text-right font-medium">손익</th>
+            <th className="px-2 py-1.5 text-right font-medium">수익률</th>
+            <th className="px-2 py-1.5 text-right font-medium">보유일</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((t, i) => (
+            <tr key={i} className="border-t border-at-border/60">
+              <td className="px-2 py-1.5 font-mono font-semibold text-at-text">{t.ticker}</td>
+              <td className="px-2 py-1.5 font-mono text-at-text-secondary">{t.entryDate}</td>
+              <td className="px-2 py-1.5 font-mono text-at-text-secondary">{t.exitDate}</td>
+              <td className="px-2 py-1.5 text-right font-mono">{t.entryPrice.toLocaleString()}</td>
+              <td className="px-2 py-1.5 text-right font-mono">{t.exitPrice.toLocaleString()}</td>
+              <td className="px-2 py-1.5 text-right font-mono">{t.quantity}</td>
+              <td className={`px-2 py-1.5 text-right font-mono font-semibold ${t.pnl >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                {t.pnl >= 0 ? '+' : ''}{Math.round(t.pnl).toLocaleString()}
+              </td>
+              <td className={`px-2 py-1.5 text-right font-mono ${t.pnlPercent >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                {t.pnlPercent >= 0 ? '+' : ''}{t.pnlPercent.toFixed(2)}%
+              </td>
+              <td className="px-2 py-1.5 text-right font-mono">{t.holdingDays}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {trades.length > limit && (
+        <div className="px-2 py-1.5 text-[10px] text-at-text-weak bg-at-surface-alt border-t border-at-border">
+          최근 {limit}건만 표시 (총 {trades.length}건)
+        </div>
       )}
     </div>
   )
