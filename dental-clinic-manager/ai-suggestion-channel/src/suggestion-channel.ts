@@ -172,17 +172,10 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
   if (req.params.name === 'update_suggestion_task') {
-    const args = (req.params.arguments ?? {}) as UpdateSuggestionTaskArgs;
     try {
-      const result = await updateSuggestionTask(args);
-      // 종료 상태 진입 시 큐 drain (다음 pending이 있으면 자동 push)
-      if (args.status && ['completed', 'failed', 'cancelled'].includes(args.status)) {
-        setTimeout(() => {
-          pushNextPendingIfIdle().catch((e) =>
-            console.error('[channel] 큐 drain 오류:', (e as Error).message)
-          );
-        }, 200);
-      }
+      const result = await updateSuggestionTask(
+        (req.params.arguments ?? {}) as UpdateSuggestionTaskArgs
+      );
       return { content: [{ type: 'text', text: result }] };
     } catch (err) {
       const msg = (err as Error).message;
@@ -209,95 +202,6 @@ async function loadPost(postId: string): Promise<{ title: string; content: strin
   }
   if (!data) return null;
   return { title: String(data.title ?? ''), content: String(data.content ?? '') };
-}
-
-// ---- 큐 헬퍼: stale reap, single-flight, drain ----
-async function reapStaleRunning(): Promise<number> {
-  // 채널 서버 재기동 시점에 status='running'인 task는 좀비로 간주.
-  // Claude 세션과 MCP 서버는 1:1로 묶여 있으므로 서버가 새로 뜨면 직전 진행분은 모두 인터럽트.
-  const { data, error } = await supabase
-    .from('ai_suggestion_tasks')
-    .update({
-      status: 'failed',
-      completed_at: new Date().toISOString(),
-      progress_step: null,
-      progress_detail: null,
-      error_message: '채널 서버 재기동으로 인터럽트됐습니다. 다시 시도하세요.',
-    })
-    .eq('status', 'running')
-    .select('id');
-  if (error) {
-    console.error('[channel] reapStaleRunning 실패:', error.message);
-    return 0;
-  }
-  const count = data?.length ?? 0;
-  if (count > 0) console.error(`[channel] ⚠ 좀비 running task ${count}개 → failed 처리`);
-  return count;
-}
-
-async function hasRunningTask(): Promise<boolean> {
-  const { count, error } = await supabase
-    .from('ai_suggestion_tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'running');
-  if (error) {
-    console.error('[channel] hasRunningTask 실패:', error.message);
-    return false;
-  }
-  return (count ?? 0) > 0;
-}
-
-async function pickOldestPending(): Promise<{ id: string; post_id: string } | null> {
-  const { data, error } = await supabase
-    .from('ai_suggestion_tasks')
-    .select('id, post_id')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.error('[channel] pickOldestPending 실패:', error.message);
-    return null;
-  }
-  return data ? { id: String(data.id), post_id: String(data.post_id) } : null;
-}
-
-async function pushTaskToChannel(taskId: string, postId: string): Promise<boolean> {
-  const post = await loadPost(postId);
-  if (!post) {
-    console.error(`[channel] post ${postId} 조회 실패 — push 스킵`);
-    return false;
-  }
-  const title = post.title.slice(0, 120);
-  const body = post.content.slice(0, 4000);
-  try {
-    await mcp.notification({
-      method: 'notifications/claude/channel',
-      params: {
-        content: body,
-        meta: { task_id: taskId, post_id: postId, title },
-      },
-    });
-    console.error(`[channel] ✓ 알림 전송: task=${taskId} title="${title}"`);
-    return true;
-  } catch (err) {
-    console.error('[channel] mcp.notification 실패:', (err as Error).message);
-    return false;
-  }
-}
-
-async function pushNextPendingIfIdle(): Promise<void> {
-  if (await hasRunningTask()) {
-    console.error('[channel] 다른 task 진행 중 — 큐 대기');
-    return;
-  }
-  const next = await pickOldestPending();
-  if (!next) {
-    console.error('[channel] 큐 비어 있음 — 대기 종료');
-    return;
-  }
-  console.error(`[channel] 큐 drain: task=${next.id} push 시도`);
-  await pushTaskToChannel(next.id, next.post_id);
 }
 
 // ---- Webhook payload 파싱 ----
@@ -369,16 +273,32 @@ Bun.serve({
       return new Response('skipped', { status: 200 });
     }
 
-    // single-flight 게이트: 다른 task가 running이면 즉시 push하지 않고 큐에 보존
-    if (await hasRunningTask()) {
-      console.error(
-        `[channel] task=${record.id}: 다른 작업 진행 중 — 큐 대기 (status=pending 유지)`
-      );
-      return new Response('queued', { status: 200 });
+    const post = await loadPost(String(record.post_id));
+    if (!post) {
+      console.error(`[channel] post ${record.post_id} 조회 실패 — 알림 스킵`);
+      return new Response('post not found', { status: 404 });
     }
 
-    const ok = await pushTaskToChannel(String(record.id), String(record.post_id));
-    if (!ok) return new Response('notify failed', { status: 500 });
+    const title = post.title.slice(0, 120);
+    const body = post.content.slice(0, 4000); // 너무 긴 본문은 잘라서
+
+    try {
+      await mcp.notification({
+        method: 'notifications/claude/channel',
+        params: {
+          content: body,
+          meta: {
+            task_id: String(record.id),
+            post_id: String(record.post_id),
+            title,
+          },
+        },
+      });
+      console.error(`[channel] ✓ 알림 전송: task=${record.id} title="${title}"`);
+    } catch (err) {
+      console.error('[channel] mcp.notification 실패:', (err as Error).message);
+      return new Response('notify failed', { status: 500 });
+    }
 
     return new Response('ok', { status: 200 });
   },
@@ -386,13 +306,3 @@ Bun.serve({
 
 console.error(`[channel] HTTP listener on 127.0.0.1:${CHANNEL_PORT}`);
 console.error('[channel] 🔔 Ready — Hookdeck에서 POST 수신 대기 중');
-
-// 부팅 정리: 좀비 running 정리 → 대기 중인 pending 작업 자동 픽업
-(async () => {
-  try {
-    await reapStaleRunning();
-    await pushNextPendingIfIdle();
-  } catch (err) {
-    console.error('[channel] startup reap/drain 오류:', (err as Error).message);
-  }
-})();
