@@ -258,6 +258,184 @@ function calcFearGreed(prices: OHLCV[], params: Record<string, number>): number[
   return result
 }
 
+/**
+ * Smart Money Index (SMART_MONEY) — 스마트머니 매집/분산 지표 (중기, -100~+100)
+ *
+ * 합성 4요소:
+ * 1. CMF (Chaikin Money Flow, 35%): 종가 위치 × 거래량 누적
+ * 2. A/D Divergence (25%): 가격-누적분포선 다이버전스 (가격↓+AD↑ = 매집)
+ * 3. Wyckoff Spring (20%): 지지선 가짜 이탈 + 거래량 급증 + 종가 회복 = 매집 함정
+ * 4. Wyckoff Upthrust (20%): 저항선 가짜 돌파 + 종가 약세 = 분산 함정
+ *
+ * 해석:
+ * - +30 이상: 강한 매집 (스마트머니 매수 → 매수 진입)
+ * - -30 이하: 강한 분산 (고점 떠넘기기 → 회피/청산)
+ */
+function calcSmartMoney(prices: OHLCV[], params: Record<string, number>): number[] {
+  const cmfPeriod = Math.max(2, params.cmfPeriod || 20)
+  const divLookback = Math.max(2, params.divergenceLookback || 20)
+  const springLookback = Math.max(2, params.springLookback || 10)
+  const upthrustLookback = Math.max(2, params.upthrustLookback || 10)
+  const cmfWeight = params.cmfWeight ?? 0.35
+  const divWeight = params.divWeight ?? 0.25
+  const springWeight = params.springWeight ?? 0.20
+  const upthrustWeight = params.upthrustWeight ?? 0.20
+
+  const n = prices.length
+  if (n === 0) return []
+
+  // 1. CMF: -1 ~ +1
+  const cmf = new Array<number>(n).fill(NaN)
+  for (let i = cmfPeriod - 1; i < n; i++) {
+    let sumMFV = 0
+    let sumVol = 0
+    for (let j = i - cmfPeriod + 1; j <= i; j++) {
+      const p = prices[j]
+      const range = p.high - p.low
+      const mfm = range === 0 ? 0 : ((p.close - p.low) - (p.high - p.close)) / range
+      sumMFV += mfm * p.volume
+      sumVol += p.volume
+    }
+    cmf[i] = sumVol === 0 ? 0 : sumMFV / sumVol
+  }
+
+  // 2. A/D Line + Divergence
+  const ad = new Array<number>(n).fill(0)
+  for (let i = 0; i < n; i++) {
+    const p = prices[i]
+    const range = p.high - p.low
+    const mfm = range === 0 ? 0 : ((p.close - p.low) - (p.high - p.close)) / range
+    ad[i] = (i === 0 ? 0 : ad[i - 1]) + mfm * p.volume
+  }
+  const adDiv = new Array<number>(n).fill(0)
+  for (let i = divLookback; i < n; i++) {
+    const prevPrice = prices[i - divLookback].close
+    const prevAD = ad[i - divLookback]
+    const priceSlope = (prices[i].close - prevPrice) / Math.max(1, Math.abs(prevPrice))
+    const adRef = Math.max(1, Math.abs(prevAD))
+    const adSlope = (ad[i] - prevAD) / adRef
+    // 가격↓ + AD↑ = +1 (매집), 가격↑ + AD↓ = -1 (분산)
+    const raw = adSlope - priceSlope
+    adDiv[i] = Math.max(-1, Math.min(1, raw * 5))
+  }
+
+  // 3. Spring 감지
+  const spring = new Array<number>(n).fill(0)
+  for (let i = springLookback; i < n; i++) {
+    const p = prices[i]
+    let recentLow = Infinity
+    let avgVol = 0
+    for (let j = i - springLookback; j < i; j++) {
+      if (prices[j].low < recentLow) recentLow = prices[j].low
+      avgVol += prices[j].volume
+    }
+    avgVol /= springLookback
+    const range = p.high - p.low
+    const closePos = range === 0 ? 0.5 : (p.close - p.low) / range
+    const brokeBelow = p.low < recentLow
+    const recovered = p.close > recentLow
+    const upperHalf = closePos > 0.6
+    const volSpike = avgVol > 0 && p.volume > avgVol * 1.5
+    if (brokeBelow && recovered && upperHalf && volSpike) spring[i] = 1
+  }
+
+  // 4. Upthrust 감지
+  const upthrust = new Array<number>(n).fill(0)
+  for (let i = upthrustLookback; i < n; i++) {
+    const p = prices[i]
+    let recentHigh = -Infinity
+    let avgVol = 0
+    for (let j = i - upthrustLookback; j < i; j++) {
+      if (prices[j].high > recentHigh) recentHigh = prices[j].high
+      avgVol += prices[j].volume
+    }
+    avgVol /= upthrustLookback
+    const range = p.high - p.low
+    const closePos = range === 0 ? 0.5 : (p.close - p.low) / range
+    const brokeAbove = p.high > recentHigh
+    const fellBack = p.close < recentHigh
+    const lowerHalf = closePos < 0.4
+    const volSpike = avgVol > 0 && p.volume > avgVol * 1.5
+    if (brokeAbove && fellBack && lowerHalf && volSpike) upthrust[i] = 1
+  }
+
+  // 5. 가중 합성 → -100 ~ +100
+  const result = new Array<number>(n).fill(NaN)
+  for (let i = 0; i < n; i++) {
+    if (isNaN(cmf[i])) continue
+    const score =
+      cmf[i] * cmfWeight +
+      adDiv[i] * divWeight +
+      spring[i] * springWeight -
+      upthrust[i] * upthrustWeight
+    const clamped = Math.max(-100, Math.min(100, score * 100))
+    result[i] = Math.round(clamped * 100) / 100
+  }
+  return result
+}
+
+/**
+ * Daily Smart Money Pulse (DAILY_SMART_MONEY_PULSE) — 일일 펄스 (-100~+100)
+ *
+ * 일봉만으로 그날의 매집/분산 강도를 정량화 (분봉 인프라 불필요).
+ * 합성 요소:
+ * - CLV (Close Location Value): (2C - H - L) / (H - L) ∈ [-1, +1]
+ * - Volume Ratio: 평소 대비 거래량 (CLV 증폭)
+ * - Gap Behavior: 갭 + 종가-시가 방향
+ *
+ * 해석:
+ * - +50 이상: 강한 일일 매집 (단타 매수)
+ * - -30 이하: 강한 일일 분산 (회피/청산)
+ */
+function calcDailySmartMoneyPulse(prices: OHLCV[], params: Record<string, number>): number[] {
+  const volPeriod = Math.max(2, params.volPeriod || 20)
+  const n = prices.length
+  if (n === 0) return []
+
+  // 거래량 평균 (전일까지)
+  const volMean = new Array<number>(n).fill(NaN)
+  for (let i = volPeriod; i < n; i++) {
+    let sum = 0
+    for (let j = i - volPeriod; j < i; j++) sum += prices[j].volume
+    volMean[i] = sum / volPeriod
+  }
+
+  const result = new Array<number>(n).fill(NaN)
+  for (let i = 1; i < n; i++) {
+    const p = prices[i]
+    const prev = prices[i - 1]
+    const range = p.high - p.low
+    if (range === 0 || isNaN(volMean[i]) || volMean[i] === 0) continue
+
+    // CLV: -1 ~ +1
+    const clv = (2 * p.close - p.high - p.low) / range
+
+    // Volume boost: 1.0 (평균) ~ 2.0 (2배 이상)
+    const volRatio = p.volume / volMean[i]
+    const volBoost = Math.min(2, Math.max(0.5, volRatio))
+
+    // Gap Behavior
+    const gapPct = (p.open - prev.close) / Math.max(1, Math.abs(prev.close))
+    let gapAdj = 0
+    if (Math.abs(gapPct) > 0.01) {
+      const closeAboveOpen = p.close > p.open
+      if (gapPct > 0) {
+        // 갭상승 후 종가>시가 = 매집 강세, 종가<시가 = Gap Fade(분산함정)
+        gapAdj = closeAboveOpen ? 10 : -25
+      } else {
+        // 갭하락 후 종가>시가 = 매집 회복, 종가<시가 = 추가 매도
+        gapAdj = closeAboveOpen ? 25 : -10
+      }
+    }
+
+    // 합성: CLV × VolBoost × 50 + GapAdj  (CLV 방향을 거래량으로 증폭)
+    const score = clv * volBoost * 50 + gapAdj
+    const clamped = Math.max(-100, Math.min(100, score))
+    result[i] = Math.round(clamped * 100) / 100
+  }
+  return result
+}
+
 // ============================================
 // 지표 계산기 매핑
 // ============================================
@@ -275,6 +453,8 @@ const INDICATOR_CALCULATORS: Record<IndicatorType, (prices: OHLCV[], params: Rec
   WILLR: calcWilliamsR,
   VOLUME_SMA: calcVolumeSMA,
   FEAR_GREED: calcFearGreed,
+  SMART_MONEY: calcSmartMoney,
+  DAILY_SMART_MONEY_PULSE: calcDailySmartMoneyPulse,
 }
 
 // ============================================

@@ -413,6 +413,165 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
     },
   },
 
+  // ============================================
+  // 스마트머니 추종 전략 (Smart Money Tracking)
+  // ============================================
+
+  {
+    id: 'smart-money-trend',
+    name: '🐳 스마트머니 추세 추종 (중기)',
+    description: 'CMF + Wyckoff Spring/Upthrust로 기관 매집 구간 진입, 분산 구간 회피',
+    indicators: [
+      { id: 'SMART_MONEY_20_20_10_10', type: 'SMART_MONEY', params: { cmfPeriod: 20, divergenceLookback: 20, springLookback: 10, upthrustLookback: 10 } },
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 강한 매집 신호
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMART_MONEY_20_20_10_10' },
+          operator: '>',
+          right: { type: 'constant', value: 30 },
+        },
+        // 과열 아님 (매집 초기 진입)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 65 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 분산 신호 (스마트머니 매도)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMART_MONEY_20_20_10_10' },
+          operator: '<',
+          right: { type: 'constant', value: -20 },
+        },
+        // 0선 하향 이탈 (모멘텀 전환)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMART_MONEY_20_20_10_10' },
+          operator: 'crossUnder',
+          right: { type: 'constant', value: 0 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 15,
+      maxHoldingDays: 30,
+    },
+  },
+
+  {
+    id: 'smart-money-daily-pulse',
+    name: '⚡ 스마트머니 일일 추종 (단타)',
+    description: '강한 일일 매집 신호 시 매수, 다음날 펄스 약화 시 청산. 1~3일 단타',
+    indicators: [
+      { id: 'DAILY_SMART_MONEY_PULSE_20', type: 'DAILY_SMART_MONEY_PULSE', params: { volPeriod: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 강한 일일 매집 펄스
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'DAILY_SMART_MONEY_PULSE_20' },
+          operator: '>',
+          right: { type: 'constant', value: 50 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 펄스 약화 (매집 종료)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'DAILY_SMART_MONEY_PULSE_20' },
+          operator: '<',
+          right: { type: 'constant', value: 0 },
+        },
+        // 강한 분산 펄스 (즉시 청산)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'DAILY_SMART_MONEY_PULSE_20' },
+          operator: '<',
+          right: { type: 'constant', value: -30 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 2,
+      takeProfitPercent: 3,
+      maxHoldingDays: 3,
+    },
+  },
+
+  {
+    id: 'smart-money-combo',
+    name: '💎 스마트머니 추세+펄스 결합 (정밀)',
+    description: '중기 매집 추세(SMI > 30) + 당일 매집 강세(Pulse > 30) 동시 만족 시에만 진입',
+    indicators: [
+      { id: 'SMART_MONEY_20_20_10_10', type: 'SMART_MONEY', params: { cmfPeriod: 20, divergenceLookback: 20, springLookback: 10, upthrustLookback: 10 } },
+      { id: 'DAILY_SMART_MONEY_PULSE_20', type: 'DAILY_SMART_MONEY_PULSE', params: { volPeriod: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMART_MONEY_20_20_10_10' },
+          operator: '>',
+          right: { type: 'constant', value: 30 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'DAILY_SMART_MONEY_PULSE_20' },
+          operator: '>',
+          right: { type: 'constant', value: 30 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 일일 펄스 약화 (단기 익절/손절)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'DAILY_SMART_MONEY_PULSE_20' },
+          operator: '<',
+          right: { type: 'constant', value: -30 },
+        },
+        // 중기 추세 전환
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMART_MONEY_20_20_10_10' },
+          operator: 'crossUnder',
+          right: { type: 'constant', value: 0 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 4,
+      takeProfitPercent: 12,
+      maxHoldingDays: 14,
+    },
+  },
+
   {
     id: 'fear-greed-conservative',
     name: '🛡️ 공포/탐욕 보수적 진입',

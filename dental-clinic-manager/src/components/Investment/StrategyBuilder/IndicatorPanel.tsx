@@ -102,6 +102,20 @@ const TEMPLATES: IndicatorTemplate[] = [
     defaultParams: { rsiPeriod: 14, bbPeriod: 20, volPeriod: 20, momentumPeriod: 10 },
     paramLabels: { rsiPeriod: 'RSI', bbPeriod: 'BB', volPeriod: '거래량', momentumPeriod: '모멘텀' },
   },
+  {
+    type: 'SMART_MONEY',
+    label: '🐳 스마트머니 지수 (중기)',
+    description: 'CMF+A/D 다이버전스+Wyckoff Spring/Upthrust로 매집/분산 추적 (-100~+100)',
+    defaultParams: { cmfPeriod: 20, divergenceLookback: 20, springLookback: 10, upthrustLookback: 10 },
+    paramLabels: { cmfPeriod: 'CMF', divergenceLookback: '다이버전스', springLookback: 'Spring', upthrustLookback: 'Upthrust' },
+  },
+  {
+    type: 'DAILY_SMART_MONEY_PULSE',
+    label: '⚡ 일일 스마트머니 펄스 (단타)',
+    description: '당일 종가위치+거래량+갭 동작으로 일일 매집/분산 포착 (-100~+100)',
+    defaultParams: { volPeriod: 20 },
+    paramLabels: { volPeriod: '거래량 기간' },
+  },
 ]
 
 function generateId(type: IndicatorType, params: Record<string, number>): string {
