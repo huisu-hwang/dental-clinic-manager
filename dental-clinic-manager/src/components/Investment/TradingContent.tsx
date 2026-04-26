@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Activity, Send, ArrowUpCircle, ArrowDownCircle, Clock, Loader2 } from 'lucide-react'
 import type { TradeOrder, Market, OrderType, OrderMethod } from '@/types/investment'
+import TradingSettingsPanel from './TradingSettingsPanel'
 
 export default function TradingContent() {
   const [orders, setOrders] = useState<TradeOrder[]>([])
@@ -134,6 +135,8 @@ export default function TradingContent() {
               </div>
             </div>
           </div>
+
+          <TradingSettingsPanel />
 
           <div className="bg-white rounded-2xl shadow-sm border border-at-border overflow-hidden">
             <div className="px-5 py-4 border-b border-at-border">

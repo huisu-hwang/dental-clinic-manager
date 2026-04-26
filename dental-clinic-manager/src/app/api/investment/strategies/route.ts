@@ -12,6 +12,7 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { validateConditionTree, validateIndicators } from '@/lib/conditionTreeValidator'
 import type { Market, Timeframe, AutomationLevel } from '@/types/investment'
+import { NOOP_RISK_SETTINGS } from '@/types/investment'
 
 const VALID_MARKETS: Market[] = ['KR', 'US']
 const VALID_TIMEFRAMES: Timeframe[] = ['1m', '5m', '15m', '1h', '1d', '1w']
@@ -75,11 +76,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `매도 조건: ${sellResult.error}` }, { status: 400 })
   }
 
-  // 리스크 설정 검증
-  const risk = riskSettings as Record<string, number> | undefined
-  if (!risk || typeof risk !== 'object') {
-    return NextResponse.json({ error: '리스크 설정이 필요합니다' }, { status: 400 })
-  }
+  // 리스크 설정은 사용자별 자동매매 설정으로 이관됨.
+  // 하위 호환을 위해 누락 시 무효화된 기본값을 사용한다.
+  const riskToStore =
+    riskSettings && typeof riskSettings === 'object'
+      ? (riskSettings as object)
+      : NOOP_RISK_SETTINGS
 
   // 전략 개수 제한 (사용자당 최대 10개)
   const { count } = await supabase
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
       indicators: indicators as object,
       buy_conditions: buyConditions as object,
       sell_conditions: sellConditions as object,
-      risk_settings: riskSettings as object,
+      risk_settings: riskToStore,
       automation_level: automationLevel as number,
       is_active: false, // 신규 전략은 비활성
     })

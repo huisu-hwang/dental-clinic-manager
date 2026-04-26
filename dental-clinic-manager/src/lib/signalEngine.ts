@@ -167,3 +167,91 @@ function resolveValue(
 
   return NaN
 }
+
+// ============================================
+// 매칭된 조건 추출 (신호 근거 캡처용)
+// ============================================
+
+/**
+ * 조건 트리 평가 + 매칭된 leaf의 사람이 읽을 수 있는 표현 수집
+ *
+ * AND 그룹: 모든 자식이 true일 때만 모든 leaf 표현 수집
+ * OR 그룹: true인 자식의 leaf 표현만 수집
+ *
+ * @returns matched=true이면 신호 발생, matchedLeaves는 조건이 충족된 leaf 표현 목록
+ */
+export function evaluateConditionTreeWithMatches(
+  tree: ConditionNode,
+  ctx: EvaluationContext
+): { matched: boolean; matchedLeaves: string[] } {
+  if (!tree || typeof tree !== 'object') return { matched: false, matchedLeaves: [] }
+  if (tree.type === 'group' && (!tree.conditions || tree.conditions.length === 0)) {
+    return { matched: false, matchedLeaves: [] }
+  }
+
+  const matchedLeaves: string[] = []
+  const matched = collectMatches(tree, ctx, matchedLeaves)
+  return { matched, matchedLeaves }
+}
+
+function collectMatches(
+  node: ConditionNode,
+  ctx: EvaluationContext,
+  out: string[]
+): boolean {
+  if (node.type === 'leaf') {
+    const result = evaluateLeaf(node, ctx)
+    if (result) out.push(formatLeaf(node, ctx))
+    return result
+  }
+
+  if (node.type === 'group') {
+    if (!node.conditions || node.conditions.length === 0) return false
+
+    if (node.operator === 'AND') {
+      // 모든 자식이 true여야 통과 → 한 번 모은 다음 전체가 true일 때만 반영
+      const tempOut: string[] = []
+      for (const child of node.conditions) {
+        if (!collectMatches(child, ctx, tempOut)) return false
+      }
+      out.push(...tempOut)
+      return true
+    }
+
+    if (node.operator === 'OR') {
+      let anyTrue = false
+      for (const child of node.conditions) {
+        const tempOut: string[] = []
+        if (collectMatches(child, ctx, tempOut)) {
+          anyTrue = true
+          out.push(...tempOut)
+        }
+      }
+      return anyTrue
+    }
+  }
+
+  return false
+}
+
+function formatLeaf(leaf: ConditionLeaf, ctx: EvaluationContext): string {
+  const left = formatRef(leaf.left, ctx)
+  const right = formatRef(leaf.right, ctx)
+  return `${left} ${leaf.operator} ${right}`
+}
+
+function formatRef(ref: IndicatorRef | ConstantRef, ctx: EvaluationContext): string {
+  if (ref.type === 'constant') {
+    return formatNumber(ref.value)
+  }
+  const val = resolveValue(ref, ctx)
+  const name = ref.property ? `${ref.id}.${ref.property}` : ref.id
+  return `${name}(${isNaN(val) ? '?' : formatNumber(val)})`
+}
+
+function formatNumber(n: number): string {
+  if (!isFinite(n)) return String(n)
+  if (Math.abs(n) >= 1000) return n.toFixed(0)
+  if (Math.abs(n) >= 1) return n.toFixed(2)
+  return n.toFixed(4)
+}

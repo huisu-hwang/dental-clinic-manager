@@ -5,10 +5,11 @@
  * 1. 입력은 분봉 OHLCV (date 필드는 'YYYY-MM-DDTHH:mm:ss' ISO 형식)
  * 2. T봉 마감 신호 → T+1봉 시가 체결 (look-ahead 방지, 동일 패턴)
  * 3. 거래일 구분(date.slice(0,10)) — 거래일 경계에서 다음 봉 진입 금지
- * 4. forceCloseAtSessionEnd=true (기본): 그날 마지막 봉에 강제 매도
+ * 4. forceCloseAtSessionEnd=true (기본): 그날 마지막 봉에 강제 매도 (단타 본질)
  * 5. 슬리피지 강화: 단타는 호가 영향이 크므로 extraSlippageBps 추가
  *    - KR 기본 5bp(0.05%), US 기본 2bp(0.02%)
- * 6. maxHoldingDays → maxHoldingBars (분봉 수)로 해석
+ * 6. 매수/매도는 오직 전략의 조건 트리에 의해 결정 — 손절/익절/최대보유봉수는 비활성화
+ *    (장 마감 강제 청산만 단타 룰로 유지)
  * 7. avgHoldingDays 필드는 호환성 위해 유지하되 의미는 '평균 보유 봉수'
  * 8. equityCurve는 일별 종가 시점으로 집계 (BacktestMetrics 호환)
  * 9. Sharpe Ratio: 분봉 수익률 → 연 환산 (√(252 × 봉수/거래일))
@@ -147,25 +148,11 @@ export function runDayTradingBacktest(
       if (position) {
         position.holdingBars++
 
-        // --- 매도 신호 / 리스크 청산 체크 ---
+        // 백테스트는 전략의 매도 조건으로만 청산 — 손절/익절/최대보유는 비활성화
+        // (단, 장 마감 강제 청산은 단타의 본질이므로 유지)
         const sellSignal = evaluateConditionTree(sellConditions, prevCtx)
 
-        // 손절 / 익절 / 최대 보유봉수
-        const currentPnlPercent = ((bar.open - position.entryPrice) / position.entryPrice) * 100
-        const stopLoss =
-          riskSettings.stopLossPercent > 0 &&
-          currentPnlPercent <= -riskSettings.stopLossPercent
-        const takeProfit =
-          riskSettings.takeProfitPercent > 0 &&
-          currentPnlPercent >= riskSettings.takeProfitPercent
-        // riskSettings.maxHoldingDays > 0 이면 N개 봉 보유 후 강제 청산
-        const maxHolding =
-          riskSettings.maxHoldingDays > 0 &&
-          position.holdingBars >= riskSettings.maxHoldingDays
-
-        // 장 마감 강제 청산: 직전 봉이 마감 봉이었다면, 그 마감 봉 종가에 청산했어야 함
-        // 하지만 마감 봉 자체에서 청산하는 것이 자연스러움 (아래 별도 처리)
-        if (sellSignal || stopLoss || takeProfit || maxHolding) {
+        if (sellSignal) {
           // 슬리피지 적용 (매도이므로 불리한 방향: 시가에서 더 낮은 가격)
           const exitPrice = bar.open * (1 - slippage)
           closeTrade(position, exitPrice, bar.date, ticker, commissionRate, trades)

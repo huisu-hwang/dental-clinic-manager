@@ -35,12 +35,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '잘못된 요청 형식입니다' }, { status: 400 })
   }
 
-  const { strategyId, ticker, market, startDate, endDate, initialCapital } = body
+  const { strategyId, preset, ticker, market, startDate, endDate, initialCapital, useFullCapital } = body
 
-  // 입력 검증
-  if (!strategyId || typeof strategyId !== 'string') {
-    return NextResponse.json({ error: '전략 ID가 필요합니다' }, { status: 400 })
-  }
   if (!ticker || typeof ticker !== 'string') {
     return NextResponse.json({ error: '종목 코드가 필요합니다' }, { status: 400 })
   }
@@ -54,32 +50,72 @@ export async function POST(request: NextRequest) {
     ? initialCapital
     : 10_000_000 // 기본 1천만원
 
-  // 전략 조회 (소유권 확인)
-  const { data: strategy } = await supabase
-    .from('investment_strategies')
-    .select('*')
-    .eq('id', strategyId)
-    .eq('user_id', userId)
-    .single()
+  // 전략 정보: 저장된 전략 또는 즉석 프리셋
+  let indicators: IndicatorConfig[]
+  let buyConditions: ConditionGroup
+  let sellConditions: ConditionGroup
+  let riskSettings: RiskSettings
+  let saveResult = true  // strategyId 모드에선 결과 저장, preset 모드에선 미저장
 
-  if (!strategy) {
-    return NextResponse.json({ error: '전략을 찾을 수 없습니다' }, { status: 404 })
+  const DEFAULT_RISK: RiskSettings = {
+    maxDailyLossPercent: 2,
+    maxPositions: 5,
+    maxPositionSizePercent: 20,
+    stopLossPercent: 7,
+    takeProfitPercent: 15,
+    maxHoldingDays: 30,
   }
 
-  // 동시 백테스트 제한 (사용자당 최대 10개)
-  const { count } = await supabase
-    .from('backtest_runs')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .in('status', ['pending', 'running'])
+  if (strategyId && typeof strategyId === 'string') {
+    const { data: strategy } = await supabase
+      .from('investment_strategies')
+      .select('*')
+      .eq('id', strategyId)
+      .eq('user_id', userId)
+      .single()
 
-  if ((count ?? 0) >= 10) {
-    return NextResponse.json({ error: '동시 백테스트는 최대 10개까지 가능합니다' }, { status: 429 })
+    if (!strategy) {
+      return NextResponse.json({ error: '전략을 찾을 수 없습니다' }, { status: 404 })
+    }
+    indicators = strategy.indicators as IndicatorConfig[]
+    buyConditions = strategy.buy_conditions as ConditionGroup
+    sellConditions = strategy.sell_conditions as ConditionGroup
+    riskSettings = strategy.risk_settings as RiskSettings
+  } else if (preset && typeof preset === 'object') {
+    const p = preset as {
+      indicators?: IndicatorConfig[]
+      buyConditions?: ConditionGroup
+      sellConditions?: ConditionGroup
+      riskSettings?: Partial<RiskSettings>
+    }
+    if (!p.indicators || !p.buyConditions || !p.sellConditions) {
+      return NextResponse.json({
+        error: 'preset에는 indicators, buyConditions, sellConditions가 필요합니다',
+      }, { status: 400 })
+    }
+    indicators = p.indicators
+    buyConditions = p.buyConditions
+    sellConditions = p.sellConditions
+    riskSettings = { ...DEFAULT_RISK, ...(p.riskSettings || {}) }
+    saveResult = false
+  } else {
+    return NextResponse.json({ error: 'strategyId 또는 preset 중 하나가 필요합니다' }, { status: 400 })
   }
 
-  // 동기 처리 (55초 타임아웃, 기간 제한 없음 — 일봉 기준 20년도 수 초 내 처리 가능)
+  // 동시 백테스트 제한 (저장된 전략에만 적용)
+  if (saveResult) {
+    const { count } = await supabase
+      .from('backtest_runs')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .in('status', ['pending', 'running'])
+
+    if ((count ?? 0) >= 10) {
+      return NextResponse.json({ error: '동시 백테스트는 최대 10개까지 가능합니다' }, { status: 429 })
+    }
+  }
+
   try {
-    // 1. 주가 데이터 조회
     const prices = await fetchPrices(
       ticker as string,
       market as Market,
@@ -93,24 +129,29 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // 2. 백테스트 실행 (60초 타임아웃)
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 55_000) // Vercel 60초 제한 대비 55초
+    const timeout = setTimeout(() => controller.abort(), 55_000)
 
     const result = runBacktest({
       prices,
-      indicators: strategy.indicators as IndicatorConfig[],
-      buyConditions: strategy.buy_conditions as ConditionGroup,
-      sellConditions: strategy.sell_conditions as ConditionGroup,
-      riskSettings: strategy.risk_settings as RiskSettings,
+      indicators,
+      buyConditions,
+      sellConditions,
+      riskSettings,
       initialCapital: capital,
       market: market as Market,
       ticker: ticker as string,
+      useFullCapital: useFullCapital === true,
     }, controller.signal)
 
     clearTimeout(timeout)
 
-    // 3. 결과 저장
+    // preset 모드는 결과 저장 안 함 (즉석 비교용)
+    if (!saveResult) {
+      return NextResponse.json({ data: { ...result, saved: false } })
+    }
+
+    // 저장된 전략 모드: backtest_runs에 결과 저장
     const { data: run, error } = await supabase
       .from('backtest_runs')
       .insert({
@@ -139,7 +180,6 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('백테스트 결과 저장 실패:', error)
-      // 저장 실패해도 결과는 반환
       return NextResponse.json({ data: { ...result, saved: false } })
     }
 

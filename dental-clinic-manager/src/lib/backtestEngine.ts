@@ -1,12 +1,13 @@
 /**
  * 백테스트 엔진
  *
- * 전략(지표 + 조건 트리 + 리스크 설정)을 과거 데이터로 시뮬레이션합니다.
+ * 전략(지표 + 조건 트리)을 과거 데이터로 시뮬레이션합니다.
  *
  * 핵심 규칙:
  * - T일 종가에서 신호 감지 → T+1일 시가에 체결 (Look-ahead Bias 방지)
  * - 수수료 반영: 매매 0.015% + 매도 세금 0.23% (국내), 매매 0% + SEC fee (미국)
- * - 손절/익절/최대보유기간 리스크 관리
+ * - 매수/매도는 오직 전략의 조건 트리에 의해서만 결정 — 손절/익절/최대보유는 백테스트에서 비활성화
+ *   (마지막 봉에서 미청산 포지션만 forceClose로 강제 청산)
  * - 60초 타임아웃 (AbortController)
  */
 
@@ -14,9 +15,10 @@ import type {
   OHLCV, IndicatorConfig, ConditionGroup,
   RiskSettings, Market,
   BacktestTrade, BacktestMetrics, EquityCurvePoint,
+  SignalSnapshot,
 } from '@/types/investment'
-import { calculateIndicators } from './indicatorEngine'
-import { evaluateConditionTree, type EvaluationContext } from './signalEngine'
+import { calculateIndicators, type IndicatorResultMap } from './indicatorEngine'
+import { evaluateConditionTreeWithMatches, type EvaluationContext } from './signalEngine'
 
 // ============================================
 // 수수료 상수
@@ -48,6 +50,12 @@ export interface BacktestParams {
   initialCapital: number
   market: Market
   ticker: string
+  /**
+   * true이면 매수 시 maxPositionSizePercent를 무시하고 가용 cash 100%를 투입.
+   * 매도 후 회수된 자본도 다음 매수에 전액 재사용 (복리).
+   * 전략 비교 페이지처럼 자본 활용 차이를 제거하고 순수 시그널 성과만 비교할 때 사용.
+   */
+  useFullCapital?: boolean
 }
 
 export interface BuyHoldResult {
@@ -68,6 +76,36 @@ interface SimPosition {
   entryPrice: number
   quantity: number
   holdingDays: number
+  entrySignal?: SignalSnapshot
+}
+
+/**
+ * 신호 발생 봉의 모든 지표값을 스냅샷으로 추출
+ * NaN 값은 제외하여 가독성 확보.
+ */
+function buildIndicatorSnapshot(
+  indicators: IndicatorConfig[],
+  indicatorResults: IndicatorResultMap,
+  barIndex: number,
+): Record<string, number | Record<string, number>> {
+  const snapshot: Record<string, number | Record<string, number>> = {}
+  for (const ind of indicators) {
+    const values = indicatorResults[ind.id]
+    if (!values) continue
+    const v = values[barIndex]
+    if (v === undefined || v === null) continue
+    if (typeof v === 'number') {
+      if (!isNaN(v)) snapshot[ind.id] = round4(v)
+    } else if (typeof v === 'object') {
+      // MACD/BB 등 객체 지표 - NaN 속성은 제외
+      const obj: Record<string, number> = {}
+      for (const [k, val] of Object.entries(v)) {
+        if (typeof val === 'number' && !isNaN(val)) obj[k] = round4(val)
+      }
+      if (Object.keys(obj).length > 0) snapshot[ind.id] = obj
+    }
+  }
+  return snapshot
 }
 
 // ============================================
@@ -85,6 +123,7 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
   const {
     prices, indicators, buyConditions, sellConditions,
     riskSettings, initialCapital, market, ticker,
+    useFullCapital = false,
   } = params
 
   if (prices.length < 2) {
@@ -121,16 +160,10 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
       if (position) {
         position.holdingDays++
 
-        // --- 매도 신호 체크 (전일 종가 기준) ---
-        const sellSignal = evaluateConditionTree(sellConditions, prevCtx)
+        // 백테스트는 전략의 매도 조건으로만 매매 — 손절/익절/최대보유는 비활성화
+        const sellResult = evaluateConditionTreeWithMatches(sellConditions, prevCtx)
 
-        // 손절 / 익절 / 최대 보유기간 체크
-        const currentPnlPercent = ((bar.open - position.entryPrice) / position.entryPrice) * 100
-        const stopLoss = riskSettings.stopLossPercent > 0 && currentPnlPercent <= -riskSettings.stopLossPercent
-        const takeProfit = riskSettings.takeProfitPercent > 0 && currentPnlPercent >= riskSettings.takeProfitPercent
-        const maxHolding = riskSettings.maxHoldingDays > 0 && position.holdingDays >= riskSettings.maxHoldingDays
-
-        if (sellSignal || stopLoss || takeProfit || maxHolding) {
+        if (sellResult.matched) {
           // 당일 시가에 매도 체결
           const exitPrice = bar.open
           const sellAmount = exitPrice * position.quantity
@@ -139,6 +172,12 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
             - (position.entryPrice * position.quantity * commissionRate.buyCommission) // 매수 수수료 차감
 
           cash += sellAmount - sellFee
+
+          const exitSignal: SignalSnapshot = {
+            reason: 'signal',
+            indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+            matchedConditions: sellResult.matchedLeaves,
+          }
 
           trades.push({
             entryDate: position.entryDate,
@@ -151,19 +190,23 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
             pnl,
             pnlPercent: ((exitPrice - position.entryPrice) / position.entryPrice) * 100,
             holdingDays: position.holdingDays,
+            entrySignal: position.entrySignal,
+            exitSignal,
           })
 
           position = null
         }
       } else {
         // --- 매수 신호 체크 (전일 종가 기준) ---
-        const buySignal = evaluateConditionTree(buyConditions, prevCtx)
+        const buyResult = evaluateConditionTreeWithMatches(buyConditions, prevCtx)
 
-        if (buySignal) {
+        if (buyResult.matched) {
           // 당일 시가에 매수 체결
           const entryPrice = bar.open
-          // 리스크 설정: 종목당 최대 비중
-          const maxInvestment = cash * (riskSettings.maxPositionSizePercent / 100)
+          // useFullCapital=true이면 가용 cash 100% 사용. 아니면 maxPositionSizePercent 적용.
+          const maxInvestment = useFullCapital
+            ? cash
+            : cash * (riskSettings.maxPositionSizePercent / 100)
           const investAmount = Math.min(cash, maxInvestment)
           const buyFee = investAmount * commissionRate.buyCommission
           const affordableAmount = investAmount - buyFee
@@ -178,6 +221,11 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
               entryPrice,
               quantity,
               holdingDays: 0,
+              entrySignal: {
+                reason: 'signal',
+                indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+                matchedConditions: buyResult.matchedLeaves,
+              },
             }
           }
         }
@@ -215,6 +263,12 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
       pnl,
       pnlPercent: ((exitPrice - position.entryPrice) / position.entryPrice) * 100,
       holdingDays: position.holdingDays,
+      entrySignal: position.entrySignal,
+      exitSignal: {
+        reason: 'forceClose',
+        indicators: buildIndicatorSnapshot(indicators, indicatorResults, prices.length - 1),
+        matchedConditions: ['백테스트 종료 시점 강제 청산'],
+      },
     })
   }
 

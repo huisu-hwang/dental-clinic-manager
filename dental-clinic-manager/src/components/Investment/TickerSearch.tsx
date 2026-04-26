@@ -13,16 +13,17 @@ interface TickerResult {
 }
 
 interface Props {
-  /** 종목 선택 시 호출 (드롭다운 클릭 OR Enter 키) */
-  onSelect: (ticker: string, name?: string) => void
-  market: Market
+  /** 종목 선택 시 호출. market은 검색 결과에서 자동 결정됨 */
+  onSelect: (ticker: string, name?: string, market?: Market) => void
+  /** 검색 시장 제한. 미설정 또는 'ALL'이면 KR/US 통합 검색 */
+  market?: Market | 'ALL'
   placeholder?: string
   className?: string
   /** 선택 후 입력 필드를 비울지 여부 (기본 true) */
   clearOnSelect?: boolean
 }
 
-export default function TickerSearch({ onSelect, market, placeholder, className, clearOnSelect = true }: Props) {
+export default function TickerSearch({ onSelect, market = 'ALL', placeholder, className, clearOnSelect = true }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<TickerResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -126,7 +127,8 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
   }
 
   const handleSelect = (result: TickerResult) => {
-    onSelect(result.ticker, result.name)
+    const m = (result.market === 'KR' || result.market === 'US') ? result.market as Market : undefined
+    onSelect(result.ticker, result.name, m)
     if (clearOnSelect) {
       setQuery('')
     } else {
@@ -179,7 +181,11 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
           onCompositionEnd={handleCompositionEnd}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder={placeholder || (market === 'KR' ? '종목명 또는 코드 검색 (예: 삼성전자, 005930)' : '종목명 또는 심볼 검색 (예: Apple, AAPL)')}
+          placeholder={placeholder || (
+            market === 'KR' ? '종목명 또는 코드 검색 (예: 삼성전자, 005930)' :
+            market === 'US' ? '종목명 또는 심볼 검색 (예: Apple, AAPL)' :
+            '국내·미국 종목 통합 검색 (예: 한화시스템, AAPL, 005930)'
+          )}
           className="w-full pl-9 pr-8 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm focus:outline-none focus:border-at-accent"
         />
         {loading && (
@@ -211,6 +217,11 @@ export default function TickerSearch({ onSelect, market, placeholder, className,
               }`}
             >
               <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap ${
+                  r.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {r.market === 'KR' ? '국내' : '미국'}
+                </span>
                 <span className="font-mono text-sm font-semibold text-at-accent whitespace-nowrap">
                   {r.ticker}
                 </span>

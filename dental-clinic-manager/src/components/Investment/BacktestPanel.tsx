@@ -6,6 +6,7 @@ import {
   BarChart3, Award, Clock, Plus, X, Trophy, ArrowLeft,
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
+import DateRangePicker from '@/components/Investment/DateRangePicker'
 import type { InvestmentStrategy, BacktestMetrics, BacktestTrade, EquityCurvePoint, Market } from '@/types/investment'
 
 interface BuyHoldData {
@@ -99,11 +100,12 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
     setStartDate(start.toISOString().split('T')[0])
   }, [loadStrategy, loadWatchlist])
 
-  const addTicker = (ticker: string, name?: string) => {
+  const addTicker = (ticker: string, name?: string, market?: Market) => {
     if (!ticker.trim()) return
     const upperTicker = ticker.trim().toUpperCase()
-    if (tickers.some(t => t.ticker === upperTicker && t.market === addingMarket)) return
-    setTickers(prev => [...prev, { ticker: upperTicker, name: name || upperTicker, market: addingMarket }])
+    const m = market ?? addingMarket
+    if (tickers.some(t => t.ticker === upperTicker && t.market === m)) return
+    setTickers(prev => [...prev, { ticker: upperTicker, name: name || upperTicker, market: m }])
   }
 
   const removeTicker = (idx: number) => {
@@ -200,24 +202,20 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
         </div>
       </div>
 
-      {/* 종목 추가 */}
+      {/* 종목 추가 (국내·미국 통합 검색) */}
       <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
         <h2 className="font-semibold text-at-text">종목 선택</h2>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <select
-            value={addingMarket}
-            onChange={e => setAddingMarket(e.target.value as Market)}
-            className="px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent w-full sm:w-24"
-          >
-            <option value="KR">국내</option>
-            <option value="US">미국</option>
-          </select>
-          <TickerSearch
-            onSelect={(ticker, name) => addTicker(ticker, name)}
-            market={addingMarket}
-            className="w-full sm:flex-1"
-          />
-        </div>
+        <TickerSearch
+          onSelect={(ticker, name, m) => {
+            if (m) {
+              addTicker(ticker, name, m)
+            } else {
+              addTicker(ticker, name)
+            }
+          }}
+          market="ALL"
+          className="w-full"
+        />
 
         {tickers.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -260,16 +258,14 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
 
       {/* 기간/자금 + 실행 */}
       <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs text-at-text-secondary mb-1">시작일</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent" />
-          </div>
-          <div>
-            <label className="block text-xs text-at-text-secondary mb-1">종료일</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-at-text-secondary mb-1">백테스트 기간</label>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+            />
           </div>
           <div>
             <label className="block text-xs text-at-text-secondary mb-1">초기 자금</label>
@@ -436,6 +432,7 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-at-text-secondary border-b border-at-border">
+                      <th className="text-left py-2 px-2">종목</th>
                       <th className="text-left py-2 px-2">진입일</th>
                       <th className="text-left py-2 px-2">청산일</th>
                       <th className="text-right py-2 px-2">진입가</th>
@@ -449,6 +446,7 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
                   <tbody>
                     {selectedResult.trades.map((t, i) => (
                       <tr key={i} className="border-b border-at-border/50 hover:bg-at-surface-alt transition-colors">
+                        <td className="py-2 px-2 font-mono font-semibold text-at-text">{t.ticker}</td>
                         <td className="py-2 px-2 font-mono">{t.entryDate}</td>
                         <td className="py-2 px-2 font-mono">{t.exitDate}</td>
                         <td className="py-2 px-2 text-right font-mono">{t.entryPrice.toLocaleString()}</td>

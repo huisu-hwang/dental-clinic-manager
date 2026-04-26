@@ -1,6 +1,7 @@
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { type Browser, type BrowserContext, type Page } from 'playwright';
 import { CONFIG } from '../config.js';
 import { randomDelay } from '../utils/delay.js';
+import { launchChromiumWithAutoInstall } from '../utils/playwright-launch.js';
 import {
   humanType,
   typeBodyContent,
@@ -64,7 +65,7 @@ export class NaverBlogPublisher {
       throw new Error('블로그 ID가 설정되지 않았습니다. 마케팅 설정에서 블로그 ID를 입력해주세요.');
     }
 
-    this.browser = await chromium.launch({
+    this.browser = await launchChromiumWithAutoInstall({
       headless: this.headless,
       args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
     });

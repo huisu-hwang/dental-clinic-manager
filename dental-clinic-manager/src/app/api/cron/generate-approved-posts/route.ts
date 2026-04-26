@@ -1,6 +1,6 @@
 // 승인된 캘린더 항목 자동 생성 cron
-// - 매일 새벽 3시 (KST 기준 12 UTC) 실행 권장
-// - status='approved' AND publish_date <= today+2 인 항목을 picking
+// - 매일 KST 새벽 3시 (vercel.json: 18 UTC) 실행
+// - status='approved' AND publish_date(KST) <= today(KST)+2 인 항목을 picking
 // - generateContent로 본문 생성 → status='scheduled' 전이
 // - 한 번에 최대 5건만 처리 (Vercel maxDuration 60초 안전)
 import { NextResponse } from 'next/server';
@@ -49,11 +49,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Supabase admin 초기화 실패' }, { status: 500 });
   }
 
-  // 오늘 + 2일 이내 발행 예정인 approved 항목 조회
-  const today = new Date();
-  const cutoff = new Date(today);
-  cutoff.setDate(cutoff.getDate() + 2);
-  const todayStr = today.toISOString().split('T')[0];
+  // 1. 'generating' 상태로 1시간 이상 정체된 항목 복구
+  // - 이전 cron 실행이 타임아웃/오류로 중단되어 status가 generating에 묶인 경우
+  // - approved로 되돌려 다음 사이클에서 재처리되도록 한다.
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  await admin
+    .from('content_calendar_items')
+    .update({ status: 'approved' })
+    .eq('status', 'generating')
+    .lt('updated_at', oneHourAgo);
+
+  // 오늘(KST) + 2일 이내 발행 예정인 approved 항목 조회
+  // publish_date 컬럼은 사용자가 KST 기준으로 입력하므로 비교도 KST 날짜로 수행해야 한다.
+  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const cutoff = new Date(nowKst);
+  cutoff.setUTCDate(cutoff.getUTCDate() + 2);
+  const todayStr = nowKst.toISOString().split('T')[0];
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
   const { data: items, error: fetchError } = await admin

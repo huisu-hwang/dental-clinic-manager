@@ -7,20 +7,27 @@ import {
   LayoutDashboard, Link2, Target, TrendingUp, TrendingDown, Briefcase,
   Wallet, Activity, AlertCircle, OctagonX, Loader2,
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
+  Zap, GitCompare, Search,
 } from 'lucide-react'
-import Link from 'next/link'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
 import BacktestPanel from './BacktestPanel'
 import StrategyCard from './StrategyCard'
+import DayTradingContent from './DayTradingContent'
+import CompareContent from './CompareContent'
+import ScreenerContent from './ScreenerContent'
+import StrategyBuilder from './StrategyBuilder/StrategyBuilder'
 import type { InvestmentStrategy } from '@/types/investment'
 
-type SubTab = 'dashboard' | 'connect' | 'strategy' | 'trading' | 'portfolio'
+type SubTab = 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener' | 'trading' | 'portfolio'
 
 const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
   { id: 'connect', label: '계좌 연결', icon: Link2 },
   { id: 'strategy', label: '전략 관리', icon: Target },
+  { id: 'daytrading', label: '단타 (분봉)', icon: Zap },
+  { id: 'compare', label: '전략 비교', icon: GitCompare },
+  { id: 'screener', label: '종목 스크리너', icon: Search },
   { id: 'trading', label: '자동매매', icon: TrendingUp },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase },
 ]
@@ -33,6 +40,7 @@ export default function InvestmentTab() {
   const [loading, setLoading] = useState(true)
   const [emergencyStopping, setEmergencyStopping] = useState(false)
   const [backtestStrategyId, setBacktestStrategyId] = useState<string | null>(null)
+  const [creatingStrategy, setCreatingStrategy] = useState(false)
   const [balance, setBalance] = useState<{ totalEvaluation: number; totalPnl: number; holdingsCount: number } | null>(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
   const [balanceError, setBalanceError] = useState<string | null>(null)
@@ -114,33 +122,33 @@ export default function InvestmentTab() {
     )
   }
 
-  // 백테스트 인라인 표시
-  if (backtestStrategyId) {
-    return (
-      <div className="bg-white min-h-screen">
-        <div className="p-4 sm:p-6">
-          <BacktestPanel
-            strategyId={backtestStrategyId}
-            onBack={() => setBacktestStrategyId(null)}
-          />
-        </div>
-      </div>
-    )
+  // 인라인 뷰 모드 (백테스트 또는 새 전략 만들기)
+  const inInlineView = backtestStrategyId !== null || creatingStrategy
+
+  const handleTabChange = (id: SubTab) => {
+    // 다른 탭 클릭 시 인라인 모드 자동 종료
+    if (inInlineView) {
+      setBacktestStrategyId(null)
+      setCreatingStrategy(false)
+    }
+    setSubTab(id)
   }
 
   return (
     <div className="bg-white min-h-screen">
-      {/* 서브메뉴 탭 - 근태/마케팅 페이지와 동일 패턴 */}
+      {/* 서브메뉴 탭 - 항상 표시 (인라인 뷰에서도) */}
       <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3">
         <div className="flex flex-wrap gap-2">
           {SUB_TABS.map(tab => {
             const Icon = tab.icon
+            // 인라인 뷰에서는 어느 탭도 active 표시 안 함 (모드를 명확히 구분)
+            const isActive = !inInlineView && subTab === tab.id
             return (
               <button
                 key={tab.id}
-                onClick={() => setSubTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`py-2 px-4 inline-flex items-center rounded-lg font-medium text-sm transition-all ${
-                  subTab === tab.id
+                  isActive
                     ? 'bg-at-accent-light text-at-accent'
                     : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
                 }`}
@@ -155,7 +163,22 @@ export default function InvestmentTab() {
 
       {/* 서브탭 콘텐츠 */}
       <div className="p-4 sm:p-6">
-        {subTab === 'dashboard' && (
+        {/* 인라인 뷰 우선 (백테스트 / 새 전략) */}
+        {backtestStrategyId && (
+          <BacktestPanel
+            strategyId={backtestStrategyId}
+            onBack={() => setBacktestStrategyId(null)}
+          />
+        )}
+        {creatingStrategy && (
+          <StrategyBuilder
+            onCancel={() => setCreatingStrategy(false)}
+            onSaved={() => { setCreatingStrategy(false); loadData() }}
+          />
+        )}
+
+        {/* 일반 탭 콘텐츠 (인라인 뷰가 아닐 때만) */}
+        {!inInlineView && subTab === 'dashboard' && (
           <DashboardSubTab
             hasCredential={hasCredential}
             strategies={strategies}
@@ -170,16 +193,31 @@ export default function InvestmentTab() {
             onRefresh={loadData}
           />
         )}
-        {subTab === 'connect' && (
+        {!inInlineView && subTab === 'connect' && (
           <ConnectContent onCredentialChange={loadData} />
         )}
-        {subTab === 'strategy' && (
-          <StrategySubTab strategies={strategies} onRefresh={loadData} onBacktest={setBacktestStrategyId} hasCredential={!!hasCredential} />
+        {!inInlineView && subTab === 'strategy' && (
+          <StrategySubTab
+            strategies={strategies}
+            onRefresh={loadData}
+            onBacktest={setBacktestStrategyId}
+            hasCredential={!!hasCredential}
+            onCreateNew={() => setCreatingStrategy(true)}
+          />
         )}
-        {subTab === 'trading' && (
+        {!inInlineView && subTab === 'daytrading' && (
+          <DayTradingContent />
+        )}
+        {!inInlineView && subTab === 'compare' && (
+          <CompareContent />
+        )}
+        {!inInlineView && subTab === 'screener' && (
+          <ScreenerContent />
+        )}
+        {!inInlineView && subTab === 'trading' && (
           <TradingContent />
         )}
-        {subTab === 'portfolio' && (
+        {!inInlineView && subTab === 'portfolio' && (
           <div className="max-w-md mx-auto text-center py-12">
             <div className="w-16 h-16 rounded-2xl bg-at-surface-alt flex items-center justify-center mx-auto mb-4">
               <Briefcase className="w-8 h-8 text-at-text-weak" />
@@ -211,6 +249,33 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
   onRefresh: () => void
 }) {
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const deleteStrategy = async (s: InvestmentStrategy) => {
+    if (s.is_active) {
+      alert('활성 상태의 전략은 삭제할 수 없습니다.\n먼저 자동매매를 중지해주세요.')
+      return
+    }
+    if (!confirm(`'${s.name}' 전략을 삭제하시겠어요?\n\n삭제하면 이 전략의 백테스트 기록과 감시 종목도 함께 정리됩니다. 되돌릴 수 없습니다.`)) {
+      return
+    }
+    setDeletingId(s.id)
+    try {
+      const res = await fetch(`/api/investment/strategies?id=${encodeURIComponent(s.id)}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) {
+        onRefresh()
+      } else {
+        alert(json.error || '삭제 실패')
+      }
+    } catch {
+      alert('네트워크 오류')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const toggleActive = async (s: InvestmentStrategy) => {
     setTogglingId(s.id)
@@ -389,6 +454,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
               <div className="space-y-2">
                 {strategies.map(s => {
                   const isToggling = togglingId === s.id
+                  const isDeleting = deletingId === s.id
                   return (
                     <div key={s.id} className={`flex items-center justify-between gap-2 p-3 rounded-xl border transition-colors ${
                       s.is_active
@@ -403,7 +469,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
                       </div>
                       <button
                         onClick={() => toggleActive(s)}
-                        disabled={isToggling}
+                        disabled={isToggling || isDeleting}
                         className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
                           s.is_active
                             ? 'bg-green-500 text-white hover:bg-green-600'
@@ -424,6 +490,14 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
                             <span>비활성</span>
                           </>
                         )}
+                      </button>
+                      <button
+                        onClick={() => deleteStrategy(s)}
+                        disabled={isDeleting || isToggling || s.is_active}
+                        title={s.is_active ? '활성 전략은 중지 후 삭제 가능' : '전략 삭제'}
+                        className="flex-shrink-0 p-1.5 rounded-full text-at-text-weak hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-at-text-weak disabled:cursor-not-allowed"
+                      >
+                        {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   )
@@ -451,7 +525,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
   )
 }
 
-function StrategySubTab({ strategies, onRefresh, onBacktest, hasCredential }: { strategies: InvestmentStrategy[]; onRefresh: () => void; onBacktest: (id: string) => void; hasCredential: boolean }) {
+function StrategySubTab({ strategies, onRefresh, onBacktest, hasCredential, onCreateNew }: { strategies: InvestmentStrategy[]; onRefresh: () => void; onBacktest: (id: string) => void; hasCredential: boolean; onCreateNew: () => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -459,12 +533,12 @@ function StrategySubTab({ strategies, onRefresh, onBacktest, hasCredential }: { 
           <h2 className="text-xl font-bold text-at-text">전략 관리</h2>
           <p className="text-sm text-at-text-secondary mt-1">매매 전략을 생성하고 백테스트하세요</p>
         </div>
-        <Link
-          href="/investment/strategy/new"
+        <button
+          onClick={onCreateNew}
           className="inline-flex items-center gap-2 px-4 py-2 bg-at-accent text-white rounded-xl text-sm font-medium hover:bg-at-accent-hover transition-colors"
         >
           <Plus className="w-4 h-4" /> 새 전략
-        </Link>
+        </button>
       </div>
 
       {strategies.length === 0 ? (

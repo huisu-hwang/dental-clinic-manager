@@ -1,31 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft, ChevronRight, Sparkles, Settings2, Zap, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, ChevronRight, Sparkles, Settings2, Zap } from 'lucide-react'
+import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import IndicatorPanel from '@/components/Investment/StrategyBuilder/IndicatorPanel'
 import ConditionBuilder from '@/components/Investment/StrategyBuilder/ConditionBuilder'
 import type {
-  InvestmentStrategy,
   Market, Timeframe, AutomationLevel,
-  IndicatorConfig, ConditionGroup,
+  IndicatorConfig, ConditionGroup, PresetStrategy,
 } from '@/types/investment'
 
 type Step = 'basic' | 'indicators' | 'conditions'
 
 const EMPTY_GROUP: ConditionGroup = { type: 'group', operator: 'AND', conditions: [] }
 
-export default function EditStrategyPage() {
-  const params = useParams<{ id: string }>()
-  const router = useRouter()
-  const strategyId = params?.id
+interface Props {
+  /** 저장 성공 시 호출 - 부모가 어디로 이동할지 결정 */
+  onSaved?: (strategyId: string) => void
+  /** 뒤로가기/취소 클릭 시 호출 - 부모가 어디로 갈지 결정 */
+  onCancel?: () => void
+}
 
+export default function StrategyBuilder({ onSaved, onCancel }: Props) {
+  const router = useRouter()
   const [step, setStep] = useState<Step>('basic')
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isActive, setIsActive] = useState(false)
 
   // 폼 상태
   const [name, setName] = useState('')
@@ -37,70 +37,51 @@ export default function EditStrategyPage() {
   const [buyConditions, setBuyConditions] = useState<ConditionGroup>(EMPTY_GROUP)
   const [sellConditions, setSellConditions] = useState<ConditionGroup>(EMPTY_GROUP)
 
-  // 기존 전략 로드
-  useEffect(() => {
-    if (!strategyId) return
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await fetch('/api/investment/strategies')
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || '전략 조회 실패')
-        const list: InvestmentStrategy[] = json.data || []
-        const found = list.find(s => s.id === strategyId)
-        if (!found) throw new Error('전략을 찾을 수 없습니다')
-        if (cancelled) return
-        setName(found.name || '')
-        setDescription(found.description || '')
-        setMarket(found.target_market)
-        setTimeframe(found.timeframe)
-        setAutomationLevel(found.automation_level)
-        setIndicators(found.indicators || [])
-        setBuyConditions(found.buy_conditions || EMPTY_GROUP)
-        setSellConditions(found.sell_conditions || EMPTY_GROUP)
-        setIsActive(!!found.is_active)
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : '불러오기 실패')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [strategyId])
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel()
+    } else {
+      router.push('/investment/strategy')
+    }
+  }
+
+  const applyPreset = (preset: PresetStrategy) => {
+    setName(preset.name)
+    setDescription(preset.description)
+    setIndicators(preset.indicators)
+    setBuyConditions(preset.buyConditions)
+    setSellConditions(preset.sellConditions)
+    setStep('indicators')
+  }
 
   const handleSave = async () => {
     if (!name.trim()) {
       alert('전략 이름을 입력해주세요')
       return
     }
-    if (!strategyId) return
     setSaving(true)
     try {
-      const payload: Record<string, unknown> = {
-        id: strategyId,
-        name: name.trim(),
-        description: description.trim() || null,
-        automationLevel,
-      }
-      // 비활성 전략일 때만 불변 필드 전송 (활성 전략에서는 API가 거부)
-      if (!isActive) {
-        payload.targetMarket = market
-        payload.timeframe = timeframe
-        payload.indicators = indicators
-        payload.buyConditions = buyConditions
-        payload.sellConditions = sellConditions
-      }
-
       const res = await fetch('/api/investment/strategies', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          targetMarket: market,
+          timeframe,
+          indicators,
+          buyConditions,
+          sellConditions,
+          automationLevel,
+        }),
       })
       const json = await res.json()
       if (res.ok) {
-        router.push('/investment/strategy')
+        if (onSaved) {
+          onSaved(json?.data?.id ?? '')
+        } else {
+          router.push('/investment/strategy')
+        }
       } else {
         alert(json.error || '저장 실패')
       }
@@ -116,75 +97,29 @@ export default function EditStrategyPage() {
     { id: 'indicators', label: '지표 선택', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'conditions', label: '매매 조건', icon: <Zap className="w-4 h-4" /> },
   ]
+
   const currentIndex = steps.findIndex(s => s.id === step)
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/investment/strategy" className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors">
-            <ArrowLeft className="w-5 h-5 text-at-text-secondary" />
-          </Link>
-          <h1 className="text-xl font-bold text-at-text">전략 수정</h1>
-        </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-12 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent" />
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/investment/strategy" className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors">
-            <ArrowLeft className="w-5 h-5 text-at-text-secondary" />
-          </Link>
-          <h1 className="text-xl font-bold text-at-text">전략 수정</h1>
-        </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-at-border p-8 text-center">
-          <AlertCircle className="w-10 h-10 text-at-error mx-auto mb-3" />
-          <p className="text-sm text-at-text">{error}</p>
-          <Link
-            href="/investment/strategy"
-            className="inline-block mt-4 px-4 py-2 rounded-xl bg-at-surface-alt text-at-text-secondary text-sm hover:bg-at-border transition-colors"
-          >
-            목록으로 돌아가기
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center gap-3">
-        <Link href="/investment/strategy" className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors">
+        <button
+          type="button"
+          onClick={handleCancel}
+          className="p-2 rounded-lg hover:bg-at-surface-alt transition-colors"
+          aria-label="뒤로가기"
+        >
           <ArrowLeft className="w-5 h-5 text-at-text-secondary" />
-        </Link>
+        </button>
         <div>
-          <h1 className="text-xl font-bold text-at-text">전략 수정</h1>
-          <p className="text-sm text-at-text-secondary mt-0.5">기존 전략의 설정을 변경합니다</p>
+          <h1 className="text-xl font-bold text-at-text">새 전략 만들기</h1>
+          <p className="text-sm text-at-text-secondary mt-0.5">프리셋으로 빠르게 시작하거나 직접 설정하세요</p>
         </div>
       </div>
 
-      {/* 활성 전략 경고 */}
-      {isActive && (
-        <div className="flex items-start gap-3 bg-at-warning-bg border border-at-warning/30 rounded-xl p-4">
-          <AlertCircle className="w-5 h-5 text-at-warning flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-at-warning">활성 중인 전략입니다</p>
-            <p className="text-at-text-secondary mt-1">
-              이름/설명/자동화 수준만 수정할 수 있습니다. 시장·시간프레임·지표·매매 조건을 바꾸려면 먼저 목록 페이지에서 전략을 비활성화해주세요.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* 스텝 인디케이터 */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2">
         {steps.map((s, i) => (
           <div key={s.id} className="flex items-center">
             <button
@@ -208,6 +143,43 @@ export default function EditStrategyPage() {
       {/* 스텝별 콘텐츠 */}
       {step === 'basic' && (
         <div className="space-y-6">
+          {/* 프리셋 - 기본 전략 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
+            <h2 className="font-semibold text-at-text mb-1">기본 전략</h2>
+            <p className="text-xs text-at-text-secondary mb-3">검증된 클래식 기술적 분석 전략</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {PRESET_STRATEGIES.filter(p => !['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce', 'fear-greed-index', 'fear-greed-conservative'].includes(p.id)).map(preset => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className="text-left p-4 rounded-xl border border-at-border hover:border-at-accent hover:bg-at-accent-light/30 transition-all"
+                >
+                  <p className="font-medium text-sm text-at-text">{preset.name}</p>
+                  <p className="text-xs text-at-text-secondary mt-1">{preset.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 프리셋 - 대중 심리 전략 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
+            <h2 className="font-semibold text-at-text mb-1">🧠 대중 심리 전략</h2>
+            <p className="text-xs text-at-text-secondary mb-3">공포/탐욕 극단 시점을 포착하는 역행(Contrarian) 투자 전략</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {PRESET_STRATEGIES.filter(p => ['panic-buy', 'fomo-avoid', 'contrarian-extreme', 'bb-panic-bounce', 'fear-greed-index', 'fear-greed-conservative'].includes(p.id)).map(preset => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className="text-left p-4 rounded-xl border border-at-border hover:border-purple-500 hover:bg-purple-50 transition-all"
+                >
+                  <p className="font-medium text-sm text-at-text">{preset.name}</p>
+                  <p className="text-xs text-at-text-secondary mt-1">{preset.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 기본 설정 */}
           <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
             <h2 className="font-semibold text-at-text">기본 설정</h2>
             <div>
@@ -237,8 +209,7 @@ export default function EditStrategyPage() {
                 <select
                   value={market}
                   onChange={e => setMarket(e.target.value as Market)}
-                  disabled={isActive}
-                  className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent"
                 >
                   <option value="KR">국내 (KOSPI/KOSDAQ)</option>
                   <option value="US">미국 (NYSE/NASDAQ)</option>
@@ -249,8 +220,7 @@ export default function EditStrategyPage() {
                 <select
                   value={timeframe}
                   onChange={e => setTimeframe(e.target.value as Timeframe)}
-                  disabled={isActive}
-                  className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent"
                 >
                   <option value="1d">일봉</option>
                   <option value="1h">1시간봉</option>
@@ -299,14 +269,7 @@ export default function EditStrategyPage() {
 
       {step === 'indicators' && (
         <div className="space-y-4">
-          {isActive && (
-            <div className="text-xs text-at-text-secondary bg-at-surface-alt rounded-lg px-3 py-2">
-              활성 전략에서는 지표를 수정할 수 없습니다 (읽기 전용).
-            </div>
-          )}
-          <div className={isActive ? 'pointer-events-none opacity-60' : ''}>
-            <IndicatorPanel indicators={indicators} onChange={setIndicators} />
-          </div>
+          <IndicatorPanel indicators={indicators} onChange={setIndicators} />
           <div className="flex gap-3">
             <button
               onClick={() => setStep('basic')}
@@ -326,26 +289,18 @@ export default function EditStrategyPage() {
 
       {step === 'conditions' && (
         <div className="space-y-4">
-          {isActive && (
-            <div className="text-xs text-at-text-secondary bg-at-surface-alt rounded-lg px-3 py-2">
-              활성 전략에서는 매매 조건을 수정할 수 없습니다 (읽기 전용).
-            </div>
-          )}
-          <div className={isActive ? 'pointer-events-none opacity-60' : ''}>
-            <ConditionBuilder
-              label="매수 조건"
-              conditions={buyConditions}
-              onChange={setBuyConditions}
-              indicators={indicators}
-            />
-            <div className="h-4" />
-            <ConditionBuilder
-              label="매도 조건"
-              conditions={sellConditions}
-              onChange={setSellConditions}
-              indicators={indicators}
-            />
-          </div>
+          <ConditionBuilder
+            label="매수 조건"
+            conditions={buyConditions}
+            onChange={setBuyConditions}
+            indicators={indicators}
+          />
+          <ConditionBuilder
+            label="매도 조건"
+            conditions={sellConditions}
+            onChange={setSellConditions}
+            indicators={indicators}
+          />
           <div className="bg-at-accent-light/40 border border-at-accent/30 rounded-xl p-4 text-xs text-at-text-secondary">
             손절·일일 손실 제한 등 안전 장치는 <span className="font-semibold text-at-accent">자동매매 &gt; 자동매매 설정</span>에서 한 번만 설정하면 모든 전략에 동일하게 적용됩니다.
           </div>
@@ -361,7 +316,7 @@ export default function EditStrategyPage() {
               disabled={saving || !name.trim()}
               className="flex-1 py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? '저장 중...' : '변경 사항 저장'}
+              {saving ? '저장 중...' : '전략 저장'}
             </button>
           </div>
         </div>
