@@ -1,12 +1,13 @@
 /**
  * 백테스트 엔진
  *
- * 전략(지표 + 조건 트리 + 리스크 설정)을 과거 데이터로 시뮬레이션합니다.
+ * 전략(지표 + 조건 트리)을 과거 데이터로 시뮬레이션합니다.
  *
  * 핵심 규칙:
  * - T일 종가에서 신호 감지 → T+1일 시가에 체결 (Look-ahead Bias 방지)
  * - 수수료 반영: 매매 0.015% + 매도 세금 0.23% (국내), 매매 0% + SEC fee (미국)
- * - 손절/익절/최대보유기간 리스크 관리
+ * - 매수/매도는 오직 전략의 조건 트리에 의해서만 결정 — 손절/익절/최대보유는 백테스트에서 비활성화
+ *   (마지막 봉에서 미청산 포지션만 forceClose로 강제 청산)
  * - 60초 타임아웃 (AbortController)
  */
 
@@ -159,16 +160,10 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
       if (position) {
         position.holdingDays++
 
-        // --- 매도 신호 체크 (전일 종가 기준) ---
+        // 백테스트는 전략의 매도 조건으로만 매매 — 손절/익절/최대보유는 비활성화
         const sellResult = evaluateConditionTreeWithMatches(sellConditions, prevCtx)
 
-        // 손절 / 익절 / 최대 보유기간 체크
-        const currentPnlPercent = ((bar.open - position.entryPrice) / position.entryPrice) * 100
-        const stopLoss = riskSettings.stopLossPercent > 0 && currentPnlPercent <= -riskSettings.stopLossPercent
-        const takeProfit = riskSettings.takeProfitPercent > 0 && currentPnlPercent >= riskSettings.takeProfitPercent
-        const maxHolding = riskSettings.maxHoldingDays > 0 && position.holdingDays >= riskSettings.maxHoldingDays
-
-        if (sellResult.matched || stopLoss || takeProfit || maxHolding) {
+        if (sellResult.matched) {
           // 당일 시가에 매도 체결
           const exitPrice = bar.open
           const sellAmount = exitPrice * position.quantity
@@ -178,32 +173,10 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
 
           cash += sellAmount - sellFee
 
-          // 매도 사유 결정 우선순위: 손절 > 익절 > 최대보유 > 신호
-          let exitSignal: SignalSnapshot
-          if (stopLoss) {
-            exitSignal = {
-              reason: 'stopLoss',
-              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
-              matchedConditions: [`수익률 ${currentPnlPercent.toFixed(2)}% ≤ -${riskSettings.stopLossPercent}% (손절)`],
-            }
-          } else if (takeProfit) {
-            exitSignal = {
-              reason: 'takeProfit',
-              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
-              matchedConditions: [`수익률 ${currentPnlPercent.toFixed(2)}% ≥ ${riskSettings.takeProfitPercent}% (익절)`],
-            }
-          } else if (maxHolding) {
-            exitSignal = {
-              reason: 'maxHolding',
-              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
-              matchedConditions: [`보유 ${position.holdingDays}일 ≥ ${riskSettings.maxHoldingDays}일 (최대보유)`],
-            }
-          } else {
-            exitSignal = {
-              reason: 'signal',
-              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
-              matchedConditions: sellResult.matchedLeaves,
-            }
+          const exitSignal: SignalSnapshot = {
+            reason: 'signal',
+            indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+            matchedConditions: sellResult.matchedLeaves,
           }
 
           trades.push({
