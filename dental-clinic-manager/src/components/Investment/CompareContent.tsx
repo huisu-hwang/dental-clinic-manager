@@ -8,10 +8,10 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
-import Link from 'next/link'
 import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight, Info, Wand2, TrendingUp } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
+import PresetDetailView from '@/components/Investment/PresetDetailView'
 import type {
   InvestmentStrategy, Market, BacktestMetrics, EquityCurvePoint, BacktestTrade,
   PresetStrategy, IndicatorConfig, ConditionGroup, RiskSettings,
@@ -38,6 +38,48 @@ interface SelectableItem {
 
 // 단타 전용 프리셋 ID (일봉 비교에서 제외)
 const DAYTRADING_PRESET_IDS = new Set(['day-vwap-bounce', 'day-orb-breakout', 'day-closing-pressure'])
+
+// 비교 결과표 컬럼 용어 설명 사전
+const METRIC_GLOSSARY: Record<string, { title: string; body: string; formula?: string }> = {
+  'totalReturn': {
+    title: '총 수익률',
+    body: '백테스트 기간 동안 전략으로 운용한 자본의 누적 수익률. 매매 수수료와 세금이 차감된 순 수익률.',
+    formula: '(최종 평가액 − 초기 자본) / 초기 자본 × 100%',
+  },
+  'buyHold': {
+    title: 'B&H (Buy & Hold)',
+    body: '같은 기간 동안 단순히 매수하고 보유했을 때의 수익률. 전략의 alpha(추가 수익) 여부를 비교하는 기준선. 전략 수익률이 B&H보다 낮으면 단순 보유가 더 나았다는 뜻.',
+    formula: '(종료일 종가 / 시작일 시가 − 1) × 100%',
+  },
+  'winRate': {
+    title: '승률 (Win Rate)',
+    body: '전체 매매 중 수익을 낸 매매의 비율. 50% 이상이면 절반 넘게 이긴 셈. 다만 승률이 높아도 평균 손실이 평균 수익보다 크면 손해(profit factor 참고).',
+    formula: '수익 매매 수 / 전체 매매 수 × 100%',
+  },
+  'totalTrades': {
+    title: '거래 횟수',
+    body: '백테스트 기간 동안 매수 → 매도 사이클이 몇 번 발생했는지. 거래가 너무 적으면(예: 1~2회) 통계적 유의성이 떨어지고, 너무 많으면 수수료/슬리피지 비용이 누적된다.',
+  },
+  'sharpe': {
+    title: 'Sharpe Ratio',
+    body: '위험(변동성) 대비 초과 수익률. 같은 수익률이라도 변동이 적을수록 Sharpe가 높음. 1 이상이면 양호, 2 이상이면 우수.',
+    formula: '(연환산 수익률 − 무위험 수익률) / 연환산 변동성 (3.5% / 252거래일 가정)',
+  },
+  'mdd': {
+    title: 'MDD (Maximum Drawdown)',
+    body: '백테스트 중 자산곡선의 고점 대비 가장 크게 하락한 비율. "최악의 손실 구간"을 의미하며, MDD가 클수록 심리적·재정적 인내가 필요. 일반적으로 30% 이상이면 운용 어렵다고 봄.',
+    formula: 'max(고점 − 저점) / 고점 × 100%',
+  },
+  'profitFactor': {
+    title: 'PF (Profit Factor)',
+    body: '총 수익 / 총 손실의 비율. 1.0 = 손익분기, 1.5 이상 양호, 2 이상 우수, 1 미만이면 전략이 손실 우위.',
+    formula: '∑(수익 매매 손익) / ∑(|손실 매매 손익|)',
+  },
+  'rank': {
+    title: '순위',
+    body: '비교한 전략들을 총 수익률 내림차순으로 정렬한 순위. 1위가 최고 성과.',
+  },
+}
 
 // 비교 전략 수 상한 (안전 마진. 사용자/프리셋 합계가 이를 넘으면 한 번에 N개씩 분할 호출 권장)
 const MAX_COMPARE = 50
@@ -86,6 +128,11 @@ export default function CompareContent() {
   const [recommending, setRecommending] = useState(false)
   const [recommendError, setRecommendError] = useState<string | null>(null)
   const [recommendResult, setRecommendResult] = useState<RecommendationResult | null>(null)
+
+  // 상세 모달 — 클릭한 프리셋 ID
+  const [detailPresetId, setDetailPresetId] = useState<string | null>(null)
+  // 용어 설명 모달
+  const [glossaryKey, setGlossaryKey] = useState<string | null>(null)
 
   const loadStrategies = useCallback(async () => {
     try {
@@ -398,7 +445,18 @@ export default function CompareContent() {
         result={recommendResult}
         onRun={runRecommend}
         onApply={applyRecommendations}
+        onOpenDetail={setDetailPresetId}
       />
+
+      {/* 상세 정보 모달 */}
+      {detailPresetId && (
+        <PresetDetailModal presetId={detailPresetId} onClose={() => setDetailPresetId(null)} />
+      )}
+
+      {/* 용어 설명 모달 */}
+      {glossaryKey && METRIC_GLOSSARY[glossaryKey] && (
+        <GlossaryModal term={METRIC_GLOSSARY[glossaryKey]} onClose={() => setGlossaryKey(null)} />
+      )}
 
       {/* 전략 선택 */}
       <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
@@ -451,6 +509,7 @@ export default function CompareContent() {
                   item={item}
                   selectedIds={selectedIds}
                   onToggle={toggleStrategy}
+                  onOpenDetail={setDetailPresetId}
                 />
               ))}
             </div>
@@ -471,6 +530,7 @@ export default function CompareContent() {
                 item={item}
                 selectedIds={selectedIds}
                 onToggle={toggleStrategy}
+                onOpenDetail={setDetailPresetId}
               />
             ))}
           </div>
@@ -508,15 +568,15 @@ export default function CompareContent() {
               <thead className="bg-at-surface-alt">
                 <tr>
                   <th className="px-2 py-2 w-8"></th>
-                  <th className="px-3 py-2 text-left font-medium text-at-text-secondary">순위</th>
+                  <GlossaryHeader label="순위" termKey="rank" align="left" onOpen={setGlossaryKey} />
                   <th className="px-3 py-2 text-left font-medium text-at-text-secondary">전략</th>
-                  <th className="px-3 py-2 text-right font-medium text-at-text-secondary">수익률</th>
-                  <th className="px-3 py-2 text-right font-medium text-at-text-secondary">B&H</th>
-                  <th className="px-3 py-2 text-right font-medium text-at-text-secondary">승률</th>
-                  <th className="px-3 py-2 text-right font-medium text-at-text-secondary">거래</th>
-                  <th className="px-3 py-2 text-right font-medium text-at-text-secondary">Sharpe</th>
-                  <th className="px-3 py-2 text-right font-medium text-at-text-secondary">MDD</th>
-                  <th className="px-3 py-2 text-right font-medium text-at-text-secondary">PF</th>
+                  <GlossaryHeader label="수익률" termKey="totalReturn" align="right" onOpen={setGlossaryKey} />
+                  <GlossaryHeader label="B&H" termKey="buyHold" align="right" onOpen={setGlossaryKey} />
+                  <GlossaryHeader label="승률" termKey="winRate" align="right" onOpen={setGlossaryKey} />
+                  <GlossaryHeader label="거래" termKey="totalTrades" align="right" onOpen={setGlossaryKey} />
+                  <GlossaryHeader label="Sharpe" termKey="sharpe" align="right" onOpen={setGlossaryKey} />
+                  <GlossaryHeader label="MDD" termKey="mdd" align="right" onOpen={setGlossaryKey} />
+                  <GlossaryHeader label="PF" termKey="profitFactor" align="right" onOpen={setGlossaryKey} />
                 </tr>
               </thead>
               <tbody>
@@ -844,10 +904,11 @@ function formatNum(n: number): string {
   return n.toFixed(4)
 }
 
-function SelectableCard({ item, selectedIds, onToggle }: {
+function SelectableCard({ item, selectedIds, onToggle, onOpenDetail }: {
   item: SelectableItem
   selectedIds: Set<string>
   onToggle: (key: string) => void
+  onOpenDetail: (presetId: string) => void
 }) {
   const isSelected = selectedIds.has(item.key)
   const orderIndex = isSelected ? Array.from(selectedIds).indexOf(item.key) : -1
@@ -889,16 +950,14 @@ function SelectableCard({ item, selectedIds, onToggle }: {
         </div>
       </button>
       {presetId && (
-        <Link
-          href={`/investment/strategy/preset/${presetId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
+        <button
+          onClick={e => { e.stopPropagation(); onOpenDetail(presetId) }}
           className="absolute top-2 right-2 p-1 rounded-full text-at-text-weak hover:text-at-accent hover:bg-at-bg transition-colors"
-          title="전략 상세 설명 (새 탭)"
+          title="전략 상세 설명"
+          type="button"
         >
           <Info className="w-3.5 h-3.5" />
-        </Link>
+        </button>
       )}
     </div>
   )
@@ -931,7 +990,7 @@ const REGIME_LABELS: Record<MarketRegime, { label: string; color: string }> = {
 
 function RecommendSection({
   ticker, tickerName, market, mode, onModeChange,
-  running, error, result, onRun, onApply,
+  running, error, result, onRun, onApply, onOpenDetail,
 }: {
   ticker: string
   tickerName: string
@@ -943,6 +1002,7 @@ function RecommendSection({
   result: RecommendationResult | null
   onRun: () => void
   onApply: () => void
+  onOpenDetail: (presetId: string) => void
 }) {
   const modes: { value: RecommendationMode; label: string; desc: string; eta: string }[] = [
     { value: 'rule', label: '룰 기반', desc: '시장 단계 분류 + 매칭만', eta: '~1초' },
@@ -1035,14 +1095,13 @@ function RecommendSection({
                     <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-bold">
                       {i + 1}
                     </span>
-                    <Link
-                      href={`/investment/strategy/preset/${rec.presetId}`}
-                      target="_blank"
-                      className="font-semibold text-sm text-at-text hover:text-purple-600 hover:underline"
+                    <button
+                      onClick={() => onOpenDetail(rec.presetId)}
+                      className="font-semibold text-sm text-at-text hover:text-purple-600 hover:underline inline-flex items-center gap-1"
                     >
                       {rec.presetName}
-                    </Link>
-                    <Info className="w-3 h-3 text-at-text-weak" />
+                      <Info className="w-3 h-3 text-at-text-weak" />
+                    </button>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-at-text-weak">적합도</span>
@@ -1101,6 +1160,128 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="bg-at-surface-alt rounded-lg px-2 py-1.5">
       <p className="text-[10px] text-at-text-weak">{label}</p>
       <p className="text-sm font-mono font-semibold text-at-text">{value}</p>
+    </div>
+  )
+}
+
+// ============================================
+// 프리셋 상세 모달
+// ============================================
+
+function PresetDetailModal({ presetId, onClose }: { presetId: string; onClose: () => void }) {
+  // ESC로 닫기
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    // body 스크롤 잠금
+    const orig = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handler)
+      document.body.style.overflow = orig
+    }
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6 overflow-y-auto bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-4xl bg-at-surface rounded-2xl shadow-2xl border border-at-border my-4"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 닫기 버튼 */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-white border border-at-border text-at-text-secondary hover:text-at-text hover:bg-at-bg shadow-sm"
+          title="닫기 (ESC)"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <div className="p-5 sm:p-6">
+          <PresetDetailView presetId={presetId} variant="modal" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// 용어 설명 헤더 + 모달
+// ============================================
+
+function GlossaryHeader({ label, termKey, align, onOpen }: {
+  label: string
+  termKey: string
+  align: 'left' | 'right'
+  onOpen: (key: string) => void
+}) {
+  const alignClass = align === 'right' ? 'justify-end text-right' : 'justify-start text-left'
+  return (
+    <th className={`px-3 py-2 font-medium text-at-text-secondary ${align === 'right' ? 'text-right' : 'text-left'}`}>
+      <span className={`inline-flex items-center gap-1 ${alignClass}`}>
+        {label}
+        <button
+          onClick={() => onOpen(termKey)}
+          className="p-0.5 rounded-full text-at-text-weak hover:text-at-accent hover:bg-at-bg transition-colors"
+          title="용어 설명"
+          type="button"
+        >
+          <Info className="w-3 h-3" />
+        </button>
+      </span>
+    </th>
+  )
+}
+
+function GlossaryModal({
+  term,
+  onClose,
+}: {
+  term: { title: string; body: string; formula?: string }
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-at-border"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 p-1.5 rounded-full text-at-text-secondary hover:text-at-text hover:bg-at-bg"
+          title="닫기 (ESC)"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Info className="w-5 h-5 text-at-accent" />
+            <h3 className="text-base font-bold text-at-text">{term.title}</h3>
+          </div>
+          <p className="text-sm text-at-text leading-relaxed">{term.body}</p>
+          {term.formula && (
+            <div className="mt-3 p-3 rounded-xl bg-at-surface-alt border border-at-border">
+              <p className="text-[10px] uppercase tracking-wide text-at-text-weak font-semibold mb-1">계산식</p>
+              <p className="font-mono text-xs text-at-text">{term.formula}</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
