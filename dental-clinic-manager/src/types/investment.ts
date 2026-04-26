@@ -512,6 +512,66 @@ export type PnlColorMode = 'KR' | 'US'
 /** 투자 대시보드 탭 */
 export type InvestmentTab = 'dashboard' | 'strategy' | 'trading' | 'portfolio' | 'settings'
 
+// ============================================
+// 시장 단계 / 종목 추천
+// ============================================
+
+/** 시장 단계 분류 — 추세/변동성/모멘텀 3축 분석 결과 */
+export type MarketRegime =
+  | 'strong-uptrend'      // 강한 상승 추세 (가격 > SMA200, ADX 강)
+  | 'weak-uptrend'        // 약한 상승 추세
+  | 'sideways'            // 횡보 (낮은 ADX, 좁은 BB)
+  | 'high-volatility'     // 변동성 확대 국면 (BB 확장, 높은 ATR)
+  | 'downtrend'           // 하락 추세
+  | 'oversold-bounce'     // 과매도 반등 가능 (RSI 매우 낮음)
+  | 'overbought'          // 과매수 (RSI 매우 높음)
+
+export interface MarketAnalysis {
+  ticker: string
+  market: Market
+  asOf: string  // 분석 기준일 (마지막 봉 날짜)
+  regime: MarketRegime
+  metrics: {
+    priceVsSMA200: number    // 종가/SMA200 - 1 (퍼센트)
+    adx: number               // ADX(14) — 추세 강도
+    rsi: number               // RSI(14)
+    bbWidth: number           // 볼린저 밴드 폭 / 중심선 (%)
+    atrPercent: number        // ATR(14) / 종가 (%)
+    momentum6M: number        // 6개월 가격 변화율 (%)
+    momentum1M: number        // 1개월 가격 변화율 (%)
+  }
+  /** 분류 근거 사람이 읽을 수 있는 설명 */
+  reasoning: string[]
+}
+
+/** 추천 모드 */
+export type RecommendationMode = 'rule' | 'hybrid' | 'backtest'
+
+/** 추천 결과 단일 항목 */
+export interface StrategyRecommendation {
+  presetId: string
+  presetName: string
+  /** 0~100 점수 (높을수록 적합) */
+  score: number
+  /** 룰 기반 매칭 점수 (모든 모드에서 채워짐) */
+  ruleScore: number
+  /** 미니 백테스트 결과 (hybrid/backtest 모드일 때만) */
+  backtest?: {
+    totalReturn: number
+    winRate: number
+    sharpeRatio: number
+    totalTrades: number
+  }
+  /** 추천 이유 */
+  reasons: string[]
+}
+
+export interface RecommendationResult {
+  analysis: MarketAnalysis
+  mode: RecommendationMode
+  recommendations: StrategyRecommendation[]
+}
+
 /** 프리셋 전략 */
 export interface PresetStrategy {
   id: string
@@ -523,4 +583,18 @@ export interface PresetStrategy {
   buyConditions: ConditionGroup
   sellConditions: ConditionGroup
   riskSettings: Partial<RiskSettings>
+  /** 자세한 작동 원리 설명 (마크다운 가능) — 상세 페이지에서 표시 */
+  longDescription?: string
+  /** 적합한 종목 특성 (예: ["대형 우량주", "추세가 명확한 종목"]) */
+  bestFor?: string[]
+  /** 적합한 시장 상황 분류 (MarketRegime 값 배열) */
+  marketConditions?: MarketRegime[]
+  /** 평균 보유 기간 표현 (예: "1~3개월", "수일") */
+  typicalHolding?: string
+  /** 장점 목록 */
+  pros?: string[]
+  /** 단점/리스크 목록 */
+  cons?: string[]
+  /** 학술/저자 출처 */
+  source?: string
 }
