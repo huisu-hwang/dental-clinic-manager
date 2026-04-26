@@ -149,22 +149,41 @@ export default function DateRangePicker({ startDate, endDate, onChange, minDate,
             <PresetButton onClick={() => applyPreset(0, 'lastYear')}>작년</PresetButton>
           </div>
 
-          {/* 월 네비게이션 */}
-          <div className="flex items-center justify-between mb-2">
+          {/* 월 네비게이션: 좌우 화살표 + 연도/월 드롭다운 */}
+          <div className="flex items-center justify-between mb-2 gap-1.5">
             <button
               type="button"
               onClick={goPrevMonth}
               className="p-1.5 rounded-lg hover:bg-at-surface-alt text-at-text-secondary"
+              title="이전 월"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-semibold text-at-text">
-              {viewMonth.getFullYear()}년 {MONTH_LABELS[viewMonth.getMonth()]}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={viewMonth.getFullYear()}
+                onChange={e => setViewMonth(new Date(Number(e.target.value), viewMonth.getMonth(), 1))}
+                className="text-sm font-semibold text-at-text bg-white border border-at-border rounded-md px-2 py-1 cursor-pointer hover:border-at-accent focus:outline-none focus:border-at-accent"
+              >
+                {generateYearOptions(effectiveMax, minDate).map(y => (
+                  <option key={y} value={y}>{y}년</option>
+                ))}
+              </select>
+              <select
+                value={viewMonth.getMonth()}
+                onChange={e => setViewMonth(new Date(viewMonth.getFullYear(), Number(e.target.value), 1))}
+                className="text-sm font-semibold text-at-text bg-white border border-at-border rounded-md px-2 py-1 cursor-pointer hover:border-at-accent focus:outline-none focus:border-at-accent"
+              >
+                {MONTH_LABELS.map((m, i) => (
+                  <option key={m} value={i}>{m}</option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               onClick={goNextMonth}
               className="p-1.5 rounded-lg hover:bg-at-surface-alt text-at-text-secondary"
+              title="다음 월"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -286,6 +305,22 @@ function daysBetween(start: string, end: string): number {
   const e = parseDate(end)
   if (!s || !e) return 0
   return Math.max(0, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)))
+}
+
+/**
+ * 연도 옵션 생성 — minDate~maxDate 사이의 모든 연도, 내림차순.
+ * 백테스트 데이터 가용성을 감안해 maxDate~maxDate−30년 범위로 제한.
+ */
+function generateYearOptions(maxDate: string, minDate?: string): number[] {
+  const max: number = parseDate(maxDate)?.getFullYear() ?? new Date().getFullYear()
+  let min: number = max - 30
+  if (minDate) {
+    const minYear = parseDate(minDate)?.getFullYear()
+    if (typeof minYear === 'number') min = minYear
+  }
+  const years: number[] = []
+  for (let y = max; y >= min; y--) years.push(y)
+  return years
 }
 
 /** 6주 × 7일 = 42셀 그리드 생성. 빈 셀은 null. */
