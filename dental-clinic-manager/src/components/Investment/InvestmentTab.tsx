@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Link2, Target, TrendingUp, TrendingDown, Briefcase,
   Wallet, Activity, AlertCircle, OctagonX, Loader2,
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
-  Zap, GitCompare,
+  Zap, GitCompare, Search,
 } from 'lucide-react'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
@@ -15,10 +15,11 @@ import BacktestPanel from './BacktestPanel'
 import StrategyCard from './StrategyCard'
 import DayTradingContent from './DayTradingContent'
 import CompareContent from './CompareContent'
+import ScreenerContent from './ScreenerContent'
 import StrategyBuilder from './StrategyBuilder/StrategyBuilder'
 import type { InvestmentStrategy } from '@/types/investment'
 
-type SubTab = 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'trading' | 'portfolio'
+type SubTab = 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener' | 'trading' | 'portfolio'
 
 const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
@@ -26,6 +27,7 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'strategy', label: '전략 관리', icon: Target },
   { id: 'daytrading', label: '단타 (분봉)', icon: Zap },
   { id: 'compare', label: '전략 비교', icon: GitCompare },
+  { id: 'screener', label: '종목 스크리너', icon: Search },
   { id: 'trading', label: '자동매매', icon: TrendingUp },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase },
 ]
@@ -208,6 +210,9 @@ export default function InvestmentTab() {
         )}
         {!inInlineView && subTab === 'compare' && (
           <CompareContent />
+        )}
+        {!inInlineView && subTab === 'screener' && (
+          <ScreenerContent />
         )}
         {!inInlineView && subTab === 'trading' && (
           <TradingContent />
