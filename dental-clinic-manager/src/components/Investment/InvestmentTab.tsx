@@ -249,6 +249,33 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
   onRefresh: () => void
 }) {
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const deleteStrategy = async (s: InvestmentStrategy) => {
+    if (s.is_active) {
+      alert('활성 상태의 전략은 삭제할 수 없습니다.\n먼저 자동매매를 중지해주세요.')
+      return
+    }
+    if (!confirm(`'${s.name}' 전략을 삭제하시겠어요?\n\n삭제하면 이 전략의 백테스트 기록과 감시 종목도 함께 정리됩니다. 되돌릴 수 없습니다.`)) {
+      return
+    }
+    setDeletingId(s.id)
+    try {
+      const res = await fetch(`/api/investment/strategies?id=${encodeURIComponent(s.id)}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) {
+        onRefresh()
+      } else {
+        alert(json.error || '삭제 실패')
+      }
+    } catch {
+      alert('네트워크 오류')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const toggleActive = async (s: InvestmentStrategy) => {
     setTogglingId(s.id)
@@ -427,6 +454,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
               <div className="space-y-2">
                 {strategies.map(s => {
                   const isToggling = togglingId === s.id
+                  const isDeleting = deletingId === s.id
                   return (
                     <div key={s.id} className={`flex items-center justify-between gap-2 p-3 rounded-xl border transition-colors ${
                       s.is_active
@@ -441,7 +469,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
                       </div>
                       <button
                         onClick={() => toggleActive(s)}
-                        disabled={isToggling}
+                        disabled={isToggling || isDeleting}
                         className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
                           s.is_active
                             ? 'bg-green-500 text-white hover:bg-green-600'
@@ -462,6 +490,14 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
                             <span>비활성</span>
                           </>
                         )}
+                      </button>
+                      <button
+                        onClick={() => deleteStrategy(s)}
+                        disabled={isDeleting || isToggling || s.is_active}
+                        title={s.is_active ? '활성 전략은 중지 후 삭제 가능' : '전략 삭제'}
+                        className="flex-shrink-0 p-1.5 rounded-full text-at-text-weak hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-at-text-weak disabled:cursor-not-allowed"
+                      >
+                        {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   )
