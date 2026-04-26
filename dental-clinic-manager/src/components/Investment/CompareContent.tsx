@@ -608,15 +608,18 @@ export default function CompareContent() {
   )
 }
 
-/** 전략별 매매 내역 미니 표 — expandable row 안에 표시 */
+/** 전략별 매매 내역 미니 표 — expandable row 안에 표시. 행 클릭 시 매매 근거 펼침. */
 function TradesMiniTable({ trades }: { trades: BacktestTrade[] }) {
   const limit = 50
   const shown = trades.slice(0, limit)
+  const [expandedTradeIdx, setExpandedTradeIdx] = useState<number | null>(null)
+
   return (
     <div className="overflow-x-auto rounded-lg border border-at-border bg-white">
       <table className="w-full text-[11px]">
         <thead className="bg-at-surface-alt">
           <tr className="text-at-text-secondary">
+            <th className="px-2 py-1.5 w-6"></th>
             <th className="px-2 py-1.5 text-left font-medium">종목</th>
             <th className="px-2 py-1.5 text-left font-medium">진입일</th>
             <th className="px-2 py-1.5 text-left font-medium">청산일</th>
@@ -626,26 +629,60 @@ function TradesMiniTable({ trades }: { trades: BacktestTrade[] }) {
             <th className="px-2 py-1.5 text-right font-medium">손익</th>
             <th className="px-2 py-1.5 text-right font-medium">수익률</th>
             <th className="px-2 py-1.5 text-right font-medium">보유일</th>
+            <th className="px-2 py-1.5 text-left font-medium">청산 사유</th>
           </tr>
         </thead>
         <tbody>
-          {shown.map((t, i) => (
-            <tr key={i} className="border-t border-at-border/60">
-              <td className="px-2 py-1.5 font-mono font-semibold text-at-text">{t.ticker}</td>
-              <td className="px-2 py-1.5 font-mono text-at-text-secondary">{t.entryDate}</td>
-              <td className="px-2 py-1.5 font-mono text-at-text-secondary">{t.exitDate}</td>
-              <td className="px-2 py-1.5 text-right font-mono">{t.entryPrice.toLocaleString()}</td>
-              <td className="px-2 py-1.5 text-right font-mono">{t.exitPrice.toLocaleString()}</td>
-              <td className="px-2 py-1.5 text-right font-mono">{t.quantity}</td>
-              <td className={`px-2 py-1.5 text-right font-mono font-semibold ${t.pnl >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
-                {t.pnl >= 0 ? '+' : ''}{Math.round(t.pnl).toLocaleString()}
-              </td>
-              <td className={`px-2 py-1.5 text-right font-mono ${t.pnlPercent >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
-                {t.pnlPercent >= 0 ? '+' : ''}{t.pnlPercent.toFixed(2)}%
-              </td>
-              <td className="px-2 py-1.5 text-right font-mono">{t.holdingDays}</td>
-            </tr>
-          ))}
+          {shown.map((t, i) => {
+            const hasSignals = !!(t.entrySignal || t.exitSignal)
+            const isExpanded = expandedTradeIdx === i
+            const exitReasonLabel = formatExitReasonLabel(t.exitSignal?.reason)
+            return (
+              <Fragment key={i}>
+                <tr
+                  className={`border-t border-at-border/60 ${hasSignals ? 'cursor-pointer hover:bg-at-surface-alt/60' : ''}`}
+                  onClick={() => {
+                    if (!hasSignals) return
+                    setExpandedTradeIdx(prev => (prev === i ? null : i))
+                  }}
+                >
+                  <td className="px-2 py-1.5 text-at-text-weak">
+                    {hasSignals && (isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />)}
+                  </td>
+                  <td className="px-2 py-1.5 font-mono font-semibold text-at-text">{t.ticker}</td>
+                  <td className="px-2 py-1.5 font-mono text-at-text-secondary">{t.entryDate}</td>
+                  <td className="px-2 py-1.5 font-mono text-at-text-secondary">{t.exitDate}</td>
+                  <td className="px-2 py-1.5 text-right font-mono">{t.entryPrice.toLocaleString()}</td>
+                  <td className="px-2 py-1.5 text-right font-mono">{t.exitPrice.toLocaleString()}</td>
+                  <td className="px-2 py-1.5 text-right font-mono">{t.quantity}</td>
+                  <td className={`px-2 py-1.5 text-right font-mono font-semibold ${t.pnl >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                    {t.pnl >= 0 ? '+' : ''}{Math.round(t.pnl).toLocaleString()}
+                  </td>
+                  <td className={`px-2 py-1.5 text-right font-mono ${t.pnlPercent >= 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                    {t.pnlPercent >= 0 ? '+' : ''}{t.pnlPercent.toFixed(2)}%
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-mono">{t.holdingDays}</td>
+                  <td className="px-2 py-1.5 text-at-text-secondary">
+                    {exitReasonLabel && (
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${exitReasonClass(t.exitSignal?.reason)}`}>
+                        {exitReasonLabel}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+                {isExpanded && hasSignals && (
+                  <tr className="border-t border-at-border/40 bg-blue-50/30">
+                    <td colSpan={11} className="px-3 py-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <SignalDetailBlock title="🟢 매수 근거" snapshot={t.entrySignal} accent="emerald" />
+                        <SignalDetailBlock title="🔴 매도 근거" snapshot={t.exitSignal} accent="rose" />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            )
+          })}
         </tbody>
       </table>
       {trades.length > limit && (
@@ -655,6 +692,104 @@ function TradesMiniTable({ trades }: { trades: BacktestTrade[] }) {
       )}
     </div>
   )
+}
+
+/** 매도 사유 한글 라벨 */
+function formatExitReasonLabel(reason?: SignalSnapshotReason): string {
+  switch (reason) {
+    case 'signal': return '시그널'
+    case 'stopLoss': return '손절'
+    case 'takeProfit': return '익절'
+    case 'maxHolding': return '최대보유'
+    case 'forceClose': return '기간만료'
+    default: return ''
+  }
+}
+
+function exitReasonClass(reason?: SignalSnapshotReason): string {
+  switch (reason) {
+    case 'signal': return 'bg-blue-100 text-blue-700'
+    case 'stopLoss': return 'bg-red-100 text-red-700'
+    case 'takeProfit': return 'bg-emerald-100 text-emerald-700'
+    case 'maxHolding': return 'bg-amber-100 text-amber-700'
+    case 'forceClose': return 'bg-gray-100 text-gray-600'
+    default: return 'bg-gray-100 text-gray-600'
+  }
+}
+
+type SignalSnapshotReason = NonNullable<BacktestTrade['exitSignal']>['reason']
+
+/** 매매 근거 상세 블록 — 매칭된 조건 + 지표 스냅샷 */
+function SignalDetailBlock({
+  title,
+  snapshot,
+  accent,
+}: {
+  title: string
+  snapshot: BacktestTrade['entrySignal']
+  accent: 'emerald' | 'rose'
+}) {
+  const borderClass = accent === 'emerald' ? 'border-emerald-200' : 'border-rose-200'
+  const headerClass = accent === 'emerald' ? 'text-emerald-700' : 'text-rose-700'
+
+  if (!snapshot) {
+    return (
+      <div className={`rounded-lg bg-white border ${borderClass} p-2.5`}>
+        <p className={`text-[11px] font-semibold ${headerClass} mb-1`}>{title}</p>
+        <p className="text-[10px] text-at-text-weak">신호 정보 없음 (이전 백테스트 데이터)</p>
+      </div>
+    )
+  }
+
+  const indicatorEntries = Object.entries(snapshot.indicators)
+  return (
+    <div className={`rounded-lg bg-white border ${borderClass} p-2.5`}>
+      <p className={`text-[11px] font-semibold ${headerClass} mb-1.5`}>{title}</p>
+
+      {/* 매칭된 조건 */}
+      {snapshot.matchedConditions.length > 0 && (
+        <div className="mb-2">
+          <p className="text-[10px] text-at-text-secondary mb-0.5">충족 조건</p>
+          <ul className="space-y-0.5">
+            {snapshot.matchedConditions.map((cond, idx) => (
+              <li key={idx} className="text-[10.5px] font-mono text-at-text bg-at-surface-alt/60 rounded px-1.5 py-0.5">
+                {cond}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* 지표 스냅샷 */}
+      {indicatorEntries.length > 0 && (
+        <div>
+          <p className="text-[10px] text-at-text-secondary mb-0.5">지표값 (전일 종가 기준)</p>
+          <div className="flex flex-wrap gap-1">
+            {indicatorEntries.map(([id, val]) => (
+              <span key={id} className="text-[10px] font-mono bg-at-surface-alt rounded px-1.5 py-0.5">
+                <span className="text-at-text-secondary">{id}:</span>{' '}
+                <span className="text-at-text">{formatIndicatorValue(val)}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function formatIndicatorValue(val: number | Record<string, number>): string {
+  if (typeof val === 'number') return formatNum(val)
+  return Object.entries(val)
+    .map(([k, v]) => `${k}=${formatNum(v)}`)
+    .join(', ')
+}
+
+function formatNum(n: number): string {
+  if (!isFinite(n)) return String(n)
+  if (Math.abs(n) >= 1000) return n.toFixed(0)
+  if (Math.abs(n) >= 1) return n.toFixed(2)
+  return n.toFixed(4)
 }
 
 function SelectableCard({ item, selectedIds, onToggle }: {

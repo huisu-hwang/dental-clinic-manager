@@ -14,9 +14,10 @@ import type {
   OHLCV, IndicatorConfig, ConditionGroup,
   RiskSettings, Market,
   BacktestTrade, BacktestMetrics, EquityCurvePoint,
+  SignalSnapshot,
 } from '@/types/investment'
-import { calculateIndicators } from './indicatorEngine'
-import { evaluateConditionTree, type EvaluationContext } from './signalEngine'
+import { calculateIndicators, type IndicatorResultMap } from './indicatorEngine'
+import { evaluateConditionTreeWithMatches, type EvaluationContext } from './signalEngine'
 
 // ============================================
 // 수수료 상수
@@ -74,6 +75,36 @@ interface SimPosition {
   entryPrice: number
   quantity: number
   holdingDays: number
+  entrySignal?: SignalSnapshot
+}
+
+/**
+ * 신호 발생 봉의 모든 지표값을 스냅샷으로 추출
+ * NaN 값은 제외하여 가독성 확보.
+ */
+function buildIndicatorSnapshot(
+  indicators: IndicatorConfig[],
+  indicatorResults: IndicatorResultMap,
+  barIndex: number,
+): Record<string, number | Record<string, number>> {
+  const snapshot: Record<string, number | Record<string, number>> = {}
+  for (const ind of indicators) {
+    const values = indicatorResults[ind.id]
+    if (!values) continue
+    const v = values[barIndex]
+    if (v === undefined || v === null) continue
+    if (typeof v === 'number') {
+      if (!isNaN(v)) snapshot[ind.id] = round4(v)
+    } else if (typeof v === 'object') {
+      // MACD/BB 등 객체 지표 - NaN 속성은 제외
+      const obj: Record<string, number> = {}
+      for (const [k, val] of Object.entries(v)) {
+        if (typeof val === 'number' && !isNaN(val)) obj[k] = round4(val)
+      }
+      if (Object.keys(obj).length > 0) snapshot[ind.id] = obj
+    }
+  }
+  return snapshot
 }
 
 // ============================================
@@ -129,7 +160,7 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
         position.holdingDays++
 
         // --- 매도 신호 체크 (전일 종가 기준) ---
-        const sellSignal = evaluateConditionTree(sellConditions, prevCtx)
+        const sellResult = evaluateConditionTreeWithMatches(sellConditions, prevCtx)
 
         // 손절 / 익절 / 최대 보유기간 체크
         const currentPnlPercent = ((bar.open - position.entryPrice) / position.entryPrice) * 100
@@ -137,7 +168,7 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
         const takeProfit = riskSettings.takeProfitPercent > 0 && currentPnlPercent >= riskSettings.takeProfitPercent
         const maxHolding = riskSettings.maxHoldingDays > 0 && position.holdingDays >= riskSettings.maxHoldingDays
 
-        if (sellSignal || stopLoss || takeProfit || maxHolding) {
+        if (sellResult.matched || stopLoss || takeProfit || maxHolding) {
           // 당일 시가에 매도 체결
           const exitPrice = bar.open
           const sellAmount = exitPrice * position.quantity
@@ -146,6 +177,34 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
             - (position.entryPrice * position.quantity * commissionRate.buyCommission) // 매수 수수료 차감
 
           cash += sellAmount - sellFee
+
+          // 매도 사유 결정 우선순위: 손절 > 익절 > 최대보유 > 신호
+          let exitSignal: SignalSnapshot
+          if (stopLoss) {
+            exitSignal = {
+              reason: 'stopLoss',
+              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+              matchedConditions: [`수익률 ${currentPnlPercent.toFixed(2)}% ≤ -${riskSettings.stopLossPercent}% (손절)`],
+            }
+          } else if (takeProfit) {
+            exitSignal = {
+              reason: 'takeProfit',
+              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+              matchedConditions: [`수익률 ${currentPnlPercent.toFixed(2)}% ≥ ${riskSettings.takeProfitPercent}% (익절)`],
+            }
+          } else if (maxHolding) {
+            exitSignal = {
+              reason: 'maxHolding',
+              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+              matchedConditions: [`보유 ${position.holdingDays}일 ≥ ${riskSettings.maxHoldingDays}일 (최대보유)`],
+            }
+          } else {
+            exitSignal = {
+              reason: 'signal',
+              indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+              matchedConditions: sellResult.matchedLeaves,
+            }
+          }
 
           trades.push({
             entryDate: position.entryDate,
@@ -158,15 +217,17 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
             pnl,
             pnlPercent: ((exitPrice - position.entryPrice) / position.entryPrice) * 100,
             holdingDays: position.holdingDays,
+            entrySignal: position.entrySignal,
+            exitSignal,
           })
 
           position = null
         }
       } else {
         // --- 매수 신호 체크 (전일 종가 기준) ---
-        const buySignal = evaluateConditionTree(buyConditions, prevCtx)
+        const buyResult = evaluateConditionTreeWithMatches(buyConditions, prevCtx)
 
-        if (buySignal) {
+        if (buyResult.matched) {
           // 당일 시가에 매수 체결
           const entryPrice = bar.open
           // useFullCapital=true이면 가용 cash 100% 사용. 아니면 maxPositionSizePercent 적용.
@@ -187,6 +248,11 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
               entryPrice,
               quantity,
               holdingDays: 0,
+              entrySignal: {
+                reason: 'signal',
+                indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+                matchedConditions: buyResult.matchedLeaves,
+              },
             }
           }
         }
@@ -224,6 +290,12 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
       pnl,
       pnlPercent: ((exitPrice - position.entryPrice) / position.entryPrice) * 100,
       holdingDays: position.holdingDays,
+      entrySignal: position.entrySignal,
+      exitSignal: {
+        reason: 'forceClose',
+        indicators: buildIndicatorSnapshot(indicators, indicatorResults, prices.length - 1),
+        matchedConditions: ['백테스트 종료 시점 강제 청산'],
+      },
     })
   }
 

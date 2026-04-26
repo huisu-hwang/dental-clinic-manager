@@ -276,6 +276,16 @@ export interface EquityCurvePoint {
   value: number
 }
 
+/** 매매 시점의 신호 근거 스냅샷 */
+export interface SignalSnapshot {
+  /** 신호 발생 사유 */
+  reason: 'signal' | 'stopLoss' | 'takeProfit' | 'maxHolding' | 'forceClose'
+  /** 신호 발생 봉의 모든 지표값 (id → 단일값 또는 객체) */
+  indicators: Record<string, number | Record<string, number>>
+  /** 매칭된 조건 leaf의 사람이 읽을 수 있는 표현 (예: "RSI_14(72.34) > 70") */
+  matchedConditions: string[]
+}
+
 export interface BacktestTrade {
   entryDate: string
   exitDate: string
@@ -287,6 +297,10 @@ export interface BacktestTrade {
   pnl: number
   pnlPercent: number
   holdingDays: number
+  /** 진입 시점의 신호 근거 (옵션, 신규 백테스트부터 채워짐) */
+  entrySignal?: SignalSnapshot
+  /** 청산 시점의 신호 근거 (옵션, 신규 백테스트부터 채워짐) */
+  exitSignal?: SignalSnapshot
 }
 
 export interface BacktestMetrics {
