@@ -6,6 +6,7 @@ import {
   BarChart3, Award, Clock, Plus, X, Trophy, ArrowLeft,
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
+import DateRangePicker from '@/components/Investment/DateRangePicker'
 import type { InvestmentStrategy, BacktestMetrics, BacktestTrade, EquityCurvePoint, Market } from '@/types/investment'
 
 interface BuyHoldData {
@@ -260,16 +261,14 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
 
       {/* 기간/자금 + 실행 */}
       <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs text-at-text-secondary mb-1">시작일</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent" />
-          </div>
-          <div>
-            <label className="block text-xs text-at-text-secondary mb-1">종료일</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-at-text-secondary mb-1">백테스트 기간</label>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+            />
           </div>
           <div>
             <label className="block text-xs text-at-text-secondary mb-1">초기 자금</label>

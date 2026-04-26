@@ -12,6 +12,7 @@ import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkl
 import TickerSearch from '@/components/Investment/TickerSearch'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
+import DateRangePicker from '@/components/Investment/DateRangePicker'
 import type {
   InvestmentStrategy, Market, BacktestMetrics, EquityCurvePoint, BacktestTrade,
   PresetStrategy, IndicatorConfig, ConditionGroup, RiskSettings,
@@ -399,22 +400,12 @@ export default function CompareContent() {
           </div>
 
           {/* 기간 */}
-          <div>
-            <label className="block text-xs font-medium text-at-text-secondary mb-1.5">시작일</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm focus:outline-none focus:border-at-accent"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-at-text-secondary mb-1.5">종료일</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm focus:outline-none focus:border-at-accent"
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-at-text-secondary mb-1.5">백테스트 기간</label>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(s, e) => { setStartDate(s); setEndDate(e) }}
             />
           </div>
 
