@@ -3,13 +3,14 @@
  *
  * POST /api/investment/screener
  * Body: {
- *   strategyId | preset { indicators, buyConditions },
+ *   strategies?: Array<{ strategyId?, preset? }>  // 다중 (권장)
+ *   strategyId?, preset?                          // 단일 (하위 호환)
  *   asOfDate: 'YYYY-MM-DD' (기본 오늘),
  *   universe: 'KR_TOP' | 'US_TOP' | 'ALL'
  * }
  *
- * 각 종목의 가격을 조회하여 asOfDate 기준 봉의 buyConditions를 평가,
- * 매칭된 종목 리스트를 반환.
+ * 종목당 가격은 한 번만 조회하고 모든 전략에 대해 매수 조건을 평가하여
+ * 호출 효율을 극대화. 결과는 전략별 섹션으로 분리되어 반환.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -19,7 +20,14 @@ import { fetchPrices } from '@/lib/stockDataService'
 import { calculateIndicators } from '@/lib/indicatorEngine'
 import { evaluateConditionTreeWithMatches } from '@/lib/signalEngine'
 import { getUniverse, type UniverseId } from '@/lib/screenerUniverses'
-import type { ConditionGroup, IndicatorConfig, Market } from '@/types/investment'
+import type { ConditionGroup, IndicatorConfig, Market, OHLCV } from '@/types/investment'
+
+interface ResolvedStrategy {
+  key: string  // 'user:<id>' 또는 'preset:<name>'
+  name: string
+  indicators: IndicatorConfig[]
+  buyConditions: ConditionGroup
+}
 
 interface ScreenerMatch {
   ticker: string
@@ -31,7 +39,14 @@ interface ScreenerMatch {
   indicators: Record<string, number | Record<string, number>>
 }
 
-const CONCURRENCY = 8 // yahoo-finance2 rate limit 고려
+interface StrategyScreenerResult {
+  strategyKey: string
+  strategyName: string
+  matches: ScreenerMatch[]
+  failed: { ticker: string; market: Market; reason: string }[]
+}
+
+const CONCURRENCY = 8
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth()
@@ -47,82 +62,117 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '잘못된 요청 형식입니다' }, { status: 400 })
   }
 
-  const { strategyId, preset, asOfDate, universe = 'KR_TOP' } = body
+  const { asOfDate, universe = 'KR_TOP' } = body
 
-  // 1. 전략 정보 (저장된 전략 또는 즉석 프리셋)
-  let indicators: IndicatorConfig[]
-  let buyConditions: ConditionGroup
-  let strategyName = '전략'
-
-  if (strategyId && typeof strategyId === 'string') {
-    const supabase = getSupabaseAdmin()
-    if (!supabase) return NextResponse.json({ error: 'Server error' }, { status: 500 })
-    const { data: strategy } = await supabase
-      .from('investment_strategies')
-      .select('*')
-      .eq('id', strategyId)
-      .eq('user_id', userId)
-      .single()
-    if (!strategy) return NextResponse.json({ error: '전략을 찾을 수 없습니다' }, { status: 404 })
-    indicators = strategy.indicators as IndicatorConfig[]
-    buyConditions = strategy.buy_conditions as ConditionGroup
-    strategyName = strategy.name
-  } else if (preset && typeof preset === 'object') {
-    const p = preset as { indicators?: IndicatorConfig[]; buyConditions?: ConditionGroup; name?: string }
-    if (!p.indicators || !p.buyConditions) {
-      return NextResponse.json({ error: 'preset.indicators와 buyConditions가 필요합니다' }, { status: 400 })
-    }
-    indicators = p.indicators
-    buyConditions = p.buyConditions
-    if (p.name) strategyName = p.name
-  } else {
-    return NextResponse.json({ error: 'strategyId 또는 preset 중 하나가 필요합니다' }, { status: 400 })
+  // 1. 전략 목록 정규화 (단일/다중 모두 수용)
+  const inputs: { strategyId?: string; preset?: { name?: string; indicators?: IndicatorConfig[]; buyConditions?: ConditionGroup } }[] = []
+  if (Array.isArray(body.strategies)) {
+    inputs.push(...(body.strategies as typeof inputs))
+  } else if (body.strategyId || body.preset) {
+    inputs.push({
+      strategyId: typeof body.strategyId === 'string' ? body.strategyId : undefined,
+      preset: typeof body.preset === 'object' ? body.preset as { name?: string; indicators?: IndicatorConfig[]; buyConditions?: ConditionGroup } : undefined,
+    })
+  }
+  if (inputs.length === 0) {
+    return NextResponse.json({ error: '평가할 전략이 1개 이상 필요합니다' }, { status: 400 })
+  }
+  if (inputs.length > 10) {
+    return NextResponse.json({ error: '한 번에 최대 10개 전략까지 동시 스캔 가능합니다' }, { status: 400 })
   }
 
-  // 2. 기준일
+  // 2. 전략 정보 조회 (저장된 전략은 DB에서, 프리셋은 그대로)
+  const supabase = getSupabaseAdmin()
+  if (!supabase) return NextResponse.json({ error: 'Server error' }, { status: 500 })
+
+  const resolved: ResolvedStrategy[] = []
+  for (let i = 0; i < inputs.length; i++) {
+    const inp = inputs[i]
+    if (inp.strategyId) {
+      const { data: strategy } = await supabase
+        .from('investment_strategies')
+        .select('*')
+        .eq('id', inp.strategyId)
+        .eq('user_id', userId)
+        .single()
+      if (!strategy) {
+        return NextResponse.json({ error: `전략을 찾을 수 없습니다 (${inp.strategyId})` }, { status: 404 })
+      }
+      resolved.push({
+        key: `user:${inp.strategyId}`,
+        name: strategy.name,
+        indicators: strategy.indicators as IndicatorConfig[],
+        buyConditions: strategy.buy_conditions as ConditionGroup,
+      })
+    } else if (inp.preset) {
+      const p = inp.preset
+      if (!p.indicators || !p.buyConditions) {
+        return NextResponse.json({ error: 'preset.indicators와 buyConditions가 필요합니다' }, { status: 400 })
+      }
+      resolved.push({
+        key: `preset:${p.name || 'preset-' + i}`,
+        name: p.name || `프리셋 ${i + 1}`,
+        indicators: p.indicators,
+        buyConditions: p.buyConditions,
+      })
+    }
+  }
+
+  // 3. 기준일 / universe
   const today = new Date().toISOString().slice(0, 10)
   const targetDate = (typeof asOfDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(asOfDate)) ? asOfDate : today
-
-  // 3. universe
   const uni = getUniverse(universe as UniverseId)
   if (uni.entries.length === 0) {
     return NextResponse.json({ error: '유효한 종목 풀이 없습니다' }, { status: 400 })
   }
 
-  // 4. 가격 데이터 조회 기간 (지표 워밍업 위해 14개월 전부터)
   const startDate = (() => {
     const d = new Date(targetDate)
     d.setMonth(d.getMonth() - 14)
     return d.toISOString().slice(0, 10)
   })()
 
-  // 5. 동시성 제한 병렬 처리
-  const matches: ScreenerMatch[] = []
-  const failed: { ticker: string; market: Market; reason: string }[] = []
+  // 4. 결과 누적기 (전략별)
+  const matchesPerStrategy: Record<string, ScreenerMatch[]> = {}
+  const failedPerStrategy: Record<string, { ticker: string; market: Market; reason: string }[]> = {}
+  for (const s of resolved) {
+    matchesPerStrategy[s.key] = []
+    failedPerStrategy[s.key] = []
+  }
   let completed = 0
 
+  // 5. 종목당 처리: 가격 한 번 → 각 전략 평가
   const evaluateOne = async (entry: typeof uni.entries[number]) => {
+    let prices: OHLCV[]
     try {
-      const prices = await fetchPrices(entry.ticker, entry.market, startDate, targetDate)
-      if (prices.length < 30) {
-        failed.push({ ticker: entry.ticker, market: entry.market, reason: `데이터 부족 (${prices.length}일)` })
-        return
-      }
-
-      // 마지막 봉이 targetDate 이전이면 그대로 사용 (휴장일/주말 대응)
-      const lastBarIdx = prices.length - 1
-      const lastBar = prices[lastBarIdx]
-
-      const indicatorResults = calculateIndicators(prices, indicators)
-      const result = evaluateConditionTreeWithMatches(buyConditions, {
-        indicators: indicatorResults,
-        barIndex: lastBarIdx,
+      prices = await fetchPrices(entry.ticker, entry.market, startDate, targetDate)
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : '가격 조회 실패'
+      for (const s of resolved) failedPerStrategy[s.key].push({ ticker: entry.ticker, market: entry.market, reason })
+      completed++
+      return
+    }
+    if (prices.length < 30) {
+      for (const s of resolved) failedPerStrategy[s.key].push({
+        ticker: entry.ticker, market: entry.market, reason: `데이터 부족 (${prices.length}일)`,
       })
+      completed++
+      return
+    }
+    const lastBarIdx = prices.length - 1
+    const lastBar = prices[lastBarIdx]
 
-      if (result.matched) {
-        // 지표 스냅샷 빌드
+    for (const s of resolved) {
+      try {
+        const indicatorResults = calculateIndicators(prices, s.indicators)
+        const result = evaluateConditionTreeWithMatches(s.buyConditions, {
+          indicators: indicatorResults,
+          barIndex: lastBarIdx,
+        })
+        if (!result.matched) continue
+
         const snapshot: Record<string, number | Record<string, number>> = {}
-        for (const ind of indicators) {
+        for (const ind of s.indicators) {
           const values = indicatorResults[ind.id]
           if (!values) continue
           const v = values[lastBarIdx]
@@ -138,7 +188,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        matches.push({
+        matchesPerStrategy[s.key].push({
           ticker: entry.ticker,
           market: entry.market,
           name: entry.name,
@@ -147,19 +197,17 @@ export async function POST(request: NextRequest) {
           matchedConditions: result.matchedLeaves,
           indicators: snapshot,
         })
+      } catch (err) {
+        failedPerStrategy[s.key].push({
+          ticker: entry.ticker,
+          market: entry.market,
+          reason: err instanceof Error ? err.message : '평가 실패',
+        })
       }
-    } catch (err) {
-      failed.push({
-        ticker: entry.ticker,
-        market: entry.market,
-        reason: err instanceof Error ? err.message : '평가 실패',
-      })
-    } finally {
-      completed++
     }
+    completed++
   }
 
-  // 작은 워커 풀로 병렬 실행
   const queue = [...uni.entries]
   const workers = Array.from({ length: CONCURRENCY }, async () => {
     while (queue.length > 0) {
@@ -169,26 +217,32 @@ export async function POST(request: NextRequest) {
     }
   })
 
-  // 60초 안전 타임아웃
   const timeoutPromise = new Promise<void>(resolve => setTimeout(resolve, 60_000))
   await Promise.race([Promise.all(workers), timeoutPromise])
 
-  // 결과 정렬 (시장 → 티커)
-  matches.sort((a, b) => {
-    if (a.market !== b.market) return a.market.localeCompare(b.market)
-    return a.ticker.localeCompare(b.ticker)
+  // 6. 결과 조립
+  const strategies: StrategyScreenerResult[] = resolved.map(s => {
+    const matches = matchesPerStrategy[s.key]
+    matches.sort((a, b) => {
+      if (a.market !== b.market) return a.market.localeCompare(b.market)
+      return a.ticker.localeCompare(b.ticker)
+    })
+    return {
+      strategyKey: s.key,
+      strategyName: s.name,
+      matches,
+      failed: failedPerStrategy[s.key].slice(0, 20),
+    }
   })
 
   return NextResponse.json({
     data: {
-      strategyName,
       asOfDate: targetDate,
       universe: uni.id,
       universeLabel: uni.label,
       evaluated: completed,
       total: uni.entries.length,
-      matches,
-      failed: failed.slice(0, 20),
+      strategies,
     },
   })
 }
