@@ -779,4 +779,295 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       maxHoldingDays: 6, // 5분봉 6봉 ≈ 다음 거래일 시가 도달 전 청산
     },
   },
+
+  // ============================================
+  // 학술 검증 퀀트 전략 (Academic Quant Strategies)
+  // 참고: SMA(period:1) = 그날 종가. 가격-지표 비교용 편법.
+  // ============================================
+
+  {
+    id: 'tsmom-12m',
+    name: '📈 시계열 모멘텀 (TSMOM 12M)',
+    description: 'Moskowitz·Ooi·Pedersen (2012, JFE "Time Series Momentum") - 12개월 가격 모멘텀이 양수일 때 매수. 거의 모든 자산군에서 검증된 강건한 추세 효과',
+    indicators: [
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },        // 그날 종가
+      { id: 'SMA_252', type: 'SMA', params: { period: 252 } },     // 12개월 평균
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 가격이 12개월 평균 위 (양의 시계열 모멘텀)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: '>',
+          right: { type: 'indicator', id: 'SMA_252' },
+        },
+        // RSI 50 위 (강세 모멘텀 확인)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 50 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 12개월 추세 이탈
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'SMA_252' },
+        },
+        // 모멘텀 약화
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 40 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 8,
+      takeProfitPercent: 20,
+      maxHoldingDays: 0, // 추세 시그널 기반, 보유 무제한
+    },
+  },
+
+  {
+    id: 'faber-200ma',
+    name: '📊 Faber 10-Month MA Rule',
+    description: 'Mebane Faber (2007 "A Quantitative Approach to Tactical Asset Allocation") - 가격이 200일 이동평균 위면 매수, 아래로 이탈 시 매도. 단순하지만 추세 추종의 클래식',
+    indicators: [
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'SMA_200', type: 'SMA', params: { period: 200 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'SMA_200' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'SMA_200' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 7,
+      takeProfitPercent: 0, // 시그널 기반, 익절 없음
+      maxHoldingDays: 0,
+    },
+  },
+
+  {
+    id: 'connors-rsi2',
+    name: '⚡ Connors 2-Period RSI',
+    description: 'Larry Connors (2008 "Short Term Trading Strategies That Work") - 장기 상승 추세(SMA 200 위) 종목에서 RSI(2) 극단 과매도 시 매수, SMA(5) 회복 시 청산. 높은 승률로 유명',
+    indicators: [
+      { id: 'RSI_2', type: 'RSI', params: { period: 2 } },         // 2-period RSI (Connors 핵심)
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'SMA_5', type: 'SMA', params: { period: 5 } },
+      { id: 'SMA_200', type: 'SMA', params: { period: 200 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 장기 상승 추세 필터
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: '>',
+          right: { type: 'indicator', id: 'SMA_200' },
+        },
+        // RSI(2) 극단 과매도 (Connors 임계값 10)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_2' },
+          operator: '<',
+          right: { type: 'constant', value: 10 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 가격이 SMA(5) 위로 회복 시 청산 (Connors 룰)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'SMA_5' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 4,
+      takeProfitPercent: 6,
+      maxHoldingDays: 10, // 단기 평균회귀, 길게 보유 안 함
+    },
+  },
+
+  {
+    id: 'elder-triple-screen',
+    name: '🔭 Elder Triple Screen',
+    description: 'Dr. Alexander Elder (1986 "Trading for a Living") - 장기 추세(가격>SMA 50) + 중기 모멘텀(MACD 히스토그램 양수) + 단기 진입(RSI 조정 시점) 3중 필터',
+    indicators: [
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'SMA_50', type: 'SMA', params: { period: 50 } },
+      { id: 'MACD_12_26_9', type: 'MACD', params: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 } },
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // Screen 1: 장기 추세 (가격 > SMA(50))
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: '>',
+          right: { type: 'indicator', id: 'SMA_50' },
+        },
+        // Screen 2: 중기 모멘텀 양수 (MACD 히스토그램 > 0)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'MACD_12_26_9', property: 'histogram' },
+          operator: '>',
+          right: { type: 'constant', value: 0 },
+        },
+        // Screen 3: 단기 조정 시점 진입 (RSI < 50)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 50 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'MACD_12_26_9', property: 'histogram' },
+          operator: 'crossUnder',
+          right: { type: 'constant', value: 0 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'SMA_50' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 12,
+      maxHoldingDays: 30,
+    },
+  },
+
+  {
+    id: 'bb-breakout',
+    name: '💥 Bollinger 변동성 돌파',
+    description: 'John Bollinger (Bollinger Bands 창시자) - 가격이 상단 밴드 돌파 시 추세 진입(volatility breakout), 중심선 이탈 시 청산. 추세 추종형 변형',
+    indicators: [
+      { id: 'BB_20_2', type: 'BB', params: { period: 20, stdDev: 2 } },
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 가격이 상단 밴드 상향 돌파 (변동성 폭발)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'BB_20_2', property: 'upper' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 가격이 중심선(SMA 20) 하향 이탈
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'BB_20_2', property: 'middle' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 10,
+      maxHoldingDays: 20,
+    },
+  },
+
+  {
+    id: 'macd-histogram-reversal',
+    name: '📐 MACD 히스토그램 반전',
+    description: 'Gerald Appel (MACD 창시자) - 히스토그램이 0선을 양수로 돌파 시 매수(모멘텀 가속), 음수로 이탈 시 매도. 단순 시그널 크로스보다 빠른 반응',
+    indicators: [
+      { id: 'MACD_12_26_9', type: 'MACD', params: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'MACD_12_26_9', property: 'histogram' },
+          operator: 'crossOver',
+          right: { type: 'constant', value: 0 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'MACD_12_26_9', property: 'histogram' },
+          operator: 'crossUnder',
+          right: { type: 'constant', value: 0 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 12,
+      maxHoldingDays: 0,
+    },
+  },
 ]
