@@ -100,11 +100,12 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
     setStartDate(start.toISOString().split('T')[0])
   }, [loadStrategy, loadWatchlist])
 
-  const addTicker = (ticker: string, name?: string) => {
+  const addTicker = (ticker: string, name?: string, market?: Market) => {
     if (!ticker.trim()) return
     const upperTicker = ticker.trim().toUpperCase()
-    if (tickers.some(t => t.ticker === upperTicker && t.market === addingMarket)) return
-    setTickers(prev => [...prev, { ticker: upperTicker, name: name || upperTicker, market: addingMarket }])
+    const m = market ?? addingMarket
+    if (tickers.some(t => t.ticker === upperTicker && t.market === m)) return
+    setTickers(prev => [...prev, { ticker: upperTicker, name: name || upperTicker, market: m }])
   }
 
   const removeTicker = (idx: number) => {
@@ -201,24 +202,20 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
         </div>
       </div>
 
-      {/* 종목 추가 */}
+      {/* 종목 추가 (국내·미국 통합 검색) */}
       <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
         <h2 className="font-semibold text-at-text">종목 선택</h2>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <select
-            value={addingMarket}
-            onChange={e => setAddingMarket(e.target.value as Market)}
-            className="px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent w-full sm:w-24"
-          >
-            <option value="KR">국내</option>
-            <option value="US">미국</option>
-          </select>
-          <TickerSearch
-            onSelect={(ticker, name) => addTicker(ticker, name)}
-            market={addingMarket}
-            className="w-full sm:flex-1"
-          />
-        </div>
+        <TickerSearch
+          onSelect={(ticker, name, m) => {
+            if (m) {
+              addTicker(ticker, name, m)
+            } else {
+              addTicker(ticker, name)
+            }
+          }}
+          market="ALL"
+          className="w-full"
+        />
 
         {tickers.length > 0 && (
           <div className="flex flex-wrap gap-2">

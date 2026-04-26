@@ -203,9 +203,13 @@ export default function CompareContent() {
     })
   }
 
-  const handleTickerSelect = (t: string, name?: string) => {
+  const handleTickerSelect = (t: string, name?: string, m?: Market) => {
     setTicker(t)
     setTickerName(name || t)
+    if (m && m !== market) {
+      setMarket(m)
+      setSelectedIds(new Set())
+    }
   }
 
   const runCompare = async () => {
@@ -363,37 +367,21 @@ export default function CompareContent() {
         <h2 className="font-semibold text-at-text mb-3">⚙️ 백테스트 설정</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 시장 */}
-          <div>
-            <label className="block text-xs font-medium text-at-text-secondary mb-1.5">시장</label>
-            <div className="flex gap-2">
-              {(['US', 'KR'] as Market[]).map(m => (
-                <button
-                  key={m}
-                  onClick={() => { if (m !== market) { setMarket(m); setSelectedIds(new Set()) } }}
-                  className={`flex-1 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    market === m
-                      ? 'bg-at-accent text-white'
-                      : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-bg'
-                  }`}
-                >
-                  {m === 'KR' ? '국내' : '미국'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 종목 */}
-          <div>
+          {/* 종목 (국내·미국 통합 검색) */}
+          <div className="md:col-span-2">
             <label className="block text-xs font-medium text-at-text-secondary mb-1.5">종목</label>
             <TickerSearch
-              market={market}
+              market="ALL"
               onSelect={handleTickerSelect}
-              placeholder={market === 'US' ? '예: 애플 / AAPL' : '예: 삼성전자 / 005930'}
               clearOnSelect={false}
             />
             {ticker && (
               <p className="text-xs text-at-text-secondary mt-1.5">
-                선택됨: <span className="font-mono font-semibold text-at-text">{ticker}</span>
+                선택됨:
+                <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                  market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                }`}>{market === 'KR' ? '국내' : '미국'}</span>
+                <span className="ml-1.5 font-mono font-semibold text-at-text">{ticker}</span>
                 {tickerName && tickerName !== ticker && <span className="ml-2">({tickerName})</span>}
               </p>
             )}
