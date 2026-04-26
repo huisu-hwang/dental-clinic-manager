@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
-import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight, Info, Wand2, TrendingUp } from 'lucide-react'
+import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight, Info, Wand2, TrendingUp, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
@@ -105,6 +105,8 @@ interface BacktestResultItem {
   error?: string
 }
 
+type SortKey = 'totalReturn' | 'buyHold' | 'winRate' | 'totalTrades' | 'sharpe' | 'mdd' | 'profitFactor'
+
 export default function CompareContent() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loadingStrategies, setLoadingStrategies] = useState(true)
@@ -134,6 +136,9 @@ export default function CompareContent() {
   const [detailPresetId, setDetailPresetId] = useState<string | null>(null)
   // 용어 설명 모달
   const [glossaryKey, setGlossaryKey] = useState<string | null>(null)
+  // 결과 표 정렬: 기본은 수익률 내림차순
+  const [sortKey, setSortKey] = useState<SortKey>('totalReturn')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const loadStrategies = useCallback(async () => {
     try {
@@ -275,8 +280,9 @@ export default function CompareContent() {
     })
 
     const allResults = await Promise.all(promises)
-    allResults.sort((a, b) => (b.metrics?.totalReturn ?? -Infinity) - (a.metrics?.totalReturn ?? -Infinity))
     setResults(allResults)
+    setSortKey('totalReturn')
+    setSortDir('desc')
     setRunning(false)
   }
 
@@ -308,6 +314,34 @@ export default function CompareContent() {
     if (!recommendResult) return
     const keys = recommendResult.recommendations.map(r => `preset:${r.presetId}`)
     setSelectedIds(new Set(keys))
+  }
+
+  /** 정렬된 결과 목록 — 헤더 클릭 시 sortKey/sortDir 변경 */
+  const sortedResults = useMemo(() => {
+    const arr = [...results]
+    const dir = sortDir === 'asc' ? 1 : -1
+    arr.sort((a, b) => {
+      // 에러 결과는 항상 뒤로
+      if (a.error && !b.error) return 1
+      if (!a.error && b.error) return -1
+      const av = getSortValue(a, sortKey)
+      const bv = getSortValue(b, sortKey)
+      if (av === bv) return 0
+      if (av === null) return 1
+      if (bv === null) return -1
+      return (av - bv) * dir
+    })
+    return arr
+  }, [results, sortKey, sortDir])
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setSortKey(key)
+      // 새 컬럼 클릭 시 기본 방향: MDD는 오름차순(낮을수록 좋음), 그 외는 내림차순
+      setSortDir(key === 'mdd' ? 'asc' : 'desc')
+    }
   }
 
   // 모든 결과의 통합 equity curve 정규화 데이터
@@ -539,7 +573,9 @@ export default function CompareContent() {
         <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-at-text">📊 비교 결과 ({ticker})</h2>
-            <span className="text-xs text-at-text-secondary">수익률 내림차순</span>
+            <span className="text-xs text-at-text-secondary">
+              {sortLabel(sortKey)} {sortDir === 'desc' ? '내림차순' : '오름차순'}
+            </span>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-at-border mb-4">
@@ -549,17 +585,17 @@ export default function CompareContent() {
                   <th className="px-2 py-2 w-8"></th>
                   <GlossaryHeader label="순위" termKey="rank" align="left" onOpen={setGlossaryKey} />
                   <th className="px-3 py-2 text-left font-medium text-at-text-secondary">전략</th>
-                  <GlossaryHeader label="수익률" termKey="totalReturn" align="right" onOpen={setGlossaryKey} />
-                  <GlossaryHeader label="B&H" termKey="buyHold" align="right" onOpen={setGlossaryKey} />
-                  <GlossaryHeader label="승률" termKey="winRate" align="right" onOpen={setGlossaryKey} />
-                  <GlossaryHeader label="거래" termKey="totalTrades" align="right" onOpen={setGlossaryKey} />
-                  <GlossaryHeader label="Sharpe" termKey="sharpe" align="right" onOpen={setGlossaryKey} />
-                  <GlossaryHeader label="MDD" termKey="mdd" align="right" onOpen={setGlossaryKey} />
-                  <GlossaryHeader label="PF" termKey="profitFactor" align="right" onOpen={setGlossaryKey} />
+                  <SortableHeader label="수익률" termKey="totalReturn" sortKey="totalReturn" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="B&H" termKey="buyHold" sortKey="buyHold" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="승률" termKey="winRate" sortKey="winRate" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="거래" termKey="totalTrades" sortKey="totalTrades" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="Sharpe" termKey="sharpe" sortKey="sharpe" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="MDD" termKey="mdd" sortKey="mdd" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="PF" termKey="profitFactor" sortKey="profitFactor" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
                 </tr>
               </thead>
               <tbody>
-                {results.map((r, i) => {
+                {sortedResults.map((r, i) => {
                   const color = COLORS[i % COLORS.length]
                   if (r.error) {
                     return (
@@ -679,15 +715,15 @@ export default function CompareContent() {
           )}
 
           {/* 요약 인사이트 */}
-          {results.length >= 2 && results[0] && !results[0].error && (
+          {sortedResults.length >= 2 && sortedResults[0] && !sortedResults[0].error && (
             <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-sm">
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-amber-900 text-xs">
-                  <p className="font-medium">최고 성과: {results[0].strategyName}</p>
+                  <p className="font-medium">{sortLabel(sortKey)} {sortDir === 'desc' ? '최상위' : '최하위'}: {sortedResults[0].strategyName}</p>
                   <p className="mt-0.5">
-                    총 수익률 <span className="font-mono font-semibold">{results[0].metrics.totalReturn > 0 ? '+' : ''}{results[0].metrics.totalReturn.toFixed(2)}%</span>,
-                    {' '}승률 {results[0].metrics.winRate.toFixed(1)}%, Sharpe {results[0].metrics.sharpeRatio.toFixed(2)}
+                    총 수익률 <span className="font-mono font-semibold">{sortedResults[0].metrics.totalReturn > 0 ? '+' : ''}{sortedResults[0].metrics.totalReturn.toFixed(2)}%</span>,
+                    {' '}승률 {sortedResults[0].metrics.winRate.toFixed(1)}%, Sharpe {sortedResults[0].metrics.sharpeRatio.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -1192,6 +1228,57 @@ function PresetDetailModal({ presetId, onClose }: { presetId: string; onClose: (
 // 용어 설명 헤더 + 모달
 // ============================================
 
+/** 정렬 + 용어 설명 가능한 헤더 셀 */
+function SortableHeader({
+  label, termKey, sortKey, curKey, dir, onSort, onGloss,
+}: {
+  label: string
+  termKey: string
+  sortKey: SortKey
+  curKey: SortKey
+  dir: 'asc' | 'desc'
+  onSort: (k: SortKey) => void
+  onGloss: (k: string) => void
+}) {
+  const isActive = curKey === sortKey
+  const Icon = isActive ? (dir === 'desc' ? ArrowDown : ArrowUp) : ArrowUpDown
+  return (
+    <th className="px-3 py-2 font-medium text-at-text-secondary text-right">
+      <span className="inline-flex items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={() => onSort(sortKey)}
+          className={`inline-flex items-center gap-0.5 hover:text-at-accent transition-colors ${isActive ? 'text-at-accent font-semibold' : ''}`}
+          title={`${label} 기준 정렬 (현재: ${isActive ? (dir === 'desc' ? '내림차순' : '오름차순') : '비활성'})`}
+        >
+          {label}
+          <Icon className={`w-3 h-3 ${isActive ? '' : 'opacity-50'}`} />
+        </button>
+        <button
+          onClick={() => onGloss(termKey)}
+          className="p-0.5 rounded-full text-at-text-weak hover:text-at-accent hover:bg-at-bg transition-colors"
+          title="용어 설명"
+          type="button"
+        >
+          <Info className="w-3 h-3" />
+        </button>
+      </span>
+    </th>
+  )
+}
+
+function sortLabel(k: SortKey): string {
+  return ({
+    'totalReturn': '수익률',
+    'buyHold': 'B&H',
+    'winRate': '승률',
+    'totalTrades': '거래',
+    'sharpe': 'Sharpe',
+    'mdd': 'MDD',
+    'profitFactor': 'PF',
+  } as Record<SortKey, string>)[k]
+}
+
 function GlossaryHeader({ label, termKey, align, onOpen }: {
   label: string
   termKey: string
@@ -1263,6 +1350,21 @@ function GlossaryModal({
       </div>
     </div>
   )
+}
+
+/** 결과 항목에서 SortKey에 해당하는 비교용 숫자 추출 (없으면 null) */
+function getSortValue(r: BacktestResultItem, key: SortKey): number | null {
+  if (r.error || !r.metrics) return null
+  switch (key) {
+    case 'totalReturn': return r.metrics.totalReturn ?? null
+    case 'buyHold': return r.buyHold?.totalReturn ?? null
+    case 'winRate': return r.metrics.winRate ?? null
+    case 'totalTrades': return r.metrics.totalTrades ?? null
+    case 'sharpe': return r.metrics.sharpeRatio ?? null
+    case 'mdd': return r.metrics.maxDrawdown ?? null
+    case 'profitFactor': return r.metrics.profitFactor ?? null
+    default: return null
+  }
 }
 
 function emptyMetrics(): BacktestMetrics {
