@@ -17,6 +17,8 @@ export type SignalType =
   | 'vwap-distribution' | 'vwap-accumulation'
   | 'iceberg-buy' | 'iceberg-sell'
   | 'sniper-buy' | 'sniper-sell'
+  | 'moo-accumulation' | 'moo-distribution'
+  | 'moc-accumulation' | 'moc-distribution'
   | 'foreigner-accumulation' | 'foreigner-distribution'
   | 'institution-accumulation' | 'institution-distribution'
 
@@ -52,8 +54,14 @@ export interface AlgoFootprintResult {
   vwapScore: number
   icebergScore: number
   sniperScore: number
-  dominantAlgo: 'TWAP' | 'VWAP' | 'Iceberg' | 'Sniper' | null
+  /** Market-On-Open: 시가 동시호가 봉의 거래량 비중 (0~100) */
+  mooScore: number
+  /** Market-On-Close: 종가 동시호가 봉의 거래량 비중 (0~100) */
+  mocScore: number
+  dominantAlgo: 'TWAP' | 'VWAP' | 'Iceberg' | 'Sniper' | 'MOO' | 'MOC' | null
   direction: 'accumulation' | 'distribution' | 'neutral'
+  /** MOO/MOC 발생 시의 방향성 (시·종가 동시호가 봉이 양봉/음봉 어느 쪽인지) */
+  auctionDirection: 'moo-buy' | 'moo-sell' | 'moc-buy' | 'moc-sell' | null
 }
 
 export interface InvestorFlowResult {

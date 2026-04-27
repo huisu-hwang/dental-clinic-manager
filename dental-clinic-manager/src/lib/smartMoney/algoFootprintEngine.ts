@@ -1,12 +1,15 @@
 /**
- * 알고리즘 풋프린트 엔진 — TWAP / VWAP / Iceberg / Sniper
+ * 알고리즘 풋프린트 엔진 — TWAP / VWAP / Iceberg / Sniper / MOO / MOC
  *
  * - TWAP score   : 1분봉 거래량의 변동계수 역수 (균등할수록 높음)
  * - VWAP score   : 시간대별 거래량 분포와 U-shape 표준곡선 코사인 유사도
  * - Iceberg score: ±5% 가격대 클러스터에서 동일 크기 체결이 반복되는 횟수
  * - Sniper score : 상위 5% 거래량 봉 직후의 가격 변화율 / 평균 가격 변화율
+ * - MOO score    : 첫 봉(시가 동시호가) 거래량이 일중 중앙값 대비 얼마나 큰가
+ * - MOC score    : 마지막 봉(종가 동시호가) 거래량이 일중 중앙값 대비 얼마나 큰가
  *
- * - direction: 양봉/음봉 비율(과 close-OHLC 위치)로 매집/분배 추정
+ * - direction        : 양봉/음봉 비율(과 close-OHLC 위치)로 매집/분배 추정
+ * - auctionDirection : MOO/MOC 발생 시 시·종가 봉의 양봉/음봉 방향
  */
 
 import type { AlgoFootprintResult } from '@/types/smartMoney'
@@ -148,6 +151,81 @@ function scoreSniper(bars: AlgoBar[]): number {
 }
 
 // ============================================
+// MOO / MOC — 시·종가 동시호가 거래량 집중도
+// ============================================
+function median(arr: number[]): number {
+  if (arr.length === 0) return 0
+  const sorted = [...arr].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+}
+
+/**
+ * 봉 거래량이 중앙값 대비 ratio일 때 점수:
+ * ratio ≤ 1.5 → 0 / ratio = 3 → 60 / ratio = 5 → 100 / 그 이상 클램프
+ */
+function ratioToScore(ratio: number): number {
+  if (ratio <= 1.5) return 0
+  // 1.5 → 0, 5 → 100 선형
+  return Math.max(0, Math.min(100, ((ratio - 1.5) / 3.5) * 100))
+}
+
+interface AuctionResult {
+  mooScore: number
+  mocScore: number
+  auctionDirection: 'moo-buy' | 'moo-sell' | 'moc-buy' | 'moc-sell' | null
+}
+
+function detectAuctionFootprint(bars: AlgoBar[]): AuctionResult {
+  if (bars.length < 5) {
+    return { mooScore: 0, mocScore: 0, auctionDirection: null }
+  }
+  // 첫·마지막 봉을 제외한 중앙값 거래량 (양 끝 자체가 노이즈가 되지 않도록)
+  const middleVolumes = bars.slice(1, -1).map(b => b.volume).filter(v => v > 0)
+  const baseline = median(middleVolumes)
+  if (baseline <= 0) return { mooScore: 0, mocScore: 0, auctionDirection: null }
+
+  const first = bars[0]
+  const last = bars[bars.length - 1]
+
+  const mooRatio = first.volume / baseline
+  const mocRatio = last.volume / baseline
+
+  const mooScore = ratioToScore(mooRatio)
+  const mocScore = ratioToScore(mocRatio)
+
+  const dirOf = (b: AlgoBar): 'buy' | 'sell' | null => {
+    const range = b.high - b.low
+    if (range <= 0) {
+      if (b.close > b.open) return 'buy'
+      if (b.close < b.open) return 'sell'
+      return null
+    }
+    const pos = (b.close - b.low) / range
+    if (b.close > b.open && pos > 0.55) return 'buy'
+    if (b.close < b.open && pos < 0.45) return 'sell'
+    if (pos > 0.6) return 'buy'
+    if (pos < 0.4) return 'sell'
+    return null
+  }
+
+  // 더 강한 쪽을 채택. 같으면 MOC 우선(NAV 추종 패시브 머니 신호로서 유의미).
+  let auctionDirection: AuctionResult['auctionDirection'] = null
+  const mocStronger = mocScore >= mooScore
+  if (mocStronger && mocScore >= 50) {
+    const d = dirOf(last)
+    if (d === 'buy') auctionDirection = 'moc-buy'
+    else if (d === 'sell') auctionDirection = 'moc-sell'
+  } else if (!mocStronger && mooScore >= 50) {
+    const d = dirOf(first)
+    if (d === 'buy') auctionDirection = 'moo-buy'
+    else if (d === 'sell') auctionDirection = 'moo-sell'
+  }
+
+  return { mooScore, mocScore, auctionDirection }
+}
+
+// ============================================
 // 방향성 판정 (매집 / 분배 / 중립)
 // ============================================
 function detectDirection(bars: AlgoBar[]): 'accumulation' | 'distribution' | 'neutral' {
@@ -187,8 +265,11 @@ export function analyzeAlgoFootprint(bars: AlgoBar[]): AlgoFootprintResult {
       vwapScore: 0,
       icebergScore: 0,
       sniperScore: 0,
+      mooScore: 0,
+      mocScore: 0,
       dominantAlgo: null,
       direction: 'neutral',
+      auctionDirection: null,
     }
   }
 
@@ -196,12 +277,16 @@ export function analyzeAlgoFootprint(bars: AlgoBar[]): AlgoFootprintResult {
   const vwapScore = scoreVwap(bars)
   const icebergScore = scoreIceberg(bars)
   const sniperScore = scoreSniper(bars)
+  const { mooScore, mocScore, auctionDirection } = detectAuctionFootprint(bars)
 
-  const scores: { algo: 'TWAP' | 'VWAP' | 'Iceberg' | 'Sniper'; score: number }[] = [
+  type AlgoLabel = 'TWAP' | 'VWAP' | 'Iceberg' | 'Sniper' | 'MOO' | 'MOC'
+  const scores: { algo: AlgoLabel; score: number }[] = [
     { algo: 'TWAP', score: twapScore },
     { algo: 'VWAP', score: vwapScore },
     { algo: 'Iceberg', score: icebergScore },
     { algo: 'Sniper', score: sniperScore },
+    { algo: 'MOO', score: mooScore },
+    { algo: 'MOC', score: mocScore },
   ]
   scores.sort((a, b) => b.score - a.score)
   const dominantAlgo = scores[0].score >= 40 ? scores[0].algo : null
@@ -213,7 +298,10 @@ export function analyzeAlgoFootprint(bars: AlgoBar[]): AlgoFootprintResult {
     vwapScore,
     icebergScore,
     sniperScore,
+    mooScore,
+    mocScore,
     dominantAlgo,
     direction,
+    auctionDirection,
   }
 }
