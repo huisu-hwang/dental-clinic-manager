@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronLeft, Loader2, Plus, X, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -16,6 +16,20 @@ interface CommunityPostFormProps {
   onCancel: () => void
 }
 
+// 임시저장 키 — 사용자별로 분리하여 다른 계정의 초안이 섞이지 않도록 함.
+// sessionStorage 사용: 탭 전환·페이지 이동·새로고침 시 보존되며 탭 종료 시 자동 폐기.
+const DRAFT_KEY_PREFIX = 'community-post-draft:'
+
+interface DraftPayload {
+  title?: string
+  content?: string
+  category?: CommunityCategory
+  showPoll?: boolean
+  pollQuestion?: string
+  pollOptions?: string[]
+  isMultipleChoice?: boolean
+}
+
 export default function CommunityPostForm({ profileId, editingPost, categories, labelMap, onSubmit, onCancel }: CommunityPostFormProps) {
   const [category, setCategory] = useState<CommunityCategory>(editingPost?.category || (categories[0]?.slug || 'free'))
   const [title, setTitle] = useState(editingPost?.title || '')
@@ -28,6 +42,58 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
   const [pollQuestion, setPollQuestion] = useState('')
   const [pollOptions, setPollOptions] = useState<string[]>(['', ''])
   const [isMultipleChoice, setIsMultipleChoice] = useState(false)
+
+  const draftKey = `${DRAFT_KEY_PREFIX}${profileId}`
+
+  // 마운트 시 저장된 초안 복원 (새 글 작성 시에만, 수정 모드에서는 건너뜀).
+  // SSR-safe하게 useEffect에서 처리하여 hydration mismatch 방지.
+  useEffect(() => {
+    if (editingPost) return
+    if (typeof window === 'undefined') return
+    try {
+      const raw = sessionStorage.getItem(draftKey)
+      if (!raw) return
+      const draft: DraftPayload = JSON.parse(raw)
+      if (draft.title) setTitle(draft.title)
+      if (draft.content) setContent(draft.content)
+      if (draft.category) setCategory(draft.category)
+      if (draft.showPoll) setShowPoll(true)
+      if (draft.pollQuestion) setPollQuestion(draft.pollQuestion)
+      if (Array.isArray(draft.pollOptions) && draft.pollOptions.length >= 2) {
+        setPollOptions(draft.pollOptions)
+      }
+      if (typeof draft.isMultipleChoice === 'boolean') setIsMultipleChoice(draft.isMultipleChoice)
+    } catch {
+      // 파싱 실패 시 무시 (초안만 손실, 동작에는 영향 없음)
+    }
+    // 의도적으로 마운트 시 1회만 실행 — 이후 입력은 아래 effect가 저장
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, editingPost])
+
+  // 입력 변경 시마다 sessionStorage에 저장 (수정 모드 제외).
+  // title, content가 모두 비면 저장된 초안 제거.
+  useEffect(() => {
+    if (editingPost) return
+    if (typeof window === 'undefined') return
+    if (!title && !content) {
+      sessionStorage.removeItem(draftKey)
+      return
+    }
+    try {
+      const payload: DraftPayload = {
+        title, content, category,
+        showPoll, pollQuestion, pollOptions, isMultipleChoice,
+      }
+      sessionStorage.setItem(draftKey, JSON.stringify(payload))
+    } catch {
+      // 용량 초과 등 저장 실패 시 무시 (입력은 정상 유지됨)
+    }
+  }, [title, content, category, showPoll, pollQuestion, pollOptions, isMultipleChoice, draftKey, editingPost])
+
+  const clearDraft = () => {
+    if (typeof window === 'undefined') return
+    sessionStorage.removeItem(draftKey)
+  }
 
   const addPollOption = () => {
     if (pollOptions.length < 10) {
@@ -78,6 +144,8 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
       }
     }
 
+    // 작성/수정 성공 시 임시저장 초안 제거
+    clearDraft()
     onSubmit()
   }
 

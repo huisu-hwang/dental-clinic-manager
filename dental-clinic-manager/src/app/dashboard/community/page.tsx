@@ -97,7 +97,10 @@ export default function CommunityPage() {
     setSelectedPostId(null)
   }
 
-  if (authLoading || profileLoading) {
+  // 최초 진입 시(profile 미존재)에만 전체화면 스피너 노출.
+  // 탭 복귀로 인한 Supabase TOKEN_REFRESHED → user 갱신 → loadProfile 재실행 시
+  // 이미 profile이 있으면 화면을 유지하여 글쓰기 폼 등 입력 컴포넌트가 언마운트되지 않도록 함.
+  if (authLoading || (profileLoading && !profile)) {
     return (
       <div className="p-4 sm:p-6 bg-white min-h-screen flex items-center justify-center">
         <div className="text-center">
