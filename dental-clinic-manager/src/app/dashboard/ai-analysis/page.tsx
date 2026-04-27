@@ -96,9 +96,9 @@ export default function AIAnalysisPage() {
   }
 
   return (
-    <div className="bg-white h-[calc(100vh-56px)] flex flex-col">
+    <div className="bg-white fixed left-0 lg:left-48 right-0 top-14 bottom-0 flex flex-col z-10">
       {/* 서브탭 헤더 */}
-      <div className="flex border-b border-at-border bg-white px-6">
+      <div className="flex border-b border-at-border bg-white px-6 shrink-0">
         <button
           onClick={() => setActiveTab('chat')}
           className={cn(
@@ -126,7 +126,7 @@ export default function AIAnalysisPage() {
       </div>
 
       {/* 탭 컨텐츠 */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab === 'chat' ? (
           <AIChat clinicId={user.clinic_id} />
         ) : (
