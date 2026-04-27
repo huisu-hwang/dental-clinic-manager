@@ -14,6 +14,7 @@ import type {
   CommunityPenalty,
   CommunityCategory,
   CommunityCategoryItem,
+  CommunityPostAttachment,
   CreatePostDto,
   UpdatePostDto,
   CreateCommentDto,
@@ -23,6 +24,7 @@ import type {
   UpdateCategoryDto,
   ReportStatus,
 } from '@/types/community'
+import { COMMUNITY_ATTACHMENT_MAX_SIZE, COMMUNITY_ATTACHMENT_MAX_COUNT } from '@/types/community'
 
 // Helper: 에러 메시지 추출
 const extractErrorMessage = (error: unknown): string => {
@@ -315,8 +317,9 @@ export const communityPostService = {
 
       const { data, error } = await (supabase as any)
         .from('community_posts')
-        .select('*, profile:community_profiles(*)')
+        .select('*, profile:community_profiles(*), attachments:community_post_attachments(*)')
         .eq('id', id)
+        .order('sort_order', { foreignTable: 'community_post_attachments', ascending: true })
         .single()
 
       if (error) throw error
@@ -1386,6 +1389,194 @@ export const communityCategoryService = {
   },
 }
 
+// =====================================================
+// 첨부 파일 서비스 (Storage: bulletin-files 버킷)
+// =====================================================
+
+const BULLETIN_BUCKET = 'bulletin-files'
+const COMMUNITY_ATTACHMENT_PREFIX = 'community'
+
+const sanitizeFileName = (name: string): string => {
+  // 한글/공백/특수문자를 안전한 파일명으로 변환
+  const lastDot = name.lastIndexOf('.')
+  const ext = lastDot >= 0 ? name.slice(lastDot + 1).toLowerCase() : ''
+  const base = lastDot >= 0 ? name.slice(0, lastDot) : name
+  const safeBase = base
+    .replace(/[^a-zA-Z0-9가-힣\-_]+/g, '_')
+    .replace(/_+/g, '_')
+    .slice(0, 80) || 'file'
+  const safeExt = ext.replace(/[^a-zA-Z0-9]+/g, '').slice(0, 10)
+  return safeExt ? `${safeBase}.${safeExt}` : safeBase
+}
+
+export const communityAttachmentService = {
+  /**
+   * 게시글의 첨부 파일 목록 조회
+   */
+  async getAttachments(postId: string): Promise<{ data: CommunityPostAttachment[]; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('community_post_attachments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.error('[communityAttachmentService.getAttachments] Error:', error)
+      return { data: [], error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 단일 파일을 Storage에 업로드하고 메타데이터를 DB에 기록
+   */
+  async uploadAttachment(params: {
+    postId: string
+    profileId: string
+    file: File
+    sortOrder?: number
+  }): Promise<{ data: CommunityPostAttachment | null; error: string | null }> {
+    const { postId, profileId, file, sortOrder = 0 } = params
+
+    try {
+      if (!file) throw new Error('파일이 없습니다.')
+      if (file.size <= 0) throw new Error('빈 파일은 업로드할 수 없습니다.')
+      if (file.size > COMMUNITY_ATTACHMENT_MAX_SIZE) {
+        throw new Error(`파일 크기는 최대 ${Math.floor(COMMUNITY_ATTACHMENT_MAX_SIZE / 1024 / 1024)}MB 까지입니다.`)
+      }
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const safeName = sanitizeFileName(file.name || 'file')
+      const uniquePart = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const storagePath = `${COMMUNITY_ATTACHMENT_PREFIX}/${postId}/${uniquePart}_${safeName}`
+
+      const contentType = file.type || 'application/octet-stream'
+
+      const { error: uploadError } = await (supabase as any).storage
+        .from(BULLETIN_BUCKET)
+        .upload(storagePath, file, {
+          contentType,
+          upsert: false,
+          cacheControl: '3600',
+        })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = (supabase as any).storage
+        .from(BULLETIN_BUCKET)
+        .getPublicUrl(storagePath)
+      const publicUrl: string = urlData?.publicUrl || ''
+
+      const { data, error: insertError } = await (supabase as any)
+        .from('community_post_attachments')
+        .insert({
+          post_id: postId,
+          uploader_profile_id: profileId,
+          file_name: file.name || safeName,
+          file_size: file.size,
+          file_type: contentType,
+          storage_path: storagePath,
+          public_url: publicUrl,
+          sort_order: sortOrder,
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        // 메타데이터 저장 실패 시 업로드한 파일 정리
+        await (supabase as any).storage.from(BULLETIN_BUCKET).remove([storagePath]).catch(() => {})
+        throw insertError
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('[communityAttachmentService.uploadAttachment] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 여러 파일을 순차 업로드 (진행 콜백 지원)
+   */
+  async uploadAttachments(params: {
+    postId: string
+    profileId: string
+    files: File[]
+    startSortOrder?: number
+    onProgress?: (uploaded: number, total: number, lastError?: string) => void
+  }): Promise<{ data: CommunityPostAttachment[]; errors: string[] }> {
+    const { postId, profileId, files, startSortOrder = 0, onProgress } = params
+    const uploaded: CommunityPostAttachment[] = []
+    const errors: string[] = []
+
+    if (files.length > COMMUNITY_ATTACHMENT_MAX_COUNT) {
+      errors.push(`첨부 파일은 게시글당 최대 ${COMMUNITY_ATTACHMENT_MAX_COUNT}개까지 업로드할 수 있습니다.`)
+      return { data: uploaded, errors }
+    }
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const { data, error } = await this.uploadAttachment({
+        postId,
+        profileId,
+        file,
+        sortOrder: startSortOrder + i,
+      })
+      if (data) uploaded.push(data)
+      if (error) errors.push(`${file.name || 'file'}: ${error}`)
+      onProgress?.(i + 1, files.length, error || undefined)
+    }
+
+    return { data: uploaded, errors }
+  },
+
+  /**
+   * 첨부 파일 삭제 (Storage 객체 + DB row)
+   */
+  async deleteAttachment(attachmentId: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data: existing, error: fetchError } = await (supabase as any)
+        .from('community_post_attachments')
+        .select('id, storage_path')
+        .eq('id', attachmentId)
+        .maybeSingle()
+      if (fetchError) throw fetchError
+      if (!existing) return { success: true, error: null }
+
+      const { error: deleteRowError } = await (supabase as any)
+        .from('community_post_attachments')
+        .delete()
+        .eq('id', attachmentId)
+      if (deleteRowError) throw deleteRowError
+
+      // Storage 파일도 정리 (실패해도 메타데이터 삭제는 성공으로 간주)
+      if (existing.storage_path) {
+        await (supabase as any).storage
+          .from(BULLETIN_BUCKET)
+          .remove([existing.storage_path])
+          .catch((err: unknown) => {
+            console.warn('[communityAttachmentService.deleteAttachment] storage cleanup warn:', err)
+          })
+      }
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[communityAttachmentService.deleteAttachment] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+}
+
 // 통합 export
 export const communityService = {
   profiles: communityProfileService,
@@ -1395,6 +1586,7 @@ export const communityService = {
   reports: communityReportService,
   admin: communityAdminService,
   categories: communityCategoryService,
+  attachments: communityAttachmentService,
 }
 
 export default communityService

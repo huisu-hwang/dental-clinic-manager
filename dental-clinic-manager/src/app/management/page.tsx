@@ -146,9 +146,9 @@ export default function ManagementPage() {
 
   return (
     <div className="min-h-screen bg-at-surface-alt">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-at-border">
-        <div className="max-w-[1400px] mx-auto h-full px-3 sm:px-6 flex items-center">
+      {/* Header - 상단 고정 (dashboard layout과 동일 규격) */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-14 bg-at-surface border-b border-at-border fixed-header-safe">
+        <div className="h-full flex items-center px-0 w-full">
           <Header
             dbStatus="connected"
             user={user}
@@ -168,30 +168,30 @@ export default function ManagementPage() {
         />
       )}
 
-      {/* 좌측 사이드바 */}
+      {/* 좌측 사이드바 (dashboard layout 표준 규격) */}
       <aside
         className={`
-          fixed top-14 w-64 lg:w-56 h-[calc(100vh-3.5rem)] bg-white border-r border-at-border z-20 overflow-y-auto py-3 px-3
+          fixed top-14 w-64 lg:w-48 h-[calc(100vh-3.5rem)] bg-at-surface border-r border-at-border z-20 overflow-y-auto py-3 px-0 fixed-sidebar-safe
           transition-transform duration-300 ease-in-out
-          lg:left-[max(0px,calc(50%-700px))]
+          lg:left-0
           ${isMobileMenuOpen ? 'translate-x-0 left-0' : '-translate-x-full left-0 lg:translate-x-0'}
         `}
       >
         <TabNavigation
-          activeTab="settings"
+          activeTab=""
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
         />
       </aside>
 
-      {/* 메인 콘텐츠 */}
-      <div className="pt-14">
-        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 lg:pl-60 lg:pr-6 pt-4 pb-6">
-          <div className="max-w-6xl bg-white min-h-screen rounded-xl border border-at-border">
+      {/* 메인 콘텐츠 (dashboard layout과 동일한 좌측 패딩 / 좌우 여백 0) */}
+      <div className="pt-14 pt-header-safe">
+        <main className="lg:pl-48 px-0">
+          <div>
 
             {/* 서브 탭 네비게이션 - 스크롤 시 고정 */}
-            <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 rounded-t-xl flex flex-wrap gap-2">
+            <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 flex flex-wrap gap-2">
               {subTabs.map((tab) => {
                 const hasTabPermission = tab.permissions.length === 0 || tab.permissions.some(p => hasPermission(p as any))
                 if (!hasTabPermission) return null

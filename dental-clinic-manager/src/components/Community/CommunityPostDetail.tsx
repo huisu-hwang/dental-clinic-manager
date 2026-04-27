@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Pencil, Trash2, Eye, Share2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Eye, Share2, Paperclip, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { communityPostService, communityPollService } from '@/lib/communityService'
-import type { CommunityPost, CommunityPoll } from '@/types/community'
+import type { CommunityPost, CommunityPoll, CommunityPostAttachment } from '@/types/community'
 import { COMMUNITY_CATEGORY_LABELS, COMMUNITY_CATEGORY_COLORS } from '@/types/community'
 import ProfileCard from './ProfileCard'
 import PostActions from './PostActions'
@@ -17,6 +17,81 @@ import ReportModal from './ReportModal'
 import ShareDialog from '@/components/shared/ShareDialog'
 import { appConfirm } from '@/components/ui/AppDialog'
 import { sanitizeHtml } from '@/utils/sanitize'
+
+const isImageType = (type?: string) => !!type && type.startsWith('image/')
+
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
+}
+
+function AttachmentSection({ attachments }: { attachments: CommunityPostAttachment[] }) {
+  if (!attachments || attachments.length === 0) return null
+
+  const images = attachments.filter((a) => isImageType(a.file_type))
+  const others = attachments.filter((a) => !isImageType(a.file_type))
+
+  return (
+    <div className="mt-6 pt-4 border-t border-at-border">
+      <div className="flex items-center gap-1.5 mb-3">
+        <Paperclip className="w-4 h-4 text-at-text-secondary" />
+        <h3 className="text-sm font-semibold text-at-text-secondary">
+          첨부 파일 <span className="text-xs text-at-text-weak">({attachments.length})</span>
+        </h3>
+      </div>
+
+      {images.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+          {images.map((att) => (
+            <a
+              key={att.id}
+              href={att.public_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block relative rounded-xl overflow-hidden border border-at-border bg-at-surface-alt hover:border-at-accent transition-colors group"
+              title={`${att.file_name} (${formatBytes(att.file_size)})`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={att.public_url}
+                alt={att.file_name}
+                className="w-full h-32 object-cover group-hover:opacity-90 transition-opacity"
+                loading="lazy"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-2 py-1 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                {att.file_name}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {others.length > 0 && (
+        <ul className="space-y-1.5">
+          {others.map((att) => (
+            <li key={att.id}>
+              <a
+                href={att.public_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={att.file_name}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-at-border bg-white hover:bg-at-surface-hover transition-colors"
+              >
+                <FileText className="w-4 h-4 text-at-text-weak flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-at-text truncate">{att.file_name}</p>
+                  <p className="text-[11px] text-at-text-weak">{formatBytes(att.file_size)}</p>
+                </div>
+                <Download className="w-4 h-4 text-at-text-weak flex-shrink-0" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
 
 interface CommunityPostDetailProps {
   postId: string
@@ -160,6 +235,11 @@ export default function CommunityPostDetail({
               />
             </div>
           </ContentProtectionWrapper>
+
+          {/* 첨부 파일 */}
+          {post.attachments && post.attachments.length > 0 && (
+            <AttachmentSection attachments={post.attachments} />
+          )}
 
           {/* 투표 */}
           {poll && myProfileId && (
