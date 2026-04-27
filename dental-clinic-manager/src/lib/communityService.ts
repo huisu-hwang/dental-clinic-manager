@@ -1503,6 +1503,57 @@ export const communityAttachmentService = {
   },
 
   /**
+   * 본문 인라인 이미지 업로드 (post_id 없이 즉시 업로드)
+   * - 첨부 파일 메타(community_post_attachments)에는 기록하지 않음
+   * - 본문 HTML에 <img src="..."> 형태로 직접 삽입되어 그 URL만으로 영구 노출
+   * - 경로: community/inline/{profileId}/{timestamp}_{name}
+   */
+  async uploadInlineImage(params: {
+    profileId: string
+    file: File
+  }): Promise<{ url: string | null; error: string | null }> {
+    const { profileId, file } = params
+    try {
+      if (!file) throw new Error('파일이 없습니다.')
+      if (file.size <= 0) throw new Error('빈 파일은 업로드할 수 없습니다.')
+      if (file.size > COMMUNITY_ATTACHMENT_MAX_SIZE) {
+        throw new Error(`이미지 크기는 최대 ${Math.floor(COMMUNITY_ATTACHMENT_MAX_SIZE / 1024 / 1024)}MB 까지입니다.`)
+      }
+      const contentType = file.type || 'image/png'
+      if (!contentType.startsWith('image/')) {
+        throw new Error('이미지 파일만 인라인 삽입할 수 있습니다.')
+      }
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const safeName = sanitizeFileName(file.name || `pasted.${(contentType.split('/')[1] || 'png').toLowerCase()}`)
+      const uniquePart = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const storagePath = `${COMMUNITY_ATTACHMENT_PREFIX}/inline/${profileId}/${uniquePart}_${safeName}`
+
+      const { error: uploadError } = await (supabase as any).storage
+        .from(BULLETIN_BUCKET)
+        .upload(storagePath, file, {
+          contentType,
+          upsert: false,
+          cacheControl: '3600',
+        })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = (supabase as any).storage
+        .from(BULLETIN_BUCKET)
+        .getPublicUrl(storagePath)
+      const publicUrl: string = urlData?.publicUrl || ''
+      if (!publicUrl) throw new Error('Public URL 생성 실패')
+
+      return { url: publicUrl, error: null }
+    } catch (error) {
+      console.error('[communityAttachmentService.uploadInlineImage] Error:', error)
+      return { url: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 여러 파일을 순차 업로드 (진행 콜백 지원)
    */
   async uploadAttachments(params: {
