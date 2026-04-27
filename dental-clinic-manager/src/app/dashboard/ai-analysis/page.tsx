@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import AIChat from '@/components/AIAnalysis/AIChat';
@@ -12,10 +12,39 @@ import { cn } from '@/lib/utils';
 
 type TabKey = 'chat' | 'event-impact';
 
+// AI 분석 페이지의 빌드 식별자 (변경 시 강제 캐시 무효화)
+const PAGE_BUILD_ID = '2026-04-28-event-impact-tab-v2';
+
 export default function AIAnalysisPage() {
   const { user, loading: authLoading } = useAuth();
   const { hasPermission, isLoading: permLoading } = usePermissions();
   const [activeTab, setActiveTab] = useState<TabKey>('chat');
+
+  // 페이지 진입 시 서비스 워커 강제 업데이트 + 첫 접근 시 1회 강제 새로고침
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const STORAGE_KEY = 'ai-analysis-build-id';
+    const lastSeenBuildId = sessionStorage.getItem(STORAGE_KEY);
+
+    // 1) 서비스 워커가 있으면 즉시 업데이트 체크
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => {
+          reg.update().catch(() => {});
+        });
+      }).catch(() => {});
+    }
+
+    // 2) 빌드 ID가 처음 보는 값이면 한 번만 강제 새로고침 (캐시 무효화)
+    if (lastSeenBuildId !== PAGE_BUILD_ID) {
+      sessionStorage.setItem(STORAGE_KEY, PAGE_BUILD_ID);
+      // 캐시된 페이지를 강제로 무시하고 새로 로드
+      if (lastSeenBuildId !== null) {
+        window.location.reload();
+      }
+    }
+  }, []);
 
   // 로딩 중
   if (authLoading || permLoading) {
