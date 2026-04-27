@@ -68,6 +68,7 @@ export interface CommunityPost {
   profile?: CommunityProfile
   is_liked?: boolean
   is_bookmarked?: boolean
+  attachments?: CommunityPostAttachment[]
 }
 
 // 커뮤니티 댓글
@@ -143,6 +144,32 @@ export interface CommunityPenalty {
   // 조인 데이터
   profile?: CommunityProfile
 }
+
+// 게시글 첨부 파일
+export interface CommunityPostAttachment {
+  id: string
+  post_id: string
+  uploader_profile_id?: string | null
+  file_name: string
+  file_size: number
+  file_type: string
+  storage_path: string
+  public_url: string
+  sort_order: number
+  created_at: string
+}
+
+// 첨부 파일 업로드 결과
+export interface AttachmentUploadResult {
+  attachment: CommunityPostAttachment | null
+  error: string | null
+}
+
+// 첨부 가능한 최대 파일 크기 (10MB) — bulletin-files 버킷 제한과 일치
+export const COMMUNITY_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024
+
+// 게시글당 최대 첨부 개수
+export const COMMUNITY_ATTACHMENT_MAX_COUNT = 10
 
 // DTO: 게시글 생성
 export interface CreatePostDto {
