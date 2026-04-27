@@ -49,11 +49,22 @@ export async function typeBodyContent(
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // [IMAGE: ...] 마커 감지
+    // [IMAGE: ...] 마커 감지 (AI 생성 원본)
     const imageMatch = line.match(/^\[IMAGE:\s*(.+?)\]$/);
     if (imageMatch && onImageMarker) {
       await randomDelay(delays.paragraph);
       await onImageMarker(imageMatch[1]);
+      await randomDelay(delays.imageUpload);
+      continue;
+    }
+
+    // 마크다운 이미지 ![alt](url) 감지
+    // (ContentEditor에서 사용자 편집 후 저장 시 [IMAGE:] 마커가 ![alt](url) 형태로 직렬화됨)
+    // alt 텍스트를 prompt로 사용하여 동일하게 onImageMarker 호출 (이미지 파일은 images 배열에서 순차 사용)
+    const markdownImageMatch = line.match(/^!\[(.*?)\]\((.+?)\)$/);
+    if (markdownImageMatch && onImageMarker) {
+      await randomDelay(delays.paragraph);
+      await onImageMarker(markdownImageMatch[1] || markdownImageMatch[2]);
       await randomDelay(delays.imageUpload);
       continue;
     }
