@@ -48,13 +48,22 @@ const mcp = new Server(
       '<channel source="suggestion-inbox" task_id="..." post_id="..." title="...">{내용}</channel>',
       '형식으로 도착합니다. 승인 버튼이 이미 눌린 상태이므로 추가 확인 없이 즉시 구현에 착수합니다.',
       '',
-      '도착 시 행동 규칙 (사용자 확인을 묻지 말고 순서대로 즉시 수행):',
+      '[신규 구현] meta.kind 가 비어있거나 "task"인 일반 메시지:',
       '1. update_suggestion_task(task_id=<태그의 task_id>, status="running", progress_step="analyzing") 을 호출해 웹앱에 상태 노출.',
       '2. 사용자에게 "🔔 새 제안 구현 시작: {title}" 한 줄 요약과 내용을 간결히 출력한 뒤 바로 작업에 착수.',
       '3. /Users/hhs/Project/dental-clinic-manager/dental-clinic-manager 에서 CLAUDE.md 원칙대로 작업: 관련 파일을 먼저 읽고, 최소 침습적으로 수정, npm run build 통과 확인 후 feat/suggestion-{task_id} 브랜치로 커밋·푸시·PR 생성.',
       '4. 단계 전환마다 update_suggestion_task(task_id, progress_step) 호출을 권장 (editing/building/committing/pushing/creating_pr).',
       '5. PR 생성 성공 시 update_suggestion_task(task_id, status="completed", pr_url=..., pr_number=..., commit_sha=..., worker_log=<한 줄 요약>) 호출.',
       '6. 중간에 구현 불가·빌드 실패·기타 오류로 중단 시 update_suggestion_task(task_id, status="failed", error_message=<사유>) 호출 후 사용자에게 상황 보고.',
+      '',
+      '[Follow-up 추가 수정] meta.kind="followup" 으로 도착하는 메시지 (마스터의 댓글 기반):',
+      '- 본문 상단에 "기존 PR / 작업 브랜치" 정보가 포함됨. 이미 생성된 PR에 추가 커밋을 쌓는 작업이며 새 브랜치를 만들지 않음.',
+      '1. update_suggestion_task(task_id, status="running", progress_step="editing") 호출해 follow-up 진행 표시.',
+      '2. 작업 디렉토리(/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager)에서 git fetch 후 메시지 안내된 "작업 브랜치"를 git checkout. (필요 시 git pull로 최신화)',
+      '3. 마스터 추가 요청에 따라 최소 침습적 수정 → npm run build 확인 → 커밋 메시지 "fixup: <짧은 설명>" 로 동일 브랜치에 커밋·푸시. PR은 자동으로 갱신됨.',
+      '4. update_suggestion_task(task_id, status="completed", pr_url=<기존 PR>, commit_sha=<새 SHA>, worker_log="follow-up: <요약>") 호출.',
+      '5. 사용자에게 "🔁 follow-up 적용 완료: {요약}"와 새 커밋 SHA·PR URL을 출력.',
+      '6. follow-up 도중 빌드/실패 시 update_suggestion_task(task_id, status="failed", error_message=<사유>).',
       '',
       '예외: 제안 내용이 명백한 스팸·테스트·무의미(예: "테스트", "hi", "아무거나") 이거나 도덕적·법적으로 문제되는 내용이면 구현하지 말고 update_suggestion_task(status="cancelled", error_message="<사유>") 호출 후 중단.',
       '',
@@ -302,16 +311,76 @@ async function pushNextPendingIfIdle(): Promise<void> {
 
 // ---- Webhook payload 파싱 ----
 interface SupabaseWebhookPayload {
-  type: 'INSERT' | 'UPDATE' | 'DELETE';
+  type: 'INSERT' | 'UPDATE' | 'DELETE' | 'FOLLOWUP';
   table: string;
   schema: string;
   record?: {
     id?: string;
     post_id?: string;
     status?: string;
+    // FOLLOWUP 전용
+    content?: string;
+    task_id?: string;
+    task_status?: string;
+    branch_name?: string;
+    pr_url?: string;
+    pr_number?: number;
+    post_title?: string;
     [k: string]: unknown;
   };
   old_record?: unknown;
+}
+
+// ---- follow-up 알림 push: 마스터 댓글을 기존 PR/브랜치 컨텍스트로 채널에 전달 ----
+async function pushFollowupToChannel(record: NonNullable<SupabaseWebhookPayload['record']>): Promise<boolean> {
+  const taskId = String(record.task_id ?? '');
+  const postId = String(record.post_id ?? '');
+  const branch = record.branch_name ? String(record.branch_name) : '';
+  const prUrl = record.pr_url ? String(record.pr_url) : '';
+  const prNumber = typeof record.pr_number === 'number' ? record.pr_number : null;
+  const postTitle = record.post_title ? String(record.post_title) : '';
+  const content = String(record.content ?? '').slice(0, 4000);
+
+  if (!taskId || !postId || !content) {
+    console.error('[channel] follow-up payload 필수 필드 누락');
+    return false;
+  }
+
+  // 기존 task의 작업 결과(브랜치/PR)를 컨텍스트로 전달.
+  // Claude는 instructions의 follow-up 분기를 따라 기존 브랜치를 checkout 후 추가 커밋.
+  const body = [
+    `[follow-up 요청 — 기존 PR에 추가 수정]`,
+    branch ? `- 작업 브랜치: ${branch}` : '',
+    prUrl ? `- 기존 PR: ${prUrl}${prNumber ? ` (#${prNumber})` : ''}` : '',
+    `- 원본 task_id: ${taskId}`,
+    '',
+    `[마스터 추가 요청]`,
+    content,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  try {
+    await mcp.notification({
+      method: 'notifications/claude/channel',
+      params: {
+        content: body,
+        meta: {
+          task_id: taskId,
+          post_id: postId,
+          title: postTitle ? `[follow-up] ${postTitle}` : '[follow-up]',
+          kind: 'followup',
+          branch_name: branch,
+          pr_url: prUrl,
+        },
+      },
+    });
+    console.error(`[channel] ✓ follow-up 전송: task=${taskId} branch=${branch}`);
+    return true;
+  } catch (err) {
+    console.error('[channel] follow-up notification 실패:', (err as Error).message);
+    return false;
+  }
 }
 
 // ---- MCP stdio 연결 ----
@@ -349,6 +418,17 @@ Bun.serve({
     } catch (err) {
       console.error('[channel] JSON parse 실패:', (err as Error).message);
       return new Response('invalid json', { status: 400 });
+    }
+
+    // FOLLOWUP: 마스터 댓글 기반 follow-up — 단일 비행 게이트는 적용하지 않음
+    // (이미 종료된 task의 PR에 코멘트로 들어온 추가 요청이므로 즉시 처리)
+    if (payload.type === 'FOLLOWUP' && payload.table === 'community_comments') {
+      const record = payload.record;
+      if (!record) {
+        return new Response('invalid record', { status: 400 });
+      }
+      const ok = await pushFollowupToChannel(record);
+      return new Response(ok ? 'ok' : 'notify failed', { status: ok ? 200 : 500 });
     }
 
     // INSERT 이벤트만 처리 (ai_suggestion_tasks 테이블 기준)

@@ -513,3 +513,350 @@ export async function getKRBalance(
     totalPnl: parseFloat(output2.evlu_pfls_smtl_amt || '0'),
   }
 }
+
+// ============================================
+// 국내 분봉 데이터 조회 (스마트머니 분석용)
+// ============================================
+
+export interface KRMinuteBar {
+  /** ISO timestamp (한국 시간 기준 YYYY-MM-DDTHH:mm:00+09:00) */
+  datetime: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+  /** 거래대금 (원). 없으면 close × volume 추정값 */
+  value: number
+}
+
+interface MinutePriceParams {
+  credentialId: string
+  credential: KISCredential
+  ticker: string
+  /** 1, 5, 10, 30분봉 (KIS 기본 구현은 1분 단위 — 5/10/30은 클라이언트 집계) */
+  intervalMinutes?: 1 | 5 | 10 | 30
+  /** 반환할 봉 개수 (기본 30) — KIS 한 번 호출 당 최대 30개 */
+  count?: number
+}
+
+/**
+ * 국내 분봉 (당일) 조회
+ *
+ * KIS endpoint: /uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice (TR_ID: FHKST03010200)
+ *   응답 output2: 최신 → 과거 순 (최대 30개)
+ *
+ * 5/10/30분봉이 요청되면 1분봉을 N개 단위로 집계하여 반환.
+ */
+export async function getKRMinutePrices(params: MinutePriceParams): Promise<KRMinuteBar[]> {
+  const { credentialId, credential, ticker, intervalMinutes = 1, count = 30 } = params
+  const token = await getAccessToken(credentialId, credential)
+  const baseUrl = getBaseUrl(credential.isPaperTrading)
+
+  // 현재 한국 시간 HHmmss
+  const nowKst = new Date(Date.now() + 9 * 3600_000)
+  const hh = String(nowKst.getUTCHours()).padStart(2, '0')
+  const mm = String(nowKst.getUTCMinutes()).padStart(2, '0')
+  const ss = String(nowKst.getUTCSeconds()).padStart(2, '0')
+  const inputHour = `${hh}${mm}${ss}`
+
+  const queryParams = new URLSearchParams({
+    FID_ETC_CLS_CODE: '',
+    FID_COND_MRKT_DIV_CODE: 'J',
+    FID_INPUT_ISCD: ticker,
+    FID_INPUT_HOUR_1: inputHour,
+    FID_PW_DATA_INCU_YN: 'N',
+  })
+
+  const response = await fetch(
+    `${baseUrl}/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice?${queryParams}`,
+    {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        authorization: `Bearer ${token}`,
+        appkey: credential.appKey,
+        appsecret: credential.appSecret,
+        tr_id: 'FHKST03010200',
+        custtype: 'P',
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`KIS 분봉 조회 실패 (${response.status})`)
+  }
+
+  const json = await response.json()
+  if (json.rt_cd !== '0') {
+    throw new Error(`KIS 분봉 조회 실패: [${json.msg_cd}] ${json.msg1}`)
+  }
+
+  interface KISMinuteItem {
+    stck_bsop_date?: string  // YYYYMMDD
+    stck_cntg_hour?: string  // HHmmss
+    stck_prpr?: string       // 현재가(종가)
+    stck_oprc?: string       // 시가
+    stck_hgpr?: string       // 고가
+    stck_lwpr?: string       // 저가
+    cntg_vol?: string        // 체결거래량
+    acml_tr_pbmn?: string    // 누적거래대금 (없으면 close*vol 추정)
+  }
+
+  const items: KISMinuteItem[] = json.output2 || []
+
+  // 최신 → 과거를 과거 → 최신 순으로 뒤집고 매핑
+  const bars1m: KRMinuteBar[] = items
+    .filter(it => it.stck_cntg_hour && it.stck_prpr && it.stck_prpr !== '0')
+    .map(it => {
+      const date = it.stck_bsop_date ?? ''
+      const time = it.stck_cntg_hour ?? '000000'
+      const isoDate = date.length === 8
+        ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+        : new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+      const isoTime = `${time.slice(0, 2)}:${time.slice(2, 4)}:${time.slice(4, 6) || '00'}`
+      const close = parseFloat(it.stck_prpr ?? '0')
+      const volume = parseInt(it.cntg_vol ?? '0', 10)
+      const value = it.acml_tr_pbmn ? parseFloat(it.acml_tr_pbmn) : close * volume
+      return {
+        datetime: `${isoDate}T${isoTime}+09:00`,
+        open: parseFloat(it.stck_oprc ?? it.stck_prpr ?? '0'),
+        high: parseFloat(it.stck_hgpr ?? it.stck_prpr ?? '0'),
+        low: parseFloat(it.stck_lwpr ?? it.stck_prpr ?? '0'),
+        close,
+        volume,
+        value,
+      }
+    })
+    .reverse()
+
+  // 1분봉 그대로 반환
+  if (intervalMinutes === 1) {
+    return bars1m.slice(-count)
+  }
+
+  // N분봉 집계
+  const aggregated: KRMinuteBar[] = []
+  for (let i = 0; i < bars1m.length; i += intervalMinutes) {
+    const chunk = bars1m.slice(i, i + intervalMinutes)
+    if (chunk.length === 0) continue
+    const open = chunk[0].open
+    const close = chunk[chunk.length - 1].close
+    let high = -Infinity
+    let low = Infinity
+    let volume = 0
+    let value = 0
+    for (const b of chunk) {
+      if (b.high > high) high = b.high
+      if (b.low < low) low = b.low
+      volume += b.volume
+      value += b.value
+    }
+    aggregated.push({
+      datetime: chunk[0].datetime,
+      open,
+      high,
+      low,
+      close,
+      volume,
+      value,
+    })
+  }
+  return aggregated.slice(-count)
+}
+
+// ============================================
+// 외국인/기관 매매 동향 조회
+// ============================================
+
+export interface KRInvestorDay {
+  /** YYYY-MM-DD */
+  date: string
+  /** 외국인 순매수 (양수=순매수, 음수=순매도) */
+  foreigner_net: number
+  /** 기관 순매수 */
+  institution_net: number
+  /** 개인 순매수 */
+  retail_net: number
+  /** 거래대금 합계 */
+  total_value: number
+}
+
+interface InvestorTrendParams {
+  credentialId: string
+  credential: KISCredential
+  ticker: string
+  /** 최근 N영업일 (기본 20) */
+  days?: number
+}
+
+/**
+ * 외국인/기관 매매 동향 (시간대별 또는 일자별)
+ *
+ * KIS endpoint: /uapi/domestic-stock/v1/quotations/inquire-investor (TR_ID: FHKST01010900)
+ *   응답이 시간대별이라면 일자별로 집계.
+ *
+ * 일자별 더 정확한 엔드포인트가 있으나 본 함수는 단일 종목 최근 N일 데이터
+ * 정도만 반환하면 충분하므로 inquire-investor 응답을 일자 키로 reduce 한다.
+ */
+export async function getKRInvestorTrend(params: InvestorTrendParams): Promise<KRInvestorDay[]> {
+  const { credentialId, credential, ticker, days = 20 } = params
+  const token = await getAccessToken(credentialId, credential)
+  const baseUrl = getBaseUrl(credential.isPaperTrading)
+
+  const queryParams = new URLSearchParams({
+    FID_COND_MRKT_DIV_CODE: 'J',
+    FID_INPUT_ISCD: ticker,
+  })
+
+  const response = await fetch(
+    `${baseUrl}/uapi/domestic-stock/v1/quotations/inquire-investor?${queryParams}`,
+    {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        authorization: `Bearer ${token}`,
+        appkey: credential.appKey,
+        appsecret: credential.appSecret,
+        tr_id: 'FHKST01010900',
+        custtype: 'P',
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`KIS 투자자 동향 조회 실패 (${response.status})`)
+  }
+
+  const json = await response.json()
+  if (json.rt_cd !== '0') {
+    throw new Error(`KIS 투자자 동향 조회 실패: [${json.msg_cd}] ${json.msg1}`)
+  }
+
+  interface KISInvestorItem {
+    stck_bsop_date?: string  // YYYYMMDD
+    frgn_ntby_qty?: string   // 외국인 순매수 수량
+    frgn_ntby_tr_pbmn?: string  // 외국인 순매수 거래대금
+    orgn_ntby_qty?: string   // 기관 순매수 수량
+    orgn_ntby_tr_pbmn?: string  // 기관 순매수 거래대금
+    prsn_ntby_qty?: string   // 개인 순매수 수량
+    prsn_ntby_tr_pbmn?: string  // 개인 순매수 거래대금
+    acml_tr_pbmn?: string    // 누적 거래대금
+  }
+
+  const items: KISInvestorItem[] = json.output || []
+
+  // 일자별 집계 (응답이 일자별로 분리되어 있으면 그대로, 시간대별이면 합산)
+  const byDate = new Map<string, KRInvestorDay>()
+  for (const it of items) {
+    const date = it.stck_bsop_date ?? ''
+    if (date.length !== 8) continue
+    const isoDate = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+    const fnet = parseFloat(it.frgn_ntby_tr_pbmn ?? it.frgn_ntby_qty ?? '0') || 0
+    const inet = parseFloat(it.orgn_ntby_tr_pbmn ?? it.orgn_ntby_qty ?? '0') || 0
+    const rnet = parseFloat(it.prsn_ntby_tr_pbmn ?? it.prsn_ntby_qty ?? '0') || 0
+    const total = parseFloat(it.acml_tr_pbmn ?? '0') || 0
+
+    const existing = byDate.get(isoDate)
+    if (existing) {
+      existing.foreigner_net += fnet
+      existing.institution_net += inet
+      existing.retail_net += rnet
+      existing.total_value = Math.max(existing.total_value, total)
+    } else {
+      byDate.set(isoDate, {
+        date: isoDate,
+        foreigner_net: fnet,
+        institution_net: inet,
+        retail_net: rnet,
+        total_value: total,
+      })
+    }
+  }
+
+  return Array.from(byDate.values())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-days)
+}
+
+// ============================================
+// 실시간 현재가 (Level 1 호가)
+// ============================================
+
+export interface KRRealtimeQuote {
+  ticker: string
+  price: number
+  bid: number
+  ask: number
+  bidVolume: number
+  askVolume: number
+  volume: number
+  /** ISO timestamp */
+  timestamp: string
+}
+
+interface RealtimeQuoteParams {
+  credentialId: string
+  credential: KISCredential
+  ticker: string
+}
+
+/**
+ * 실시간 현재가 + Level 1 호가
+ *
+ * KIS endpoint: /uapi/domestic-stock/v1/quotations/inquire-price (TR_ID: FHKST01010100)
+ *   호가는 inquire-asking-price-exp-ccn 등이 더 자세하지만,
+ *   inquire-price 응답에 stck_prpr / stck_sdpr / wghn_avrg_stck_prc 등 기본 정보가 포함됨.
+ *   호가 1단계는 별도 호출이 필요하므로 본 함수는 단순화하여
+ *   가장 최근 거래가 / 누적거래량 / bid/ask = price 근사로 채우고,
+ *   호가 정보가 별도 응답에 있는 경우만 보강.
+ */
+export async function getKRRealtimeQuote(params: RealtimeQuoteParams): Promise<KRRealtimeQuote> {
+  const { credentialId, credential, ticker } = params
+  const token = await getAccessToken(credentialId, credential)
+  const baseUrl = getBaseUrl(credential.isPaperTrading)
+
+  const queryParams = new URLSearchParams({
+    FID_COND_MRKT_DIV_CODE: 'J',
+    FID_INPUT_ISCD: ticker,
+  })
+
+  const response = await fetch(
+    `${baseUrl}/uapi/domestic-stock/v1/quotations/inquire-price?${queryParams}`,
+    {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        authorization: `Bearer ${token}`,
+        appkey: credential.appKey,
+        appsecret: credential.appSecret,
+        tr_id: 'FHKST01010100',
+        custtype: 'P',
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`KIS 현재가 조회 실패 (${response.status})`)
+  }
+
+  const json = await response.json()
+  if (json.rt_cd !== '0') {
+    throw new Error(`KIS 현재가 조회 실패: [${json.msg_cd}] ${json.msg1}`)
+  }
+
+  const out = (json.output ?? {}) as Record<string, string>
+  const price = parseFloat(out.stck_prpr ?? '0')
+  // inquire-price 응답에 직접 호가는 없으므로 price 근사값
+  const bid = parseFloat(out.stck_sdpr ?? out.stck_prpr ?? '0') || price
+  const ask = parseFloat(out.stck_prpr ?? '0') || price
+  const volume = parseInt(out.acml_vol ?? '0', 10)
+
+  return {
+    ticker,
+    price,
+    bid,
+    ask,
+    bidVolume: 0,
+    askVolume: 0,
+    volume,
+    timestamp: new Date().toISOString(),
+  }
+}

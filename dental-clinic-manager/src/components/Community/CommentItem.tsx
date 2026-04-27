@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Heart, MessageSquare, Flag, MoreVertical, Edit3, Trash2 } from 'lucide-react'
+import { Heart, MessageSquare, Flag, MoreVertical, Edit3, Trash2, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { CommunityComment } from '@/types/community'
 import { communityCommentService } from '@/lib/communityService'
@@ -64,11 +64,16 @@ export default function CommentItem({ comment, profileId, postId, onReply, onDel
 
   return (
     <div className={`${depth > 0 ? 'ml-8 border-l-2 border-at-border pl-4' : ''}`}>
-      <div className="py-3">
+      <div className={`py-3 ${comment.is_master_only ? 'bg-amber-50 -mx-2 px-2 rounded-lg border border-amber-200' : ''}`}>
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {comment.profile && <ProfileCard profile={comment.profile} compact />}
             <span className="text-xs text-at-text-weak">{formatDate(comment.created_at)}</span>
+            {comment.is_master_only && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-amber-300 bg-amber-100 text-amber-800">
+                <Lock className="w-2.5 h-2.5" />마스터 전용
+              </span>
+            )}
           </div>
           {isOwner && (
             <div className="relative">

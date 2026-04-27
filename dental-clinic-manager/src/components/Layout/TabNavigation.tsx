@@ -27,7 +27,7 @@ import { saveUserMenuSettings } from '@/lib/menuSettingsService'
 import type { Permission } from '@/types/permissions'
 import type { MenuItemSetting, MenuCategorySetting } from '@/types/menuSettings'
 import { createNewCategory } from '@/types/menuSettings'
-import { MENU_CONFIG, MENU_ICON_MAP, MENU_PERMISSIONS_MAP, MENU_OWNER_ONLY_MAP, MENU_PREMIUM_MAP } from '@/config/menuConfig'
+import { MENU_CONFIG, MENU_ICON_MAP, MENU_PERMISSIONS_MAP, MENU_OWNER_ONLY_MAP, MENU_PREMIUM_MAP, INVESTMENT_ALLOWED_CLINIC_IDS } from '@/config/menuConfig'
 import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
 import WorkerStatusMenuItem from '@/components/Layout/WorkerStatusMenuItem'
 import {
@@ -313,6 +313,10 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   const { menuSettings, categorySettings, isLoading } = useMenuSettings()
   const { user } = useAuth()
   const isOwner = user?.role === 'owner'
+  const isMasterAdmin = user?.role === 'master_admin'
+  const canSeeInvestment =
+    isMasterAdmin ||
+    (!!user?.clinic_id && (INVESTMENT_ALLOWED_CLINIC_IDS as readonly string[]).includes(user.clinic_id))
   const { hasPremiumFeature } = usePremiumFeatures()
 
   // 편집 모드 상태
@@ -424,11 +428,14 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
       if (MENU_OWNER_ONLY_MAP[tab.id] && !isOwner) {
         return false
       }
+      if (tab.id === 'investment' && !canSeeInvestment) {
+        return false
+      }
       if (!tab.requiredPermissions || tab.requiredPermissions.length === 0) {
         return true
       }
       return tab.requiredPermissions.some(perm => hasPermission(perm))
-    }), [tabs, hasPermission, isOwner])
+    }), [tabs, hasPermission, isOwner, canSeeInvestment])
 
   // 기본 상단 메뉴 ID 목록 (원래 설정에서 카테고리 없이 상단에 고정된 메뉴 - 정적)
   const defaultTopMenuIds = useMemo(() => {
@@ -482,8 +489,9 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   const visibleCategories = useMemo(() => {
     return localCategorySettings
       .filter(cat => cat.visible)
+      .filter(cat => cat.id !== 'investment' || canSeeInvestment)
       .sort((a, b) => a.order - b.order)
-  }, [localCategorySettings])
+  }, [localCategorySettings, canSeeInvestment])
 
   useEffect(() => {
     if (skipAutoRedirect) return

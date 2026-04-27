@@ -5,7 +5,6 @@ import { X } from 'lucide-react'
 import type { SubscriptionPlan, Subscription } from '@/types/subscription'
 import BasicPlansSection from './BasicPlansSection'
 import PremiumBundleSection from './PremiumBundleSection'
-import PerformanceSection from './PerformanceSection'
 import { countActiveEmployeesClient } from '@/lib/subscriptionClient'
 
 interface PlanSelectModalProps {
@@ -73,10 +72,6 @@ export default function PlanSelectModal({
               <PremiumBundleSection
                 plans={plans}
                 current={currentSubscription}
-                onSelect={onSelect}
-              />
-              <PerformanceSection
-                plans={plans}
                 onSelect={onSelect}
               />
             </>

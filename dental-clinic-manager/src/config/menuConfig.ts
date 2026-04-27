@@ -11,6 +11,12 @@
 
 import type { Permission } from '@/types/permissions'
 
+// 투자(주식 자동매매) 기능을 노출할 클리닉 ID 화이트리스트
+// 마스터 관리자(master_admin)는 권한 자체로 항상 노출됨
+export const INVESTMENT_ALLOWED_CLINIC_IDS = [
+  'de87b3fd-f936-49d8-a659-7b50b0019fe9', // 하얀치과
+] as const
+
 // 프리미엄 기능 ID 상수
 export const PREMIUM_FEATURE_IDS = ['recall', 'ai-analysis', 'financial', 'marketing', 'investment'] as const
 export type PremiumFeatureId = typeof PREMIUM_FEATURE_IDS[number]

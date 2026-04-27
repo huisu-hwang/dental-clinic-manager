@@ -191,7 +191,7 @@ export default function CommunityPostDetail({
 
         {/* 댓글 */}
         <div className="border-t border-at-border p-4 sm:p-6 bg-at-surface-alt">
-          <CommentList postId={post.id} profileId={myProfileId} commentCount={post.comment_count} />
+          <CommentList postId={post.id} profileId={myProfileId} commentCount={post.comment_count} postCategory={post.category} />
         </div>
       </div>
 
