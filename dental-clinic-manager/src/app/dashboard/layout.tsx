@@ -38,6 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/dashboard/community/telegram')) return 'community-groups'
     if (pathname.startsWith('/dashboard/community')) return 'community-board'
     if (pathname.startsWith('/dashboard/financial')) return 'financial'
+    if (pathname.startsWith('/dashboard/ai-analysis')) return 'ai-analysis'
     return searchParams.get('tab') || 'home'
   }
   const [activeTab, setActiveTab] = useState<string>(getInitialTab)

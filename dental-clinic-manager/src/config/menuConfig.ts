@@ -174,7 +174,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     id: 'ai-analysis',
     label: 'AI 데이터 분석',
     icon: 'Sparkles',
-    route: '/dashboard?tab=ai-analysis',
+    route: '/dashboard/ai-analysis',
     permissions: [],  // 권한 체크는 ownerOnly로 대체
     categoryId: 'work',
     order: 6,

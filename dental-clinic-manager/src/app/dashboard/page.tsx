@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { createClient } from '@/lib/supabase/client'
@@ -44,8 +44,16 @@ import PendingApprovalBanner from '@/components/Dashboard/PendingApprovalBanner'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { user } = useAuth()
   const { hasPermission } = usePermissions()
+
+  // 레거시 URL 리다이렉트: /dashboard?tab=ai-analysis → /dashboard/ai-analysis
+  useEffect(() => {
+    if (searchParams.get('tab') === 'ai-analysis') {
+      router.replace('/dashboard/ai-analysis')
+    }
+  }, [searchParams, router])
 
   // 권한 상태 정의
   const canCreateReport = hasPermission('daily_report_create')
