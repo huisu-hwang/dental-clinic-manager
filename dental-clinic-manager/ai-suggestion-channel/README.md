@@ -55,11 +55,25 @@ cp .env.example .env
 
 ## Claude Code 세션 기동 (research preview 중)
 
+수동 실행:
+
 ```bash
-claude --dangerously-load-development-channels server:suggestion-inbox
+claude --dangerously-load-development-channels server:suggestion-inbox --permission-mode bypassPermissions
 ```
 
-세션이 열려 있는 동안만 이벤트 수신. 자리 비울 때는 tmux로 띄워두면 좋음.
+상시 구동(맥미니 모니터에 Terminal 창 노출 + 부팅 시 자동 시작):
+
+```bash
+# 1. .command 스크립트 (이미 동봉) — 종료 시 5초 후 자동 재시작 루프
+./claude-suggestion.command
+
+# 2. LaunchAgent 등록 (로그인 시 Terminal 창 자동 열림)
+cp ../scripts/com.huisu.claude-suggestion.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.huisu.claude-suggestion.plist
+```
+
+LaunchAgent는 로그인 시 `open -a Terminal claude-suggestion.command`를 호출.
+Terminal 창이 화면에 그대로 보이므로 진행 상황을 실시간 확인 가능.
 
 ## Hookdeck CLI 터널
 
