@@ -5,6 +5,7 @@ import { ChevronLeft, Loader2, Plus, X, BarChart3, Paperclip, Upload, FileText, 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { communityPostService, communityAttachmentService } from '@/lib/communityService'
+import CommunityRichEditor from './CommunityRichEditor'
 import type {
   CommunityCategory,
   CommunityPost,
@@ -52,6 +53,19 @@ const formatBytes = (bytes: number): string => {
 }
 
 const isImageType = (type?: string) => !!type && type.startsWith('image/')
+
+// 리치 에디터의 빈 상태(`<p></p>`, 공백뿐인 HTML)를 걸러내고
+// 이미지/비디오 등 미디어가 들어 있으면 유효 콘텐츠로 간주.
+const hasMeaningfulContent = (html: string): boolean => {
+  if (!html) return false
+  if (/<(img|iframe|video|figure|table)\b/i.test(html)) return true
+  const text = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text.length > 0
+}
 
 const inferExtensionFromType = (type: string): string => {
   if (type === 'image/png') return 'png'
@@ -213,39 +227,61 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
   }
 
   // 클립보드 paste — 캡쳐한 이미지 자동 첨부
+  // textarea와 form 양쪽에 부착: textarea native paste가 일부 브라우저에서
+  // form까지 bubble되지 않는 케이스 대비. file을 발견했을 때만 stopPropagation으로
+  // 같은 이벤트가 두 핸들러에서 중복 처리되지 않도록 차단.
   const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items || items.length === 0) return
+    // ClipboardEvent.clipboardData는 SyntheticEvent에서 native object를 그대로 노출
+    const clipboardData = e.clipboardData || (e.nativeEvent as ClipboardEvent | undefined)?.clipboardData
+    if (!clipboardData) return
+
+    const items = clipboardData.items
+    const filesFromList = clipboardData.files
     const pastedFiles: File[] = []
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      if (item.kind === 'file') {
-        const file = item.getAsFile()
-        if (file) {
-          // 클립보드 이미지 파일명이 없는 경우 보강
-          if (!file.name || file.name === 'image.png' || file.name === '') {
-            const ext = inferExtensionFromType(file.type || 'image/png')
-            const renamed = new File(
-              [file],
-              `pasted_${Date.now()}.${ext}`,
-              { type: file.type || 'image/png' }
-            )
-            pastedFiles.push(renamed)
-          } else {
-            pastedFiles.push(file)
-          }
+
+    // 이미지 파일은 본문 에디터(CommunityRichEditor)가 직접 인라인 삽입을 처리하므로
+    // 폼 레벨에서는 이미지 외 파일(PDF/Office/ZIP 등)만 첨부 큐에 추가한다.
+    // 1순위: items에서 kind === 'file' 추출 (가장 표준)
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.kind === 'file' && !item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) pastedFiles.push(file)
         }
       }
     }
-    if (pastedFiles.length > 0) {
-      e.preventDefault()
-      addFiles(pastedFiles)
+
+    // 2순위: items가 비어있거나 file이 없으면 files 컬렉션 직접 확인 (Safari/구형 호환)
+    if (pastedFiles.length === 0 && filesFromList && filesFromList.length > 0) {
+      for (let i = 0; i < filesFromList.length; i++) {
+        const file = filesFromList.item(i)
+        if (file && !file.type.startsWith('image/')) pastedFiles.push(file)
+      }
     }
+
+    if (pastedFiles.length === 0) return
+
+    // 캡쳐 이미지처럼 파일명이 없는 경우 보강
+    const normalized = pastedFiles.map((file) => {
+      if (!file.name || file.name === 'image.png' || file.name === '') {
+        const ext = inferExtensionFromType(file.type || 'image/png')
+        return new File([file], `pasted_${Date.now()}.${ext}`, {
+          type: file.type || 'image/png',
+        })
+      }
+      return file
+    })
+
+    // 파일 paste 확정 → default(텍스트 paste) 차단 + 다른 핸들러로 bubble되어 중복 처리되는 것 차단
+    e.preventDefault()
+    e.stopPropagation()
+    addFiles(normalized)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim()) return
+    if (!title.trim() || !hasMeaningfulContent(content)) return
 
     setSubmitting(true)
     setError(null)
@@ -358,15 +394,13 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
             />
           </div>
 
-          {/* 내용 */}
+          {/* 내용 (TipTap 기반 리치 에디터 — 이미지 인라인 삽입 지원) */}
           <div>
             <label className="block text-sm font-medium text-at-text-secondary mb-1">내용</label>
-            <textarea
+            <CommunityRichEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="내용을 입력하세요. 캡쳐한 이미지를 바로 붙여넣기(Ctrl/Cmd+V)할 수 있습니다."
-              rows={12}
-              className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent resize-y"
+              onChange={setContent}
+              profileId={profileId}
             />
           </div>
 
@@ -529,7 +563,7 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
 
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">취소</Button>
-            <Button type="submit" disabled={!title.trim() || !content.trim() || submitting} className="flex-1">
+            <Button type="submit" disabled={!title.trim() || !hasMeaningfulContent(content) || submitting} className="flex-1">
               {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {editingPost ? '수정하기' : '작성하기'}
             </Button>
