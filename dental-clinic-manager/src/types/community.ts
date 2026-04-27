@@ -78,6 +78,7 @@ export interface CommunityComment {
   parent_id?: string
   content: string
   is_blinded: boolean
+  is_master_only: boolean
   like_count: number
   created_at: string
   updated_at: string
