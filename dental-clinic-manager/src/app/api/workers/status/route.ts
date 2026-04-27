@@ -8,6 +8,21 @@ let cachedReleaseDate: string | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL = 5 * 60 * 1000;
 
+// semver 순서 비교: a > b 이면 양수, 같으면 0, a < b 이면 음수.
+// pre-release/build 메타데이터는 무시하고 숫자 부분만 비교한다.
+function compareSemver(a: string, b: string): number {
+  const norm = (v: string) => v.replace(/^v/, '').split(/[-+]/)[0];
+  const pa = norm(a).split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = norm(b).split('.').map((n) => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const x = pa[i] ?? 0;
+    const y = pb[i] ?? 0;
+    if (x !== y) return x - y;
+  }
+  return 0;
+}
+
 async function getLatestWorkerInfo(): Promise<{ version: string | null; releaseDate: string | null }> {
   if (cachedLatestVersion && Date.now() - cacheTimestamp < CACHE_TTL) {
     return { version: cachedLatestVersion, releaseDate: cachedReleaseDate };
@@ -128,7 +143,7 @@ export async function GET(request: NextRequest) {
       }
 
       const { version: latestVersion, releaseDate: latestReleaseDate } = await getLatestWorkerInfo();
-      const updateAvailable = !!(currentVersion && latestVersion && currentVersion !== latestVersion);
+      const updateAvailable = !!(currentVersion && latestVersion && compareSemver(latestVersion, currentVersion) > 0);
 
       result.marketing = { installed, online, currentVersion, latestVersion, updateAvailable, updateStatus, latestReleaseDate };
     }
