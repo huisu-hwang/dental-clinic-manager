@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Loader2, Calendar, TrendingUp, AlertTriangle, BarChart3 } from 'lucide-react';
 import {
@@ -21,9 +21,6 @@ import {
   type EventImpactResult,
 } from '@/lib/statistics/eventImpact';
 import { cn } from '@/lib/utils';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface Announcement {
   id: string;
@@ -61,13 +58,8 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
     const loadAnnouncements = async () => {
       try {
         setLoadingAnnouncements(true);
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (!token) {
-          setError('로그인이 필요합니다');
-          return;
-        }
+        const supabase = createClient();
+        if (!supabase) return;
 
         const { data, error: fetchError } = await supabase
           .from('announcements')
@@ -118,12 +110,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
         .toISOString()
         .slice(0, 10);
 
-      // 인증 토큰
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      // API 호출
+      // API 호출 (쿠키 기반 인증 - same-origin이므로 자동 전송)
       const apiPath =
         metric === 'sales'
           ? '/api/event-impact/sales'
@@ -131,7 +118,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
 
       const response = await fetch(
         `${apiPath}?start_date=${startDate}&end_date=${endDate}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { credentials: 'include' }
       );
       const json = await response.json();
 
