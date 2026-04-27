@@ -1,7 +1,7 @@
 // Service Worker for PWA install & auto-update support
 // 배포마다 이 파일의 내용이 변경되어야 브라우저가 업데이트를 감지함
 // SW_VERSION은 빌드 스크립트(prebuild)에서 자동 갱신됨
-const SW_VERSION = 'v1777310314010'
+const SW_VERSION = 'v1777093279291'
 
 // 캐시 이름 (버전별)
 const CACHE_NAME = `clinic-manager-${SW_VERSION}`

@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import {
   ArrowLeft,
-  Calendar,
   Eye,
   Download,
   Pencil,
@@ -17,7 +16,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { Document } from '@/types/bulletin'
-import { DOCUMENT_CATEGORY_LABELS } from '@/types/bulletin'
+import { DOCUMENT_CATEGORY_LABELS, normalizeDocumentAttachments } from '@/types/bulletin'
+import { documentService } from '@/lib/bulletinService'
 import ShareDialog from '@/components/shared/ShareDialog'
 import { sanitizeHtml } from '@/utils/sanitize'
 
@@ -37,6 +37,14 @@ export default function DocumentDetail({
   onDownload,
 }: DocumentDetailProps) {
   const [showShareDialog, setShowShareDialog] = useState(false)
+  const attachments = normalizeDocumentAttachments(document)
+  const hasAttachments = attachments.length > 0
+
+  const handleDownloadAttachment = async (url: string) => {
+    await documentService.incrementDownloadCount(document.id)
+    window.open(url, '_blank')
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR', {
       year: 'numeric',
@@ -103,7 +111,7 @@ export default function DocumentDetail({
     }
   }
 
-  const fileType = getFileType(document.file_name)
+  const previewableAttachments = attachments.filter(a => canPreview(a.name))
 
   return (
     <div className="space-y-6">
@@ -139,14 +147,14 @@ export default function DocumentDetail({
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />{document.view_count}
               </span>
-              {document.file_name && (
+              {hasAttachments && (
                 <span className="flex items-center gap-1">
                   <Download className="w-3 h-3" />{document.download_count}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-1">
-              {document.file_url && onDownload && (
+              {hasAttachments && onDownload && (
                 <Button variant="ghost" size="sm" onClick={onDownload} className="text-at-text-weak hover:text-at-accent">
                   <Download className="w-3.5 h-3.5 mr-1" />다운로드
                 </Button>
@@ -168,73 +176,89 @@ export default function DocumentDetail({
           </div>
 
           {/* 첨부파일 정보 */}
-          {document.file_name && (
+          {hasAttachments && (
             <div className="mt-4 p-3 bg-at-surface-alt rounded-xl">
-              <div className="flex items-center gap-2 text-at-text-secondary">
-                {getFileIcon(document.file_name)}
-                <span className="font-medium">첨부파일</span>
+              <div className="flex items-center gap-2 text-at-text-secondary mb-2">
+                <FileText className="w-4 h-4" />
+                <span className="font-medium">첨부파일 ({attachments.length}개)</span>
               </div>
-              <div className="mt-2 flex items-center gap-3">
-                <span className="text-sm text-at-text-secondary">{document.file_name}</span>
-                {document.file_size && (
-                  <span className="text-xs text-at-text-weak">({formatFileSize(document.file_size)})</span>
-                )}
-                {document.file_url && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={onDownload}
-                      className="text-at-accent hover:text-at-accent"
-                    >
-                      다운로드
-                    </Button>
-                    {canPreview(document.file_name) && (
-                      <a
-                        href={document.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-at-text-weak hover:text-at-text-secondary flex items-center gap-1"
+              <ul className="divide-y divide-at-border">
+                {attachments.map((att, idx) => (
+                  <li key={`${att.url}-${idx}`} className="py-2 flex items-center gap-3">
+                    {getFileIcon(att.name)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-at-text-secondary truncate">{att.name}</p>
+                      {att.size > 0 && (
+                        <p className="text-xs text-at-text-weak">{formatFileSize(att.size)}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => handleDownloadAttachment(att.url)}
+                        className="text-at-accent hover:text-at-accent"
                       >
-                        <ExternalLink className="w-3 h-3" />
-                        새 탭에서 열기
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
+                        다운로드
+                      </Button>
+                      {canPreview(att.name) && (
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-at-text-weak hover:text-at-text-secondary flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          새 탭
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
 
         {/* 파일 미리보기 영역 */}
-        {document.file_url && canPreview(document.file_name) && (
+        {previewableAttachments.length > 0 && (
           <div className="border-b border-at-border">
             <div className="p-3 bg-at-surface-alt border-b border-at-border">
               <p className="text-sm text-at-text-secondary font-medium flex items-center gap-2">
-                {getFileIcon(document.file_name)}
+                <FileText className="w-4 h-4" />
                 파일 미리보기
               </p>
             </div>
-            <div className="p-4 bg-at-surface-alt">
-              {fileType === 'image' && (
-                <div className="flex justify-center">
-                  <img
-                    src={document.file_url}
-                    alt={document.file_name || document.title}
-                    className="max-w-full max-h-[600px] object-contain rounded-xl shadow-at-card"
-                  />
-                </div>
-              )}
-              {fileType === 'pdf' && (
-                <div className="bg-white rounded-xl overflow-hidden shadow-at-card">
-                  <iframe
-                    src={document.file_url}
-                    className="w-full h-[600px] border-0"
-                    title="PDF 미리보기"
-                  />
-                </div>
-              )}
+            <div className="p-4 bg-at-surface-alt space-y-4">
+              {previewableAttachments.map((att, idx) => {
+                const type = getFileType(att.name)
+                return (
+                  <div key={`preview-${att.url}-${idx}`} className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-at-text-weak">
+                      {getFileIcon(att.name)}
+                      <span className="truncate">{att.name}</span>
+                    </div>
+                    {type === 'image' && (
+                      <div className="flex justify-center">
+                        <img
+                          src={att.url}
+                          alt={att.name}
+                          className="max-w-full max-h-[600px] object-contain rounded-xl shadow-at-card"
+                        />
+                      </div>
+                    )}
+                    {type === 'pdf' && (
+                      <div className="bg-white rounded-xl overflow-hidden shadow-at-card">
+                        <iframe
+                          src={att.url}
+                          className="w-full h-[600px] border-0"
+                          title={`PDF 미리보기: ${att.name}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -250,7 +274,7 @@ export default function DocumentDetail({
         )}
 
         {/* 본문도 파일도 없는 경우 */}
-        {!document.content && !document.file_url && (
+        {!document.content && !hasAttachments && (
           <div className="p-4 sm:p-6 text-center text-at-text-weak">
             <FileText className="w-12 h-12 mx-auto text-at-text-weak mb-2" />
             <p>등록된 내용이 없습니다.</p>

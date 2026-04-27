@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { documentService } from '@/lib/bulletinService'
 import type { Document, DocumentCategory } from '@/types/bulletin'
-import { DOCUMENT_CATEGORY_LABELS } from '@/types/bulletin'
+import { DOCUMENT_CATEGORY_LABELS, normalizeDocumentAttachments } from '@/types/bulletin'
 import DocumentDetail from './DocumentDetail'
 import DocumentForm from './DocumentForm'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
@@ -276,7 +276,11 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
             </div>
             {/* 목록 */}
             <div className="divide-y divide-at-border">
-              {documents.map((document) => (
+              {documents.map((document) => {
+                const docAttachments = normalizeDocumentAttachments(document)
+                const attachmentCount = docAttachments.length
+                const firstAttachment = docAttachments[0]
+                return (
                 <div
                   key={document.id}
                   onClick={() => handleDocumentClick(document)}
@@ -295,10 +299,18 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                     <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${getCategoryBadgeColor(document.category)}`}>
                       {DOCUMENT_CATEGORY_LABELS[document.category]}
                     </span>
-                    {document.file_name && (
-                      <span className="flex-shrink-0">{getFileIcon(document.file_name)}</span>
+                    {firstAttachment && (
+                      <span className="flex-shrink-0">{getFileIcon(firstAttachment.name)}</span>
                     )}
                     <span className="text-sm text-at-text truncate">{document.title}</span>
+                    {attachmentCount > 1 && (
+                      <span
+                        className="flex-shrink-0 ml-1 px-1.5 py-0.5 text-[10px] font-medium bg-at-tag text-at-accent rounded"
+                        title={`첨부 ${attachmentCount}개`}
+                      >
+                        +{attachmentCount - 1}
+                      </span>
+                    )}
                     {(() => {
                       const created = new Date(document.created_at)
                       const now = new Date()
@@ -320,21 +332,22 @@ export default function DocumentList({ canCreate = false }: DocumentListProps) {
                   </div>
                   {/* 다운로드 */}
                   <div className="hidden sm:block w-10 flex-shrink-0 text-center">
-                    {document.file_url && (
+                    {firstAttachment && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDownload(document)
                         }}
                         className="p-1 rounded hover:bg-at-border transition-colors text-at-text-weak hover:text-at-text-secondary"
-                        title="다운로드"
+                        title={attachmentCount > 1 ? `첨부 ${attachmentCount}개 - 첫 번째 파일 다운로드` : '다운로드'}
                       >
                         <Download className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
