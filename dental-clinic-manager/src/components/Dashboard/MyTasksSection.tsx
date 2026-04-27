@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   ClipboardList,
   RefreshCw,
@@ -14,12 +15,24 @@ import {
   Flag,
   Loader2,
   Inbox,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { taskService, recurringTaskTemplateService } from '@/lib/bulletinService'
 import type { Task, TaskStatus, TaskPriority } from '@/types/bulletin'
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from '@/types/bulletin'
-import { appAlert } from '@/components/ui/AppDialog'
+import { appAlert, appConfirm } from '@/components/ui/AppDialog'
+
+// TipTap 에디터 등 무거운 의존성을 대시보드 초기 번들에 포함시키지 않기 위해 동적 로드
+const TaskForm = dynamic(() => import('@/components/Bulletin/TaskForm'), {
+  ssr: false,
+  loading: () => (
+    <div className="py-12 flex items-center justify-center">
+      <Loader2 className="w-5 h-5 animate-spin text-at-accent" />
+    </div>
+  ),
+})
 
 const ADMIN_ROLES = ['master_admin', 'owner', 'vice_director', 'manager', 'team_leader']
 
@@ -71,6 +84,7 @@ export default function MyTasksSection() {
   const { user } = useAuth()
   const router = useRouter()
   const isAdmin = !!(user?.role && ADMIN_ROLES.includes(user.role))
+  const isOwner = user?.role === 'owner'
 
   const [tab, setTab] = useState<DashboardTab>('toMe')
   const [assignedToMe, setAssignedToMe] = useState<Task[]>([])
@@ -78,6 +92,8 @@ export default function MyTasksSection() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [actionTaskId, setActionTaskId] = useState<string | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
 
   const load = useCallback(
     async (initial: boolean) => {
@@ -153,6 +169,33 @@ export default function MyTasksSection() {
 
   const openDetail = (task: Task) => {
     router.push(`/dashboard/tasks?taskId=${task.id}`)
+  }
+
+  const handleDelete = async (task: Task) => {
+    const confirmed = await appConfirm({
+      title: '업무 삭제',
+      description: `"${task.title}" 업무를 삭제하시겠습니까?\n삭제된 업무는 복구할 수 없습니다.`,
+      variant: 'destructive',
+      confirmText: '삭제',
+      cancelText: '취소',
+    })
+    if (!confirmed) return
+
+    setDeletingTaskId(task.id)
+    const prevToMe = assignedToMe
+    const prevByMe = assignedByMe
+    // Optimistic remove
+    setAssignedToMe((prev) => prev.filter((t) => t.id !== task.id))
+    setAssignedByMe((prev) => prev.filter((t) => t.id !== task.id))
+
+    const { success, error } = await taskService.deleteTask(task.id)
+    setDeletingTaskId(null)
+    if (!success) {
+      // 롤백
+      setAssignedToMe(prevToMe)
+      setAssignedByMe(prevByMe)
+      await appAlert(`삭제에 실패했습니다: ${error}`)
+    }
   }
 
   const renderActions = (task: Task) => {
@@ -255,15 +298,28 @@ export default function MyTasksSection() {
             </span>
           )}
         </h3>
-        <button
-          type="button"
-          onClick={() => load(false)}
-          disabled={refreshing || loading}
-          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-at-text-secondary hover:text-at-text bg-at-surface-alt hover:bg-at-surface-hover border border-at-border rounded-lg transition-colors disabled:opacity-50"
-          title="새로고침"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-at-accent hover:bg-at-accent/90 rounded-lg transition-colors"
+              title="업무 추가"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">추가</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => load(false)}
+            disabled={refreshing || loading}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-at-text-secondary hover:text-at-text bg-at-surface-alt hover:bg-at-surface-hover border border-at-border rounded-lg transition-colors disabled:opacity-50"
+            title="새로고침"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* 관리자 탭 */}
@@ -384,11 +440,55 @@ export default function MyTasksSection() {
                   </div>
 
                   {/* 액션 */}
-                  <div className="flex-shrink-0">{renderActions(task)}</div>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    {renderActions(task)}
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(task)
+                        }}
+                        disabled={deletingTaskId === task.id}
+                        className="inline-flex items-center justify-center w-7 h-7 text-at-text-weak hover:text-at-error hover:bg-at-error-bg rounded-lg transition-colors disabled:opacity-50"
+                        title="업무 삭제"
+                        aria-label="업무 삭제"
+                      >
+                        {deletingTaskId === task.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* 업무 추가 모달 (대표원장 전용) */}
+      {isOwner && isCreateOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto"
+          onClick={() => setIsCreateOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-2xl w-full my-8 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TaskForm
+              onSubmit={() => {
+                setIsCreateOpen(false)
+                load(false)
+              }}
+              onCancel={() => setIsCreateOpen(false)}
+            />
+          </div>
         </div>
       )}
     </div>
