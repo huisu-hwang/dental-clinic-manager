@@ -103,7 +103,26 @@ interface CrawledArticle {
 
 export default function DashboardHome() {
   const { user } = useAuth()
-  const today = new Date().toISOString().split('T')[0]
+
+  // 현재 시각 (1분마다 갱신) — 자정 롤오버 시 today 자동 갱신용
+  const [currentTime, setCurrentTime] = useState(new Date())
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // 오늘 날짜 (Asia/Seoul 기준 YYYY-MM-DD). UTC 기반 toISOString은
+  // 한국 자정~오전 9시 사이에 어제 날짜를 반환하므로 사용 금지.
+  const today = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(currentTime),
+    [currentTime]
+  )
 
   // 일일 보고서 데이터
   const { dailyReports, consultLogs, giftLogs, loading: dataLoading } = useSupabaseData(user?.clinic_id ?? null)
@@ -383,12 +402,6 @@ export default function DashboardHome() {
       weekday: 'long'
     })
   }
-
-  const [currentTime, setCurrentTime] = useState(new Date())
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000)
-    return () => clearInterval(timer)
-  }, [])
 
   // 인라인 확장 패널 상태
   const [todayActivePanel, setTodayActivePanel] = useState<'consult' | 'recall' | 'gift' | null>(null)
