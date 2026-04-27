@@ -364,7 +364,6 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              onPaste={handlePaste}
               placeholder="내용을 입력하세요. 캡쳐한 이미지를 바로 붙여넣기(Ctrl/Cmd+V)할 수 있습니다."
               rows={12}
               className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent resize-y"
