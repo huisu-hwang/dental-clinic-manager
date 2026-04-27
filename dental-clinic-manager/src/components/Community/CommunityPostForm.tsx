@@ -213,34 +213,54 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
   }
 
   // 클립보드 paste — 캡쳐한 이미지 자동 첨부
+  // textarea와 form 양쪽에 부착: textarea native paste가 일부 브라우저에서
+  // form까지 bubble되지 않는 케이스 대비. file을 발견했을 때만 stopPropagation으로
+  // 같은 이벤트가 두 핸들러에서 중복 처리되지 않도록 차단.
   const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items || items.length === 0) return
+    // ClipboardEvent.clipboardData는 SyntheticEvent에서 native object를 그대로 노출
+    const clipboardData = e.clipboardData || (e.nativeEvent as ClipboardEvent | undefined)?.clipboardData
+    if (!clipboardData) return
+
+    const items = clipboardData.items
+    const filesFromList = clipboardData.files
     const pastedFiles: File[] = []
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      if (item.kind === 'file') {
-        const file = item.getAsFile()
-        if (file) {
-          // 클립보드 이미지 파일명이 없는 경우 보강
-          if (!file.name || file.name === 'image.png' || file.name === '') {
-            const ext = inferExtensionFromType(file.type || 'image/png')
-            const renamed = new File(
-              [file],
-              `pasted_${Date.now()}.${ext}`,
-              { type: file.type || 'image/png' }
-            )
-            pastedFiles.push(renamed)
-          } else {
-            pastedFiles.push(file)
-          }
+
+    // 1순위: items에서 kind === 'file' 추출 (가장 표준)
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.kind === 'file') {
+          const file = item.getAsFile()
+          if (file) pastedFiles.push(file)
         }
       }
     }
-    if (pastedFiles.length > 0) {
-      e.preventDefault()
-      addFiles(pastedFiles)
+
+    // 2순위: items가 비어있거나 file이 없으면 files 컬렉션 직접 확인 (Safari/구형 호환)
+    if (pastedFiles.length === 0 && filesFromList && filesFromList.length > 0) {
+      for (let i = 0; i < filesFromList.length; i++) {
+        const file = filesFromList.item(i)
+        if (file) pastedFiles.push(file)
+      }
     }
+
+    if (pastedFiles.length === 0) return
+
+    // 캡쳐 이미지처럼 파일명이 없는 경우 보강
+    const normalized = pastedFiles.map((file) => {
+      if (!file.name || file.name === 'image.png' || file.name === '') {
+        const ext = inferExtensionFromType(file.type || 'image/png')
+        return new File([file], `pasted_${Date.now()}.${ext}`, {
+          type: file.type || 'image/png',
+        })
+      }
+      return file
+    })
+
+    // 파일 paste 확정 → default(텍스트 paste) 차단 + 다른 핸들러로 bubble되어 중복 처리되는 것 차단
+    e.preventDefault()
+    e.stopPropagation()
+    addFiles(normalized)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -364,6 +384,7 @@ export default function CommunityPostForm({ profileId, editingPost, categories, 
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              onPaste={handlePaste}
               placeholder="내용을 입력하세요. 캡쳐한 이미지를 바로 붙여넣기(Ctrl/Cmd+V)할 수 있습니다."
               rows={12}
               className="w-full border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent resize-y"
