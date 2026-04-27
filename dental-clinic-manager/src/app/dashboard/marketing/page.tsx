@@ -457,7 +457,10 @@ function PostEditModal({
   const [editingClinicalImage, setEditingClinicalImage] = useState<{ id: string; file?: File | null; previewUrl: string; imageIndex: number } | null>(null)
   const [currentImages, setCurrentImages] = useState(content?.generatedImages || post.generated_images || undefined)
   const statusInfo = STATUS_LABELS[post.status] || STATUS_LABELS.review
-  const canPublish = content?.body && !['published', 'publishing'].includes(post.status)
+  // 발행 중인 글만 차단. 'published' 상태도 재발행 허용 (사용자 확인 필요)
+  const canPublish = content?.body && post.status !== 'publishing'
+  const isAlreadyPublished = post.status === 'published'
+  const previousBlogUrl = post.published_urls?.naverBlog
 
   const handleImageEdit = useCallback((imageIndex: number, currentImage: { fileName: string; prompt: string; path: string }) => {
     // 임상글: ClinicalPhotoEditor로 편집 (File 없이 URL로 로드)
@@ -582,11 +585,32 @@ function PostEditModal({
   }
 
   const handlePublishNow = () => {
+    // 이미 발행된 글이면 사용자 확인 (기존 발행 URL이 새 URL로 대체됨)
+    if (isAlreadyPublished) {
+      const confirmed = window.confirm(
+        '이미 발행된 글입니다. 다시 발행하시겠습니까?\n\n' +
+        (previousBlogUrl ? `기존 발행 URL:\n${previousBlogUrl}\n\n` : '') +
+        '새로 발행되면 별도의 새 글로 네이버 블로그에 게시되며, 기존 발행 URL 정보는 새 URL로 대체됩니다.'
+      )
+      if (!confirmed) return
+    }
     // KST 기준 날짜/시간 계산 (worker-api/poll이 KST로 비교하므로 일치시킴)
     const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
     const today = kst.toISOString().split('T')[0]
     const now = kst.toISOString().split('T')[1].slice(0, 5)
     handlePublish(today, now, true)
+  }
+
+  const handleScheduleConfirm = (date: string, time: string) => {
+    if (isAlreadyPublished) {
+      const confirmed = window.confirm(
+        '이미 발행된 글입니다. 다시 예약 발행하시겠습니까?\n\n' +
+        (previousBlogUrl ? `기존 발행 URL:\n${previousBlogUrl}\n\n` : '') +
+        '예약 시각이 되면 별도의 새 글로 네이버 블로그에 게시됩니다.'
+      )
+      if (!confirmed) return
+    }
+    handlePublish(date, time, false)
   }
 
   return (
@@ -673,14 +697,14 @@ function PostEditModal({
                   disabled={isPublishing}
                   className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
                 >
-                  {isPublishing ? '발행 중...' : '바로 발행'}
+                  {isPublishing ? '발행 중...' : isAlreadyPublished ? '다시 발행' : '바로 발행'}
                 </button>
                 <button
                   onClick={() => setShowScheduleModal(true)}
                   disabled={isPublishing}
                   className="px-4 py-2 text-sm bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
                 >
-                  예약 발행
+                  {isAlreadyPublished ? '다시 예약 발행' : '예약 발행'}
                 </button>
               </>
             )}
@@ -706,7 +730,7 @@ function PostEditModal({
         <ScheduleModal
           isOpen={showScheduleModal}
           onClose={() => setShowScheduleModal(false)}
-          onConfirm={(date, time) => handlePublish(date, time, false)}
+          onConfirm={handleScheduleConfirm}
           isLoading={isPublishing}
         />
 
