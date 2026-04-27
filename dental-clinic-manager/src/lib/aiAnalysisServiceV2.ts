@@ -7,6 +7,7 @@ import type {
   FileAttachment,
 } from '@/types/aiAnalysis';
 import { buildFileContext } from '@/lib/fileParsingUtils';
+import { welchTTest, splitByEvent } from '@/lib/statistics/eventImpact';
 
 // 데이터베이스 스키마 정의 (AI가 이해할 수 있는 형태) - 실제 DB 마이그레이션과 일치
 const DATABASE_SCHEMA = {
@@ -482,6 +483,28 @@ const geminiTools = [
         name: 'aggregate_data',
         description: '테이블 데이터를 집계합니다 (합계, 평균, 개수 등).',
         parameters: aggregateDataParams,
+      },
+      {
+        name: 'analyze_event_impact',
+        description: '특정 이벤트(공지사항)가 매출 또는 신환 수에 통계적으로 유의미한 영향을 미쳤는지 Welch\'s t-test로 검증합니다. 이벤트 전/후 N일간 일별 데이터를 비교하여 평균 변화율, p-value, 유의성 결론을 반환합니다.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            announcement_id: {
+              type: Type.STRING,
+              description: 'announcements 테이블의 이벤트 ID (UUID). 이벤트 시작일은 announcements.start_date에서 자동 조회됨.',
+            },
+            metric: {
+              type: Type.STRING,
+              description: "분석 지표: 'sales' (DentWeb 일별 매출) 또는 'new_patients' (dentweb_patients 등록 기준 신환 수)",
+            },
+            window_days: {
+              type: Type.NUMBER,
+              description: '비교 기간 (이벤트 전/후 각 N일). 기본 14일, 권장 7~30일.',
+            },
+          },
+          required: ['announcement_id', 'metric'],
+        },
       },
     ],
   },
@@ -1003,6 +1026,16 @@ ${tableList}
 - 수치 데이터는 명확하게 표시합니다.
 - 분석 결과와 함께 의미있는 인사이트를 제공합니다.
 
+## 이벤트 효과 분석 도구
+analyze_event_impact 도구로 특정 공지사항(이벤트)이 매출/신환에 영향을 미쳤는지 통계 검증할 수 있습니다.
+- 사용자가 "X 이벤트가 매출에 영향 줬어?"같이 물으면:
+  1. announcements 테이블에서 관련 공지를 query_table로 찾기 (announcement_id를 모르면 반드시 먼저 조회)
+  2. 찾은 공지의 id를 analyze_event_impact에 전달
+  3. 결과의 conclusion, pValue, changeRate를 자연어로 설명
+- metric: 'sales' (매출) 또는 'new_patients' (신환)
+- window_days: 비교 기간 (기본 14일)
+- 결과 해석: pValue < 0.05면 통계적으로 유의함. 단, 인과관계는 보장하지 않으므로 외부 요인 언급 권장.
+
 ## 첨부 파일 분석 기능
 사용자가 Excel, CSV, PDF, TXT 파일을 첨부하면 해당 파일의 내용이 [ATTACHED_FILE: 파일명] 형식으로 제공됩니다.
 - 테이블 데이터 (Excel, CSV): 컬럼명, 샘플 데이터(최대 10행), 전체 행 수가 제공됩니다.
@@ -1061,6 +1094,125 @@ ${writableList}
   return prompt;
 }
 
+// 이벤트 영향 분석 (Welch's t-test 기반)
+async function analyzeEventImpact(
+  supabase: SupabaseClient,
+  clinicId: string,
+  params: {
+    announcement_id: string;
+    metric: 'sales' | 'new_patients';
+    window_days?: number;
+  }
+): Promise<string> {
+  try {
+    const { announcement_id, metric, window_days = 14 } = params;
+
+    // 1. 이벤트(공지사항) 조회
+    const { data: event, error: eventError } = await supabase
+      .from('announcements')
+      .select('id, title, start_date, end_date')
+      .eq('id', announcement_id)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    if (eventError || !event) {
+      return JSON.stringify({ error: `공지사항을 찾을 수 없습니다: ${announcement_id}` });
+    }
+    if (!event.start_date) {
+      return JSON.stringify({ error: '공지사항에 시작일(start_date)이 설정되어 있지 않습니다.' });
+    }
+
+    const eventDate = event.start_date;
+    const eventTs = new Date(eventDate).getTime();
+    const startDate = new Date(eventTs - window_days * 24 * 60 * 60 * 1000)
+      .toISOString().slice(0, 10);
+    const endDate = new Date(eventTs + window_days * 24 * 60 * 60 * 1000)
+      .toISOString().slice(0, 10);
+
+    // 2. 메트릭별 데이터 조회
+    let dailyData: Array<{ date: string; value: number }> = [];
+
+    if (metric === 'sales') {
+      // DentWeb 프록시로 일별 매출 조회 (executeDentwebQuery 함수 재사용)
+      const startYYYYMMDD = startDate.replace(/-/g, '');
+      const endYYYYMMDD = endDate.replace(/-/g, '');
+      const sqlQuery = `
+        SELECT
+          sz진료일 AS day,
+          SUM(COALESCE(n공단부담금, 0) + COALESCE(n본인부담금, 0) + COALESCE(n비급여진료비, 0)) AS total
+        FROM TB_진료비내역
+        WHERE sz진료일 >= '${startYYYYMMDD}' AND sz진료일 <= '${endYYYYMMDD}'
+        GROUP BY sz진료일
+        ORDER BY sz진료일
+      `.trim();
+
+      const dentwebResultStr = await executeDentwebQuery(supabase, clinicId, 'read', sqlQuery);
+      const dentwebResult = JSON.parse(dentwebResultStr);
+
+      if (dentwebResult.error) {
+        return JSON.stringify({
+          error: `DentWeb 매출 조회 실패: ${dentwebResult.error}. 원내 PC가 켜져 있고 브릿지 에이전트가 실행 중인지 확인하세요.`,
+        });
+      }
+
+      const rows = (dentwebResult.data as Array<{ day: string; total: number }>) || [];
+      dailyData = rows.map(r => ({
+        date: `${r.day.slice(0, 4)}-${r.day.slice(4, 6)}-${r.day.slice(6, 8)}`,
+        value: Number(r.total) || 0,
+      }));
+    } else if (metric === 'new_patients') {
+      // dentweb_patients.registration_date 기반 일별 신환 집계
+      const { data: patients, error: patientsError } = await supabase
+        .from('dentweb_patients')
+        .select('registration_date')
+        .eq('clinic_id', clinicId)
+        .gte('registration_date', startDate)
+        .lte('registration_date', endDate)
+        .not('registration_date', 'is', null);
+
+      if (patientsError) {
+        return JSON.stringify({ error: `신환 데이터 조회 실패: ${patientsError.message}` });
+      }
+
+      const counts = new Map<string, number>();
+      for (const p of patients || []) {
+        if (!p.registration_date) continue;
+        const dateStr = p.registration_date.slice(0, 10);
+        counts.set(dateStr, (counts.get(dateStr) || 0) + 1);
+      }
+
+      // 누락된 날짜는 0으로 채움
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().slice(0, 10);
+        dailyData.push({ date: dateStr, value: counts.get(dateStr) || 0 });
+      }
+    } else {
+      return JSON.stringify({ error: `지원되지 않는 metric: ${metric}` });
+    }
+
+    // 3. 통계 검증
+    const { before, after } = splitByEvent(dailyData, eventDate, window_days);
+    const stats = welchTTest(before, after);
+
+    return JSON.stringify({
+      event: {
+        id: event.id,
+        title: event.title,
+        start_date: event.start_date,
+      },
+      metric,
+      window_days,
+      analysis_period: { start_date: startDate, end_date: endDate },
+      statistics: stats,
+      raw_data_sample: dailyData.slice(0, 5),  // 처음 5개만 (토큰 절약)
+    });
+  } catch (error) {
+    return JSON.stringify({ error: `이벤트 영향 분석 오류: ${String(error)}` });
+  }
+}
+
 // 도구 호출 처리
 async function processToolCall(
   supabase: SupabaseClient,
@@ -1094,6 +1246,13 @@ async function processToolCall(
         clinicId,
         'write',
         args.query as string
+      );
+
+    case 'analyze_event_impact':
+      return await analyzeEventImpact(
+        supabase,
+        clinicId,
+        args as Parameters<typeof analyzeEventImpact>[2]
       );
 
     default:
