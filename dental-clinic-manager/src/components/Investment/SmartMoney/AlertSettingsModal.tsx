@@ -48,6 +48,8 @@ const SIGNAL_GROUPS: SignalGroup[] = [
     items: [
       { value: 'twap-accumulation', label: 'TWAP 매집' },
       { value: 'vwap-accumulation', label: 'VWAP 매집' },
+      { value: 'moo-accumulation', label: 'MOO 매집 (시가 동시호가)' },
+      { value: 'moc-accumulation', label: 'MOC 매집 (종가 동시호가)' },
       { value: 'foreigner-accumulation', label: '외국인 매집' },
       { value: 'institution-accumulation', label: '기관 매집' },
     ],
@@ -57,6 +59,8 @@ const SIGNAL_GROUPS: SignalGroup[] = [
     items: [
       { value: 'twap-distribution', label: 'TWAP 분배' },
       { value: 'vwap-distribution', label: 'VWAP 분배' },
+      { value: 'moo-distribution', label: 'MOO 분배 (시가 동시호가)' },
+      { value: 'moc-distribution', label: 'MOC 분배 (종가 동시호가)' },
       { value: 'foreigner-distribution', label: '외국인 분배' },
       { value: 'institution-distribution', label: '기관 분배' },
     ],

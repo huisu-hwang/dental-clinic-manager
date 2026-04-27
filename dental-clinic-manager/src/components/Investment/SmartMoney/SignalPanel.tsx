@@ -30,7 +30,7 @@ const HELP_TEXT: Record<CardKey, { title: string; body: string }> = {
   },
   algo: {
     title: '알고리즘 풋프린트',
-    body: '대형 기관이 사용하는 실행 알고리즘의 흔적. TWAP(시간분할), VWAP(거래량가중), Iceberg(소량반복), Sniper(타이밍 저격) 패턴이 발견되면 스마트머니 개입 가능성.',
+    body: '대형 기관이 사용하는 실행 알고리즘의 흔적. TWAP(시간분할), VWAP(거래량가중), Iceberg(소량반복), Sniper(타이밍 저격), MOO(시가 동시호가), MOC(종가 동시호가) 패턴 — 특히 MOC는 인덱스/패시브 펀드의 NAV 추종 매매 신호.',
   },
   flow: {
     title: '외국인·기관 수급',
@@ -117,6 +117,8 @@ export function SignalPanel({ analysis }: Props) {
     { label: 'VWAP', score: algoFootprint.vwapScore },
     { label: 'Iceberg', score: algoFootprint.icebergScore },
     { label: 'Sniper', score: algoFootprint.sniperScore },
+    { label: 'MOO', score: algoFootprint.mooScore },
+    { label: 'MOC', score: algoFootprint.mocScore },
   ]
   const algoDirColor =
     algoFootprint.direction === 'accumulation'

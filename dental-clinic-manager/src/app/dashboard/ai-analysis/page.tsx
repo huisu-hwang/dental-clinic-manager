@@ -1,15 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import AIChat from '@/components/AIAnalysis/AIChat';
-import { AlertCircle, Lock } from 'lucide-react';
+import EventImpactAnalysis from '@/components/AIAnalysis/EventImpactAnalysis';
+import { AlertCircle, Lock, MessageSquare, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
+
+type TabKey = 'chat' | 'event-impact';
 
 export default function AIAnalysisPage() {
   const { user, loading: authLoading } = useAuth();
   const { hasPermission, isLoading: permLoading } = usePermissions();
+  const [activeTab, setActiveTab] = useState<TabKey>('chat');
 
   // 로딩 중
   if (authLoading || permLoading) {
@@ -91,7 +97,42 @@ export default function AIAnalysisPage() {
 
   return (
     <div className="bg-white h-[calc(100vh-56px)] flex flex-col">
-      <AIChat clinicId={user.clinic_id} />
+      {/* 서브탭 헤더 */}
+      <div className="flex border-b border-at-border bg-white px-6">
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2',
+            activeTab === 'chat'
+              ? 'border-at-accent text-at-accent'
+              : 'border-transparent text-at-text-weak hover:text-at-text'
+          )}
+        >
+          <MessageSquare className="w-4 h-4" />
+          AI 채팅
+        </button>
+        <button
+          onClick={() => setActiveTab('event-impact')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2',
+            activeTab === 'event-impact'
+              ? 'border-at-accent text-at-accent'
+              : 'border-transparent text-at-text-weak hover:text-at-text'
+          )}
+        >
+          <BarChart3 className="w-4 h-4" />
+          이벤트 효과 분석
+        </button>
+      </div>
+
+      {/* 탭 컨텐츠 */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'chat' ? (
+          <AIChat clinicId={user.clinic_id} />
+        ) : (
+          <EventImpactAnalysis clinicId={user.clinic_id} />
+        )}
+      </div>
     </div>
   );
 }

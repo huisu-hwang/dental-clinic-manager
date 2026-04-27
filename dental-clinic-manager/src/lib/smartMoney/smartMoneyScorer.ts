@@ -147,6 +147,8 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
         case 'VWAP': return algoFootprint.vwapScore
         case 'Iceberg': return algoFootprint.icebergScore
         case 'Sniper': return algoFootprint.sniperScore
+        case 'MOO': return algoFootprint.mooScore
+        case 'MOC': return algoFootprint.mocScore
       }
     })()
     algoComponent = dirSign * (dominantScore / 100) * WEIGHTS.algoFootprint
@@ -155,19 +157,33 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
     const algoSignal: SignalType | null = (() => {
       const isAccum = algoFootprint.direction === 'accumulation'
       const isDist = algoFootprint.direction === 'distribution'
-      if (!isAccum && !isDist) return null
       switch (algoFootprint.dominantAlgo) {
-        case 'TWAP': return isAccum ? 'twap-accumulation' : 'twap-distribution'
-        case 'VWAP': return isAccum ? 'vwap-accumulation' : 'vwap-distribution'
-        case 'Iceberg': return isAccum ? 'iceberg-buy' : 'iceberg-sell'
-        case 'Sniper': return isAccum ? 'sniper-buy' : 'sniper-sell'
+        case 'TWAP': return isAccum ? 'twap-accumulation' : isDist ? 'twap-distribution' : null
+        case 'VWAP': return isAccum ? 'vwap-accumulation' : isDist ? 'vwap-distribution' : null
+        case 'Iceberg': return isAccum ? 'iceberg-buy' : isDist ? 'iceberg-sell' : null
+        case 'Sniper': return isAccum ? 'sniper-buy' : isDist ? 'sniper-sell' : null
+        // MOO/MOC는 detectAuctionFootprint가 직접 산출한 auctionDirection을 우선 사용
+        case 'MOO': {
+          if (algoFootprint.auctionDirection === 'moo-buy') return 'moo-accumulation'
+          if (algoFootprint.auctionDirection === 'moo-sell') return 'moo-distribution'
+          return isAccum ? 'moo-accumulation' : isDist ? 'moo-distribution' : null
+        }
+        case 'MOC': {
+          if (algoFootprint.auctionDirection === 'moc-buy') return 'moc-accumulation'
+          if (algoFootprint.auctionDirection === 'moc-sell') return 'moc-distribution'
+          return isAccum ? 'moc-accumulation' : isDist ? 'moc-distribution' : null
+        }
       }
     })()
     if (algoSignal) {
+      const isAuction = algoFootprint.dominantAlgo === 'MOO' || algoFootprint.dominantAlgo === 'MOC'
+      const desc = isAuction
+        ? `${algoFootprint.dominantAlgo} 동시호가 거래량 집중 (${algoFootprint.auctionDirection ?? algoFootprint.direction})`
+        : `${algoFootprint.dominantAlgo} 풋프린트 감지 (${algoFootprint.direction})`
       signalDetails.push({
         type: algoSignal,
         confidence: clamp(dominantScore, 0, 100),
-        description: `${algoFootprint.dominantAlgo} 풋프린트 감지 (${algoFootprint.direction})`,
+        description: desc,
         triggeredAt,
       })
     }
