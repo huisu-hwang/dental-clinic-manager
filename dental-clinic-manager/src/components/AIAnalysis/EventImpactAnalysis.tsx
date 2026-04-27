@@ -22,12 +22,12 @@ import {
 } from '@/lib/statistics/eventImpact';
 import { cn } from '@/lib/utils';
 
-interface Announcement {
+interface EventCandidate {
+  // source-prefixed unique id (예: "ann:<uuid>" 또는 "note:<uuid>")
   id: string;
+  source: 'announcement' | 'special_note';
   title: string;
-  start_date: string | null;
-  end_date: string | null;
-  category: string;
+  date: string; // YYYY-MM-DD
 }
 
 interface DailyDataPoint {
@@ -42,8 +42,8 @@ interface Props {
 }
 
 export default function EventImpactAnalysis({ clinicId }: Props) {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+  const [events, setEvents] = useState<EventCandidate[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [metric, setMetric] = useState<Metric>('sales');
   const [windowDays, setWindowDays] = useState(14);
@@ -53,34 +53,82 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
   const [chartData, setChartData] = useState<DailyDataPoint[]>([]);
   const [eventDate, setEventDate] = useState<string>('');
 
-  // 공지사항 목록 로드
+  // 공지사항 + 일일 보고서 특이사항을 이벤트 후보로 통합 로드
   useEffect(() => {
-    const loadAnnouncements = async () => {
+    const loadEventCandidates = async () => {
       try {
-        setLoadingAnnouncements(true);
+        setLoadingEvents(true);
         const supabase = createClient();
         if (!supabase) return;
 
-        const { data, error: fetchError } = await supabase
-          .from('announcements')
-          .select('id, title, start_date, end_date, category')
-          .eq('clinic_id', clinicId)
-          .not('start_date', 'is', null)
-          .order('start_date', { ascending: false })
-          .limit(50);
+        const [announcementsRes, notesRes] = await Promise.all([
+          supabase
+            .from('announcements')
+            .select('id, title, start_date')
+            .eq('clinic_id', clinicId)
+            .not('start_date', 'is', null)
+            .order('start_date', { ascending: false })
+            .limit(50),
+          supabase
+            .from('special_notes_history')
+            .select('id, report_date, content')
+            .eq('clinic_id', clinicId)
+            .not('report_date', 'is', null)
+            .not('content', 'is', null)
+            .order('report_date', { ascending: false })
+            .limit(50),
+        ]);
 
-        if (fetchError) {
-          setError(`공지 목록 조회 실패: ${fetchError.message}`);
+        if (announcementsRes.error) {
+          setError(`공지 목록 조회 실패: ${announcementsRes.error.message}`);
           return;
         }
-        setAnnouncements(data || []);
+        if (notesRes.error) {
+          setError(`특이사항 조회 실패: ${notesRes.error.message}`);
+          return;
+        }
+
+        const annRows = (announcementsRes.data || []) as Array<{
+          id: string;
+          title: string;
+          start_date: string | null;
+        }>;
+        const announcements: EventCandidate[] = annRows
+          .filter((a) => a.start_date)
+          .map((a) => ({
+            id: `ann:${a.id}`,
+            source: 'announcement' as const,
+            title: a.title,
+            date: (a.start_date as string).slice(0, 10),
+          }));
+
+        const noteRows = (notesRes.data || []) as Array<{
+          id: string;
+          content: string | null;
+          report_date: string | null;
+        }>;
+        const notes: EventCandidate[] = noteRows
+          .filter((n) => n.content && n.content.trim().length > 0 && n.report_date)
+          .map((n) => ({
+            id: `note:${n.id}`,
+            source: 'special_note' as const,
+            title: (n.content as string).trim().replace(/\s+/g, ' ').slice(0, 60),
+            date: (n.report_date as string).slice(0, 10),
+          }));
+
+        // 날짜 내림차순으로 합치기
+        const merged = [...announcements, ...notes].sort((a, b) =>
+          a.date < b.date ? 1 : -1
+        );
+
+        setEvents(merged);
       } catch (err) {
         setError(String(err));
       } finally {
-        setLoadingAnnouncements(false);
+        setLoadingEvents(false);
       }
     };
-    loadAnnouncements();
+    loadEventCandidates();
   }, [clinicId]);
 
   const handleAnalyze = async () => {
@@ -89,9 +137,9 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
       return;
     }
 
-    const event = announcements.find((a) => a.id === selectedEventId);
-    if (!event || !event.start_date) {
-      setError('이벤트의 시작일이 없습니다');
+    const event = events.find((e) => e.id === selectedEventId);
+    if (!event || !event.date) {
+      setError('이벤트의 날짜가 없습니다');
       return;
     }
 
@@ -101,8 +149,8 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
     setChartData([]);
 
     try {
-      // 분석 기간 = 이벤트 시작일 ± windowDays
-      const eventTs = new Date(event.start_date).getTime();
+      // 분석 기간 = 이벤트 날짜 ± windowDays
+      const eventTs = new Date(event.date).getTime();
       const startDate = new Date(eventTs - windowDays * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 10);
@@ -136,10 +184,10 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
       );
 
       // 통계 계산
-      const { before, after } = splitByEvent(rawData, event.start_date, windowDays);
+      const { before, after } = splitByEvent(rawData, event.date, windowDays);
       const stats = welchTTest(before, after);
 
-      setEventDate(event.start_date);
+      setEventDate(event.date);
       setChartData(rawData);
       setResult(stats);
     } catch (err) {
@@ -187,19 +235,36 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
             <select
               value={selectedEventId}
               onChange={(e) => setSelectedEventId(e.target.value)}
-              disabled={loadingAnnouncements || loading}
+              disabled={loadingEvents || loading}
               className="w-full px-3 py-2 border border-at-border rounded-lg text-sm focus:outline-none focus:border-at-accent"
             >
-              <option value="">-- 공지사항 선택 --</option>
-              {announcements.map((a) => (
-                <option key={a.id} value={a.id}>
-                  [{a.start_date?.slice(0, 10)}] {a.title}
-                </option>
-              ))}
+              <option value="">-- 이벤트 선택 --</option>
+              {events.filter((e) => e.source === 'announcement').length > 0 && (
+                <optgroup label="📢 공지사항">
+                  {events
+                    .filter((e) => e.source === 'announcement')
+                    .map((e) => (
+                      <option key={e.id} value={e.id}>
+                        [{e.date}] {e.title}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+              {events.filter((e) => e.source === 'special_note').length > 0 && (
+                <optgroup label="📝 일일 보고서 특이사항">
+                  {events
+                    .filter((e) => e.source === 'special_note')
+                    .map((e) => (
+                      <option key={e.id} value={e.id}>
+                        [{e.date}] {e.title}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
             </select>
-            {!loadingAnnouncements && announcements.length === 0 && (
+            {!loadingEvents && events.length === 0 && (
               <p className="text-xs text-at-text-weak mt-1">
-                시작일이 설정된 공지사항이 없습니다. 병원 게시판에서 공지를 작성해주세요.
+                이벤트로 사용할 수 있는 공지사항이나 일일 보고서 특이사항이 없습니다.
               </p>
             )}
           </div>
