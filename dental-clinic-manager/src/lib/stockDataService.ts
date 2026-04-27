@@ -220,3 +220,76 @@ function daysBetween(start: string, end: string): number {
   const d2 = new Date(end)
   return Math.ceil((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24))
 }
+
+// ============================================
+// 장중 현재가 조회 (yahoo-finance2 quote)
+// ============================================
+
+export interface CurrentQuote {
+  ticker: string
+  market: Market
+  price: number
+  open?: number
+  high?: number
+  low?: number
+  previousClose?: number
+  marketTime?: string  // ISO
+}
+
+interface YahooQuoteResult {
+  regularMarketPrice?: number | null
+  regularMarketOpen?: number | null
+  regularMarketDayHigh?: number | null
+  regularMarketDayLow?: number | null
+  regularMarketPreviousClose?: number | null
+  regularMarketTime?: Date | number | string | null
+}
+
+/**
+ * 장중 현재가 조회 — yahoo-finance2 quote 사용
+ * KR은 자동으로 .KS/.KQ suffix 처리 (기존 fetchPrices와 동일 규칙)
+ */
+export async function fetchCurrentQuote(ticker: string, market: Market): Promise<CurrentQuote> {
+  const YahooFinance = (await import('yahoo-finance2')).default
+  const yahooFinance = new YahooFinance()
+
+  const trySymbols = market === 'KR' ? [`${ticker}.KS`, `${ticker}.KQ`] : [ticker]
+
+  let q: YahooQuoteResult | null = null
+  let lastError: unknown = null
+  for (const symbol of trySymbols) {
+    try {
+      const result = (await yahooFinance.quote(symbol)) as unknown as YahooQuoteResult
+      if (result && typeof result.regularMarketPrice === 'number') {
+        q = result
+        break
+      }
+    } catch (error) {
+      lastError = error
+      continue
+    }
+  }
+
+  if (!q || typeof q.regularMarketPrice !== 'number') {
+    const errMsg = lastError instanceof Error ? lastError.message : '데이터 없음'
+    throw new Error(`현재가 조회 실패: ${ticker} (${errMsg})`)
+  }
+
+  let marketTimeIso: string | undefined
+  const rawTime = q.regularMarketTime
+  if (rawTime != null) {
+    const d = rawTime instanceof Date ? rawTime : new Date(rawTime)
+    if (!isNaN(d.getTime())) marketTimeIso = d.toISOString()
+  }
+
+  return {
+    ticker,
+    market,
+    price: q.regularMarketPrice,
+    open: typeof q.regularMarketOpen === 'number' ? q.regularMarketOpen : undefined,
+    high: typeof q.regularMarketDayHigh === 'number' ? q.regularMarketDayHigh : undefined,
+    low: typeof q.regularMarketDayLow === 'number' ? q.regularMarketDayLow : undefined,
+    previousClose: typeof q.regularMarketPreviousClose === 'number' ? q.regularMarketPreviousClose : undefined,
+    marketTime: marketTimeIso,
+  }
+}
