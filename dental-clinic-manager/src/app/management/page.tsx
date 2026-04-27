@@ -178,7 +178,7 @@ export default function ManagementPage() {
         `}
       >
         <TabNavigation
-          activeTab="settings"
+          activeTab=""
           onTabChange={handleMainTabChange}
           onItemClick={() => setIsMobileMenuOpen(false)}
           skipAutoRedirect={true}
