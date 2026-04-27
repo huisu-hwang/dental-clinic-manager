@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { Loader2, Calendar, TrendingUp, AlertTriangle, BarChart3 } from 'lucide-react';
+import { Loader2, Calendar, TrendingUp, AlertTriangle, BarChart3, Search } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -41,10 +41,33 @@ interface Props {
   clinicId: string;
 }
 
+// 일일 보고서 특이사항에서 환자 관련 항목을 배제하기 위한 키워드
+// 개별 환자 이슈(컴플레인, 노쇼 등)는 마케팅/병원 차원 이벤트가 아니므로 분석 대상에서 제외
+const PATIENT_RELATED_KEYWORDS = [
+  '환자',
+  '컴플레인',
+  '클레임',
+  '노쇼',
+  '예약취소',
+  '예약 취소',
+  '내원',
+  '진료중',
+  '대기',
+  '컴플',
+  'cx',
+  'c/x',
+];
+
+const isPatientRelated = (text: string): boolean => {
+  const lower = text.toLowerCase();
+  return PATIENT_RELATED_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()));
+};
+
 export default function EventImpactAnalysis({ clinicId }: Props) {
   const [events, setEvents] = useState<EventCandidate[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [metric, setMetric] = useState<Metric>('sales');
   const [windowDays, setWindowDays] = useState(14);
   const [loading, setLoading] = useState(false);
@@ -109,6 +132,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
         }>;
         const notes: EventCandidate[] = noteRows
           .filter((n) => n.content && n.content.trim().length > 0 && n.report_date)
+          .filter((n) => !isPatientRelated(n.content as string))
           .map((n) => ({
             id: `note:${n.id}`,
             source: 'special_note' as const,
@@ -121,7 +145,17 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
           a.date < b.date ? 1 : -1
         );
 
-        setEvents(merged);
+        // (date, title) 기준 중복 제거 - 같은 내용이 여러 보고서에 기록된 경우 1개만 노출
+        const seen = new Set<string>();
+        const deduped: EventCandidate[] = [];
+        for (const ev of merged) {
+          const key = `${ev.date}::${ev.title}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(ev);
+        }
+
+        setEvents(deduped);
       } catch (err) {
         setError(String(err));
       } finally {
@@ -130,6 +164,17 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
     };
     loadEventCandidates();
   }, [clinicId]);
+
+  // 검색어 적용 - 제목 또는 날짜 부분 일치
+  const filteredEvents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return events;
+    return events.filter(
+      (e) => e.title.toLowerCase().includes(q) || e.date.includes(q)
+    );
+  }, [events, searchQuery]);
+
+  const selectedEvent = events.find((e) => e.id === selectedEventId) || null;
 
   const handleAnalyze = async () => {
     if (!selectedEventId) {
@@ -232,36 +277,90 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
               <Calendar className="inline w-4 h-4 mr-1" />
               이벤트 선택
             </label>
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              disabled={loadingEvents || loading}
-              className="w-full px-3 py-2 border border-at-border rounded-lg text-sm focus:outline-none focus:border-at-accent"
-            >
-              <option value="">-- 이벤트 선택 --</option>
-              {events.filter((e) => e.source === 'announcement').length > 0 && (
-                <optgroup label="📢 공지사항">
-                  {events
-                    .filter((e) => e.source === 'announcement')
-                    .map((e) => (
-                      <option key={e.id} value={e.id}>
-                        [{e.date}] {e.title}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-              {events.filter((e) => e.source === 'special_note').length > 0 && (
-                <optgroup label="📝 일일 보고서 특이사항">
-                  {events
-                    .filter((e) => e.source === 'special_note')
-                    .map((e) => (
-                      <option key={e.id} value={e.id}>
-                        [{e.date}] {e.title}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-            </select>
+
+            {/* 검색 입력 */}
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="제목 또는 날짜(YYYY-MM-DD)로 검색..."
+                disabled={loadingEvents || loading}
+                className="w-full pl-9 pr-3 py-2 border border-at-border rounded-lg text-sm focus:outline-none focus:border-at-accent"
+              />
+            </div>
+
+            {/* 검색 결과 리스트 (검색어 입력 시) */}
+            {searchQuery.trim() ? (
+              <div className="border border-at-border rounded-lg max-h-60 overflow-y-auto">
+                {filteredEvents.length === 0 ? (
+                  <div className="p-3 text-sm text-at-text-weak text-center">
+                    검색 결과가 없습니다.
+                  </div>
+                ) : (
+                  filteredEvents.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => setSelectedEventId(e.id)}
+                      className={cn(
+                        'w-full text-left px-3 py-2 text-sm border-b border-at-border last:border-b-0 hover:bg-at-bg-base transition-colors',
+                        selectedEventId === e.id && 'bg-at-accent-light text-at-accent'
+                      )}
+                    >
+                      <span className="text-xs text-at-text-weak mr-2">
+                        {e.source === 'announcement' ? '📢' : '📝'} [{e.date}]
+                      </span>
+                      {e.title}
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : (
+              /* 드롭다운 (검색어 없을 때) */
+              <select
+                value={selectedEventId}
+                onChange={(ev) => setSelectedEventId(ev.target.value)}
+                disabled={loadingEvents || loading}
+                className="w-full px-3 py-2 border border-at-border rounded-lg text-sm focus:outline-none focus:border-at-accent"
+              >
+                <option value="">-- 이벤트 선택 --</option>
+                {events.filter((e) => e.source === 'announcement').length > 0 && (
+                  <optgroup label="📢 공지사항">
+                    {events
+                      .filter((e) => e.source === 'announcement')
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>
+                          [{e.date}] {e.title}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+                {events.filter((e) => e.source === 'special_note').length > 0 && (
+                  <optgroup label="📝 일일 보고서 특이사항">
+                    {events
+                      .filter((e) => e.source === 'special_note')
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>
+                          [{e.date}] {e.title}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </select>
+            )}
+
+            {/* 선택된 이벤트 표시 */}
+            {selectedEvent && (
+              <div className="mt-2 px-3 py-2 bg-at-accent-light/50 border border-at-accent rounded-lg text-sm">
+                <span className="font-medium text-at-accent">선택됨: </span>
+                <span className="text-at-text">
+                  [{selectedEvent.date}] {selectedEvent.title}
+                </span>
+              </div>
+            )}
+
             {!loadingEvents && events.length === 0 && (
               <p className="text-xs text-at-text-weak mt-1">
                 이벤트로 사용할 수 있는 공지사항이나 일일 보고서 특이사항이 없습니다.
