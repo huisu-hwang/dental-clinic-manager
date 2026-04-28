@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/Button'
-import { ChevronLeft, ChevronRight, RefreshCw, FileBarChart2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw, FileBarChart2, Download } from 'lucide-react'
 import type { MonthlyReport } from '@/types/monthlyReport'
 import SummaryCards from './SummaryCards'
 import RevenueTrendChart from './RevenueTrendChart'
@@ -33,6 +33,8 @@ export default function MonthlyReportContainer() {
   const [error, setError] = useState<string | null>(null)
   const [regenerating, setRegenerating] = useState(false)
   const [accessDenied, setAccessDenied] = useState(false)
+  const [backfillLoading, setBackfillLoading] = useState(false)
+  const [backfillMessage, setBackfillMessage] = useState<string | null>(null)
 
   const queryYear = searchParams?.get('year')
   const queryMonth = searchParams?.get('month')
@@ -137,6 +139,35 @@ export default function MonthlyReportContainer() {
     }
   }
 
+  const handleBackfillRevenue = async () => {
+    if (!user?.clinic_id) return
+    setBackfillLoading(true)
+    setBackfillMessage(null)
+    setError(null)
+    try {
+      const res = await fetch('/api/dentweb/request-revenue-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clinic_id: user.clinic_id, mode: 'backfill', months_back: 24 }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        throw new Error(json?.error ?? '동기화 요청 실패')
+      }
+      const added = json?.data?.added_count ?? 0
+      const total = json?.data?.total_pending ?? 0
+      setBackfillMessage(
+        added > 0
+          ? `과거 ${added}개월 동기화 요청 등록 완료 (대기 중 ${total}건). 워커가 처리하면 데이터가 채워집니다. 잠시 후 "재생성" 버튼을 눌러 반영하세요.`
+          : '추가로 동기화할 과거 월이 없습니다 (이미 데이터가 있거나 요청이 등록되어 있습니다).',
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '동기화 요청 중 오류 발생')
+    } finally {
+      setBackfillLoading(false)
+    }
+  }
+
   const navigateMonth = (delta: number) => {
     if (!report) return
     let y = report.year
@@ -224,6 +255,18 @@ export default function MonthlyReportContainer() {
               </Button>
             </div>
           )}
+          {canManage && (
+            <Button
+              variant="outline"
+              onClick={handleBackfillRevenue}
+              disabled={backfillLoading}
+              className="gap-2"
+              title="덴트웹의 과거 24개월 매출을 다시 가져옵니다 (이미 있는 월은 건너뜀)"
+            >
+              <Download className={`w-4 h-4 ${backfillLoading ? 'animate-pulse' : ''}`} />
+              과거 매출 가져오기
+            </Button>
+          )}
           {canManage && report && (
             <Button
               variant="outline"
@@ -237,6 +280,15 @@ export default function MonthlyReportContainer() {
           )}
         </div>
       </div>
+
+      {/* 동기화 요청 안내 */}
+      {backfillMessage && (
+        <Card>
+          <CardContent className="p-4 text-sm text-indigo-700 bg-indigo-50 border-l-4 border-indigo-300 rounded-xl">
+            {backfillMessage}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 에러 표시 */}
       {error && (

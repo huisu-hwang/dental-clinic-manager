@@ -6,12 +6,13 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 /**
  * POST: 특정 월 또는 전체 과거 데이터 수입 동기화 요청
- * - mode: 'single' (단일 월) 또는 'backfill' (올해 전체 + 전년도 최근 3개월)
+ * - mode: 'single' (단일 월) 또는 'backfill' (직전 N개월, default 24)
+ * - months_back: backfill 모드에서 직전 몇 개월을 채울지 (1~48, default 24)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { clinic_id, mode, year, month } = body
+    const { clinic_id, mode, year, month, months_back } = body
 
     if (!clinic_id) {
       return NextResponse.json({ success: false, error: 'clinic_id가 필요합니다.' }, { status: 400 })
@@ -36,17 +37,16 @@ export async function POST(request: NextRequest) {
     let newMonths: Array<{ year: number; month: number }> = []
 
     if (mode === 'backfill') {
-      // 올해 1월~현재월 + 전년도 10~12월
+      // 직전 N개월 (default 24, 최대 48) — 월간 보고서 12개월 윈도우 + 여유분
+      const requestedBack = Number.isFinite(Number(months_back)) ? parseInt(months_back) : 24
+      const monthsBack = Math.max(1, Math.min(48, requestedBack))
       const now = new Date()
-      const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() + 1
-
-      for (let m = 1; m <= currentMonth; m++) {
-        newMonths.push({ year: currentYear, month: m })
+      for (let i = monthsBack; i >= 1; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        newMonths.push({ year: d.getFullYear(), month: d.getMonth() + 1 })
       }
-      for (let m = 10; m <= 12; m++) {
-        newMonths.push({ year: currentYear - 1, month: m })
-      }
+      // 현재월도 포함 (덴트웹 워커가 진행 중인 월의 누적 매출 갱신)
+      newMonths.push({ year: now.getFullYear(), month: now.getMonth() + 1 })
     } else {
       // 단일 월
       if (!year || !month) {
