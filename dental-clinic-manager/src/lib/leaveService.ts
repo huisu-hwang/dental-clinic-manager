@@ -2231,10 +2231,10 @@ export const leaveService = {
         throw new Error('연차 차감 대상이 아닌 휴무일입니다.')
       }
 
-      // 적용 대상 직원 조회
+      // 적용 대상 직원 조회 (hire_date, created_at 포함 - 입사일 기준 연차 기간 계산용)
       let staffQuery = (supabase as any)
         .from('users')
-        .select('id, name, role')
+        .select('id, name, role, hire_date, created_at')
         .eq('clinic_id', user.clinic_id)
         .eq('status', 'active')
 
@@ -2249,12 +2249,33 @@ export const leaveService = {
       )
 
       const deductDays = holiday.deduct_days ?? holiday.total_days
-      const year = new Date(holiday.start_date).getFullYear()
+      const holidayStartDate = new Date(holiday.start_date)
       let appliedCount = 0
+      const skippedBeforeHire: string[] = []
 
-      // 각 직원에게 연차 차감 적용
+      // 각 직원에게 연차 차감 적용 (직원별 입사일 기준 연차 기간으로 year 계산)
       for (const staff of targetStaff) {
-        // 연차 조정 추가
+        // 입사일 기준 (없으면 created_at fallback - update_leave_balance/initializeBalance와 일관)
+        const hireDate = staff.hire_date ? new Date(staff.hire_date) : new Date(staff.created_at)
+
+        // 휴가 시작일이 입사일 이전이면 차감 대상 아님 → skip
+        if (holidayStartDate < hireDate) {
+          skippedBeforeHire.push(staff.name)
+          continue
+        }
+
+        // 직원별 입사일 기준 연차 기간 계산 (휴가일이 어느 연차 기간에 속하는지)
+        // calculateLeavePeriod은 referenceDate 기준 현재 기간을 반환하므로 holidayStartDate를 referenceDate로 사용
+        let periodYear: number
+        try {
+          const period = calculateLeavePeriod(hireDate, holidayStartDate)
+          periodYear = new Date(period.startDate).getFullYear()
+        } catch {
+          // 계산 실패 시 캘린더 연도 fallback
+          periodYear = holidayStartDate.getFullYear()
+        }
+
+        // 연차 조정 추가 (initializeBalance가 .eq('year', periodYear)로 조회하므로 일관 유지)
         const { data: adjustment, error: adjError } = await (supabase as any)
           .from('leave_adjustments')
           .insert({
@@ -2262,7 +2283,7 @@ export const leaveService = {
             clinic_id: user.clinic_id,
             adjustment_type: 'deduct',
             days: deductDays,
-            year,
+            year: periodYear,
             reason: `[병원휴무] ${holiday.holiday_name} (${holiday.start_date} ~ ${holiday.end_date})`,
             use_date: holiday.start_date,
             adjusted_by: user.id,
@@ -2270,25 +2291,39 @@ export const leaveService = {
           .select()
           .single()
 
-        if (adjError) {
-          console.error(`Error applying to ${staff.name}:`, adjError)
+        if (adjError || !adjustment?.id) {
+          console.error(`[applyHolidayToLeave] Failed to insert adjustment for ${staff.name}:`, adjError)
           continue
         }
 
-        // 적용 기록 저장
-        await (supabase as any)
+        // 적용 기록 저장 (leave_adjustment_id가 유효할 때만)
+        const { error: hlaError } = await (supabase as any)
           .from('holiday_leave_applications')
           .insert({
             clinic_holiday_id: holidayId,
             user_id: staff.id,
             clinic_id: user.clinic_id,
             deducted_days: deductDays,
-            year,
+            year: periodYear,
             leave_adjustment_id: adjustment.id,
             applied_by: user.id,
           })
 
+        if (hlaError) {
+          // application 기록 실패 시 leave_adjustments도 롤백 (정합성 유지)
+          console.error(`[applyHolidayToLeave] Failed to record application for ${staff.name}:`, hlaError)
+          await (supabase as any)
+            .from('leave_adjustments')
+            .delete()
+            .eq('id', adjustment.id)
+          continue
+        }
+
         appliedCount++
+      }
+
+      if (skippedBeforeHire.length > 0) {
+        console.log(`[applyHolidayToLeave] 입사일 이전이라 차감 제외된 직원: ${skippedBeforeHire.join(', ')}`)
       }
 
       // 휴무일 적용 완료 표시
