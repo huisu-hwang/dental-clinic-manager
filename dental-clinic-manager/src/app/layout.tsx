@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AIGenerationProvider } from "@/contexts/AIGenerationContext";
+import { SeoPreviewProvider } from "@/contexts/SeoPreviewContext";
 import { ScannerProvider } from "@/contexts/ScannerContext";
 import { AppDialogRoot } from "@/components/ui/AppDialog";
 import ServiceWorkerRegistrar from "@/components/PWA/ServiceWorkerRegistrar";
 import AIGenerationFloating from "@/components/marketing/AIGenerationFloating";
+import SeoPreviewFloating from "@/components/marketing/SeoPreviewFloating";
 import ScannerProgressFloat from "@/components/Investment/ScannerProgressFloat";
 import "./globals.css";
 
@@ -67,13 +69,16 @@ export default function RootLayout({
       <body className="antialiased font-sans">
         <AuthProvider>
           <AIGenerationProvider>
-            <ScannerProvider>
-              <ServiceWorkerRegistrar />
-              {children}
-              <AIGenerationFloating />
-              <ScannerProgressFloat />
-              <AppDialogRoot />
-            </ScannerProvider>
+            <SeoPreviewProvider>
+              <ScannerProvider>
+                <ServiceWorkerRegistrar />
+                {children}
+                <AIGenerationFloating />
+                <SeoPreviewFloating />
+                <ScannerProgressFloat />
+                <AppDialogRoot />
+              </ScannerProvider>
+            </SeoPreviewProvider>
           </AIGenerationProvider>
         </AuthProvider>
       </body>

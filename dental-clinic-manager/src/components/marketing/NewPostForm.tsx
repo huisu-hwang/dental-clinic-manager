@@ -37,6 +37,9 @@ import ClinicalForm, { type ClinicalFormData } from '@/components/marketing/clin
 import ClinicalPhotoEditor from '@/components/marketing/clinical/ClinicalPhotoEditor'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 import { useSeoPreview } from '@/hooks/useSeoPreview'
+import { useFormDraft } from '@/hooks/useFormDraft'
+
+const DRAFT_KEY = 'marketing-newpost-tab-draft-v1'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
@@ -143,6 +146,29 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     setPostType(type)
     setPlatforms(DEFAULT_PLATFORM_PRESETS[type])
   }
+
+  // ── 폼 드래프트 자동 저장/복원 (탭/페이지 전환해도 입력값 유지) ──
+  useFormDraft(
+    DRAFT_KEY,
+    {
+      topic, keyword, postType, tone, useResearch, factCheck,
+      platforms, imageStyle, imageVisualStyle, imageCount, targetWordCount, useSeoAnalysis,
+    },
+    (restored) => {
+      if (typeof restored.topic === 'string') setTopic(restored.topic)
+      if (typeof restored.keyword === 'string') setKeyword(restored.keyword)
+      if (typeof restored.postType === 'string') setPostType(restored.postType as PostType)
+      if (typeof restored.tone === 'string') setTone(restored.tone as ToneType)
+      if (typeof restored.useResearch === 'boolean') setUseResearch(restored.useResearch)
+      if (typeof restored.factCheck === 'boolean') setFactCheck(restored.factCheck)
+      if (restored.platforms && typeof restored.platforms === 'object') setPlatforms(restored.platforms as PlatformOptions)
+      if (typeof restored.imageStyle === 'string') setImageStyle(restored.imageStyle as ImageStyleOption)
+      if (typeof restored.imageVisualStyle === 'string') setImageVisualStyle(restored.imageVisualStyle as ImageVisualStyle)
+      if (typeof restored.imageCount === 'number') setImageCount(restored.imageCount)
+      if (typeof restored.targetWordCount === 'number') setTargetWordCount(restored.targetWordCount)
+      if (typeof restored.useSeoAnalysis === 'boolean') setUseSeoAnalysis(restored.useSeoAnalysis)
+    }
+  )
 
   // ── SEO 분석 미리보기 ──
   const runSeoPreview = useCallback(() => {
@@ -587,7 +613,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                       style={{ width: `${seoPreview.progress}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-at-text-weak">분석은 보통 30초~1분 정도 걸리며, 페이지를 떠나지 않으셔도 됩니다.</p>
+                  <p className="text-[10px] text-at-text-weak">분석은 보통 30초~1분 정도 걸립니다. 다른 페이지로 이동하셔도 백그라운드에서 분석이 계속 진행되며, 진행률은 화면 우측 하단의 플로팅 패널에서도 확인하실 수 있습니다. 작성 중인 입력 값도 자동으로 저장됩니다.</p>
                 </div>
               )}
 
