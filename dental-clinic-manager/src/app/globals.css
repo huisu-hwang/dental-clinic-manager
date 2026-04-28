@@ -53,8 +53,15 @@ table th,
 table td,
 table tbody,
 table thead {
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+}
+
+/* 테이블 안의 버튼/링크는 디자인 시스템 색상(text-white 등)을 그대로 사용 */
+table button,
+table a {
+  color: revert;
+  -webkit-text-fill-color: currentColor;
 }
 
 /* placeholder 스타일 */
