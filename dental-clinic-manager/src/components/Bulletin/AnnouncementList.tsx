@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Megaphone,
   Pin,
@@ -20,9 +21,11 @@ import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 interface AnnouncementListProps {
   canCreate?: boolean
+  initialAnnouncementId?: string | null
 }
 
-export default function AnnouncementList({ canCreate = false }: AnnouncementListProps) {
+export default function AnnouncementList({ canCreate = false, initialAnnouncementId }: AnnouncementListProps) {
+  const router = useRouter()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +61,21 @@ export default function AnnouncementList({ canCreate = false }: AnnouncementList
   useEffect(() => {
     fetchAnnouncements()
   }, [fetchAnnouncements])
+
+  // initialAnnouncementId가 있으면 마운트 시 1회 자동 오픈 + URL에서 id 제거
+  useEffect(() => {
+    if (!initialAnnouncementId) return
+    let cancelled = false
+    announcementService.getAnnouncement(initialAnnouncementId).then(({ data }) => {
+      if (!cancelled && data) setSelectedAnnouncement(data)
+    })
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('id')
+      router.replace(url.pathname + url.search, { scroll: false })
+    }
+    return () => { cancelled = true }
+  }, [initialAnnouncementId, router])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
