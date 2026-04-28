@@ -397,21 +397,27 @@ function DayScheduleRow({
       </td>
       <td className="px-4 py-3 whitespace-nowrap">
         {isEditing ? (
-          <div className="flex gap-1">
-            <input
-              type="time"
+          <div className="flex gap-1 items-center">
+            <TimePicker
               value={breakStart}
-              onChange={(e) => setBreakStart(e.target.value)}
+              onChange={setBreakStart}
               disabled={!isWorking}
-              className="px-2 py-1 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt w-24"
+              step={30}
+              minHour={6}
+              maxHour={22}
+              className="w-[140px]"
+              aria-label="휴게 시작 시간"
             />
             <span className="text-at-text-weak self-center">~</span>
-            <input
-              type="time"
+            <TimePicker
               value={breakEnd}
-              onChange={(e) => setBreakEnd(e.target.value)}
+              onChange={setBreakEnd}
               disabled={!isWorking}
-              className="px-2 py-1 border border-at-border rounded focus:ring-2 focus:ring-at-accent disabled:bg-at-surface-alt w-24"
+              step={30}
+              minHour={6}
+              maxHour={22}
+              className="w-[140px]"
+              aria-label="휴게 종료 시간"
             />
           </div>
         ) : (
