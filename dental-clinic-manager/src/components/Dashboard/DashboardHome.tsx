@@ -27,6 +27,7 @@ import {
   Users,
 } from 'lucide-react'
 import MyTasksSection from './MyTasksSection'
+import ScheduleWidget from './ScheduleWidget'
 
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
@@ -552,6 +553,9 @@ export default function DashboardHome() {
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* 왼쪽: 메인 콘텐츠 */}
           <div className="flex-1 space-y-4 sm:space-y-5">
+            {/* 병원 일정 */}
+            <ScheduleWidget />
+
             {/* 오늘의 현황 */}
             <div>
               <h3 className="text-sm font-semibold text-at-text mb-3 tracking-[0.08px] flex items-center gap-2">
