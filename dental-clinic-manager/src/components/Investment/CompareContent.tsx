@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
-import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight, Info, Wand2, TrendingUp, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight, Info, Wand2, TrendingUp, ArrowDown, ArrowUp, ArrowUpDown, LayoutGrid, List as ListIcon } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
@@ -84,6 +84,11 @@ const METRIC_GLOSSARY: Record<string, { title: string; body: string; formula?: s
 
 // 비교 전략 수 상한 (안전 마진. 사용자/프리셋 합계가 이를 넘으면 한 번에 N개씩 분할 호출 권장)
 const MAX_COMPARE = 50
+// 다중 종목 비교 상한 (종목 × 전략 = 백테스트 호출 수)
+const MAX_TICKERS = 10
+const MAX_PAIRS = 100
+// 백테스트 동시 호출 수 (서버 부하 분산)
+const COMPARE_CHUNK = 8
 
 // 일정한 색상 팔레트 (최대 6개 전략 비교) — Tailwind JIT가 인식하도록 클래스 전체 명시
 const COLORS = [
@@ -96,8 +101,12 @@ const COLORS = [
 ]
 
 interface BacktestResultItem {
+  /** "<strategyKey>::<ticker>" 복합 키 */
+  rowKey: string
   strategyId: string
   strategyName: string
+  ticker: string
+  tickerName: string
   metrics: BacktestMetrics
   trades: BacktestTrade[]
   equityCurve: EquityCurvePoint[]
@@ -107,12 +116,19 @@ interface BacktestResultItem {
 
 type SortKey = 'totalReturn' | 'buyHold' | 'winRate' | 'totalTrades' | 'sharpe' | 'mdd' | 'profitFactor'
 
+/** 선택된 종목 정보 (다중 종목 비교용) */
+interface SelectedTicker {
+  ticker: string
+  name: string
+}
+
+type ViewMode = 'matrix' | 'list'
+
 export default function CompareContent() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loadingStrategies, setLoadingStrategies] = useState(true)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [ticker, setTicker] = useState('AAPL')
-  const [tickerName, setTickerName] = useState('Apple Inc.')
+  const [tickers, setTickers] = useState<SelectedTicker[]>([{ ticker: 'AAPL', name: 'Apple Inc.' }])
   const [market, setMarket] = useState<Market>('US')
   const [startDate, setStartDate] = useState(() => {
     const d = new Date()
@@ -139,6 +155,12 @@ export default function CompareContent() {
   // 결과 표 정렬: 기본은 수익률 내림차순
   const [sortKey, setSortKey] = useState<SortKey>('totalReturn')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  // 결과 뷰 모드: 매트릭스(전략×종목) / 리스트
+  const [viewMode, setViewMode] = useState<ViewMode>('matrix')
+  // 매트릭스에서 클릭한 셀 (rowKey)
+  const [activeCellKey, setActiveCellKey] = useState<string | null>(null)
+  // 진행률 (실행 중)
+  const [runProgress, setRunProgress] = useState({ done: 0, total: 0 })
 
   const loadStrategies = useCallback(async () => {
     try {
@@ -209,85 +231,134 @@ export default function CompareContent() {
   }
 
   const handleTickerSelect = (t: string, name?: string, m?: Market) => {
-    setTicker(t)
-    setTickerName(name || t)
+    const symbol = t.trim().toUpperCase()
+    if (!symbol) return
+    // 다른 시장 종목 선택 시 시장 전환 (기존 종목/전략 초기화)
     if (m && m !== market) {
+      const ok = window.confirm(`다른 시장(${m === 'KR' ? '국내' : '미국'})으로 전환합니다. 선택한 종목과 전략이 초기화됩니다.`)
+      if (!ok) return
       setMarket(m)
       setSelectedIds(new Set())
+      setTickers([{ ticker: symbol, name: name || symbol }])
+      return
     }
+    setTickers(prev => {
+      if (prev.some(p => p.ticker === symbol)) return prev
+      if (prev.length >= MAX_TICKERS) {
+        alert(`종목은 최대 ${MAX_TICKERS}개까지 선택할 수 있습니다.`)
+        return prev
+      }
+      return [...prev, { ticker: symbol, name: name || symbol }]
+    })
+  }
+
+  const removeTicker = (t: string) => {
+    setTickers(prev => prev.filter(p => p.ticker !== t))
   }
 
   const runCompare = async () => {
     if (selectedIds.size === 0) return setError('비교할 전략을 1개 이상 선택해주세요')
-    if (!ticker.trim()) return setError('종목 코드를 입력해주세요')
+    if (tickers.length === 0) return setError('비교할 종목을 1개 이상 선택해주세요')
+    const totalPairs = selectedIds.size * tickers.length
+    if (totalPairs > MAX_PAIRS) {
+      return setError(`종목 ${tickers.length} × 전략 ${selectedIds.size} = ${totalPairs}회는 너무 많습니다 (최대 ${MAX_PAIRS}회).`)
+    }
 
     setRunning(true)
     setError(null)
     setResults([])
+    setActiveCellKey(null)
+    setRunProgress({ done: 0, total: totalPairs })
 
-    const keys = Array.from(selectedIds)
-    const promises = keys.map(async (key): Promise<BacktestResultItem> => {
-      const item = allItems.find(it => it.key === key)
-      const name = item?.name || key
-      const body: Record<string, unknown> = {
-        ticker: ticker.trim(),
-        market,
-        startDate,
-        endDate,
-        initialCapital,
-        // 비교 정확도를 위해 모든 전략을 동일 조건으로 실행:
-        // 자본 100% 매수 + 매도 후 회수액 전액 재투자 (복리)
-        useFullCapital: true,
-      }
-      if (item?.source === 'user') body.strategyId = item.strategyId
-      else if (item?.source === 'preset') body.preset = item.preset
+    const strategyKeys = Array.from(selectedIds)
+    const pairs: Array<{ strategyKey: string; tk: SelectedTicker }> = []
+    for (const sk of strategyKeys) {
+      for (const tk of tickers) pairs.push({ strategyKey: sk, tk })
+    }
 
-      try {
-        const res = await fetch('/api/investment/backtest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-        const json = await res.json()
-        if (!res.ok || !json.data) {
-          return {
-            strategyId: key,
-            strategyName: name,
-            metrics: emptyMetrics(),
-            trades: [],
-            equityCurve: [],
-            error: json.error || '실패',
+    const collected: BacktestResultItem[] = []
+    let done = 0
+
+    // 청크 단위로 병렬 실행 (서버 부하 분산)
+    for (let i = 0; i < pairs.length; i += COMPARE_CHUNK) {
+      const chunk = pairs.slice(i, i + COMPARE_CHUNK)
+      const chunkResults = await Promise.all(
+        chunk.map(async ({ strategyKey, tk }): Promise<BacktestResultItem> => {
+          const item = allItems.find(it => it.key === strategyKey)
+          const name = item?.name || strategyKey
+          const rowKey = `${strategyKey}::${tk.ticker}`
+          const body: Record<string, unknown> = {
+            ticker: tk.ticker,
+            market,
+            startDate,
+            endDate,
+            initialCapital,
+            useFullCapital: true,
           }
-        }
-        return {
-          strategyId: key,
-          strategyName: name,
-          metrics: json.data.metrics,
-          trades: json.data.trades || [],
-          equityCurve: json.data.equityCurve || [],
-          buyHold: json.data.buyHold,
-        }
-      } catch (err) {
-        return {
-          strategyId: key,
-          strategyName: name,
-          metrics: emptyMetrics(),
-          trades: [],
-          equityCurve: [],
-          error: err instanceof Error ? err.message : '네트워크 오류',
-        }
-      }
-    })
+          if (item?.source === 'user') body.strategyId = item.strategyId
+          else if (item?.source === 'preset') body.preset = item.preset
 
-    const allResults = await Promise.all(promises)
-    setResults(allResults)
+          try {
+            const res = await fetch('/api/investment/backtest', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            })
+            const json = await res.json()
+            if (!res.ok || !json.data) {
+              return {
+                rowKey,
+                strategyId: strategyKey,
+                strategyName: name,
+                ticker: tk.ticker,
+                tickerName: tk.name,
+                metrics: emptyMetrics(),
+                trades: [],
+                equityCurve: [],
+                error: json.error || '실패',
+              }
+            }
+            return {
+              rowKey,
+              strategyId: strategyKey,
+              strategyName: name,
+              ticker: tk.ticker,
+              tickerName: tk.name,
+              metrics: json.data.metrics,
+              trades: json.data.trades || [],
+              equityCurve: json.data.equityCurve || [],
+              buyHold: json.data.buyHold,
+            }
+          } catch (err) {
+            return {
+              rowKey,
+              strategyId: strategyKey,
+              strategyName: name,
+              ticker: tk.ticker,
+              tickerName: tk.name,
+              metrics: emptyMetrics(),
+              trades: [],
+              equityCurve: [],
+              error: err instanceof Error ? err.message : '네트워크 오류',
+            }
+          }
+        })
+      )
+      collected.push(...chunkResults)
+      done += chunk.length
+      setRunProgress({ done, total: pairs.length })
+      // 부분 결과 점진 표시 (사용자 체감 속도 개선)
+      setResults([...collected])
+    }
+
     setSortKey('totalReturn')
     setSortDir('desc')
     setRunning(false)
   }
 
   const runRecommend = async () => {
-    if (!ticker.trim()) return setRecommendError('먼저 종목을 선택해주세요')
+    if (tickers.length !== 1) return setRecommendError('전략 추천은 종목을 1개만 선택했을 때 가능합니다')
+    const target = tickers[0]
     setRecommending(true)
     setRecommendError(null)
     setRecommendResult(null)
@@ -295,7 +366,7 @@ export default function CompareContent() {
       const res = await fetch('/api/investment/recommend-strategy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker: ticker.trim(), market, mode: recommendMode }),
+        body: JSON.stringify({ ticker: target.ticker, market, mode: recommendMode }),
       })
       const json = await res.json()
       if (!res.ok || !json.data) {
@@ -345,14 +416,16 @@ export default function CompareContent() {
   }
 
   // 모든 결과의 통합 equity curve 정규화 데이터
+  // 다중 종목 모드에서는 자산곡선 비교가 의미 없으므로 단일 종목일 때만 표시
   const chartData = useMemo(() => {
     if (results.length === 0) return null
+    if (tickers.length !== 1) return null
     const validResults = results.filter(r => !r.error && r.equityCurve.length > 0)
     if (validResults.length === 0) return null
 
     // 각 전략 80포인트로 샘플링
     const sampled = validResults.map(r => ({
-      strategyId: r.strategyId,
+      strategyId: r.rowKey,
       name: r.strategyName,
       points: sampleCurve(r.equityCurve, 80),
     }))
@@ -368,7 +441,7 @@ export default function CompareContent() {
     const max = Math.max(...allValues)
 
     return { sampled, min, max, range: max - min || 1 }
-  }, [results])
+  }, [results, tickers.length])
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -400,25 +473,48 @@ export default function CompareContent() {
       <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
         <h2 className="font-semibold text-at-text mb-3">⚙️ 백테스트 설정</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 시장 */}
-          {/* 종목 (국내·미국 통합 검색) */}
+          {/* 종목 (다중 선택, 동일 시장 내) */}
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-at-text-secondary mb-1.5">종목</label>
+            <label className="block text-xs font-medium text-at-text-secondary mb-1.5">
+              종목 <span className="text-at-text-weak font-normal">(검색해서 추가, 최대 {MAX_TICKERS}개 · 현재 {tickers.length}개)</span>
+            </label>
             <TickerSearch
               market="ALL"
               onSelect={handleTickerSelect}
-              clearOnSelect={false}
+              clearOnSelect={true}
+              placeholder="종목 검색 후 선택하면 칩으로 추가됩니다"
             />
-            {ticker && (
-              <p className="text-xs text-at-text-secondary mt-1.5">
-                선택됨:
-                <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                  market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                }`}>{market === 'KR' ? '국내' : '미국'}</span>
-                <span className="ml-1.5 font-mono font-semibold text-at-text">{ticker}</span>
-                {tickerName && tickerName !== ticker && <span className="ml-2">({tickerName})</span>}
-              </p>
+            {tickers.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {tickers.map(t => (
+                  <span
+                    key={t.ticker}
+                    className={`inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-xs border ${
+                      market === 'KR' ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-purple-50 border-purple-200 text-purple-800'
+                    }`}
+                  >
+                    <span className="font-mono font-semibold">{t.ticker}</span>
+                    {t.name && t.name !== t.ticker && (
+                      <span className="text-at-text-secondary truncate max-w-[120px]">{t.name}</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeTicker(t.ticker)}
+                      className="ml-0.5 p-0.5 rounded-full hover:bg-white/60"
+                      title="제거"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
+            <p className="text-[11px] text-at-text-weak mt-1">
+              <span className={`mr-1 text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+              }`}>{market === 'KR' ? '국내' : '미국'}</span>
+              종목은 같은 시장 내에서만 묶을 수 있어요. 다른 시장 종목 선택 시 시장이 전환됩니다.
+            </p>
           </div>
 
           {/* 기간 */}
@@ -446,11 +542,17 @@ export default function CompareContent() {
         </div>
       </section>
 
-      {/* 종목 분석 → 전략 추천 */}
+      {/* 종목 분석 → 전략 추천 (단일 종목 선택 시에만 활성화) */}
       <RecommendSection
-        ticker={ticker}
-        tickerName={tickerName}
+        ticker={tickers.length === 1 ? tickers[0].ticker : ''}
+        tickerName={tickers.length === 1 ? tickers[0].name : ''}
         market={market}
+        disabled={tickers.length !== 1}
+        disabledReason={
+          tickers.length === 0
+            ? '먼저 종목을 1개 선택해주세요.'
+            : '여러 종목이 선택된 상태에서는 추천을 실행할 수 없어요. 종목을 1개로 줄여주세요.'
+        }
         mode={recommendMode}
         onModeChange={setRecommendMode}
         running={recommending}
@@ -552,11 +654,13 @@ export default function CompareContent() {
         <div className="mt-4 flex items-center gap-3">
           <button
             onClick={runCompare}
-            disabled={running || selectedIds.size === 0 || !ticker.trim()}
+            disabled={running || selectedIds.size === 0 || tickers.length === 0}
             className="flex-1 px-4 py-2.5 bg-at-accent text-white rounded-xl text-sm font-medium hover:bg-at-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
           >
             {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            {running ? `백테스트 실행 중... (${selectedIds.size}개)` : `${selectedIds.size}개 전략 비교 실행`}
+            {running
+              ? `백테스트 실행 중... (${runProgress.done}/${runProgress.total})`
+              : `${tickers.length}종목 × ${selectedIds.size}전략 = ${tickers.length * selectedIds.size}회 비교 실행`}
           </button>
         </div>
 
@@ -571,19 +675,62 @@ export default function CompareContent() {
       {/* 결과: 메트릭 비교 표 */}
       {results.length > 0 && (
         <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-at-text">📊 비교 결과 ({ticker})</h2>
-            <span className="text-xs text-at-text-secondary">
-              {sortLabel(sortKey)} {sortDir === 'desc' ? '내림차순' : '오름차순'}
-            </span>
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 className="font-semibold text-at-text">
+              📊 비교 결과 <span className="text-at-text-secondary font-normal text-sm">({tickers.length}종목 × {selectedIds.size}전략)</span>
+            </h2>
+            <div className="flex items-center gap-3">
+              {/* 뷰 토글 — 다중 종목일 때만 의미 있음 */}
+              {tickers.length > 1 && (
+                <div className="inline-flex rounded-lg border border-at-border bg-at-surface-alt p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('matrix')}
+                    className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${viewMode === 'matrix' ? 'bg-white shadow-sm text-at-accent font-semibold' : 'text-at-text-secondary'}`}
+                  >
+                    <LayoutGrid className="w-3 h-3" />
+                    매트릭스
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${viewMode === 'list' ? 'bg-white shadow-sm text-at-accent font-semibold' : 'text-at-text-secondary'}`}
+                  >
+                    <ListIcon className="w-3 h-3" />
+                    리스트
+                  </button>
+                </div>
+              )}
+              <span className="text-xs text-at-text-secondary">
+                {sortLabel(sortKey)} {sortDir === 'desc' ? '내림차순' : '오름차순'}
+              </span>
+            </div>
           </div>
 
+          {/* 매트릭스 뷰 — 다중 종목일 때만 활성화 */}
+          {tickers.length > 1 && viewMode === 'matrix' && (
+            <MatrixView
+              results={results}
+              tickers={tickers}
+              strategies={Array.from(selectedIds).map(key => {
+                const item = allItems.find(i => i.key === key)
+                return { key, name: item?.name || key }
+              })}
+              activeCellKey={activeCellKey}
+              onCellClick={setActiveCellKey}
+            />
+          )}
+
+          {(tickers.length === 1 || viewMode === 'list') && (
           <div className="overflow-x-auto rounded-xl border border-at-border mb-4">
             <table className="w-full text-xs">
               <thead className="bg-at-surface-alt">
                 <tr>
                   <th className="px-2 py-2 w-8"></th>
                   <GlossaryHeader label="순위" termKey="rank" align="left" onOpen={setGlossaryKey} />
+                  {tickers.length > 1 && (
+                    <th className="px-3 py-2 text-left font-medium text-at-text-secondary">종목</th>
+                  )}
                   <th className="px-3 py-2 text-left font-medium text-at-text-secondary">전략</th>
                   <SortableHeader label="수익률" termKey="totalReturn" sortKey="totalReturn" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
                   <SortableHeader label="B&H" termKey="buyHold" sortKey="buyHold" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
@@ -597,30 +744,35 @@ export default function CompareContent() {
               <tbody>
                 {sortedResults.map((r, i) => {
                   const color = COLORS[i % COLORS.length]
+                  const colSpanWithTicker = tickers.length > 1 ? 8 : 7
                   if (r.error) {
                     return (
-                      <tr key={r.strategyId} className="border-t border-at-border bg-red-50/30">
+                      <tr key={r.rowKey} className="border-t border-at-border bg-red-50/30">
                         <td></td>
                         <td className="px-3 py-2"><span className={`inline-block w-5 h-5 rounded-full ${color.dot}`} /></td>
+                        {tickers.length > 1 && (
+                          <td className="px-3 py-2 font-mono text-at-text">{r.ticker}</td>
+                        )}
                         <td className="px-3 py-2 font-medium text-at-text">{r.strategyName}</td>
-                        <td colSpan={7} className="px-3 py-2 text-red-700 text-xs">⚠️ {r.error}</td>
+                        <td colSpan={colSpanWithTicker} className="px-3 py-2 text-red-700 text-xs">⚠️ {r.error}</td>
                       </tr>
                     )
                   }
                   const totalRet = r.metrics.totalReturn
                   const bhRet = r.buyHold?.totalReturn ?? 0
-                  const isExpanded = expandedIds.has(r.strategyId)
+                  const isExpanded = expandedIds.has(r.rowKey)
                   const hasTrades = r.trades.length > 0
+                  const expandColSpan = tickers.length > 1 ? 11 : 10
                   return (
-                    <Fragment key={r.strategyId}>
+                    <Fragment key={r.rowKey}>
                       <tr
                         className={`border-t border-at-border hover:bg-at-surface-alt ${hasTrades ? 'cursor-pointer' : ''}`}
                         onClick={() => {
                           if (!hasTrades) return
                           setExpandedIds(prev => {
                             const next = new Set(prev)
-                            if (next.has(r.strategyId)) next.delete(r.strategyId)
-                            else next.add(r.strategyId)
+                            if (next.has(r.rowKey)) next.delete(r.rowKey)
+                            else next.add(r.rowKey)
                             return next
                           })
                         }}
@@ -633,6 +785,9 @@ export default function CompareContent() {
                             {i + 1}
                           </span>
                         </td>
+                        {tickers.length > 1 && (
+                          <td className="px-3 py-2 font-mono font-semibold text-at-text">{r.ticker}</td>
+                        )}
                         <td className="px-3 py-2 font-medium text-at-text">
                           {i === 0 && <Trophy className="w-3 h-3 text-amber-500 inline mr-1" />}
                           {r.strategyName}
@@ -651,7 +806,7 @@ export default function CompareContent() {
                       </tr>
                       {isExpanded && hasTrades && (
                         <tr className={`border-t border-at-border ${color.light}`}>
-                          <td colSpan={10} className="p-3">
+                          <td colSpan={expandColSpan} className="p-3">
                             <TradesMiniTable trades={r.trades} />
                           </td>
                         </tr>
@@ -662,6 +817,7 @@ export default function CompareContent() {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* 통합 자산 곡선 */}
           {chartData && (
@@ -669,9 +825,9 @@ export default function CompareContent() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-at-text text-sm">자산 곡선 비교</h3>
                 <div className="flex flex-wrap gap-3 text-xs">
-                  {chartData.sampled.map((s, i) => {
+                  {chartData.sampled.map((s) => {
                     const isBH = s.strategyId === '__bh__'
-                    const color = isBH ? null : COLORS[results.findIndex(r => r.strategyId === s.strategyId) % COLORS.length]
+                    const color = isBH ? null : COLORS[results.findIndex(r => r.rowKey === s.strategyId) % COLORS.length]
                     return (
                       <span key={s.strategyId} className="flex items-center gap-1">
                         <span className={`w-3 h-1.5 rounded inline-block ${isBH ? 'bg-amber-300' : color?.dot}`} />
@@ -685,7 +841,7 @@ export default function CompareContent() {
                 <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
                   {chartData.sampled.map(s => {
                     const isBH = s.strategyId === '__bh__'
-                    const colorIdx = isBH ? -1 : results.findIndex(r => r.strategyId === s.strategyId)
+                    const colorIdx = isBH ? -1 : results.findIndex(r => r.rowKey === s.strategyId)
                     const colorClass = isBH
                       ? 'stroke-amber-300'
                       : COLORS[colorIdx % COLORS.length].stroke
@@ -720,7 +876,11 @@ export default function CompareContent() {
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-amber-900 text-xs">
-                  <p className="font-medium">{sortLabel(sortKey)} {sortDir === 'desc' ? '최상위' : '최하위'}: {sortedResults[0].strategyName}</p>
+                  <p className="font-medium">
+                    {sortLabel(sortKey)} {sortDir === 'desc' ? '최상위' : '최하위'}:
+                    {tickers.length > 1 && <span className="font-mono ml-1">{sortedResults[0].ticker}</span>}
+                    <span className="ml-1">{sortedResults[0].strategyName}</span>
+                  </p>
                   <p className="mt-0.5">
                     총 수익률 <span className="font-mono font-semibold">{sortedResults[0].metrics.totalReturn > 0 ? '+' : ''}{sortedResults[0].metrics.totalReturn.toFixed(2)}%</span>,
                     {' '}승률 {sortedResults[0].metrics.winRate.toFixed(1)}%, Sharpe {sortedResults[0].metrics.sharpeRatio.toFixed(2)}
@@ -731,6 +891,158 @@ export default function CompareContent() {
           )}
         </section>
       )}
+    </div>
+  )
+}
+
+// ============================================
+// 매트릭스 뷰 — 행=전략, 열=종목, 셀=수익률 (다중 종목 비교용)
+// ============================================
+
+function MatrixView({
+  results,
+  tickers,
+  strategies,
+  activeCellKey,
+  onCellClick,
+}: {
+  results: BacktestResultItem[]
+  tickers: SelectedTicker[]
+  strategies: Array<{ key: string; name: string }>
+  activeCellKey: string | null
+  onCellClick: (key: string | null) => void
+}) {
+  const lookup = useMemo(() => {
+    const map = new Map<string, BacktestResultItem>()
+    for (const r of results) map.set(r.rowKey, r)
+    return map
+  }, [results])
+
+  /** 셀 배경색: 양수=빨강(국내 관행), 음수=파랑. ±50%를 최대 강도로. */
+  const cellStyle = (val: number | null, isError: boolean): React.CSSProperties => {
+    if (isError) return { background: 'rgba(254, 226, 226, 0.6)', color: 'rgb(185, 28, 28)' }
+    if (val === null) return {}
+    const abs = Math.min(Math.abs(val), 50)
+    const intensity = abs / 50
+    if (val >= 0) {
+      return { background: `rgba(239, 68, 68, ${intensity * 0.35})`, color: 'rgb(185, 28, 28)' }
+    }
+    return { background: `rgba(59, 130, 246, ${intensity * 0.35})`, color: 'rgb(29, 78, 216)' }
+  }
+
+  const activeResult = activeCellKey ? lookup.get(activeCellKey) : null
+
+  return (
+    <div className="space-y-3 mb-4">
+      <div className="overflow-x-auto rounded-xl border border-at-border">
+        <table className="w-full text-xs border-collapse">
+          <thead className="bg-at-surface-alt">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium text-at-text-secondary sticky left-0 bg-at-surface-alt z-10 border-r border-at-border min-w-[160px]">
+                전략 \ 종목
+              </th>
+              {tickers.map(t => (
+                <th key={t.ticker} className="px-3 py-2 text-center font-medium text-at-text-secondary min-w-[88px]">
+                  <div className="font-mono font-semibold text-at-text">{t.ticker}</div>
+                  {t.name && t.name !== t.ticker && (
+                    <div className="text-[10px] text-at-text-weak font-normal truncate max-w-[110px] mx-auto">{t.name}</div>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {strategies.map(s => (
+              <tr key={s.key} className="border-t border-at-border">
+                <td className="px-3 py-2 font-medium text-at-text sticky left-0 bg-white z-10 border-r border-at-border">
+                  {s.name}
+                </td>
+                {tickers.map(t => {
+                  const key = `${s.key}::${t.ticker}`
+                  const result = lookup.get(key)
+                  const isLoading = !result
+                  const isError = !!result?.error
+                  const val = result && !isError ? result.metrics.totalReturn : null
+                  const isActive = activeCellKey === key
+                  return (
+                    <td key={key} className="border-l border-at-border/60 p-0">
+                      <button
+                        type="button"
+                        onClick={() => onCellClick(isActive ? null : key)}
+                        disabled={isLoading || isError}
+                        title={isError ? result?.error : isLoading ? '실행 중...' : `${result?.strategyName} on ${t.ticker}`}
+                        className={`w-full px-2 py-2 text-center font-mono text-xs transition-all ${
+                          isActive ? 'ring-2 ring-at-accent ring-inset' : ''
+                        } ${!isLoading && !isError ? 'cursor-pointer hover:brightness-95' : 'cursor-default'}`}
+                        style={cellStyle(val, isError)}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-3 h-3 animate-spin inline opacity-50" />
+                        ) : isError ? (
+                          '⚠️'
+                        ) : val !== null ? (
+                          <span className="font-semibold">{val > 0 ? '+' : ''}{val.toFixed(1)}%</span>
+                        ) : '—'}
+                      </button>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 활성 셀 상세 */}
+      {activeResult && !activeResult.error && (
+        <div className="rounded-xl border border-at-accent/40 bg-blue-50/40 p-3">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-2 py-0.5 rounded bg-white border border-at-border font-mono font-semibold">
+                {activeResult.ticker}
+              </span>
+              <span className="text-sm font-semibold text-at-text">{activeResult.strategyName}</span>
+            </div>
+            <button
+              onClick={() => onCellClick(null)}
+              className="text-xs text-at-text-secondary hover:text-at-text inline-flex items-center gap-0.5"
+              type="button"
+            >
+              <X className="w-3 h-3" />닫기
+            </button>
+          </div>
+          <div className="grid grid-cols-3 md:grid-cols-7 gap-2 text-[11px]">
+            <Metric label="수익률" value={`${activeResult.metrics.totalReturn > 0 ? '+' : ''}${activeResult.metrics.totalReturn.toFixed(2)}%`} />
+            <Metric label="B&H" value={`${(activeResult.buyHold?.totalReturn ?? 0) > 0 ? '+' : ''}${(activeResult.buyHold?.totalReturn ?? 0).toFixed(2)}%`} />
+            <Metric label="승률" value={`${activeResult.metrics.winRate.toFixed(1)}%`} />
+            <Metric label="거래" value={`${activeResult.metrics.totalTrades}`} />
+            <Metric label="Sharpe" value={`${activeResult.metrics.sharpeRatio.toFixed(2)}`} />
+            <Metric label="MDD" value={`${activeResult.metrics.maxDrawdown.toFixed(2)}%`} />
+            <Metric label="PF" value={`${activeResult.metrics.profitFactor.toFixed(2)}`} />
+          </div>
+          {activeResult.trades.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold text-at-text-secondary mb-1">매매 내역</p>
+              <TradesMiniTable trades={activeResult.trades} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 범례 */}
+      <div className="flex items-center justify-between text-[10px] text-at-text-weak">
+        <span>셀 클릭 → 상세 메트릭과 매매내역 펼침</span>
+        <span className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1">
+            <span className="w-3 h-3 rounded" style={{ background: 'rgba(59,130,246,0.35)' }} />
+            손실
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="w-3 h-3 rounded" style={{ background: 'rgba(239,68,68,0.35)' }} />
+            수익
+          </span>
+        </span>
+      </div>
     </div>
   )
 }
@@ -1006,6 +1318,7 @@ const REGIME_LABELS: Record<MarketRegime, { label: string; color: string }> = {
 function RecommendSection({
   ticker, tickerName, market, mode, onModeChange,
   running, error, result, onRun, onApply, onOpenDetail,
+  disabled, disabledReason,
 }: {
   ticker: string
   tickerName: string
@@ -1018,6 +1331,8 @@ function RecommendSection({
   onRun: () => void
   onApply: () => void
   onOpenDetail: (presetId: string) => void
+  disabled?: boolean
+  disabledReason?: string
 }) {
   const modes: { value: RecommendationMode; label: string; desc: string; eta: string }[] = [
     { value: 'rule', label: '룰 기반', desc: '시장 단계 분류 + 매칭만', eta: '~1초' },
@@ -1059,12 +1374,19 @@ function RecommendSection({
 
       <button
         onClick={onRun}
-        disabled={running || !ticker.trim()}
+        disabled={running || !ticker.trim() || !!disabled}
         className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
       >
         {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
         {running ? '분석 중...' : `${market === 'KR' ? '국내' : '미국'} 시장 — 추천 받기`}
       </button>
+
+      {disabled && disabledReason && (
+        <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-1.5">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <span>{disabledReason}</span>
+        </div>
+      )}
 
       {error && (
         <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2 text-sm text-red-800">
