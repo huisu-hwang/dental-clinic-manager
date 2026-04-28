@@ -35,7 +35,9 @@ interface SeoPreviewContextType extends SeoPreviewState {
 const SeoPreviewContext = createContext<SeoPreviewContextType | null>(null)
 
 const POLL_INTERVAL_MS = 3000
-const POLL_MAX_DURATION_MS = 5 * 60 * 1000
+// 워커가 네이버 상위 5개 글을 모두 스크래핑하는 데 시간이 오래 걸리므로
+// 클라이언트 폴링 데드라인은 워커 stale 임계값(7분)보다 충분히 큰 15분으로 설정
+const POLL_MAX_DURATION_MS = 15 * 60 * 1000
 
 const STORAGE_KEY = 'seo-preview-state-v1'
 
@@ -139,12 +141,15 @@ export function SeoPreviewProvider({ children }: { children: ReactNode }) {
       console.warn('[SeoPreview] poll error:', err)
     }
     if (Date.now() > pollDeadlineRef.current) {
+      // 클라이언트 폴링 데드라인 만료 (15분).
+      // 일반적으로는 서버 STALE(7분) 처리로 더 빨리 'failed' 응답을 받지만,
+      // 그 응답조차 도달하지 못한 극단적 경우의 안전장치.
       stopPolling()
       setState((prev) => {
         const next: SeoPreviewState = {
           ...prev,
           status: 'failed',
-          error: '분석 시간이 너무 오래 걸려 중단했습니다. 잠시 후 다시 시도해주세요.',
+          error: '분석이 예상보다 오래 걸려 중단했습니다. 잠시 후 다시 시도해주세요.',
         }
         persistFullState(next, pollDeadlineRef.current)
         return next

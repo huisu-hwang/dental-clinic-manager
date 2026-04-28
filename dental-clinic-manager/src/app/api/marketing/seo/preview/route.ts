@@ -10,8 +10,9 @@ import type { SeoKeywordMiningResult } from '@/types/marketing';
 
 export const maxDuration = 30;
 
-// 5분 이상 running 상태로 멈춰있으면 stale로 간주 (워커 비정상 종료 추정)
-const STALE_RUNNING_MS = 5 * 60 * 1000;
+// 7분 이상 running 상태로 멈춰있으면 stale로 간주 (워커 비정상 종료 추정)
+// 워커가 네이버 상위 5개 글을 스크래핑하는 데 5~6분이 걸릴 수 있어 5분은 너무 짧음
+const STALE_RUNNING_MS = 7 * 60 * 1000;
 
 interface JobRow {
   id: string;
@@ -126,11 +127,21 @@ async function resolvePreviewState(
       const { progress, step } = estimateRunningProgress(latestJob.started_at);
       return { status: 'running', progress, step, jobId: latestJob.id };
     } else {
-      // stale인데 autoRequeue 비활성 (GET 호출) → running으로 그대로 반환하되 step에 안내
+      // stale인데 autoRequeue 비활성 (GET 호출) → 무한 running 방지를 위해 failed 마킹만 (재큐잉 X)
+      // 사용자가 다시 분석 실행 시 새 잡이 생성됨
+      await admin
+        .from('seo_jobs')
+        .update({
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: latestJob.error_message || '워커 응답 없음 — 자동 종료',
+        })
+        .eq('id', latestJob.id);
       return {
-        status: 'running',
-        progress: 90,
-        step: '분석이 오래 걸리고 있습니다. 잠시 후 자동으로 재시도됩니다.',
+        status: 'failed',
+        progress: 0,
+        step: '분석이 시간 내에 완료되지 못했습니다.',
+        error: '워커 응답이 지연되어 분석을 중단했습니다. 다시 시도해주세요.',
         jobId: latestJob.id,
       };
     }
