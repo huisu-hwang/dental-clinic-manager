@@ -3,7 +3,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { Loader2, Calendar, TrendingUp, AlertTriangle, BarChart3, Search } from 'lucide-react';
+import {
+  Loader2,
+  Calendar,
+  TrendingUp,
+  AlertTriangle,
+  BarChart3,
+  Search,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -68,6 +78,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showGuide, setShowGuide] = useState(false);
   const [metric, setMetric] = useState<Metric>('sales');
   const [windowDays, setWindowDays] = useState(14);
   const [loading, setLoading] = useState(false);
@@ -267,7 +278,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-at-accent-light text-at-accent">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-lg font-semibold text-at-text">
                 이벤트 효과 분석
               </h2>
@@ -275,8 +286,24 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
                 특정 이벤트(공지)가 매출/신환에 통계적으로 유의미한 영향을 미쳤는지 검증합니다.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowGuide((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-at-border text-at-text-weak hover:bg-at-bg-base transition-colors shrink-0"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              통계 해석 가이드
+              {showGuide ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
           </div>
         </div>
+
+        {/* 통계 해석 가이드 (펼침/접힘) */}
+        {showGuide && <StatisticalGuide />}
 
         {/* 입력 패널 */}
         <div className="bg-white rounded-xl border border-at-border p-6 space-y-4">
@@ -487,20 +514,32 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
                   : 'bg-gray-50 border-at-border text-at-text'
               )}
             >
-              <div className="font-medium mb-1">
+              <div className="font-medium mb-1 flex items-center gap-2">
                 {result.isSignificant
                   ? '✓ 통계적으로 유의한 변화'
                   : '— 유의한 변화 없음'}
+                <button
+                  type="button"
+                  onClick={() => setShowGuide(true)}
+                  className="text-xs font-normal underline opacity-70 hover:opacity-100"
+                >
+                  해석 방법
+                </button>
               </div>
               <div className="text-sm">{result.conclusion}</div>
+              <div className="text-xs mt-2 opacity-80">
+                {result.isSignificant
+                  ? `p-value(${result.pValue.toFixed(4)}) < 0.05 → 우연히 발생할 확률이 5% 미만이라는 의미입니다.`
+                  : `p-value(${result.pValue.toFixed(4)}) ≥ 0.05 → 변화가 있어도 우연일 가능성을 배제하기 어렵습니다.`}
+              </div>
               {result.reliability !== 'high' && (
                 <div className="flex items-center gap-2 mt-2 text-xs text-yellow-700">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   신뢰도:{' '}
                   {result.reliability === 'low'
-                    ? '낮음 (데이터 부족)'
-                    : '중간'}{' '}
-                  - 더 긴 윈도우 권장
+                    ? '낮음 (각 기간 7일 미만)'
+                    : '중간 (각 기간 7~13일)'}{' '}
+                  - 비교 기간을 14일 이상으로 늘리면 신뢰도가 높아집니다.
                 </div>
               )}
             </div>
@@ -563,6 +602,125 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function StatisticalGuide() {
+  return (
+    <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-6 space-y-5 text-sm">
+      <div>
+        <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+          <HelpCircle className="w-4 h-4" />
+          어떻게 통계적 유의성을 판단하나요?
+        </h3>
+        <p className="text-at-text leading-relaxed">
+          이벤트 전 N일과 후 N일의 일별 데이터를 모은 뒤,
+          두 평균 차이가 단순히 우연(랜덤 변동)인지 진짜 차이인지를{' '}
+          <strong>Welch&apos;s t-test</strong>(분산이 다른 두 집단 비교에 적합)로 검증합니다.
+          결과로 나오는 <strong>p-value</strong>는 &ldquo;실제 차이가 없는데도 이만큼의 차이가 우연히 발생했을 확률&rdquo;을 의미합니다.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <GuideCard
+          title="p-value < 0.05"
+          tone="success"
+          body={
+            <>
+              <strong>통계적으로 유의함</strong> 으로 판정합니다.
+              우연일 확률이 5% 미만이라는 의미이며, 이벤트가 실제로 영향을 미쳤다고 보기에 합당한 근거가 됩니다.
+            </>
+          }
+        />
+        <GuideCard
+          title="p-value ≥ 0.05"
+          tone="neutral"
+          body={
+            <>
+              <strong>유의한 변화 없음</strong> 으로 판정합니다.
+              변화가 있더라도 우연히 발생했을 가능성을 배제하기 어렵습니다.
+              데이터가 너무 적거나 변동성이 크면 실제 효과가 있어도 잡히지 않을 수 있습니다.
+            </>
+          }
+        />
+      </div>
+
+      <div>
+        <h4 className="font-semibold text-blue-900 mb-2">데이터 신뢰도 등급</h4>
+        <div className="space-y-1.5 text-at-text">
+          <div className="flex items-start gap-2">
+            <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-800 shrink-0">높음</span>
+            <span>각 기간 14일 이상 - 일별 변동이 평균에 잘 흡수되어 결과의 안정성이 높습니다.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="px-2 py-0.5 text-xs font-medium rounded bg-yellow-100 text-yellow-800 shrink-0">중간</span>
+            <span>각 기간 7~13일 - 결과는 참고 가능하지만, 가능하면 윈도우를 14일 이상으로 늘려 재확인하세요.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-800 shrink-0">낮음</span>
+            <span>각 기간 7일 미만 - 표본이 너무 적어 우연한 변동에 휘둘립니다. 결론을 내리지 마세요.</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="font-semibold text-blue-900 mb-2">사용자가 결과를 볼 때 주의할 점</h4>
+        <ul className="list-disc list-inside space-y-1.5 text-at-text">
+          <li>
+            <strong>변화율(%)이 커도 p-value가 크면</strong> 우연일 수 있습니다. 두 값을 함께 봐야 합니다.
+          </li>
+          <li>
+            <strong>유의함 ≠ 인과관계.</strong> 같은 시기 마케팅, 계절성, 휴일, 날씨 등 다른 요인의 영향일 수 있습니다.
+          </li>
+          <li>
+            <strong>비교 기간을 넓힐수록</strong> 안정적이지만, 너무 길면 다른 이벤트가 섞여 들어갈 수 있습니다. 14~30일이 일반적으로 적절합니다.
+          </li>
+          <li>
+            특정 요일 효과(예: 주말 매출 패턴)가 강하면 결과가 왜곡될 수 있습니다.
+            가능하면 <strong>이벤트 전·후가 같은 요일 구성</strong>이 되도록 짝수 주(7·14·21·28일) 윈도우를 사용하세요.
+          </li>
+          <li>
+            매출이 0인 날(휴진)도 평균에 포함됩니다. 휴진일이 많으면 결과 해석에 주의가 필요합니다.
+          </li>
+        </ul>
+      </div>
+
+      <div className="bg-white border border-blue-200 rounded-lg p-3 text-xs text-at-text-weak">
+        <strong>요약:</strong> p-value &lt; 0.05이면서 신뢰도가 &ldquo;높음&rdquo;인 결과를 우선 신뢰하고,
+        그 외 외부 요인(마케팅 비용, 계절성, 휴진일 등)을 같이 검토한 뒤 의사결정에 활용하세요.
+      </div>
+    </div>
+  );
+}
+
+function GuideCard({
+  title,
+  body,
+  tone,
+}: {
+  title: string;
+  body: React.ReactNode;
+  tone: 'success' | 'neutral';
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-lg p-3 border text-sm',
+        tone === 'success'
+          ? 'bg-green-50 border-green-200'
+          : 'bg-gray-50 border-at-border'
+      )}
+    >
+      <div
+        className={cn(
+          'font-semibold mb-1',
+          tone === 'success' ? 'text-green-800' : 'text-at-text'
+        )}
+      >
+        {title}
+      </div>
+      <div className="text-at-text leading-relaxed">{body}</div>
     </div>
   );
 }
