@@ -17,6 +17,7 @@ import { formatResidentNumber, autoFormatResidentNumber, validateResidentNumberW
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import type { DaySchedule, WorkSchedule, DayName } from '@/types/workSchedule'
 import { appAlert } from '@/components/ui/AppDialog'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 interface ContractFormProps {
   currentUser: UserProfile
@@ -627,38 +628,50 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                           <div>
                             <label className="block text-xs text-at-text-secondary mb-1">시작</label>
-                            <input
-                              type="time"
+                            <TimePicker
                               value={daySchedule?.start || ''}
-                              onChange={(e) => handleDayTimeChange(key, 'start', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
+                              onChange={(v) => handleDayTimeChange(key, 'start', v)}
+                              step={30}
+                              minHour={6}
+                              maxHour={22}
+                              className="w-full"
+                              aria-label="시작 시간"
                             />
                           </div>
                           <div>
                             <label className="block text-xs text-at-text-secondary mb-1">종료</label>
-                            <input
-                              type="time"
+                            <TimePicker
                               value={daySchedule?.end || ''}
-                              onChange={(e) => handleDayTimeChange(key, 'end', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
+                              onChange={(v) => handleDayTimeChange(key, 'end', v)}
+                              step={30}
+                              minHour={6}
+                              maxHour={22}
+                              className="w-full"
+                              aria-label="종료 시간"
                             />
                           </div>
                           <div>
                             <label className="block text-xs text-at-text-secondary mb-1">휴게 시작</label>
-                            <input
-                              type="time"
+                            <TimePicker
                               value={daySchedule?.breakStart || ''}
-                              onChange={(e) => handleDayTimeChange(key, 'breakStart', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
+                              onChange={(v) => handleDayTimeChange(key, 'breakStart', v)}
+                              step={30}
+                              minHour={6}
+                              maxHour={22}
+                              className="w-full"
+                              aria-label="휴게 시작 시간"
                             />
                           </div>
                           <div>
                             <label className="block text-xs text-at-text-secondary mb-1">휴게 종료</label>
-                            <input
-                              type="time"
+                            <TimePicker
                               value={daySchedule?.breakEnd || ''}
-                              onChange={(e) => handleDayTimeChange(key, 'breakEnd', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border border-at-border rounded focus:ring-2 focus:ring-at-accent"
+                              onChange={(v) => handleDayTimeChange(key, 'breakEnd', v)}
+                              step={30}
+                              minHour={6}
+                              maxHour={22}
+                              className="w-full"
+                              aria-label="휴게 종료 시간"
                             />
                           </div>
                         </div>

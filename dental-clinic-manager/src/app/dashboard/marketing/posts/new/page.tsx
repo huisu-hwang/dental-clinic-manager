@@ -41,6 +41,7 @@ import { useFormDraft, clearFormDraft } from '@/hooks/useFormDraft'
 const DRAFT_KEY = 'marketing-new-post-draft-v1'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
+import { TimePicker } from '@/components/ui/TimePicker'
 
 // ── 섹션 헤더 (연차관리 페이지와 동일한 패턴) ──
 function SectionHeader({
@@ -904,11 +905,14 @@ export default function NewMarketingPostPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-at-accent mb-1">시간</label>
-                      <input
-                        type="time"
+                      <TimePicker
                         value={scheduleTime}
-                        onChange={(e) => setScheduleTime(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-at-border rounded-lg focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
+                        onChange={setScheduleTime}
+                        step={15}
+                        minHour={0}
+                        maxHour={23}
+                        className="w-full"
+                        aria-label="예약 시간"
                       />
                     </div>
                   </div>

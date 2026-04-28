@@ -6,6 +6,7 @@ import {
   ClockIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 interface ScheduleModalProps {
   isOpen: boolean
@@ -75,11 +76,14 @@ export default function ScheduleModal({ isOpen, onClose, onConfirm, isLoading }:
             </div>
             <div>
               <label className="block text-sm font-medium text-at-text mb-1.5">시간</label>
-              <input
-                type="time"
+              <TimePicker
                 value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
+                onChange={setScheduleTime}
+                step={15}
+                minHour={0}
+                maxHour={23}
+                className="w-full"
+                aria-label="예약 시간"
               />
             </div>
           </div>
