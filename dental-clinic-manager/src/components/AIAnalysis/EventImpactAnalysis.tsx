@@ -91,7 +91,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
             .eq('clinic_id', clinicId)
             .not('start_date', 'is', null)
             .order('start_date', { ascending: false })
-            .limit(50),
+            .limit(200),
           supabase
             .from('special_notes_history')
             .select('id, report_date, content')
@@ -99,7 +99,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
             .not('report_date', 'is', null)
             .not('content', 'is', null)
             .order('report_date', { ascending: false })
-            .limit(50),
+            .limit(1000),
         ]);
 
         if (announcementsRes.error) {
@@ -130,9 +130,9 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
           content: string | null;
           report_date: string | null;
         }>;
+        // 환자 관련 키워드 필터는 드롭다운 표시 시에만 적용 (검색 시에는 모든 특이사항 검색 가능)
         const notes: EventCandidate[] = noteRows
           .filter((n) => n.content && n.content.trim().length > 0 && n.report_date)
-          .filter((n) => !isPatientRelated(n.content as string))
           .map((n) => ({
             id: `note:${n.id}`,
             source: 'special_note' as const,
@@ -165,7 +165,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
     loadEventCandidates();
   }, [clinicId]);
 
-  // 검색어 적용 - 제목 또는 날짜 부분 일치
+  // 검색어 적용 - 제목 또는 날짜 부분 일치 (검색 시에는 환자 관련 항목 포함 모든 특이사항 대상)
   const filteredEvents = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return events;
@@ -173,6 +173,15 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
       (e) => e.title.toLowerCase().includes(q) || e.date.includes(q)
     );
   }, [events, searchQuery]);
+
+  // 드롭다운 표시용 - 환자 관련 항목은 일일 보고서 특이사항에서 제외
+  const dropdownEvents = useMemo(
+    () =>
+      events.filter((e) =>
+        e.source === 'special_note' ? !isPatientRelated(e.title) : true
+      ),
+    [events]
+  );
 
   const selectedEvent = events.find((e) => e.id === selectedEventId) || null;
 
@@ -318,7 +327,7 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
                 )}
               </div>
             ) : (
-              /* 드롭다운 (검색어 없을 때) */
+              /* 드롭다운 (검색어 없을 때) - 환자 관련 항목 제외 */
               <select
                 value={selectedEventId}
                 onChange={(ev) => setSelectedEventId(ev.target.value)}
@@ -326,9 +335,9 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
                 className="w-full px-3 py-2 border border-at-border rounded-lg text-sm focus:outline-none focus:border-at-accent"
               >
                 <option value="">-- 이벤트 선택 --</option>
-                {events.filter((e) => e.source === 'announcement').length > 0 && (
+                {dropdownEvents.filter((e) => e.source === 'announcement').length > 0 && (
                   <optgroup label="📢 공지사항">
-                    {events
+                    {dropdownEvents
                       .filter((e) => e.source === 'announcement')
                       .map((e) => (
                         <option key={e.id} value={e.id}>
@@ -337,9 +346,9 @@ export default function EventImpactAnalysis({ clinicId }: Props) {
                       ))}
                   </optgroup>
                 )}
-                {events.filter((e) => e.source === 'special_note').length > 0 && (
+                {dropdownEvents.filter((e) => e.source === 'special_note').length > 0 && (
                   <optgroup label="📝 일일 보고서 특이사항">
-                    {events
+                    {dropdownEvents
                       .filter((e) => e.source === 'special_note')
                       .map((e) => (
                         <option key={e.id} value={e.id}>
