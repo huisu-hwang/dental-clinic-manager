@@ -315,6 +315,7 @@ export type UserNotificationType =
   | 'system'                      // 시스템 알림
   | 'subscription_upgrade_required'  // 구독 업그레이드 필요 (원장에게)
   | 'subscription_payment_succeeded' // 결제 성공 후 대기자 승인 안내 (원장에게)
+  | 'monthly_report_ready'           // 월간 성과 보고서 생성 완료 (대표원장/실장에게)
 
 // 사용자 알림 타입 라벨
 export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string> = {
@@ -341,7 +342,8 @@ export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string>
   important: '중요 알림',
   system: '시스템 알림',
   subscription_upgrade_required: '구독 업그레이드 필요',
-  subscription_payment_succeeded: '결제 완료 · 승인 대기'
+  subscription_payment_succeeded: '결제 완료 · 승인 대기',
+  monthly_report_ready: '월간 성과 보고서'
 }
 
 // 사용자 알림 아이콘 매핑
@@ -369,7 +371,8 @@ export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> 
   important: 'exclamation-circle',
   system: 'bell',
   subscription_upgrade_required: 'alert-circle',
-  subscription_payment_succeeded: 'credit-card'
+  subscription_payment_succeeded: 'credit-card',
+  monthly_report_ready: 'file-bar-chart-2'
 }
 
 // 사용자 알림 색상 매핑
@@ -397,7 +400,8 @@ export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon:
   important: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' },
   system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
   subscription_upgrade_required: { icon: 'text-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' },
-  subscription_payment_succeeded: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' }
+  subscription_payment_succeeded: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  monthly_report_ready: { icon: 'text-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-700' }
 }
 
 // 사용자 알림 인터페이스
