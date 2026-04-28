@@ -200,6 +200,38 @@ export const announcementService = {
   },
 
   /**
+   * 공지사항 상세 조회 — 조회수 미증가 (대시보드 미리보기용)
+   */
+  async getAnnouncementPreview(id: string): Promise<{ data: Announcement | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const { data, error } = await (supabase as any)
+        .from('announcements')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) throw error
+
+      // author 이름 조회 (조회수 증가 RPC는 호출하지 않음)
+      const nameMap = await getUserNames(supabase, [data.author_id])
+
+      return {
+        data: {
+          ...data,
+          author_name: nameMap[data.author_id] || '알 수 없음',
+        },
+        error: null,
+      }
+    } catch (error) {
+      console.error('[announcementService.getAnnouncementPreview] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 공지사항 생성
    */
   async createAnnouncement(input: CreateAnnouncementDto): Promise<{ data: Announcement | null; error: string | null }> {
