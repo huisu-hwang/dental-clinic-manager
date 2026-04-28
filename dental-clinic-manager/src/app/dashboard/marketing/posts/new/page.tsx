@@ -30,12 +30,12 @@ import {
   type PlatformOptions,
   type ImageStyleOption,
   type ImageVisualStyle,
-  type SeoKeywordMiningResult,
 } from '@/types/marketing'
 import dynamic from 'next/dynamic'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 import { requireWorker } from '@/hooks/useWorkerGuard'
 import { usePremiumFeatures } from '@/hooks/usePremiumFeatures'
+import { useSeoPreview } from '@/hooks/useSeoPreview'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
@@ -85,10 +85,8 @@ export default function NewMarketingPostPage() {
   const [imageCount, setImageCount] = useState(3)
   const [targetWordCount, setTargetWordCount] = useState<number>(1500)
   const [useSeoAnalysis, setUseSeoAnalysis] = useState(false)
-  const [seoAnalyzing, setSeoAnalyzing] = useState(false)
-  const [seoResult, setSeoResult] = useState<SeoKeywordMiningResult | null>(null)
-  const [seoError, setSeoError] = useState<string>('')
-  const [seoAppliedKeyword, setSeoAppliedKeyword] = useState<string>('')
+  const seoPreview = useSeoPreview()
+  const seoResult = seoPreview.result
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
 
@@ -131,36 +129,11 @@ export default function NewMarketingPostPage() {
   }
 
   // ── SEO 분석 미리보기 ──
-  const runSeoPreview = async () => {
-    if (!keyword.trim()) {
-      setSeoError('키워드를 먼저 입력해주세요.')
-      return
-    }
-    setSeoAnalyzing(true)
-    setSeoError('')
-    setSeoResult(null)
-    try {
-      const res = await fetch('/api/marketing/seo/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword: keyword.trim() }),
-      })
-      const json = await res.json()
-      if (res.status === 202) {
-        setSeoError(json.message || '분석이 진행 중입니다. 1~2분 후 다시 시도해주세요.')
-      } else if (!res.ok) {
-        setSeoError(json.error || 'SEO 분석에 실패했습니다.')
-      } else {
-        setSeoResult(json.data as SeoKeywordMiningResult)
-        setSeoAppliedKeyword(keyword.trim())
-        setUseSeoAnalysis(true)
-      }
-    } catch (err) {
-      setSeoError(err instanceof Error ? err.message : '네트워크 오류')
-    } finally {
-      setSeoAnalyzing(false)
-    }
-  }
+  const runSeoPreview = useCallback(() => {
+    if (!keyword.trim()) return
+    setUseSeoAnalysis(true)
+    seoPreview.start(keyword)
+  }, [keyword, seoPreview])
 
   const applySeoRecommendations = () => {
     if (!seoResult) return
@@ -413,19 +386,38 @@ export default function NewMarketingPostPage() {
               <button
                 type="button"
                 onClick={runSeoPreview}
-                disabled={seoAnalyzing || !keyword.trim() || isFormDisabled}
+                disabled={seoPreview.isBusy || !keyword.trim() || isFormDisabled}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
                 title={!keyword.trim() ? '키워드를 먼저 입력해주세요' : 'SEO 분석을 실행하여 상위 노출 글의 권장값을 확인합니다'}
               >
-                {seoAnalyzing ? '분석 중...' : (seoResult ? '다시 분석' : '분석 실행')}
+                {seoPreview.isBusy ? '분석 중...' : (seoResult ? '다시 분석' : '분석 실행')}
               </button>
             </div>
 
-            {seoError && <p className="text-xs text-at-error">{seoError}</p>}
+            {/* 진행률 바 (분석 중) */}
+            {seoPreview.isBusy && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-at-text-secondary">{seoPreview.step || '분석 중...'}</span>
+                  <span className="font-semibold text-indigo-600">{seoPreview.progress}%</span>
+                </div>
+                <div className="relative h-2 bg-at-border rounded-full overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${seoPreview.progress}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-at-text-weak">분석은 보통 30초~1분 정도 걸리며, 페이지를 떠나지 않으셔도 됩니다.</p>
+              </div>
+            )}
+
+            {seoPreview.status === 'failed' && seoPreview.error && (
+              <p className="text-xs text-at-error">{seoPreview.error}</p>
+            )}
 
             {seoResult && (
               <div className="space-y-3">
-                <p className="text-[11px] text-at-text-weak">키워드 “{seoAppliedKeyword}” 상위 노출 글 분석 결과</p>
+                <p className="text-[11px] text-at-text-weak">키워드 “{seoPreview.appliedKeyword}” 상위 노출 글 분석 결과</p>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-lg bg-white border border-at-border p-2.5">
                     <p className="text-[10px] text-at-text-weak">평균 글자수</p>
