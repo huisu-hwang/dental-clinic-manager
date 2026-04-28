@@ -17,6 +17,7 @@ import { formatResidentNumber, maskResidentNumber } from '@/utils/residentNumber
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import { collectSignatureMetadata } from '@/utils/documentLegalUtils'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
+import { usePermissions } from '@/hooks/usePermissions'
 
 interface ContractDetailProps {
   contractId: string
@@ -25,6 +26,7 @@ interface ContractDetailProps {
 
 export default function ContractDetail({ contractId, currentUser }: ContractDetailProps) {
   const router = useRouter()
+  const { hasPermission } = usePermissions()
   const [contract, setContract] = useState<EmploymentContract | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -57,6 +59,13 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
       if (response.error) {
         setError(response.error)
       } else if (response.data) {
+        // 본인이 아닌 계약서는 contract_view_all 권한 필요
+        const isOwnContract = response.data.employee_user_id === currentUser.id
+        if (!isOwnContract && !hasPermission('contract_view_all')) {
+          setError('해당 근로계약서를 조회할 권한이 없습니다.')
+          return
+        }
+
         setContract(response.data)
 
         // 주민번호 복호화

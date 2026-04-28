@@ -14,6 +14,7 @@ import type { UserProfile } from '@/contexts/AuthContext'
 import { checkSecuritySession, setSecuritySession } from '@/lib/securitySession'
 import PasswordVerificationModal from '@/components/Security/PasswordVerificationModal'
 import { appAlert } from '@/components/ui/AppDialog'
+import { usePermissions } from '@/hooks/usePermissions'
 
 interface ContractListProps {
   currentUser: UserProfile
@@ -38,11 +39,12 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
 
 export default function ContractList({ currentUser, clinicId }: ContractListProps) {
   const router = useRouter()
+  const { hasPermission } = usePermissions()
   const [contracts, setContracts] = useState<EmploymentContract[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  // 대표원장만 전체 계약서 조회, 나머지는 본인 계약서만
-  const isFullAccessRole = currentUser.role === 'owner'
+  // 전체 직원 계약서 조회 권한이 있으면 전체 조회, 아니면 본인 계약서만
+  const isFullAccessRole = hasPermission('contract_view_all')
   const [filters, setFilters] = useState<ContractListFilters>({
     status: undefined,
     employee_user_id: isFullAccessRole ? undefined : currentUser.id,

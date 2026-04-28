@@ -22,7 +22,8 @@ export type Permission =
   | 'protocol_history_view'  // 프로토콜 히스토리 조회
   | 'protocol_category_manage' // 프로토콜 카테고리 관리
   // 근로계약서 관리 권한
-  | 'contract_view'          // 계약서 조회
+  | 'contract_view'          // 본인 근로계약서 조회 (모든 직원 기본 보유)
+  | 'contract_view_all'      // 전체 직원 근로계약서 조회 (대표원장이 위임 가능)
   | 'contract_create'        // 계약서 생성
   | 'contract_edit'          // 계약서 수정
   | 'contract_delete'        // 계약서 삭제
@@ -107,7 +108,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'protocol_view', 'protocol_create', 'protocol_edit', 'protocol_delete',
     'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
     // 근로계약서 관리 (모든 권한)
-    'contract_view', 'contract_create', 'contract_edit', 'contract_delete', 'contract_template_manage',
+    'contract_view', 'contract_view_all', 'contract_create', 'contract_edit', 'contract_delete', 'contract_template_manage',
     // 출퇴근 관리 (모든 권한)
     'attendance_check_in', 'attendance_view_own', 'attendance_view_all', 'attendance_manage',
     'attendance_stats_view', 'schedule_view_own', 'schedule_view_all', 'schedule_manage',
@@ -318,6 +319,7 @@ export const PERMISSION_GROUPS = {
   ],
   '근로계약서': [
     { key: 'contract_view', label: '본인 근로계약서 조회' },
+    { key: 'contract_view_all', label: '전체 직원 근로계약서 조회' },
     { key: 'contract_create', label: '계약서 생성' },
     { key: 'contract_edit', label: '계약서 수정' },
     { key: 'contract_delete', label: '계약서 삭제' },
@@ -434,7 +436,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'protocol_history_view': '프로토콜 변경 히스토리를 조회할 수 있습니다.',
   'protocol_category_manage': '프로토콜 카테고리를 관리할 수 있습니다.',
   // 근로계약서 관리 권한 설명
-  'contract_view': '본인의 근로계약서를 조회할 수 있습니다. (대표원장/실장은 전체 조회)',
+  'contract_view': '본인의 근로계약서를 조회할 수 있습니다. (모든 직원 기본 보유)',
+  'contract_view_all': '전체 직원의 근로계약서를 조회할 수 있습니다. (대표원장이 위임)',
   'contract_create': '새로운 근로계약서를 생성할 수 있습니다.',
   'contract_edit': '근로계약서를 수정할 수 있습니다.',
   'contract_delete': '근로계약서를 삭제할 수 있습니다.',
