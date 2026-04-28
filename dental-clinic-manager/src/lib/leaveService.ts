@@ -1810,6 +1810,69 @@ export const leaveService = {
   },
 
   /**
+   * 연차 조정 수정 (관리자용)
+   * leave_adjustments 레코드의 일수/사유/사용일자 수정 후 잔여 연차 재계산
+   */
+  async updateAdjustment(
+    adjustmentId: string,
+    updates: {
+      days?: number
+      reason?: string
+      use_date?: string | null
+      leave_type_id?: string | null
+    }
+  ): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const user = getCurrentUser()
+      if (!user) throw new Error('User not found')
+
+      if (user.role !== 'owner' && user.role !== 'manager') {
+        throw new Error('권한이 없습니다.')
+      }
+
+      const { data: existing, error: fetchError } = await (supabase as any)
+        .from('leave_adjustments')
+        .select('user_id, year, reason')
+        .eq('id', adjustmentId)
+        .single()
+
+      if (fetchError) throw fetchError
+      if (!existing) throw new Error('조정 내역을 찾을 수 없습니다.')
+
+      // 시스템 자동 생성 항목은 수정 금지 (UI에서도 차단하지만 방어적으로 한 번 더)
+      const reason: string = existing.reason || ''
+      if (reason.startsWith('[병원휴무]') || reason.startsWith('[법정공휴일]')) {
+        throw new Error('시스템에서 자동 생성된 조정 내역은 수정할 수 없습니다.')
+      }
+
+      const updateData: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      }
+      if (typeof updates.days === 'number') updateData.days = updates.days
+      if (typeof updates.reason === 'string') updateData.reason = updates.reason
+      if (updates.use_date !== undefined) updateData.use_date = updates.use_date
+      if (updates.leave_type_id !== undefined) updateData.leave_type_id = updates.leave_type_id
+
+      const { error } = await (supabase as any)
+        .from('leave_adjustments')
+        .update(updateData)
+        .eq('id', adjustmentId)
+
+      if (error) throw error
+
+      await this.initializeBalance(existing.user_id, existing.year)
+
+      return { success: true, error: null }
+    } catch (error) {
+      console.error('[leaveService.updateAdjustment] Error:', error)
+      return { success: false, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 조정 삭제
    */
   async deleteAdjustment(adjustmentId: string): Promise<{ success: boolean; error: string | null }> {
