@@ -11,6 +11,7 @@ import BranchSelector from './BranchSelector'
 import { useBranches } from '@/hooks/useBranches'
 import { overtimeMealService } from '@/lib/overtimeMealService'
 import type { OvertimeMealLog } from '@/types'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 type StatisticsWithName = AttendanceStatistics & { user_name: string }
 type PeriodMode = 'monthly' | 'custom'
@@ -1008,16 +1009,19 @@ export default function AdminAttendanceStats() {
                   <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     출근 시간
                   </label>
-                  <input
-                    type="time"
+                  <TimePicker
                     value={editFormData.check_in_time}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setEditFormData((prev) => ({
                         ...prev,
-                        check_in_time: e.target.value,
+                        check_in_time: v,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
+                    step={15}
+                    minHour={6}
+                    maxHour={22}
+                    className="w-full"
+                    aria-label="출근 시간"
                   />
                 </div>
 
@@ -1026,16 +1030,19 @@ export default function AdminAttendanceStats() {
                   <label className="block text-sm font-medium text-at-text-secondary mb-1">
                     퇴근 시간
                   </label>
-                  <input
-                    type="time"
+                  <TimePicker
                     value={editFormData.check_out_time}
-                    onChange={(e) =>
+                    onChange={(v) =>
                       setEditFormData((prev) => ({
                         ...prev,
-                        check_out_time: e.target.value,
+                        check_out_time: v,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent"
+                    step={15}
+                    minHour={6}
+                    maxHour={22}
+                    className="w-full"
+                    aria-label="퇴근 시간"
                   />
                 </div>
 
