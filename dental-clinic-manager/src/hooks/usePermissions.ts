@@ -7,7 +7,18 @@ import { DEFAULT_PERMISSIONS, PERMISSION_DESCRIPTIONS } from '@/types/permission
 
 // 신규 추가된 기능의 권한 prefix 목록
 // 커스텀 권한에 해당 prefix 권한이 하나도 없으면 역할 기본값에서 자동 보충
-const NEW_FEATURE_PREFIXES = ['payroll_', 'task_checklist_'] as const
+const NEW_FEATURE_PREFIXES = [
+  'payroll_',
+  'task_checklist_',
+  'task_directive_',
+  'bulletin_',
+  'community_',
+  'recall_',
+  'ai_analysis_',
+  'financial_',
+  'marketing_',
+  'investment_',
+] as const
 
 export function usePermissions() {
   const { user } = useAuth()

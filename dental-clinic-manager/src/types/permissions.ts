@@ -70,6 +70,31 @@ export type Permission =
   | 'task_checklist_manage'   // 업무 체크리스트 템플릿 생성/수정 (실장)
   | 'task_checklist_approve'  // 업무 체크리스트 결재 (원장)
   | 'task_checklist_view_all' // 전체 직원 체크리스트 현황 조회
+  // 업무 지시 권한
+  | 'task_directive_view'     // 업무 지시 조회
+  | 'task_directive_create'   // 업무 지시 생성
+  | 'task_directive_manage'   // 업무 지시 관리(수정/삭제/할당)
+  // 병원 게시판 권한
+  | 'bulletin_view'           // 병원 게시판 조회
+  | 'bulletin_manage'         // 병원 게시판 관리(작성/수정/삭제)
+  // 커뮤니티 권한
+  | 'community_view'          // 자유게시판/소모임 조회
+  | 'community_post'          // 자유게시판/소모임 게시글/댓글 작성
+  | 'community_manage'        // 자유게시판/소모임 관리(수정/삭제/모임 운영)
+  // 리콜 관리 권한
+  | 'recall_view'             // 리콜 관리 조회
+  | 'recall_manage'           // 리콜 관리 캠페인/처리
+  // AI 데이터 분석 권한
+  | 'ai_analysis_view'        // AI 데이터 분석 조회
+  // 경영 현황 권한
+  | 'financial_view'          // 경영 현황 조회
+  | 'financial_manage'        // 경영 현황 입력/수정
+  // 마케팅 자동화 권한
+  | 'marketing_view'          // 마케팅 자동화 조회
+  | 'marketing_manage'        // 마케팅 자동화 발행/관리
+  // 주식 자동매매 권한
+  | 'investment_view'         // 주식 자동매매 조회
+  | 'investment_manage'       // 주식 자동매매 전략/주문 관리
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -100,7 +125,23 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 급여 명세서 (모든 권한)
     'payroll_view', 'payroll_manage',
     // 업무 체크리스트 (모든 권한)
-    'task_checklist_view', 'task_checklist_manage', 'task_checklist_approve', 'task_checklist_view_all'
+    'task_checklist_view', 'task_checklist_manage', 'task_checklist_approve', 'task_checklist_view_all',
+    // 업무 지시 (모든 권한)
+    'task_directive_view', 'task_directive_create', 'task_directive_manage',
+    // 병원 게시판 (모든 권한)
+    'bulletin_view', 'bulletin_manage',
+    // 커뮤니티 (모든 권한)
+    'community_view', 'community_post', 'community_manage',
+    // 리콜 관리 (모든 권한)
+    'recall_view', 'recall_manage',
+    // AI 데이터 분석
+    'ai_analysis_view',
+    // 경영 현황 (모든 권한)
+    'financial_view', 'financial_manage',
+    // 마케팅 자동화 (모든 권한)
+    'marketing_view', 'marketing_manage',
+    // 주식 자동매매 (모든 권한)
+    'investment_view', 'investment_manage'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -128,7 +169,21 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 급여 명세서 (본인 조회)
     'payroll_view',
     // 업무 체크리스트 (본인 체크만 - 직원과 동일)
-    'task_checklist_view'
+    'task_checklist_view',
+    // 업무 지시 (조회/생성/관리)
+    'task_directive_view', 'task_directive_create', 'task_directive_manage',
+    // 병원 게시판 (조회/관리)
+    'bulletin_view', 'bulletin_manage',
+    // 커뮤니티 (조회/작성)
+    'community_view', 'community_post',
+    // 리콜 관리 (조회/관리)
+    'recall_view', 'recall_manage',
+    // AI 데이터 분석 (조회)
+    'ai_analysis_view',
+    // 경영 현황 (조회)
+    'financial_view',
+    // 마케팅 자동화 (조회)
+    'marketing_view'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -153,7 +208,15 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 급여 명세서 (본인 조회)
     'payroll_view',
     // 업무 체크리스트 (관리 및 전체 현황 - 실장은 템플릿 생성/수정 가능)
-    'task_checklist_view', 'task_checklist_manage', 'task_checklist_view_all'
+    'task_checklist_view', 'task_checklist_manage', 'task_checklist_view_all',
+    // 업무 지시 (조회/생성/관리)
+    'task_directive_view', 'task_directive_create', 'task_directive_manage',
+    // 병원 게시판 (조회/관리)
+    'bulletin_view', 'bulletin_manage',
+    // 커뮤니티 (조회/작성)
+    'community_view', 'community_post',
+    // 리콜 관리 (조회/관리)
+    'recall_view', 'recall_manage'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -176,7 +239,15 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 급여 명세서 (본인 조회)
     'payroll_view',
     // 업무 체크리스트 (본인 체크만)
-    'task_checklist_view'
+    'task_checklist_view',
+    // 업무 지시 (조회)
+    'task_directive_view',
+    // 병원 게시판 (조회)
+    'bulletin_view',
+    // 커뮤니티 (조회/작성)
+    'community_view', 'community_post',
+    // 리콜 관리 (조회)
+    'recall_view'
   ],
   staff: [
     // 일반 직원은 프로토콜 조회, 본인 출퇴근, 본인 연차만 가능
@@ -199,7 +270,15 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 급여 명세서 (본인 조회)
     'payroll_view',
     // 업무 체크리스트 (본인 체크만)
-    'task_checklist_view'
+    'task_checklist_view',
+    // 업무 지시 (조회)
+    'task_directive_view',
+    // 병원 게시판 (조회)
+    'bulletin_view',
+    // 커뮤니티 (조회/작성)
+    'community_view', 'community_post',
+    // 리콜 관리 (조회)
+    'recall_view'
   ]
 }
 
@@ -293,6 +372,39 @@ export const PERMISSION_GROUPS = {
     { key: 'task_checklist_approve', label: '체크리스트 결재' },
     { key: 'task_checklist_view_all', label: '전체 현황 조회' }
   ],
+  '업무 지시': [
+    { key: 'task_directive_view', label: '업무 지시 조회' },
+    { key: 'task_directive_create', label: '업무 지시 생성' },
+    { key: 'task_directive_manage', label: '업무 지시 관리(수정/삭제/할당)' }
+  ],
+  '병원 게시판': [
+    { key: 'bulletin_view', label: '병원 게시판 조회' },
+    { key: 'bulletin_manage', label: '게시판 관리(작성/수정/삭제)' }
+  ],
+  '커뮤니티(자유게시판/소모임)': [
+    { key: 'community_view', label: '커뮤니티 조회' },
+    { key: 'community_post', label: '게시글/댓글 작성' },
+    { key: 'community_manage', label: '커뮤니티 관리(수정/삭제/모임 운영)' }
+  ],
+  '리콜 관리': [
+    { key: 'recall_view', label: '리콜 관리 조회' },
+    { key: 'recall_manage', label: '리콜 캠페인/처리 관리' }
+  ],
+  'AI 데이터 분석': [
+    { key: 'ai_analysis_view', label: 'AI 데이터 분석 조회' }
+  ],
+  '경영 현황': [
+    { key: 'financial_view', label: '경영 현황 조회' },
+    { key: 'financial_manage', label: '경영 현황 입력/수정' }
+  ],
+  '마케팅 자동화': [
+    { key: 'marketing_view', label: '마케팅 자동화 조회' },
+    { key: 'marketing_manage', label: '마케팅 발행/관리' }
+  ],
+  '주식 자동매매': [
+    { key: 'investment_view', label: '주식 자동매매 조회' },
+    { key: 'investment_manage', label: '전략/주문 관리' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -369,5 +481,30 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'task_checklist_view': '본인의 업무 체크리스트를 조회하고 체크할 수 있습니다.',
   'task_checklist_manage': '업무 체크리스트 템플릿을 생성하고 수정할 수 있습니다.',
   'task_checklist_approve': '업무 체크리스트 변경사항을 결재할 수 있습니다.',
-  'task_checklist_view_all': '전체 직원의 업무 체크리스트 현황을 조회할 수 있습니다.'
+  'task_checklist_view_all': '전체 직원의 업무 체크리스트 현황을 조회할 수 있습니다.',
+  // 업무 지시 권한 설명
+  'task_directive_view': '업무 지시 내역을 조회할 수 있습니다.',
+  'task_directive_create': '새로운 업무 지시를 생성할 수 있습니다.',
+  'task_directive_manage': '업무 지시를 수정/삭제하거나 담당자를 할당할 수 있습니다.',
+  // 병원 게시판 권한 설명
+  'bulletin_view': '병원 게시판 글을 조회할 수 있습니다.',
+  'bulletin_manage': '병원 게시판에 글을 작성/수정/삭제할 수 있습니다.',
+  // 커뮤니티 권한 설명
+  'community_view': '자유게시판과 소모임을 조회할 수 있습니다.',
+  'community_post': '자유게시판/소모임에 글과 댓글을 작성할 수 있습니다.',
+  'community_manage': '자유게시판/소모임 게시글을 수정/삭제하거나 모임을 운영할 수 있습니다.',
+  // 리콜 관리 권한 설명
+  'recall_view': '리콜 관리 페이지의 환자 목록과 현황을 조회할 수 있습니다.',
+  'recall_manage': '리콜 캠페인을 실행하고 처리 결과를 등록/수정할 수 있습니다.',
+  // AI 데이터 분석 권한 설명
+  'ai_analysis_view': 'AI 데이터 분석 결과를 조회할 수 있습니다.',
+  // 경영 현황 권한 설명
+  'financial_view': '경영 현황(수입/지출/손익)을 조회할 수 있습니다.',
+  'financial_manage': '경영 현황 데이터를 입력하거나 수정할 수 있습니다.',
+  // 마케팅 자동화 권한 설명
+  'marketing_view': '마케팅 자동화 콘텐츠와 발행 현황을 조회할 수 있습니다.',
+  'marketing_manage': '마케팅 자동화 콘텐츠를 생성/수정/발행할 수 있습니다.',
+  // 주식 자동매매 권한 설명
+  'investment_view': '주식 자동매매 현황과 포트폴리오를 조회할 수 있습니다.',
+  'investment_manage': '자동매매 전략을 설정하거나 주문을 관리할 수 있습니다.'
 }
