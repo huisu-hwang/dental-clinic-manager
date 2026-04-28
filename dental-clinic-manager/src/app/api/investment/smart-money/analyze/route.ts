@@ -208,12 +208,15 @@ export async function POST(request: NextRequest) {
       const quote = await fetchCurrentQuote(ticker, 'US')
       currentPrice = quote.price ?? 0
 
+      // fetchIntradayPrices는 default로 30일치(≈2340봉)를 반환 → 인트라데이 분석에 과대.
+      // KR과 동일하게 "최근 1 거래일분(≈78봉, 6.5시간)" 만 사용.
       const usBars: OHLCV[] = await fetchIntradayPrices({
         ticker,
         market: 'US',
         timeframe: '5m',
       })
-      bars = usBars.map((b) => ({
+      const recent = usBars.slice(-78)
+      bars = recent.map((b) => ({
         datetime: b.date,
         open: b.open,
         high: b.high,

@@ -72,44 +72,59 @@ function scoreVwap(bars: AlgoBar[]): number {
 }
 
 // ============================================
-// Iceberg — 동일 가격대(±5%) 클러스터에서 동일 크기 체결 반복
+// Iceberg — 좁은 가격대(±0.5%)에서 평균 미만 거래량의 유사 크기 봉 반복 클러스터
+//
+// 진짜 아이스버그 시그니처:
+//   1) 분할 체결 = 평균 이하의 작은 거래량
+//   2) 같은 가격대에서 반복 체결 (가격을 지키려는 의도)
+//   3) 비슷한 사이즈로 반복 (알고 트레이딩 typical)
+//
+// 이전 구현은 정렬 후 인접 값을 보았기 때문에, 어떤 인트라데이 데이터에서도
+// 저거래량 구간이 길게 정렬되면 100점이 나오는 결함이 있었음.
 // ============================================
 function scoreIceberg(bars: AlgoBar[]): number {
   if (bars.length < 10) return 0
-  // 가격을 5% 버킷으로 정규화
+
+  const allVolumes = bars.map(b => b.volume).filter(v => v > 0)
+  if (allVolumes.length === 0) return 0
+  const meanVol = allVolumes.reduce((s, v) => s + v, 0) / allVolumes.length
+  if (meanVol <= 0) return 0
+  // 평균 거래량의 1.5배 이상인 봉은 후보에서 제외 (아이스버그는 작게 분할)
+  const volCap = meanVol * 1.5
+
+  // 가격을 0.5% 좁은 버킷으로 그룹핑 (이전 5%는 너무 넓어서 인트라데이 ≈ 1~2개 빈만 생성)
   const priceBins = new Map<number, number[]>()
   for (const b of bars) {
     const mid = (b.high + b.low) / 2
-    if (mid <= 0) continue
-    const binKey = Math.round(Math.log(mid) / Math.log(1.05))  // ±5% 단위
+    if (mid <= 0 || b.volume <= 0) continue
+    if (b.volume > volCap) continue
+    const binKey = Math.round(Math.log(mid) / Math.log(1.005))
     const arr = priceBins.get(binKey) ?? []
     arr.push(b.volume)
     priceBins.set(binKey, arr)
   }
-  let maxRepeats = 0
-  let totalCount = 0
+
+  // 각 가격 빈 안에서 "± 10% 거래량으로 묶인 가장 큰 클러스터" 카운트
+  // (정렬 후 슬라이딩 윈도우: 정렬 자체는 시간순서가 의미 없는 클러스터 빈도 측정에 사용)
+  let bestCluster = 0
   for (const volumes of priceBins.values()) {
-    if (volumes.length < 3) continue
-    // 같은 크기 체결 (±10% 허용) 반복 카운트
+    if (volumes.length < 4) continue
     const sorted = [...volumes].sort((a, b) => a - b)
-    let bestRun = 1
-    let curRun = 1
-    for (let i = 1; i < sorted.length; i++) {
-      const prev = sorted[i - 1]
-      const cur = sorted[i]
-      if (prev > 0 && Math.abs(cur - prev) / prev < 0.1) {
-        curRun++
-        if (curRun > bestRun) bestRun = curRun
-      } else {
-        curRun = 1
+    for (let i = 0; i < sorted.length; i++) {
+      const center = sorted[i]
+      if (center <= 0) continue
+      let count = 1
+      for (let j = i + 1; j < sorted.length; j++) {
+        if (Math.abs(sorted[j] - center) / center < 0.1) count++
+        else break
       }
+      if (count > bestCluster) bestCluster = count
     }
-    maxRepeats = Math.max(maxRepeats, bestRun)
-    totalCount += volumes.length
   }
-  if (totalCount === 0) return 0
-  // 5회 반복 → 50점, 10회 → 100점
-  return Math.max(0, Math.min(100, (maxRepeats / 10) * 100))
+
+  // 4 클러스터 → 0점, 8 → ~50점, 12 이상 → 100점
+  if (bestCluster < 4) return 0
+  return Math.max(0, Math.min(100, ((bestCluster - 4) / 8) * 100))
 }
 
 // ============================================
