@@ -20,6 +20,7 @@ const statusCallbacks: StatusCallback[] = [];
 
 const POLL_INTERVAL = 5000;       // 5초
 const HEARTBEAT_INTERVAL = 30000; // 30초
+const JOB_TIMEOUT_MS = 5 * 60 * 1000; // 잡 1건 처리 최대 5분 (Playwright/네이버 hang 방지)
 
 function setStatus(status: SeoStatus, message?: string): void {
   currentStatus = status;
@@ -62,6 +63,9 @@ async function pollForJobs(): Promise<void> {
   try {
     const { job, runningCount } = await client.fetchPendingJob();
 
+    // 워커가 stop_requested 상태면 잡 픽업하지 않음 (heartbeat에서 종료 처리됨)
+    if (!client) return;
+
     if (job) {
       isProcessingLocally = true;
       setStatus('analyzing', `키워드 "${job.params.keyword}" 분석 중...`);
@@ -86,28 +90,43 @@ async function processJob(job: SeoJob): Promise<void> {
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { chromium } = require('playwright');
-  const browser = await chromium.launch({ headless: getConfig().headless });
+  let browser: any = null;
 
   try {
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    });
-    const page = await context.newPage();
+    // 전체 잡 처리에 5분 timeout — Playwright/네이버 hang 시 자동 fail 처리
+    await Promise.race([
+      (async () => {
+        browser = await chromium.launch({ headless: getConfig().headless });
+        const context = await browser.newContext({
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        });
+        const page = await context.newPage();
 
-    if (job.job_type === 'keyword_analysis') {
-      await processKeywordAnalysis(job, page);
-    } else if (job.job_type === 'competitor_compare') {
-      await processCompetitorCompare(job, page);
-    }
+        if (job.job_type === 'keyword_analysis') {
+          await processKeywordAnalysis(job, page);
+        } else if (job.job_type === 'competitor_compare') {
+          await processCompetitorCompare(job, page);
+        }
+      })(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Job timeout: ${JOB_TIMEOUT_MS / 1000}초 내 완료되지 않음`)), JOB_TIMEOUT_MS)
+      ),
+    ]);
 
     await client!.updateJobStatus(job.id, 'completed');
     log('info', `[SEO] Job 완료: ${job.id}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log('error', `[SEO] Job 실패: ${msg}`);
-    await client!.updateJobStatus(job.id, 'failed', { error_message: msg });
+    try {
+      await client!.updateJobStatus(job.id, 'failed', { error_message: msg });
+    } catch (updateErr) {
+      log('error', `[SEO] Job 실패 상태 업데이트 실패: ${updateErr instanceof Error ? updateErr.message : updateErr}`);
+    }
   } finally {
-    await browser.close();
+    if (browser) {
+      try { await browser.close(); } catch { /* ignore close errors */ }
+    }
   }
 }
 
@@ -472,9 +491,14 @@ function calculateOverallScore(myPost: any, competitors: any[]): number {
 async function sendHeartbeat(): Promise<void> {
   if (!client) return;
   try {
-    await client.sendHeartbeat(
+    const result = await client.sendHeartbeat(
       `electron-seo-${os.hostname()}`,
       isProcessingLocally || currentStatus === 'analyzing' ? 'busy' : 'online'
     );
+    // DB에서 stop_requested=true 이면 워커 즉시 종료
+    if (result?.stop_requested) {
+      log('info', '[SEO] stop_requested 신호 수신, 워커 종료');
+      stopSeoWorker();
+    }
   } catch { /* ignore */ }
 }
