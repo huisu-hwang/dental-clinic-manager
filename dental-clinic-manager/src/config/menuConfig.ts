@@ -179,7 +179,6 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     categoryId: 'work',
     order: 6,
     visible: true,
-    ownerOnly: true,  // 대표 원장 전용 (권한 위임 시에도 owner만 표시 유지)
     premiumFeature: true,  // 프리미엄 기능
   },
 
@@ -319,7 +318,6 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     categoryId: 'operations',
     order: 15,
     visible: true,
-    ownerOnly: true,  // 대표 원장 전용 (권한 위임 시에도 owner만 표시 유지)
     premiumFeature: true,  // 프리미엄 기능
   },
   {
@@ -331,7 +329,6 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     categoryId: 'operations',
     order: 16,
     visible: true,
-    ownerOnly: true,  // 대표 원장 전용 (권한 위임 시에도 owner만 표시 유지)
     premiumFeature: true,  // 프리미엄 기능
   },
 
