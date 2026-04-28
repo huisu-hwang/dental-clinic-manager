@@ -76,6 +76,7 @@ export function generateChips(
   const chips: TimeChip[] = []
   for (let h = startHour; h <= endHour; h++) {
     for (let m = 0; m < 60; m += step) {
+      if (h === maxHour && m > 0) break
       const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
       let displayHour = h % 12
       if (displayHour === 0) displayHour = 12

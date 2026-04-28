@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import { Popover, PopoverButton, PopoverPanel, Transition } from '@headlessui/react'
 import { Clock, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -40,6 +40,7 @@ export function TimePicker({
   name,
   'aria-label': ariaLabel,
 }: TimePickerProps) {
+  const panelId = useId()
   const [activeTab, setActiveTab] = useState<'am' | 'pm'>(() => getDefaultTab(value))
 
   useEffect(() => {
@@ -61,10 +62,12 @@ export function TimePicker({
 
   const handleInputBlur = () => {
     const parsed = parseTimeInput(inputText)
-    if (parsed !== null && parsed !== value) {
-      onChange(parsed)
+    if (parsed !== null) {
+      if (parsed !== value) {
+        onChange(parsed)
+      }
       setInputText(formatTo12Hour(parsed))
-    } else if (parsed === null) {
+    } else {
       setInputText(formatTo12Hour(value))
     }
   }
@@ -73,6 +76,12 @@ export function TimePicker({
     <Popover className={cn('relative', className)}>
       <PopoverButton
         as="div"
+        onClickCapture={(e: React.MouseEvent) => {
+          if (disabled) {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+        }}
         className={cn(
           'flex items-center gap-2 w-full px-3 py-2 text-sm',
           'bg-white border border-at-border rounded-lg',
@@ -90,6 +99,10 @@ export function TimePicker({
               ref={inputRef}
               id={id}
               name={name}
+              role="combobox"
+              aria-expanded={open}
+              aria-haspopup="dialog"
+              aria-controls={panelId}
               aria-label={ariaLabel}
               disabled={disabled}
               type="text"
@@ -122,6 +135,9 @@ export function TimePicker({
         leaveTo="opacity-0 translate-y-1"
       >
         <PopoverPanel
+          id={panelId}
+          role="dialog"
+          aria-label="시간 선택"
           anchor={{ to: 'bottom start', gap: 8 }}
           className={cn(
             'z-50 w-72 max-w-[calc(100vw-2rem)]',
