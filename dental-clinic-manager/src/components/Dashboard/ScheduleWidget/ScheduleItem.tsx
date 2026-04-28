@@ -13,7 +13,7 @@ interface BadgeStyle {
 const BADGE_STYLES: Record<ScheduleBadgeKind, BadgeStyle> = {
   clinic_holiday: { label: '휴무', className: 'bg-red-50 text-red-700' },
   public_holiday: { label: '공휴일', className: 'bg-amber-50 text-amber-700' },
-  schedule: { label: '일정', className: 'bg-at-accent-tag text-at-accent' },
+  schedule: { label: '일정', className: 'bg-at-tag text-at-accent' },
   holiday_announcement: { label: '휴무공지', className: 'bg-red-50 text-red-700' },
 }
 

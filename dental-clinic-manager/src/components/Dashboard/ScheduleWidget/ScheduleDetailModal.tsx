@@ -90,7 +90,7 @@ export default function ScheduleDetailModal({ event, open, onOpenChange }: Sched
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-at-text">
-            <span className="px-1.5 py-0.5 rounded bg-at-accent-tag text-at-accent text-xs font-medium">
+            <span className="px-1.5 py-0.5 rounded bg-at-tag text-at-accent text-xs font-medium">
               {badgeLabel}
             </span>
             <span className="flex-1 truncate">{event?.title}</span>
