@@ -29,6 +29,7 @@ import {
   type ImageVisualStyle,
   type PlatformContent,
   type ClinicalPhotoInput,
+  type SeoKeywordMiningResult,
 } from '@/types/marketing'
 import dynamic from 'next/dynamic'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
@@ -86,6 +87,12 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
   const [imageVisualStyle, setImageVisualStyle] = useState<ImageVisualStyle>('realistic')
   const [imageCount, setImageCount] = useState(3)
+  const [targetWordCount, setTargetWordCount] = useState<number>(1500)
+  // ── SEO 분석 미리보기 상태 ──
+  const [seoAnalyzing, setSeoAnalyzing] = useState(false)
+  const [seoResult, setSeoResult] = useState<SeoKeywordMiningResult | null>(null)
+  const [seoError, setSeoError] = useState<string>('')
+  const [seoAppliedKeyword, setSeoAppliedKeyword] = useState<string>('')
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
   const [clinicalData, setClinicalData] = useState<ClinicalFormData | null>(null)
@@ -137,6 +144,48 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const handlePostTypeChange = (type: PostType) => {
     setPostType(type)
     setPlatforms(DEFAULT_PLATFORM_PRESETS[type])
+  }
+
+  // ── SEO 분석 미리보기 ──
+  const runSeoPreview = async () => {
+    if (!keyword.trim()) {
+      setSeoError('키워드를 먼저 입력해주세요.')
+      return
+    }
+    setSeoAnalyzing(true)
+    setSeoError('')
+    setSeoResult(null)
+    try {
+      const res = await fetch('/api/marketing/seo/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: keyword.trim() }),
+      })
+      const json = await res.json()
+      if (res.status === 202) {
+        setSeoError(json.message || '분석이 진행 중입니다. 1~2분 후 다시 시도해주세요.')
+      } else if (!res.ok) {
+        setSeoError(json.error || 'SEO 분석에 실패했습니다.')
+      } else {
+        setSeoResult(json.data as SeoKeywordMiningResult)
+        setSeoAppliedKeyword(keyword.trim())
+        // 분석 결과를 글 생성 시 자동 반영하도록 useSeoAnalysis 자동 활성화
+        setUseSeoAnalysis(true)
+      }
+    } catch (err) {
+      setSeoError(err instanceof Error ? err.message : '네트워크 오류')
+    } finally {
+      setSeoAnalyzing(false)
+    }
+  }
+
+  // 분석 결과의 권장값을 imageCount/targetWordCount에 적용
+  const applySeoRecommendations = () => {
+    if (!seoResult) return
+    const recommendedImages = Math.min(5, Math.max(0, Math.round(seoResult.avgImageCount)))
+    const recommendedLength = Math.max(1000, Math.round(seoResult.avgBodyLength / 100) * 100)
+    setImageCount(recommendedImages)
+    setTargetWordCount(recommendedLength)
   }
 
   // 컨텍스트에서 결과가 오면 로컬 상태에 반영
@@ -251,7 +300,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     } else {
       aiGen.startGeneration({
         topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis, platforms,
-        imageStyle, imageVisualStyle, imageCount,
+        imageStyle, imageVisualStyle, imageCount, targetWordCount,
         referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
       })
     }
@@ -532,6 +581,118 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 </div>
               </label>
             </div>
+
+            {/* SEO 분석 미리보기 카드 */}
+            <div className="mt-4 p-4 rounded-xl border border-at-border bg-at-surface-alt/50 space-y-3">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-at-text">경쟁 글 분석 미리보기</p>
+                  <p className="text-xs text-at-text-weak mt-0.5">
+                    상위 노출 글의 평균 글자수·이미지 수를 확인한 뒤 글 길이와 이미지 개수를 직접 정할 수 있습니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={runSeoPreview}
+                  disabled={seoAnalyzing || !keyword.trim()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-at-border disabled:cursor-not-allowed transition-colors"
+                  title={!keyword.trim() ? '키워드를 먼저 입력해주세요' : 'SEO 분석을 실행하여 상위 노출 글의 권장값을 확인합니다'}
+                >
+                  {seoAnalyzing ? '분석 중...' : (seoResult ? '다시 분석' : '분석 실행')}
+                </button>
+              </div>
+
+              {seoError && (
+                <p className="text-xs text-at-error">{seoError}</p>
+              )}
+
+              {seoResult && (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-at-text-weak">
+                    키워드 “{seoAppliedKeyword}” 상위 노출 글 분석 결과
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg bg-white border border-at-border p-2.5">
+                      <p className="text-[10px] text-at-text-weak">평균 글자수</p>
+                      <p className="text-sm font-semibold text-at-text mt-0.5">{seoResult.avgBodyLength.toLocaleString()}자</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-at-border p-2.5">
+                      <p className="text-[10px] text-at-text-weak">평균 이미지</p>
+                      <p className="text-sm font-semibold text-at-text mt-0.5">{seoResult.avgImageCount.toFixed(1)}장</p>
+                    </div>
+                    <div className="rounded-lg bg-white border border-at-border p-2.5">
+                      <p className="text-[10px] text-at-text-weak">평균 소제목</p>
+                      <p className="text-sm font-semibold text-at-text mt-0.5">{seoResult.avgHeadingCount.toFixed(1)}개</p>
+                    </div>
+                  </div>
+
+                  {seoResult.recommendedKeywords && seoResult.recommendedKeywords.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-medium text-at-text-secondary mb-1">추천 키워드 (자동 반영)</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {seoResult.recommendedKeywords.slice(0, 8).map((kw) => (
+                          <span key={kw} className="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={applySeoRecommendations}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                    >
+                      권장값을 글 길이/이미지에 적용
+                    </button>
+                    <span className="text-[11px] text-at-text-weak">
+                      → 글자수 {Math.max(1000, Math.round(seoResult.avgBodyLength / 100) * 100).toLocaleString()}자, 이미지 {Math.min(5, Math.max(0, Math.round(seoResult.avgImageCount)))}장
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 목표 글자수 입력 */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-at-text-secondary mb-1.5">
+                목표 글자수
+                {seoResult && (
+                  <span className="ml-2 text-[11px] text-at-text-weak">
+                    (경쟁 평균 {seoResult.avgBodyLength.toLocaleString()}자)
+                  </span>
+                )}
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={1000}
+                  max={3500}
+                  step={100}
+                  value={targetWordCount}
+                  onChange={(e) => setTargetWordCount(Number(e.target.value))}
+                  className="flex-1 h-2 accent-at-accent cursor-pointer"
+                />
+                <input
+                  type="number"
+                  min={1000}
+                  max={5000}
+                  step={100}
+                  value={targetWordCount}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    if (Number.isFinite(v)) setTargetWordCount(Math.max(500, Math.min(5000, v)))
+                  }}
+                  className="w-24 px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
+                />
+                <span className="text-xs text-at-text-weak">자</span>
+              </div>
+              <p className="text-[11px] text-at-text-weak mt-1">
+                권장 1,500~2,500자. SEO 분석 결과의 평균 글자수에 맞추면 상위 노출 가능성이 높아집니다.
+              </p>
+            </div>
           </fieldset>
         </section>
       )}
@@ -542,7 +703,14 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
           <SectionHeader number={3} title="이미지 옵션" icon={PaintBrushIcon} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
           <fieldset disabled={isGenerating} className={`space-y-5 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
             <div>
-              <label className="block text-sm font-medium text-at-text-secondary mb-2">이미지 개수</label>
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
+                이미지 개수
+                {seoResult && (
+                  <span className="ml-2 text-[11px] text-at-text-weak">
+                    (경쟁 평균 {seoResult.avgImageCount.toFixed(1)}장)
+                  </span>
+                )}
+              </label>
               <div className="flex items-center gap-2 flex-wrap">
                 {[0, 1, 2, 3, 4, 5].map((n) => (
                   <button key={n} type="button" onClick={() => setImageCount(n)}
