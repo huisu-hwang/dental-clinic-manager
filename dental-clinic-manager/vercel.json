@@ -21,6 +21,10 @@
     {
       "path": "/api/investment/profit-snapshot",
       "schedule": "5 15 * * *"
+    },
+    {
+      "path": "/api/cron/monthly-report",
+      "schedule": "0 15 * * *"
     }
   ]
 }

@@ -33,6 +33,8 @@ export interface DentwebPatient {
   last_treatment_type: string | null
   next_appointment_date: string | null
   registration_date: string | null
+  acquisition_channel: string | null
+  customer_type: string | null
   is_active: boolean
   raw_data: Record<string, unknown> | null
   synced_at: string
@@ -88,6 +90,8 @@ export interface DentwebPatientSyncData {
   last_treatment_type?: string
   next_appointment_date?: string
   registration_date?: string
+  acquisition_channel?: string
+  customer_type?: string
   is_active?: boolean
   raw_data?: Record<string, unknown>
 }

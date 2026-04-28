@@ -96,6 +96,9 @@ export type Permission =
   // 주식 자동매매 권한
   | 'investment_view'         // 주식 자동매매 조회
   | 'investment_manage'       // 주식 자동매매 전략/주문 관리
+  // 월간 성과 보고서 권한
+  | 'monthly_report_view'     // 월간 성과 보고서 조회
+  | 'monthly_report_manage'   // 월간 성과 보고서 수동 재생성
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -142,7 +145,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 마케팅 자동화 (모든 권한)
     'marketing_view', 'marketing_manage',
     // 주식 자동매매 (모든 권한)
-    'investment_view', 'investment_manage'
+    'investment_view', 'investment_manage',
+    // 월간 성과 보고서 (모든 권한)
+    'monthly_report_view', 'monthly_report_manage'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -184,7 +189,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 경영 현황 (조회)
     'financial_view',
     // 마케팅 자동화 (조회)
-    'marketing_view'
+    'marketing_view',
+    // 월간 성과 보고서 (조회)
+    'monthly_report_view'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -217,7 +224,11 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 커뮤니티 (조회/작성)
     'community_view', 'community_post',
     // 리콜 관리 (조회/관리)
-    'recall_view', 'recall_manage'
+    'recall_view', 'recall_manage',
+    // 경영 현황 (조회)
+    'financial_view',
+    // 월간 성과 보고서 (조회)
+    'monthly_report_view'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -407,6 +418,10 @@ export const PERMISSION_GROUPS = {
     { key: 'investment_view', label: '주식 자동매매 조회' },
     { key: 'investment_manage', label: '전략/주문 관리' }
   ],
+  '월간 성과 보고서': [
+    { key: 'monthly_report_view', label: '월간 성과 보고서 조회' },
+    { key: 'monthly_report_manage', label: '보고서 수동 재생성' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -509,5 +524,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'marketing_manage': '마케팅 자동화 콘텐츠를 생성/수정/발행할 수 있습니다.',
   // 주식 자동매매 권한 설명
   'investment_view': '주식 자동매매 현황과 포트폴리오를 조회할 수 있습니다.',
-  'investment_manage': '자동매매 전략을 설정하거나 주문을 관리할 수 있습니다.'
+  'investment_manage': '자동매매 전략을 설정하거나 주문을 관리할 수 있습니다.',
+  // 월간 성과 보고서 권한 설명
+  'monthly_report_view': '월간 성과 보고서(매출/신환/유입경로/연령대 분석)를 조회할 수 있습니다.',
+  'monthly_report_manage': '월간 성과 보고서를 수동으로 재생성할 수 있습니다.'
 }

@@ -18,6 +18,7 @@ const NEW_FEATURE_PREFIXES = [
   'financial_',
   'marketing_',
   'investment_',
+  'monthly_report_',
 ] as const
 
 // 신규로 추가된 개별 권한(prefix 보충 대상이 아닌 단독 권한)
