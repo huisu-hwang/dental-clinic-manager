@@ -235,6 +235,8 @@ export interface ContentGenerateOptions {
   imageStyle?: ImageStyleOption;
   imageVisualStyle?: ImageVisualStyle;
   imageCount?: number;
+  /** 사용자가 SEO 분석 결과를 보고 직접 정한 목표 본문 길이(자). 미지정 시 기본 1500자. */
+  targetWordCount?: number;
   referenceImageBase64?: string;
   schedule: {
     publishAt?: string;

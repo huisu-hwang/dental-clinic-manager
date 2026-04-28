@@ -21,6 +21,8 @@ interface GenerationOptions {
   imageStyle: string
   imageVisualStyle: string
   imageCount: number
+  /** 사용자가 정한 목표 본문 길이(자). 미지정 시 서버에서 기본값 사용. */
+  targetWordCount?: number
   referenceImageBase64?: string
   clinical?: {
     procedureType: string
@@ -106,6 +108,7 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
             imageStyle: options.imageStyle,
             imageVisualStyle: options.imageVisualStyle,
             imageCount: options.imageCount,
+            ...(options.targetWordCount ? { targetWordCount: options.targetWordCount } : {}),
             ...(options.imageStyle === 'use_own_image' && options.referenceImageBase64
               ? { referenceImageBase64: options.referenceImageBase64 }
               : {}),

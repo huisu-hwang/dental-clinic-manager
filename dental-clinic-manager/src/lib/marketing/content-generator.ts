@@ -24,6 +24,16 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// ─── 사용자 지정 글자수 지시문 (없으면 기본 1,500자~) ───
+
+function buildLengthInstruction(targetWordCount?: number): string {
+  if (!targetWordCount || targetWordCount < 800) return '';
+  // ±10% 허용 범위로 안내 (SEO 분석 평균값 적용 시 너무 빡빡한 제약 방지)
+  const minLen = Math.round(targetWordCount * 0.9);
+  const maxLen = Math.round(targetWordCount * 1.15);
+  return `\n\n## 본문 길이 목표 (필수)\n사용자가 SEO 분석 결과를 바탕으로 본문 길이를 직접 지정했습니다. 공백을 제외한 본문 글자수가 약 ${targetWordCount.toLocaleString()}자(허용 범위: ${minLen.toLocaleString()}~${maxLen.toLocaleString()}자)가 되도록 작성하세요. 본문이 부족하면 핵심 내용을 풀어쓰거나 사례·수치를 추가하고, 과도하면 중복되는 설명을 정리하세요.`;
+}
+
 // ─── 메인 생성 함수 ───
 
 export async function generateContent(
@@ -99,7 +109,7 @@ export async function generateContent(
       : '',
     // 공지글 변수
     ...options.notice?.templateData,
-  }) + imageStyleInstruction + seoSection;
+  }) + imageStyleInstruction + seoSection + buildLengthInstruction(options.targetWordCount);
 
   // 4. Claude API 호출 (임상 사진이 있으면 멀티모달)
   const callStart = Date.now();
@@ -199,8 +209,15 @@ export async function generateContent(
   }
 
   // 8. 글자수 부족 시 재생성 (1회)
-  if (!validation.bodyLengthPassed) {
+  // 사용자가 targetWordCount를 지정했으면 그 값을, 아니면 기본 1,000자 기준으로 재시도 임계 적용
+  const minTarget = options.targetWordCount && options.targetWordCount >= 800
+    ? Math.round(options.targetWordCount * 0.9)
+    : 1000;
+  if (parsed.wordCount < minTarget) {
     const retryStart = Date.now();
+    const retryGoal = options.targetWordCount && options.targetWordCount >= 800
+      ? `${options.targetWordCount.toLocaleString()}자(최소 ${minTarget.toLocaleString()}자)`
+      : '1,000자 이상';
     const retryResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
@@ -215,7 +232,7 @@ export async function generateContent(
         },
         {
           role: 'user',
-          content: `글자수가 ${parsed.wordCount}자로 부족합니다. 1,000자 이상으로 내용을 보강하여 다시 작성해주세요. 기존 구조와 [IMAGE:] 마커는 유지해주세요.`,
+          content: `글자수가 ${parsed.wordCount}자로 부족합니다. ${retryGoal}으로 내용을 보강하여 다시 작성해주세요. 기존 구조와 [IMAGE:] 마커는 유지해주세요.`,
         },
       ],
       system: systemPrompt,

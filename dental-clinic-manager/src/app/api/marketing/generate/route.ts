@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
           imageStyle: body.imageStyle || undefined,
           imageVisualStyle: body.imageVisualStyle || undefined,
           imageCount: body.imageCount !== undefined ? Number(body.imageCount) : 3,
+          targetWordCount: body.targetWordCount !== undefined ? Number(body.targetWordCount) : undefined,
           referenceImageBase64: body.referenceImageBase64 || undefined,
           schedule: body.schedule || { snsDelayMinutes: 30 },
           clinical: body.clinical,
