@@ -15,6 +15,8 @@ interface PatientSyncData {
   last_treatment_type?: string
   next_appointment_date?: string
   registration_date?: string
+  acquisition_channel?: string | null
+  customer_type?: string | null
   is_active?: boolean
   raw_data?: Record<string, unknown>
 }
@@ -110,6 +112,8 @@ export async function POST(request: NextRequest) {
           last_treatment_type: p.last_treatment_type || null,
           next_appointment_date: sanitizeDate(p.next_appointment_date),
           registration_date: sanitizeDate(p.registration_date),
+          acquisition_channel: p.acquisition_channel ?? null,
+          customer_type: p.customer_type ?? null,
           is_active: p.is_active !== false,
           raw_data: p.raw_data || null,
           synced_at: new Date().toISOString(),

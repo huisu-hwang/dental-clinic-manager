@@ -321,6 +321,16 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     premiumFeature: true,  // 프리미엄 기능
   },
   {
+    id: 'monthly-report',
+    label: '월간 성과 보고서',
+    icon: 'FileBarChart2',
+    route: '/dashboard/monthly-report',
+    permissions: ['monthly_report_view'],
+    categoryId: 'operations',
+    order: 15.5,
+    visible: true,
+  },
+  {
     id: 'marketing',
     label: '마케팅 자동화',
     icon: 'Sparkles',

@@ -93,10 +93,80 @@ function formatDentwebDate(dateStr: string | null | undefined): string | null {
   return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 }
 
+// TB_환자정보에 존재할 가능성이 있는 내원경로/고객구분 컬럼 후보들
+// 실제 컬럼명을 INFORMATION_SCHEMA 조회로 찾아 매핑
+const ACQUISITION_CHANNEL_CANDIDATES = [
+  'sz내원경로', 'sz경로', 'sz유입경로', 'sz소개', 'sz채널', 'szChannel', 'szRoute', 'sz가입경로'
+];
+const CUSTOMER_TYPE_CANDIDATES = [
+  'sz고객구분', 'sz환자구분', 'sz구분', 'sz분류', 'szType', 'sz고객유형'
+];
+
+let resolvedAcquisitionColumn: string | null = null;
+let resolvedCustomerTypeColumn: string | null = null;
+let columnDiscoveryDone = false;
+
+async function discoverPatientColumns(pool: sql.ConnectionPool): Promise<void> {
+  if (columnDiscoveryDone) return;
+  try {
+    const result = await pool.request().query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = 'TB_환자정보'
+    `);
+    const columnNames = result.recordset.map((r: { COLUMN_NAME: string }) => r.COLUMN_NAME);
+    const lowerSet = new Set(columnNames.map((n) => n.toLowerCase()));
+
+    for (const candidate of ACQUISITION_CHANNEL_CANDIDATES) {
+      if (lowerSet.has(candidate.toLowerCase())) {
+        resolvedAcquisitionColumn = candidate;
+        break;
+      }
+    }
+    if (!resolvedAcquisitionColumn) {
+      // 부분 일치: 한글 키워드 포함
+      const found = columnNames.find((n) => /경로|채널|유입|소개/.test(n));
+      if (found) resolvedAcquisitionColumn = found;
+    }
+
+    for (const candidate of CUSTOMER_TYPE_CANDIDATES) {
+      if (lowerSet.has(candidate.toLowerCase())) {
+        resolvedCustomerTypeColumn = candidate;
+        break;
+      }
+    }
+    if (!resolvedCustomerTypeColumn) {
+      const found = columnNames.find((n) => /구분|분류|유형/.test(n) && !/성별|진료/.test(n));
+      if (found) resolvedCustomerTypeColumn = found;
+    }
+
+    log('info', `[DentWeb] 컬럼 발견: 내원경로=${resolvedAcquisitionColumn ?? 'none'}, 고객구분=${resolvedCustomerTypeColumn ?? 'none'}`);
+  } catch (err) {
+    log('warn', `[DentWeb] 컬럼 발견 실패 (계속 진행): ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    columnDiscoveryDone = true;
+  }
+}
+
 function formatPatientRow(row: Record<string, unknown>) {
   // b성별: false(0)=남, true(1)=여
   const genderBit = row['b성별'];
   const gender = genderBit === true || genderBit === 1 ? 'F' : genderBit === false || genderBit === 0 ? 'M' : null;
+
+  const acquisitionChannel = resolvedAcquisitionColumn
+    ? (() => {
+        const v = row[resolvedAcquisitionColumn!];
+        if (typeof v === 'string') return v.trim() || null;
+        return null;
+      })()
+    : null;
+
+  const customerType = resolvedCustomerTypeColumn
+    ? (() => {
+        const v = row[resolvedCustomerTypeColumn!];
+        if (typeof v === 'string') return v.trim() || null;
+        return null;
+      })()
+    : null;
 
   return {
     dentweb_patient_id: String(row['n환자ID']),
@@ -109,6 +179,8 @@ function formatPatientRow(row: Record<string, unknown>) {
     last_treatment_type: (row['last_treatment_type'] as string) || null,
     next_appointment_date: formatDentwebDate(row['next_appointment_date'] as string),
     registration_date: formatDentwebDate((row['sz등록시각'] as string)?.slice(0, 8)),
+    acquisition_channel: acquisitionChannel,
+    customer_type: customerType,
     is_active: true,
   };
 }
@@ -127,42 +199,51 @@ function formatPatientRow(row: Record<string, unknown>) {
  *   TB_예약목록: n환자ID, sz예약시각(char), sz예약내용
  */
 
-const PATIENT_QUERY_BASE = `
-  SELECT
-    p.n환자ID,
-    p.sz차트번호,
-    p.sz이름,
-    p.sz휴대폰번호,
-    p.sz생년월일,
-    p.b성별,
-    p.sz최종내원일,
-    p.sz등록시각,
-    -- 최근 진료 코드 (세부처치내역에서 취소되지 않은 최신 항목)
-    (SELECT TOP 1 t.sz수가코드
-     FROM TB_세부처치내역 t
-     WHERE t.n환자ID = p.n환자ID AND t.b취소 = 0
-     ORDER BY t.sz진료일 DESC, t.nID DESC) AS last_treatment_type,
-    -- 다음 예약 (오늘 이후)
-    (SELECT TOP 1 LEFT(a.sz예약시각, 8)
-     FROM TB_예약목록 a
-     WHERE a.n환자ID = p.n환자ID AND a.sz예약시각 >= CONVERT(VARCHAR(8), GETDATE(), 112)
-     ORDER BY a.sz예약시각 ASC) AS next_appointment_date
-  FROM TB_환자정보 p
-  WHERE p.sz이름 IS NOT NULL AND p.sz이름 != ''
-`;
+function buildPatientQueryBase(): string {
+  const extraColumns: string[] = [];
+  if (resolvedAcquisitionColumn) extraColumns.push(`p.[${resolvedAcquisitionColumn}]`);
+  if (resolvedCustomerTypeColumn) extraColumns.push(`p.[${resolvedCustomerTypeColumn}]`);
+  const extraSelect = extraColumns.length > 0 ? `,\n    ${extraColumns.join(',\n    ')}` : '';
+
+  return `
+    SELECT
+      p.n환자ID,
+      p.sz차트번호,
+      p.sz이름,
+      p.sz휴대폰번호,
+      p.sz생년월일,
+      p.b성별,
+      p.sz최종내원일,
+      p.sz등록시각${extraSelect},
+      -- 최근 진료 코드 (세부처치내역에서 취소되지 않은 최신 항목)
+      (SELECT TOP 1 t.sz수가코드
+       FROM TB_세부처치내역 t
+       WHERE t.n환자ID = p.n환자ID AND t.b취소 = 0
+       ORDER BY t.sz진료일 DESC, t.nID DESC) AS last_treatment_type,
+      -- 다음 예약 (오늘 이후)
+      (SELECT TOP 1 LEFT(a.sz예약시각, 8)
+       FROM TB_예약목록 a
+       WHERE a.n환자ID = p.n환자ID AND a.sz예약시각 >= CONVERT(VARCHAR(8), GETDATE(), 112)
+       ORDER BY a.sz예약시각 ASC) AS next_appointment_date
+    FROM TB_환자정보 p
+    WHERE p.sz이름 IS NOT NULL AND p.sz이름 != ''
+  `;
+}
 
 async function getAllPatients(pool: sql.ConnectionPool) {
-  const result = await pool.request().query(`${PATIENT_QUERY_BASE} ORDER BY p.n환자ID`);
+  await discoverPatientColumns(pool);
+  const result = await pool.request().query(`${buildPatientQueryBase()} ORDER BY p.n환자ID`);
   return result.recordset.map(formatPatientRow);
 }
 
 async function getUpdatedPatients(pool: sql.ConnectionPool, since: Date) {
+  await discoverPatientColumns(pool);
   const sinceStr = since.toISOString().slice(0, 10).replace(/-/g, ''); // '20260416'
   const result = await pool.request()
     .input('sinceDate', sql.DateTime, since)
     .input('sinceDateStr', sql.VarChar, sinceStr)
     .query(`
-      ${PATIENT_QUERY_BASE}
+      ${buildPatientQueryBase()}
         AND (p.t수정시각 >= @sinceDate
              OR p.n환자ID IN (SELECT n환자ID FROM TB_접수목록 WHERE LEFT(sz접수시각, 8) >= @sinceDateStr))
       ORDER BY p.n환자ID
