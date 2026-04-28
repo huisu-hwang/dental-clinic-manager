@@ -68,6 +68,7 @@ export function generateChips(
   minHour: number,
   maxHour: number
 ): TimeChip[] {
+  if (!Number.isFinite(step) || step <= 0) return []
   const startHour = tab === 'am' ? Math.max(0, minHour) : Math.max(12, minHour)
   const endHour = tab === 'am' ? Math.min(11, maxHour) : Math.min(23, maxHour)
   if (startHour > endHour) return []
