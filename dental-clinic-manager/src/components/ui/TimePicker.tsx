@@ -50,21 +50,35 @@ export function TimePicker({
 
   const chips = generateChips(activeTab, step, minHour, maxHour)
 
-  const displayText = formatTo12Hour(value)
+  const [inputText, setInputText] = useState<string>(() => formatTo12Hour(value))
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) {
+      setInputText(formatTo12Hour(value))
+    }
+  }, [value])
+
+  const handleInputBlur = () => {
+    const parsed = parseTimeInput(inputText)
+    if (parsed !== null && parsed !== value) {
+      onChange(parsed)
+      setInputText(formatTo12Hour(parsed))
+    } else if (parsed === null) {
+      setInputText(formatTo12Hour(value))
+    }
+  }
 
   return (
     <Popover className={cn('relative', className)}>
       <PopoverButton
-        id={id}
-        name={name}
-        aria-label={ariaLabel}
-        disabled={disabled}
+        as="div"
         className={cn(
           'flex items-center gap-2 w-full px-3 py-2 text-sm',
           'bg-white border border-at-border rounded-lg',
-          'focus:outline-none focus:ring-2 focus:ring-at-accent focus:border-at-accent',
+          'focus-within:ring-2 focus-within:ring-at-accent focus-within:border-at-accent',
           'text-at-text',
-          'disabled:bg-at-surface-alt disabled:text-at-text-weak disabled:cursor-not-allowed',
+          disabled && 'bg-at-surface-alt text-at-text-weak cursor-not-allowed',
           'transition-colors',
           inputClassName
         )}
@@ -72,14 +86,23 @@ export function TimePicker({
         {({ open }) => (
           <>
             <Clock className="w-4 h-4 text-at-text-weak shrink-0" />
-            <span
+            <input
+              ref={inputRef}
+              id={id}
+              name={name}
+              aria-label={ariaLabel}
+              disabled={disabled}
+              type="text"
+              value={inputText}
+              placeholder={placeholder}
+              onChange={(e) => setInputText(e.target.value)}
+              onBlur={handleInputBlur}
               className={cn(
-                'flex-1 text-left truncate',
-                !displayText && 'text-at-text-weak'
+                'flex-1 bg-transparent border-0 outline-none p-0 text-sm',
+                'placeholder:text-at-text-weak',
+                'disabled:cursor-not-allowed'
               )}
-            >
-              {displayText || placeholder}
-            </span>
+            />
             <ChevronDown
               className={cn(
                 'w-4 h-4 text-at-text-weak shrink-0 transition-transform',
@@ -159,6 +182,7 @@ export function TimePicker({
                         aria-selected={isSelected}
                         onClick={() => {
                           onChange(chip.value)
+                          setInputText(formatTo12Hour(chip.value))
                           close()
                         }}
                         className={cn(
