@@ -552,6 +552,58 @@ export interface LeaveConflictCheck {
 }
 
 /**
+ * 수동 연차 조정
+ * Leave Adjustment (관리자가 수동으로 추가/차감하는 기록)
+ */
+export interface LeaveAdjustment {
+  id: string;
+  user_id: string;
+  clinic_id: string;
+
+  adjustment_type: LeaveAdjustmentType; // 'deduct' | 'add' | 'set'
+  days: number; // 조정 일수
+  year: number; // 입사일 기준 연차 기간의 시작 연도
+
+  reason: string; // 조정 사유 (시스템 생성: '[병원휴무]', '[법정공휴일]' prefix)
+  leave_type_id?: string | null;
+  use_date?: string | null; // 차감일 때의 사용 일자
+
+  adjusted_by: string; // 조정한 관리자 ID
+  adjusted_at: string;
+
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * 연차 조정 유형
+ */
+export type LeaveAdjustmentType = 'deduct' | 'add' | 'set';
+
+/**
+ * 연차 조정 입력 DTO
+ */
+export interface LeaveAdjustmentInput {
+  user_id: string;
+  adjustment_type: LeaveAdjustmentType;
+  days: number;
+  year: number;
+  reason: string;
+  leave_type_id?: string;
+  use_date?: string;
+}
+
+/**
+ * 연차 조정 수정 DTO
+ */
+export interface LeaveAdjustmentUpdateInput {
+  days?: number;
+  reason?: string;
+  use_date?: string | null;
+  leave_type_id?: string | null;
+}
+
+/**
  * 연차 종류 한글 매핑
  */
 export const LEAVE_TYPE_NAMES: Record<LeaveTypeCode, string> = {

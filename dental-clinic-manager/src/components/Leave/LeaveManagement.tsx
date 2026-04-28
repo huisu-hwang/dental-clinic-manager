@@ -26,7 +26,7 @@ import type { EmployeeLeaveBalance, LeaveType, LeaveTypeCode } from '@/types/lea
 import { LEAVE_STATUS_NAMES, LEAVE_STATUS_COLORS, LEAVE_TYPE_NAMES } from '@/types/leave'
 import LeaveRequestForm from './LeaveRequestForm'
 import LeaveApprovalList from './LeaveApprovalList'
-import LeaveAdminInput from './LeaveAdminInput'
+import LeaveEditPanel from './edit/LeaveEditPanel'
 import LeavePolicySettings from './LeavePolicySettings'
 import ClinicHolidayManager from './ClinicHolidayManager'
 import Toast from '@/components/ui/Toast'
@@ -241,7 +241,7 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
     { id: 'request', label: '연차 신청', icon: Plus, show: hasPermission('leave_request_create') },
     { id: 'approval', label: '승인 대기', icon: Clock, badge: pendingCount, show: canApprove },
     { id: 'all', label: '전체 현황', icon: Users, show: canViewAll },
-    { id: 'admin', label: '연차 관리', icon: FileText, show: canManageBalance },
+    { id: 'admin', label: '연차 수정', icon: FileText, show: canManageBalance },
     { id: 'holiday', label: '휴무일 관리', icon: Building2, show: currentUser.role === 'owner' },
     { id: 'policy', label: '정책 설정', icon: Settings, show: canManagePolicy },
   ].filter(tab => tab.show)
@@ -406,12 +406,11 @@ export default function LeaveManagement({ currentUser, initialSubtab }: LeaveMan
         </div>
       )}
 
-      {/* 연차 관리 탭 (소진 연차 입력) */}
+      {/* 연차 수정 탭 (추가/차감 + 승인된 연차 수정) */}
       {activeTab === 'admin' && canManageBalance && (
-        <LeaveAdminInput
-          year={new Date().getFullYear()}
+        <LeaveEditPanel
           leaveTypes={leaveTypes}
-          onSuccess={handleApprovalSuccess}
+          onSuccess={() => fetchInitialData(false)}
         />
       )}
 
