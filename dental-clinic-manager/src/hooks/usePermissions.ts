@@ -20,6 +20,10 @@ const NEW_FEATURE_PREFIXES = [
   'investment_',
 ] as const
 
+// 신규로 추가된 개별 권한(prefix 보충 대상이 아닌 단독 권한)
+// 기존 그룹에 추가된 권한이라 prefix 보충에서 누락되므로, 직급 기본값에서 직접 보충
+const NEW_INDIVIDUAL_PERMISSIONS: Permission[] = ['contract_view_all']
+
 export function usePermissions() {
   const { user } = useAuth()
   const [permissions, setPermissions] = useState<Set<Permission>>(new Set())
@@ -50,6 +54,13 @@ export function usePermissions() {
         if (!hasFeaturePerms) {
           const featureDefaults = roleDefaults.filter(p => p.startsWith(prefix))
           userPermissions.push(...featureDefaults)
+        }
+      }
+
+      // 단독 신규 권한 보충 (기존 그룹에 추가된 권한)
+      for (const perm of NEW_INDIVIDUAL_PERMISSIONS) {
+        if (!userPermissions.includes(perm) && roleDefaults.includes(perm)) {
+          userPermissions.push(perm)
         }
       }
     } else {
