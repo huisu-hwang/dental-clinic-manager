@@ -175,11 +175,10 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: 'AI 데이터 분석',
     icon: 'Sparkles',
     route: '/dashboard/ai-analysis',
-    permissions: [],  // 권한 체크는 ownerOnly로 대체
+    permissions: ['ai_analysis_view'],
     categoryId: 'work',
     order: 6,
     visible: true,
-    ownerOnly: true,  // 대표 원장 전용
     premiumFeature: true,  // 프리미엄 기능
   },
 
@@ -198,7 +197,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '업무 지시',
     icon: 'ListTodo',
     route: '/dashboard/tasks',
-    permissions: [],
+    permissions: ['task_directive_view'],
     categoryId: 'work',
     order: 6.7,
     visible: true,
@@ -210,7 +209,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '병원 게시판',
     icon: 'Megaphone',
     route: '/dashboard/bulletin',
-    permissions: [],
+    permissions: ['bulletin_view'],
     order: 7,
     visible: true,
   },
@@ -220,7 +219,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '자유게시판',
     icon: 'MessageCircle',
     route: '/dashboard/community',
-    permissions: [],
+    permissions: ['community_view'],
     categoryId: 'community',
     order: 7.5,
     visible: true,
@@ -230,7 +229,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '소모임',
     icon: 'Send',
     route: '/dashboard/community/telegram',
-    permissions: [],
+    permissions: ['community_view'],
     categoryId: 'community',
     order: 7.6,
     visible: true,
@@ -304,7 +303,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '리콜 관리',
     icon: 'PhoneCall',
     route: '/dashboard?tab=recall',
-    permissions: ['daily_report_view'],
+    permissions: ['recall_view'],
     categoryId: 'operations',
     order: 14,
     visible: true,
@@ -315,11 +314,10 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '경영 현황',
     icon: 'BarChart3',
     route: '/dashboard/financial',
-    permissions: [],
+    permissions: ['financial_view'],
     categoryId: 'operations',
     order: 15,
     visible: true,
-    ownerOnly: true,  // 대표 원장 전용
     premiumFeature: true,  // 프리미엄 기능
   },
   {
@@ -327,11 +325,10 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '마케팅 자동화',
     icon: 'Sparkles',
     route: '/dashboard/marketing',
-    permissions: [],
+    permissions: ['marketing_view'],
     categoryId: 'operations',
     order: 16,
     visible: true,
-    ownerOnly: true,  // 대표 원장 전용
     premiumFeature: true,  // 프리미엄 기능
   },
 
@@ -341,11 +338,11 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '주식 자동 매매',
     icon: 'TrendingUp',
     route: '/dashboard?tab=investment',
-    permissions: [],
+    permissions: ['investment_view'],
     categoryId: 'investment',
     order: 16.5,
     visible: true,
-    ownerOnly: true,  // 대표 원장 전용
+    ownerOnly: true,  // 대표 원장 전용 (권한 위임 시에도 owner만 표시 유지)
     premiumFeature: true,  // 프리미엄 기능
   },
 
