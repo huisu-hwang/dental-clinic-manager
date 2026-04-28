@@ -16,6 +16,7 @@ import {
 } from '@/types/clinic'
 import { ClockIcon, CalendarDaysIcon, PlusIcon, TrashIcon, PlusCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { appConfirm } from '@/components/ui/AppDialog'
+import { TimePicker } from '@/components/ui/TimePicker'
 
 interface ClinicHoursSettingsProps {
   clinicId: string
@@ -356,20 +357,24 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
 
                     {day.is_open && (
                       <div className="flex items-center gap-1.5">
-                        <input
-                          type="time"
+                        <TimePicker
                           value={day.open_time}
-                          onChange={(e) => handleDayChange(day.day_of_week, 'open_time', e.target.value)}
-                          step="1800"
-                          className="px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent w-[130px]"
+                          onChange={(v) => handleDayChange(day.day_of_week, 'open_time', v)}
+                          step={30}
+                          minHour={6}
+                          maxHour={22}
+                          className="w-[140px]"
+                          aria-label="영업 시작 시간"
                         />
                         <span className="text-at-text-weak text-sm">~</span>
-                        <input
-                          type="time"
+                        <TimePicker
                           value={day.close_time}
-                          onChange={(e) => handleDayChange(day.day_of_week, 'close_time', e.target.value)}
-                          step="1800"
-                          className="px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent w-[130px]"
+                          onChange={(v) => handleDayChange(day.day_of_week, 'close_time', v)}
+                          step={30}
+                          minHour={6}
+                          maxHour={22}
+                          className="w-[140px]"
+                          aria-label="영업 종료 시간"
                         />
                       </div>
                     )}
@@ -387,20 +392,24 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                         <span className="text-sm text-at-text-weak whitespace-nowrap">휴게시간</span>
                         {day.breaks.length > 0 && (
                           <div className="flex items-center gap-1.5 bg-white px-2 py-1.5 rounded-lg border border-at-border">
-                            <input
-                              type="time"
+                            <TimePicker
                               value={day.breaks[0].start}
-                              onChange={(e) => handleBreakChange(day.day_of_week, 0, 'start', e.target.value)}
-                              step="1800"
-                              className="px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent w-[130px]"
+                              onChange={(v) => handleBreakChange(day.day_of_week, 0, 'start', v)}
+                              step={30}
+                              minHour={6}
+                              maxHour={22}
+                              className="w-[140px]"
+                              aria-label="휴식 시작 시간"
                             />
                             <span className="text-at-text-weak text-sm">~</span>
-                            <input
-                              type="time"
+                            <TimePicker
                               value={day.breaks[0].end}
-                              onChange={(e) => handleBreakChange(day.day_of_week, 0, 'end', e.target.value)}
-                              step="1800"
-                              className="px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent w-[130px]"
+                              onChange={(v) => handleBreakChange(day.day_of_week, 0, 'end', v)}
+                              step={30}
+                              minHour={6}
+                              maxHour={22}
+                              className="w-[140px]"
+                              aria-label="휴식 종료 시간"
                             />
                             <button
                               type="button"
@@ -429,20 +438,24 @@ export default function ClinicHoursSettings({ clinicId }: ClinicHoursSettingsPro
                             const breakIndex = idx + 1
                             return (
                               <div key={breakIndex} className="flex items-center gap-1.5 bg-white px-2 py-1.5 rounded-lg border border-at-border w-fit">
-                                <input
-                                  type="time"
+                                <TimePicker
                                   value={breakTime.start}
-                                  onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'start', e.target.value)}
-                                  step="1800"
-                                  className="px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent w-[130px]"
+                                  onChange={(v) => handleBreakChange(day.day_of_week, breakIndex, 'start', v)}
+                                  step={30}
+                                  minHour={6}
+                                  maxHour={22}
+                                  className="w-[140px]"
+                                  aria-label="휴식 시작 시간"
                                 />
                                 <span className="text-at-text-weak text-sm">~</span>
-                                <input
-                                  type="time"
+                                <TimePicker
                                   value={breakTime.end}
-                                  onChange={(e) => handleBreakChange(day.day_of_week, breakIndex, 'end', e.target.value)}
-                                  step="1800"
-                                  className="px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent w-[130px]"
+                                  onChange={(v) => handleBreakChange(day.day_of_week, breakIndex, 'end', v)}
+                                  step={30}
+                                  minHour={6}
+                                  maxHour={22}
+                                  className="w-[140px]"
+                                  aria-label="휴식 종료 시간"
                                 />
                                 <button
                                   type="button"
