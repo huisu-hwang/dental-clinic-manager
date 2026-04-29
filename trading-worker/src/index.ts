@@ -22,6 +22,7 @@ import { startMarketScheduler, stopMarketScheduler } from './marketScheduler'
 import { startSignalProcessor, stopSignalProcessor } from './signalProcessor'
 import { startReconciler, stopReconciler } from './reconciler'
 import { runDailyRebalance } from './dailyRebalanceJob'
+import { buildDailyRebalanceDeps } from './dailyRebalanceDeps'
 
 let isShuttingDown = false
 
@@ -61,11 +62,12 @@ async function main() {
   startReconciler()
 
   // 7. RL 일일 리밸런스 크론 (평일 오전 7시, Asia/Seoul)
-  // Note: 실제 Supabase + KIS deps는 Task 11에서 연결됩니다. 현재는 placeholder입니다.
   cron.schedule('0 7 * * 2-6', async () => {
     try {
       logger.info('[dailyRebalance] start')
-      logger.warn('[dailyRebalance] deps not wired yet; skipping (will be wired in Task 11)')
+      const deps = await buildDailyRebalanceDeps()
+      const result = await runDailyRebalance(deps)
+      logger.info({ result }, '[dailyRebalance] done')
     } catch (err) {
       logger.error({ err }, '[dailyRebalance] failed')
     }
