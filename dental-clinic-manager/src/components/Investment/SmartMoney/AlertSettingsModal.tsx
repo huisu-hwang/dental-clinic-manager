@@ -82,6 +82,75 @@ const SIGNAL_GROUPS: SignalGroup[] = [
       { value: 'sniper-sell', label: 'Sniper 매도' },
     ],
   },
+  {
+    title: '유동성 사냥',
+    items: [
+      { value: 'liquidity-sweep-bullish', label: '강세 유동성 사냥' },
+      { value: 'liquidity-sweep-bearish', label: '약세 유동성 사냥' },
+    ],
+  },
+  {
+    title: '시장 구조',
+    items: [
+      { value: 'choch-bullish', label: 'CHoCH 강세 전환' },
+      { value: 'choch-bearish', label: 'CHoCH 약세 전환' },
+      { value: 'bos-bullish', label: 'BOS 강세 지속' },
+      { value: 'bos-bearish', label: 'BOS 약세 지속' },
+    ],
+  },
+  {
+    title: '오더블록 / FVG',
+    items: [
+      { value: 'order-block-bullish', label: '강세 오더블록' },
+      { value: 'order-block-bearish', label: '약세 오더블록' },
+      { value: 'fvg-bullish', label: '강세 FVG' },
+      { value: 'fvg-bearish', label: '약세 FVG' },
+    ],
+  },
+  {
+    title: '트랩 경고',
+    items: [
+      { value: 'bull-trap', label: '불 트랩' },
+      { value: 'bear-trap', label: '베어 트랩' },
+    ],
+  },
+  {
+    title: 'VSA (거래량 분석)',
+    items: [
+      { value: 'no-demand', label: '수요 부재' },
+      { value: 'no-supply', label: '공급 부재' },
+      { value: 'buying-climax', label: '매수 클라이맥스' },
+      { value: 'selling-climax', label: '매도 클라이맥스' },
+      { value: 'stopping-volume', label: '멈춤 거래량' },
+    ],
+  },
+  {
+    title: 'PO3 / 세션',
+    items: [
+      { value: 'judas-swing', label: 'Judas Swing' },
+      { value: 'po3-accumulation', label: 'PO3 매집' },
+      { value: 'po3-distribution', label: 'PO3 분배' },
+    ],
+  },
+  {
+    title: '뉴스 이벤트',
+    items: [
+      { value: 'news-fade', label: '뉴스 페이드' },
+      { value: 'sell-the-news', label: 'Sell-the-News' },
+      { value: 'bad-news-accumulation', label: '악재 매집' },
+    ],
+  },
+  {
+    title: '와이코프 페이즈',
+    items: [
+      { value: 'wyckoff-phase-c', label: '와이코프 Phase C' },
+      { value: 'wyckoff-sos', label: '강세 신호 (SOS)' },
+      { value: 'wyckoff-lps', label: '마지막 지지점 (LPS)' },
+      { value: 'wyckoff-utad', label: 'UTAD' },
+      { value: 'wyckoff-sow', label: '약세 신호 (SOW)' },
+      { value: 'wyckoff-lpsy', label: '마지막 공급점 (LPSY)' },
+    ],
+  },
 ]
 
 export function AlertSettingsModal({

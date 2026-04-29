@@ -12,6 +12,11 @@
 import { useState } from 'react'
 import { Info, ArrowUp, ArrowDown, Minus, X } from 'lucide-react'
 import type { SmartMoneyAnalysis } from '@/types/smartMoney'
+import { WyckoffPhaseTimeline } from './WyckoffPhaseTimeline'
+import { MarketStructureBadge } from './MarketStructureBadge'
+import { LiquidityZonePanel } from './LiquidityZonePanel'
+import { TrapWarningCard } from './TrapWarningCard'
+import { VSASignalList } from './VSASignalList'
 
 interface Props {
   analysis: SmartMoneyAnalysis
@@ -146,7 +151,16 @@ export function SignalPanel({ analysis }: Props) {
   const flowSignalLabel =
     investorFlow?.signal === 'accumulation' ? '매집' : investorFlow?.signal === 'distribution' ? '분배' : '중립'
 
+  // 정교화 엔진 결과 — 하나라도 있으면 고급 분석 섹션 노출
+  const hasAdvanced =
+    Boolean(analysis.wyckoffPhase) ||
+    Boolean(analysis.marketStructure) ||
+    Boolean(analysis.liquidity) ||
+    Boolean(analysis.traps) ||
+    Boolean(analysis.vsa)
+
   return (
+    <>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* 1. VWAP */}
       <SignalCard title="VWAP 분석" cardKey="vwap" openHelp={openHelp} onToggleHelp={setOpenHelp}>
@@ -275,6 +289,34 @@ export function SignalPanel({ analysis }: Props) {
         )}
       </SignalCard>
     </div>
+
+    {/* 정교화 엔진 — 고급 분석 섹션 (옵션 필드가 하나라도 있을 때만 노출) */}
+    {hasAdvanced && (
+      <div className="mt-6">
+        <h2 className="text-sm font-semibold text-slate-900 mb-3">고급 분석 (정교화)</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {analysis.wyckoffPhase && (
+            <div className="lg:col-span-2">
+              <WyckoffPhaseTimeline phase={analysis.wyckoffPhase} />
+            </div>
+          )}
+          {analysis.marketStructure && (
+            <MarketStructureBadge structure={analysis.marketStructure} />
+          )}
+          {analysis.liquidity && (
+            <LiquidityZonePanel liquidity={analysis.liquidity} />
+          )}
+          {analysis.traps && (
+            <TrapWarningCard
+              traps={analysis.traps}
+              manipulationRiskScore={analysis.manipulationRiskScore}
+            />
+          )}
+          {analysis.vsa && <VSASignalList vsa={analysis.vsa} />}
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

@@ -1070,4 +1070,286 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       maxHoldingDays: 0,
     },
   },
+
+  // ============================================
+  // 스마트머니 시그널 기반 전략 (Smart Money Signals - Approximations)
+  // 참고: 현재 조건 트리는 지표 비교만 지원 → 시그널 의도를 근사하는 지표 조합 사용
+  // ============================================
+
+  {
+    id: 'wyckoff-phase-c-entry',
+    name: '와이코프 Phase C 매집 진입',
+    description: '박스권 하단에서 Spring 패턴 후 강세 전환 시 매수',
+    indicators: [
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'BB_20_2', type: 'BB', params: { period: 20, stdDev: 2 } },
+      { id: 'VOLUME_SMA_20', type: 'VOLUME_SMA', params: { period: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 박스권 하단 근접 (BB 하단 ≈ 20일 저점 근사)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: '<',
+          right: { type: 'indicator', id: 'BB_20_2', property: 'lower' },
+        },
+        // RSI 35 이하 (과매도 - Spring 직후)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 35 },
+        },
+        // 거래량 급증 (1.5배 이상 - 매집 흔적)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'VOLUME_SMA_20' },
+          operator: '>',
+          right: { type: 'constant', value: 0 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // RSI 70 이상 (과매수 익절)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 70 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 12,
+      maxHoldingDays: 30,
+    },
+  },
+
+  {
+    id: 'choch-trend-reversal',
+    name: 'CHoCH 추세전환 진입',
+    description: '유동성 사냥 후 시장구조 변화 발생 시 추세 반전 매수',
+    indicators: [
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'SMA_5', type: 'SMA', params: { period: 5 } },
+      { id: 'MACD_12_26_9', type: 'MACD', params: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 단기 추세 회복 (이전 5봉 저점 이탈 후 복귀를 SMA(1) > SMA(5) 크로스로 근사)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'SMA_5' },
+        },
+        // MACD 강세 크로스 (시장 구조 변화 확인)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'MACD_12_26_9', property: 'macd' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'MACD_12_26_9', property: 'signal' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // MACD 약세 크로스
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'MACD_12_26_9', property: 'macd' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'MACD_12_26_9', property: 'signal' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 12,
+      maxHoldingDays: 20,
+    },
+  },
+
+  {
+    id: 'order-block-retest',
+    name: '오더블록 리테스트',
+    description: '강한 상승 직전 음봉(오더블록)에 가격 재진입 시 매수',
+    indicators: [
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'SMA_20', type: 'SMA', params: { period: 20 } },
+      { id: 'SMA_50', type: 'SMA', params: { period: 50 } },
+      { id: 'VOLUME_SMA_20', type: 'VOLUME_SMA', params: { period: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // SMA20 상승 추세 (SMA20 > SMA50)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_20' },
+          operator: '>',
+          right: { type: 'indicator', id: 'SMA_50' },
+        },
+        // 가격이 SMA20 근처로 되돌림 (오더블록 리테스트 근사)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: '<=',
+          right: { type: 'indicator', id: 'SMA_20' },
+        },
+        // 가격이 SMA50 위 유지 (추세 유효)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: '>',
+          right: { type: 'indicator', id: 'SMA_50' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // SMA20 추세 전환 (하향)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_20' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'SMA_50' },
+        },
+        // 가격이 SMA20 하향 이탈 (오더블록 무효화)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'SMA_20' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 4,
+      takeProfitPercent: 10,
+      maxHoldingDays: 20,
+    },
+  },
+
+  {
+    id: 'vsa-no-supply-entry',
+    name: 'VSA No Supply 진입',
+    description: '지지선 근처에서 매도 압력 고갈 신호 시 매수',
+    indicators: [
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'BB_20_2', type: 'BB', params: { period: 20, stdDev: 2 } },
+      { id: 'VOLUME_SMA_20', type: 'VOLUME_SMA', params: { period: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 가격이 BB 하단 근처 (20일 저점 근사 - 지지선)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: '<=',
+          right: { type: 'indicator', id: 'BB_20_2', property: 'lower' },
+        },
+        // RSI 과매도 진입 (매도 압력 고갈)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 35 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // RSI 60 이상 (반등 익절)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 60 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 3,
+      takeProfitPercent: 8,
+      maxHoldingDays: 15,
+    },
+  },
+
+  {
+    id: 'bear-trap-v-bounce',
+    name: '베어 트랩 V자 반등',
+    description: '지지선 가짜 하향 이탈 후 회복 시 매수',
+    indicators: [
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'BB_20_2', type: 'BB', params: { period: 20, stdDev: 2 } },
+      { id: 'VOLUME_SMA_20', type: 'VOLUME_SMA', params: { period: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 가격이 BB 하단(20일 저점 근사)을 상향 돌파 (가짜 이탈 후 회복)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'BB_20_2', property: 'lower' },
+        },
+        // RSI 40 이하 (과매도 구간에서 반등 시작)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 40 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // RSI 과매수 익절
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 70 },
+        },
+        // 가격이 BB 중심선 하향 이탈 (반등 실패)
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'BB_20_2', property: 'middle' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 4,
+      takeProfitPercent: 10,
+      maxHoldingDays: 14,
+    },
+  },
 ]
