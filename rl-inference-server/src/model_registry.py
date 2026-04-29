@@ -24,11 +24,14 @@ class ModelRegistry:
         self._capacity = lru_capacity
 
     async def _fetch_bytes(self, url: str) -> bytes:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
-            r = await client.get(url, follow_redirects=True)
-            if r.status_code >= 400:
-                raise DownloadError(f"GET {url} -> {r.status_code}")
-            return r.content
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+                r = await client.get(url, follow_redirects=True)
+                if r.status_code >= 400:
+                    raise DownloadError(f"GET {url} -> {r.status_code}")
+                return r.content
+        except httpx.RequestError as e:
+            raise DownloadError(f"network error for {url}: {e}") from e
 
     async def download(self, model_id: str, url: str, expected_sha256: str) -> str:
         data = await self._fetch_bytes(url)

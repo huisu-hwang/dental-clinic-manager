@@ -82,3 +82,23 @@ def test_download_endpoint_writes_file_and_returns_path(tmp_path, monkeypatch):
     data = resp.json()
     assert "path" in data
     assert expected in data["path"]
+
+
+def test_download_endpoint_502_on_network_error(tmp_path, monkeypatch):
+    """If httpx fails (timeout / connect error), endpoint should return 502 not 500."""
+    monkeypatch.setenv("RL_API_KEY", "test-key")
+    monkeypatch.setenv("MODEL_DIR", str(tmp_path))
+    from src.main import app, registry
+    from fastapi.testclient import TestClient
+
+    async def fake_fetch_raises(_url: str) -> bytes:
+        # Simulate the wrapped DownloadError path
+        from src.model_registry import DownloadError
+        raise DownloadError("network error: simulated timeout")
+
+    monkeypatch.setattr(registry, "_fetch_bytes", fake_fetch_raises)
+
+    client = TestClient(app)
+    body = {"model_id": "m_net_err", "checkpoint_url": "https://nope.invalid/x.zip", "checkpoint_sha256": "0" * 64}
+    resp = client.post("/models/download", headers={"X-RL-API-KEY": "test-key"}, json=body)
+    assert resp.status_code == 502, resp.text
