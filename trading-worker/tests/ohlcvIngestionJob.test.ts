@@ -14,10 +14,12 @@ const sampleRow = (ticker: string): OhlcvRow => ({
   open: 100, high: 101, low: 99, close: 100.5, volume: 1_000_000,
 })
 
+const FAST = { throttleMs: 0, retries: 0 } as const
+
 describe('runOhlcvIngestion', () => {
   it('upserts rows for each ticker', async () => {
     const deps = makeDeps({ AAPL: [sampleRow('AAPL')], MSFT: [sampleRow('MSFT')] })
-    const r = await runOhlcvIngestion(['AAPL', 'MSFT'], 5, deps)
+    const r = await runOhlcvIngestion(['AAPL', 'MSFT'], 5, deps, FAST)
     expect(r.tickers).toBe(2)
     expect(r.inserted).toBe(2)
     expect(r.failed).toHaveLength(0)
@@ -31,7 +33,7 @@ describe('runOhlcvIngestion', () => {
       }),
       upsert: vi.fn(async (rows: OhlcvRow[]) => ({ inserted: rows.length, error: null })),
     }
-    const r = await runOhlcvIngestion(['AAPL', 'BAD', 'MSFT'], 5, deps)
+    const r = await runOhlcvIngestion(['AAPL', 'BAD', 'MSFT'], 5, deps, FAST)
     expect(r.tickers).toBe(3)
     expect(r.inserted).toBe(2)
     expect(r.failed).toEqual([{ ticker: 'BAD', error: 'yahoo 500' }])
@@ -39,7 +41,7 @@ describe('runOhlcvIngestion', () => {
 
   it('skips empty fetch results', async () => {
     const deps = makeDeps({ AAPL: [] })
-    const r = await runOhlcvIngestion(['AAPL'], 5, deps)
+    const r = await runOhlcvIngestion(['AAPL'], 5, deps, FAST)
     expect(r.inserted).toBe(0)
     expect(r.failed).toHaveLength(0)
   })
@@ -49,8 +51,23 @@ describe('runOhlcvIngestion', () => {
       fetchYahoo: vi.fn(async (t: string) => [sampleRow(t)]),
       upsert: vi.fn(async () => ({ inserted: 0, error: 'duplicate key' })),
     }
-    const r = await runOhlcvIngestion(['AAPL'], 5, deps)
+    const r = await runOhlcvIngestion(['AAPL'], 5, deps, FAST)
     expect(r.inserted).toBe(0)
     expect(r.failed).toEqual([{ ticker: 'AAPL', error: 'duplicate key' }])
+  })
+
+  it('retries on transient fetch error then succeeds', async () => {
+    let calls = 0
+    const deps: IngestionDeps = {
+      fetchYahoo: vi.fn(async () => {
+        calls++
+        if (calls === 1) throw new Error('yahoo 429')
+        return [sampleRow('AAPL')]
+      }),
+      upsert: vi.fn(async (rows: OhlcvRow[]) => ({ inserted: rows.length, error: null })),
+    }
+    const r = await runOhlcvIngestion(['AAPL'], 5, deps, { throttleMs: 0, retries: 2 })
+    expect(r.inserted).toBe(1)
+    expect(calls).toBe(2)
   })
 })

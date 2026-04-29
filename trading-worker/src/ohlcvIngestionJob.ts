@@ -31,28 +31,55 @@ export interface IngestionResult {
   failed: { ticker: string; error: string }[]
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+export interface IngestionOptions {
+  throttleMs?: number  // 종목 사이 sleep
+  retries?: number     // 429/5xx 재시도
+}
+
 export async function runOhlcvIngestion(
   universe: string[],
   daysBack: number,
   deps: IngestionDeps,
+  options: IngestionOptions = {},
 ): Promise<IngestionResult> {
+  const throttleMs = options.throttleMs ?? 1500
+  const retries = options.retries ?? 3
   const result: IngestionResult = { tickers: 0, inserted: 0, failed: [] }
-  for (const ticker of universe) {
+
+  for (let i = 0; i < universe.length; i++) {
+    const ticker = universe[i]
     result.tickers++
-    try {
-      const rows = await deps.fetchYahoo(ticker, daysBack)
-      if (rows.length === 0) continue
-      const r = await deps.upsert(rows)
-      if (r.error) {
-        result.failed.push({ ticker, error: r.error })
-        continue
+    let lastErr = ''
+    let rows: OhlcvRow[] | null = null
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        rows = await deps.fetchYahoo(ticker, daysBack)
+        lastErr = ''
+        break
+      } catch (err) {
+        lastErr = (err as Error).message
+        // 429 또는 5xx로 보이면 exponential backoff (1s, 2s, 4s, ...)
+        if (attempt < retries) {
+          const wait = throttleMs * Math.pow(2, attempt)
+          logger.warn({ ticker, attempt, wait, err: lastErr }, 'ohlcvIngestion: retry after backoff')
+          await sleep(wait)
+        }
       }
-      result.inserted += r.inserted
-    } catch (err) {
-      const msg = (err as Error).message
-      result.failed.push({ ticker, error: msg })
-      logger.warn({ ticker, err: msg }, 'ohlcvIngestion: ticker failed')
     }
+
+    if (lastErr || !rows) {
+      result.failed.push({ ticker, error: lastErr || 'fetch returned null' })
+    } else if (rows.length > 0) {
+      const r = await deps.upsert(rows)
+      if (r.error) result.failed.push({ ticker, error: r.error })
+      else result.inserted += r.inserted
+    }
+
+    // 다음 종목 전 throttle (마지막 종목은 sleep 생략)
+    if (i < universe.length - 1) await sleep(throttleMs)
   }
   return result
 }
