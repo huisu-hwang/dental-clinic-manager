@@ -131,3 +131,30 @@ export interface PatientSearchResult {
   acquisition_channel: string | null
   registration_date: string | null
 }
+
+export interface FamilyCandidateMember {
+  id: string
+  patient_name: string
+  birth_date: string | null
+  chart_number: string | null
+  gender: string | null
+}
+
+export interface FamilyCandidate {
+  group_key: string
+  member_count: number
+  members: FamilyCandidateMember[]
+}
+
+export interface ConfirmedFamily {
+  id: string
+  family_name: string
+  created_at: string
+  members: Array<FamilyCandidateMember & { relation_label: string | null }>
+}
+
+export interface MonthlyStatRow {
+  year_month: string
+  referral_count: number
+  paid_count: number
+}

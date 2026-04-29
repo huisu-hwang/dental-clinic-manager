@@ -45,6 +45,20 @@ class BacktestRequest(PredictRequest):
     initial_capital: float = 10000.0
 
 
+class BacktestUniverseRequest(BaseModel):
+    """Server-side fetch 모드: OHLCV 페치를 server(yfinance)에 위임."""
+    model_id: str
+    checkpoint_path: str
+    algorithm: str
+    kind: Literal["portfolio"]
+    state_window: int = Field(ge=1, le=500)
+    input_features: list[str]
+    universe: list[str]
+    start_date: str
+    end_date: str
+    initial_capital: float = 10000.0
+
+
 class EquityPoint(BaseModel):
     date: str
     equity: float
