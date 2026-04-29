@@ -102,6 +102,19 @@ export async function sendOrderResult(userId: string, data: OrderResultData) {
 }
 
 /**
+ * 사용자별 시스템 공지 (간단한 free-text).
+ * RL 신호처럼 구조화된 알림이 아닌 경우에 사용.
+ */
+export async function sendSystemNotice(userId: string, text: string): Promise<void> {
+  const chatId = await getUserTelegramChatId(userId)
+  if (!chatId) {
+    logger.warn({ userId }, 'Telegram chatId 없음 - 시스템 공지 건너뜀')
+    return
+  }
+  await sendTelegramMessage(chatId, text)
+}
+
+/**
  * 시스템 경보 (긴급)
  */
 export async function sendSystemAlert(message: string) {

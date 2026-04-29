@@ -14,12 +14,16 @@ import 'dotenv/config'
  * - SIGINT/SIGTERM 수신 시 WebSocket 해제 → 진행 중 작업 완료 대기 → 종료
  */
 
+import cron from 'node-cron'
 import { logger } from './logger'
 import { loadConfig } from './config'
 import { getSupabase } from './supabaseClient'
 import { startMarketScheduler, stopMarketScheduler } from './marketScheduler'
 import { startSignalProcessor, stopSignalProcessor } from './signalProcessor'
 import { startReconciler, stopReconciler } from './reconciler'
+import { runDailyRebalance } from './dailyRebalanceJob'
+import { buildDailyRebalanceDeps } from './dailyRebalanceDeps'
+import { runOhlcvIngestion, buildIngestionDeps, DEFAULT_UNIVERSE } from './ohlcvIngestionJob'
 
 let isShuttingDown = false
 
@@ -57,6 +61,34 @@ async function main() {
 
   // 6. 주문 재조정 배치 시작 (5분 주기)
   startReconciler()
+
+  // 7. RL 일일 리밸런스 크론 (평일 오전 7시, Asia/Seoul)
+  // DST 안전성: ET 마감(16:00 local) → KST 05:00 (EDT, UTC-4) / KST 06:00 (EST, UTC-5).
+  // KST 07:00은 항상 ET 마감 대비 최소 1시간(EDT) ~ 2시간(EST) 마진을 확보.
+  // node-cron의 timezone 옵션으로 KST 기준 고정되어 있어 미국 DST 전환에 무관.
+  cron.schedule('0 7 * * 2-6', async () => {
+    try {
+      logger.info('[dailyRebalance] start')
+      const deps = await buildDailyRebalanceDeps()
+      const result = await runDailyRebalance(deps)
+      logger.info({ result }, '[dailyRebalance] done')
+    } catch (err) {
+      logger.error({ err }, '[dailyRebalance] failed')
+    }
+  }, { timezone: 'Asia/Seoul' })
+
+  // 8. OHLCV 일일 수집 크론 (평일 KST 06:30)
+  // ET 마감(KST 05:00 EDT / 06:00 EST) 직후 → Yahoo Finance에서 Dow 30 일봉 30일치 fetch
+  cron.schedule('30 6 * * 2-6', async () => {
+    try {
+      logger.info('[ohlcvIngestion] start')
+      const deps = await buildIngestionDeps(getSupabase())
+      const r = await runOhlcvIngestion(DEFAULT_UNIVERSE, 30, deps)
+      logger.info({ result: r }, '[ohlcvIngestion] done')
+    } catch (err) {
+      logger.error({ err }, '[ohlcvIngestion] failed')
+    }
+  }, { timezone: 'Asia/Seoul' })
 
   logger.info('=== 트레이딩 워커 준비 완료 ===')
 

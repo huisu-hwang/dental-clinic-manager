@@ -40,6 +40,51 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '잘못된 요청 형식입니다' }, { status: 400 })
   }
 
+  // 전략 타입 결정 (rule | rl_portfolio | rl_single)
+  const strategyType = (body.strategy_type as 'rule' | 'rl_portfolio' | 'rl_single' | undefined) ?? 'rule'
+
+  // RL 전략 추가 검증
+  if (strategyType !== 'rule') {
+    if (!body.rl_model_id) {
+      return NextResponse.json({ error: 'rl_model_id required for RL strategies' }, { status: 400 })
+    }
+    // RL 기본 automation_level = 1 (시그널 전용)
+    if (body.automation_level == null) body.automation_level = 1
+
+    // 모델 상태 및 종류 검증
+    const { data: model } = await supabase
+      .from('rl_models')
+      .select('id, status, kind')
+      .eq('id', body.rl_model_id)
+      .single()
+
+    if (!model) {
+      return NextResponse.json({ error: 'rl model not found' }, { status: 400 })
+    }
+    if (model.status !== 'ready') {
+      return NextResponse.json({ error: `rl model not ready (status: ${model.status})` }, { status: 400 })
+    }
+    const expectedType = model.kind === 'portfolio' ? 'rl_portfolio' : 'rl_single'
+    if (strategyType !== expectedType) {
+      return NextResponse.json({
+        error: `strategy_type must be ${expectedType} for model kind ${model.kind}`,
+      }, { status: 400 })
+    }
+    if (strategyType === 'rl_single' && body.automation_level === 2) {
+      return NextResponse.json({
+        error: 'rl_single auto trading not supported in Phase 1',
+      }, { status: 400 })
+    }
+
+    // RL 전략은 지표/조건이 필요 없으므로 빈 기본값 설정
+    body.indicators = body.indicators ?? []
+    body.buy_conditions = body.buy_conditions ?? { type: 'group', operator: 'AND', conditions: [] }
+    body.sell_conditions = body.sell_conditions ?? { type: 'group', operator: 'AND', conditions: [] }
+    // camelCase 별칭도 설정 (아래 구조분해에서 사용)
+    body.buyConditions = body.buyConditions ?? body.buy_conditions
+    body.sellConditions = body.sellConditions ?? body.sell_conditions
+  }
+
   // 필수 필드 검증
   const { name, targetMarket, timeframe, indicators, buyConditions, sellConditions, riskSettings, automationLevel } = body
 
@@ -107,6 +152,8 @@ export async function POST(request: NextRequest) {
       sell_conditions: sellConditions as object,
       risk_settings: riskToStore,
       automation_level: automationLevel as number,
+      strategy_type: strategyType,
+      rl_model_id: (body.rl_model_id as string | undefined) ?? null,
       is_active: false, // 신규 전략은 비활성
     })
     .select()
@@ -176,6 +223,13 @@ export async function PATCH(request: NextRequest) {
   const { id, ...updates } = body
   if (!id || typeof id !== 'string') {
     return NextResponse.json({ error: '전략 ID가 필요합니다' }, { status: 400 })
+  }
+
+  // strategy_type and rl_model_id are immutable after creation
+  if ('strategy_type' in updates || 'rl_model_id' in updates) {
+    return NextResponse.json({
+      error: 'strategy_type and rl_model_id cannot be changed after creation',
+    }, { status: 400 })
   }
 
   // 소유권 확인

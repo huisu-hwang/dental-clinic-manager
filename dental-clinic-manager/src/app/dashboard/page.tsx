@@ -28,6 +28,7 @@ import TeamStatus from '@/components/Attendance/TeamStatus'
 import QRCodeDisplay from '@/components/Attendance/QRCodeDisplay'
 import { PayrollManagement } from '@/components/Payroll'
 import { RecallManagement } from '@/components/Recall'
+import { ReferralManagement } from '@/components/Referral'
 import AIChat from '@/components/AIAnalysis/AIChat'
 import PremiumGate from '@/components/Premium/PremiumGate'
 import TaskChecklistManagement from '@/components/TaskChecklist/TaskChecklistManagement'
@@ -836,6 +837,11 @@ export default function DashboardPage() {
             <PremiumGate featureId="recall">
               <RecallManagement />
             </PremiumGate>
+          )}
+
+          {/* 소개환자 관리 */}
+          {activeTab === 'referral' && (
+            <ReferralManagement />
           )}
 
           {/* 업무 체크리스트 */}
