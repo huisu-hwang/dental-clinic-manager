@@ -11,8 +11,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { SmartMoneyAnalysis } from '@/types/smartMoney'
 
 const MODEL_ID = 'claude-haiku-4-5-20251001'
-const MAX_TOKENS = 200
+const MAX_TOKENS = 600
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24h
+/** 캐시 키에 포함되는 프롬프트 버전 — 프롬프트 구조 변경 시 무효화 */
+const PROMPT_VERSION = 'v2'
 
 interface CacheEntry {
   comment: string
@@ -23,7 +25,7 @@ const llmCache = new Map<string, CacheEntry>()
 const MAX_CACHE_SIZE = 200
 
 function cacheKey(analysis: SmartMoneyAnalysis): string {
-  return `${analysis.market}:${analysis.ticker}:${analysis.asOfDate}`
+  return `${PROMPT_VERSION}:${analysis.market}:${analysis.ticker}:${analysis.asOfDate}`
 }
 
 function getCached(key: string): string | null {
@@ -45,7 +47,21 @@ function setCached(key: string, comment: string): void {
   llmCache.set(key, { comment, expiresAt: Date.now() + CACHE_TTL_MS })
 }
 
-const SYSTEM_PROMPT = `당신은 한국 주식시장 전문 트레이더입니다. 주어진 분석 데이터(VWAP, Wyckoff, 알고리즘 풋프린트, 외국인/기관 매매)를 토대로 오늘 이 종목에서 스마트머니의 의도(매집/분배/중립)와 일반 투자자가 취할 수 있는 대응 전략을 한국어로 2~3문장 자연어로 작성하세요. 단정적 표현 대신 "~로 보입니다", "~의심됩니다" 같은 톤. 절대 매수/매도 추천하지 말 것.`
+const SYSTEM_PROMPT = `당신은 한국 주식시장 전문 트레이더입니다. 주어진 다층 분석 데이터(VWAP, 단일봉 Wyckoff, 알고리즘 풋프린트, 외국인/기관 매매, 와이코프 페이즈 A~E, 시장구조 BOS/CHoCH, 유동성 풀과 sweep, 오더블록·FVG, Bull/Bear Trap, VSA effort-vs-result, 세션·PO3, 뉴스 컨텍스트, 조작 위험도)를 종합 해석하여 오늘 이 종목에서 스마트머니의 의도와 일반 투자자가 취할 수 있는 대응 전략을 작성하세요.
+
+반드시 아래 두 섹션을 모두 포함해야 합니다:
+
+[스마트머니 의도]
+- 2~3문장. 매집/분배/중립 중 어느 단계로 보이는지, 어떤 시그널이 그 판단을 뒷받침하는지 구체적으로 언급(예: 와이코프 Phase C Spring, CHoCH 강세 전환, 유동성 사냥, 매수 클라이맥스 등).
+
+[일반 투자자 대응 전략]
+- 2~3문장. 위 의도 분석을 바탕으로 일반 개인 투자자가 어떻게 행동/관망/주의해야 하는지 구체적 가이드. 트랩이 감지되면 "추격 매수 자제", 매집 후기 페이즈면 "분할 진입 고려" 같이 행동 지침 제시. 조작 위험도가 50 이상이면 반드시 경고 문구 포함.
+
+규칙:
+- 위 두 섹션 헤더([스마트머니 의도] / [일반 투자자 대응 전략])는 반드시 그대로 출력.
+- 단정적 표현 대신 "~로 보입니다", "~의심됩니다" 같은 톤 사용.
+- 절대 특정 가격대의 매수/매도 추천이나 목표가/손절가 명시 금지.
+- 단순한 데이터 나열 금지 — 반드시 종합 해석.`
 
 let anthropicClient: Anthropic | null = null
 
@@ -101,6 +117,63 @@ function summarizeAnalysis(analysis: SmartMoneyAnalysis): Record<string, unknown
     },
     overallScore: analysis.overallScore,
     interpretation: analysis.interpretation,
+    manipulationRiskScore: analysis.manipulationRiskScore ?? 0,
+    // ===== 정교화 엔진 요약 =====
+    wyckoffPhase: analysis.wyckoffPhase
+      ? {
+          cycle: analysis.wyckoffPhase.cycle,
+          phase: analysis.wyckoffPhase.phase,
+          confidence: analysis.wyckoffPhase.confidence,
+          eventTypes: analysis.wyckoffPhase.events.map((e) => e.type),
+        }
+      : null,
+    marketStructure: analysis.marketStructure
+      ? {
+          trend: analysis.marketStructure.trend,
+          lastEvent: analysis.marketStructure.lastEvent,
+          lastEventDirection: analysis.marketStructure.lastEventDirection,
+        }
+      : null,
+    liquidity: analysis.liquidity
+      ? {
+          activePoolCount: analysis.liquidity.pools.filter((p) => !p.swept).length,
+          recentSweepDirections: analysis.liquidity.recentSweeps.slice(0, 3).map((s) => s.direction),
+        }
+      : null,
+    orderBlocksFvg: analysis.orderBlocksFvg
+      ? {
+          unmitigatedBullishOB: analysis.orderBlocksFvg.orderBlocks.filter((o) => o.direction === 'bullish' && !o.mitigated).length,
+          unmitigatedBearishOB: analysis.orderBlocksFvg.orderBlocks.filter((o) => o.direction === 'bearish' && !o.mitigated).length,
+          unfilledBullishFVG: analysis.orderBlocksFvg.fvgs.filter((f) => f.direction === 'bullish' && !f.filled).length,
+          unfilledBearishFVG: analysis.orderBlocksFvg.fvgs.filter((f) => f.direction === 'bearish' && !f.filled).length,
+        }
+      : null,
+    traps: analysis.traps
+      ? {
+          bullTrapDetected: analysis.traps.bullTrapDetected,
+          bearTrapDetected: analysis.traps.bearTrapDetected,
+          detailCount: analysis.traps.details.length,
+        }
+      : null,
+    vsa: analysis.vsa
+      ? {
+          effortVsResult: analysis.vsa.effortVsResult,
+          recentSignalTypes: analysis.vsa.signals.slice(0, 3).map((s) => s.type),
+        }
+      : null,
+    session: analysis.session
+      ? {
+          currentSession: analysis.session.currentSession,
+          judasSwingDetected: analysis.session.judasSwingDetected,
+          po3Pattern: analysis.session.po3Pattern,
+        }
+      : null,
+    newsContext: analysis.newsContext
+      ? {
+          pattern: analysis.newsContext.pattern,
+          affectedSignalCount: analysis.newsContext.affectedSignalIndices.length,
+        }
+      : null,
     signalDetails: analysis.signalDetails.map((s) => ({
       type: s.type,
       confidence: s.confidence,
