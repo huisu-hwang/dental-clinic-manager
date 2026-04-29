@@ -29,9 +29,9 @@ export interface LiquidityBar {
 }
 
 const MIN_BARS = 20
-const CLUSTER_TOLERANCE = 0.002 // 0.2%
+const CLUSTER_TOLERANCE = 0.005 // 0.5% (0.2→0.5 완화: 일봉 클러스터 인정 폭 확대)
 const SWEEP_LOOKBACK = 20
-const SWEEP_VOL_RATIO = 1.3
+const SWEEP_VOL_RATIO = 1.15    // 1.3→1.15 완화 (정상 거래량 ±15%만 더 넘으면 sweep 인정)
 const MAX_RECENT_SWEEPS = 5
 
 // ============================================
@@ -44,14 +44,10 @@ interface SwingPoint {
 
 function findSwingHighs(bars: LiquidityBar[]): SwingPoint[] {
   const out: SwingPoint[] = []
-  for (let i = 2; i < bars.length - 2; i++) {
+  // 3봉 프랙탈 (좌우 1봉씩): 좌 2봉 + 우 2봉(5봉)에서 완화 — 일봉 60일치에서 더 많은 swing 포착
+  for (let i = 1; i < bars.length - 1; i++) {
     const h = bars[i].high
-    if (
-      h > bars[i - 1].high &&
-      h > bars[i - 2].high &&
-      h > bars[i + 1].high &&
-      h > bars[i + 2].high
-    ) {
+    if (h > bars[i - 1].high && h > bars[i + 1].high) {
       out.push({ barIndex: i, price: h })
     }
   }
@@ -60,14 +56,9 @@ function findSwingHighs(bars: LiquidityBar[]): SwingPoint[] {
 
 function findSwingLows(bars: LiquidityBar[]): SwingPoint[] {
   const out: SwingPoint[] = []
-  for (let i = 2; i < bars.length - 2; i++) {
+  for (let i = 1; i < bars.length - 1; i++) {
     const l = bars[i].low
-    if (
-      l < bars[i - 1].low &&
-      l < bars[i - 2].low &&
-      l < bars[i + 1].low &&
-      l < bars[i + 2].low
-    ) {
+    if (l < bars[i - 1].low && l < bars[i + 1].low) {
       out.push({ barIndex: i, price: l })
     }
   }

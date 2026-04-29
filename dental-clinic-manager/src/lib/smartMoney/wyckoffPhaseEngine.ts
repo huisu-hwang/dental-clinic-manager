@@ -115,9 +115,9 @@ function detectAccumulation(bars: PhaseBar[]): AccumulationEvents {
     const avg = avgVolume(bars, i, VOL_WINDOW)
     if (avg <= 0) continue
     const volMul = b.volume / avg
-    if (volMul <= 2.5) continue
+    if (volMul <= 1.8) continue
     if (b.close >= b.open) continue
-    if (lowerWickRatio(b) <= 0.5) continue
+    if (lowerWickRatio(b) <= 0.35) continue
     // 가시범위 최저 근처 (±1%)
     if (visibleLow <= 0) continue
     if (Math.abs(b.low - visibleLow) / visibleLow > VISIBLE_EXTREME_TOLERANCE) continue
@@ -286,9 +286,9 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
     const avg = avgVolume(bars, i, VOL_WINDOW)
     if (avg <= 0) continue
     const volMul = b.volume / avg
-    if (volMul <= 2.5) continue
+    if (volMul <= 1.8) continue
     if (b.close <= b.open) continue
-    if (upperWickRatio(b) <= 0.5) continue
+    if (upperWickRatio(b) <= 0.35) continue
     if (visibleHigh <= 0) continue
     if (Math.abs(b.high - visibleHigh) / visibleHigh > VISIBLE_EXTREME_TOLERANCE) continue
     const strength = volMul * (1 + upperWickRatio(b))

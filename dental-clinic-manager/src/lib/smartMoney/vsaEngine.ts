@@ -31,13 +31,13 @@ export interface Bar {
 }
 
 const SCAN_WINDOW = 30          // 최근 30봉 스캔
-const ACTIONABLE_WINDOW = 5     // 시그널 채택 구간 (최근 5봉)
+const ACTIONABLE_WINDOW = 10    // 시그널 채택 구간 (최근 N봉, 5→10 완화)
 const VOL_AVG_BARS = 20         // volRatio 산출용 평균 봉 수
 const SPREAD_AVG_BARS = 10      // 좁은/넓은 spread 판정 기준
-const NARROW_SPREAD_MULT = 0.7
-const WIDE_SPREAD_MULT = 1.5
-const LOW_VOL_RATIO = 0.7
-const CLIMAX_VOL_RATIO = 2.5
+const NARROW_SPREAD_MULT = 0.85 // 0.7→0.85 완화 (No Demand/Supply 더 잘 잡히게)
+const WIDE_SPREAD_MULT = 1.3    // 1.5→1.3 완화 (Climax wide-spread 인정 범위 넓힘)
+const LOW_VOL_RATIO = 0.85      // 0.7→0.85 완화 (No Demand/Supply 검출)
+const CLIMAX_VOL_RATIO = 1.8    // 2.5→1.8 완화 (climax 검출)
 const STOPPING_CLOSE_POS = 0.66
 const STOPPING_BODY_TO_SPREAD = 0.4   // 작은 body 기준
 const MAX_SIGNALS = 10
