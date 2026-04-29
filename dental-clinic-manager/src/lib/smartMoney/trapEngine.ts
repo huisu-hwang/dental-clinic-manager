@@ -22,10 +22,10 @@ export interface Bar {
 }
 
 const LEVEL_LOOKBACK = 30          // 저항/지지선 산출 봉 수
-const RECENT_WINDOW = 5            // 트랩 후보 검사 구간 (최근 N봉)
-const RECLAIM_WINDOW = 3           // 돌파 후 회귀 허용 봉 수
+const RECENT_WINDOW = 10           // 트랩 후보 검사 구간 (최근 N봉, 5→10 완화)
+const RECLAIM_WINDOW = 5           // 돌파 후 회귀 허용 봉 수 (3→5 완화)
 const BREAK_THRESHOLD = 0.001      // 0.1% 돌파 임계
-const VOLUME_WEAK_MULT = 1.2       // 거래량 약세 컷오프 (≤1.2x)
+const VOLUME_WEAK_MULT = 1.5       // 거래량 약세 컷오프 (≤1.5x, 1.2→1.5 완화)
 const VOLUME_AVG_BARS = 20         // 거래량 평균 산출 봉 수
 const MAX_DETAILS = 5              // 최대 반환 트랩 개수
 
