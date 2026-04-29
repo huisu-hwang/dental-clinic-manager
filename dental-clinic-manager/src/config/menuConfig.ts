@@ -331,6 +331,16 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     visible: true,
   },
   {
+    id: 'referral',
+    label: '소개환자 관리',
+    icon: 'Heart',
+    route: '/dashboard?tab=referral',
+    permissions: ['referral_view'],
+    categoryId: 'operations',
+    order: 15.7,
+    visible: true,
+  },
+  {
     id: 'marketing',
     label: '마케팅 자동화',
     icon: 'Sparkles',
