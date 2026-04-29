@@ -11,7 +11,6 @@ import hashlib
 from pathlib import Path
 
 import time
-import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
@@ -39,7 +38,8 @@ def main(args: argparse.Namespace) -> None:
         n_steps=args.n_steps,
         batch_size=args.batch_size,
         learning_rate=args.lr,
-        gamma=0.99,
+        clip_range=args.clip_range,
+        gamma=args.gamma,
         verbose=1,
         device="cpu",
     )
@@ -76,6 +76,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--n-steps", type=int, default=2048)
     p.add_argument("--batch-size", type=int, default=64)
     p.add_argument("--lr", type=float, default=3e-4)
+    p.add_argument("--clip-range", type=float, default=0.2)
+    p.add_argument("--gamma", type=float, default=0.99)
     p.add_argument("--window", type=int, default=30)
     p.add_argument("--cache-dir", default="./.cache/dow30")
     p.add_argument("--output", default="./trained/ppo_dow30.zip")
