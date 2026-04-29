@@ -1,0 +1,55 @@
+import hashlib
+from pathlib import Path
+import pytest
+from src.model_registry import ModelRegistry, DownloadError, IntegrityError
+
+
+def make_dummy_bytes(n: int = 1024) -> bytes:
+    return bytes((i % 256 for i in range(n)))
+
+
+@pytest.mark.asyncio
+async def test_download_writes_to_sha256_subdir(tmp_path, monkeypatch):
+    payload = make_dummy_bytes()
+    expected_sha = hashlib.sha256(payload).hexdigest()
+    registry = ModelRegistry(model_dir=str(tmp_path))
+
+    async def fake_fetch(url: str) -> bytes:
+        return payload
+
+    monkeypatch.setattr(registry, "_fetch_bytes", fake_fetch)
+    path = await registry.download("model-1", "https://example.com/x.zip", expected_sha)
+    p = Path(path)
+    assert p.exists()
+    assert expected_sha in str(p)
+
+
+@pytest.mark.asyncio
+async def test_download_rejects_sha_mismatch(tmp_path, monkeypatch):
+    payload = make_dummy_bytes()
+    bad_sha = "0" * 64
+    registry = ModelRegistry(model_dir=str(tmp_path))
+
+    async def fake_fetch(url: str) -> bytes:
+        return payload
+
+    monkeypatch.setattr(registry, "_fetch_bytes", fake_fetch)
+    with pytest.raises(IntegrityError):
+        await registry.download("model-1", "https://example.com/x.zip", bad_sha)
+
+
+def test_lru_evicts_oldest_when_capacity_exceeded():
+    registry = ModelRegistry(model_dir="/tmp", lru_capacity=2)
+    registry._cache_set("a", "obj-a")
+    registry._cache_set("b", "obj-b")
+    registry._cache_set("c", "obj-c")  # 'a' should be evicted
+    assert registry._cache_get("a") is None
+    assert registry._cache_get("b") == "obj-b"
+    assert registry._cache_get("c") == "obj-c"
+
+
+def test_loaded_models_returns_cached_keys():
+    registry = ModelRegistry(model_dir="/tmp", lru_capacity=2)
+    registry._cache_set("a", "obj-a")
+    registry._cache_set("b", "obj-b")
+    assert sorted(registry.loaded_models()) == ["a", "b"]
