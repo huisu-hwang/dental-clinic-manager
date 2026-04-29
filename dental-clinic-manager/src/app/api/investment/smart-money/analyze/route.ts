@@ -272,7 +272,21 @@ export async function POST(request: NextRequest) {
   let vwap, wyckoff, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
   let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
   try {
-    const vwapBars: VWAPInputBar[] = bars.map((b) => ({
+    // ===== Intraday window 추출 =====
+    // algoFootprint(TWAP/Iceberg/Sniper/MOO/MOC), VWAP, 단일봉 Wyckoff, VSA는
+    // 본질적으로 단일 거래일(intraday) 기반 패턴이다. 5일치(390봉)를 그대로 입력하면
+    // 일별 거래량 차이가 누적돼 CV 폭증 → 점수=0 등 오작동.
+    // 따라서 가장 최근 거래일(YYYY-MM-DD)의 봉만 추출해 intraday 엔진에 사용.
+    const lastDate = bars[bars.length - 1]?.datetime?.slice(0, 10) ?? ''
+    let intradayBars: NormalizedBar[] = lastDate
+      ? bars.filter((b) => b.datetime.slice(0, 10) === lastDate)
+      : []
+    // edge case: 새 날짜의 첫 봉이 아직 적으면 fallback 마지막 78봉
+    if (intradayBars.length < 20) {
+      intradayBars = bars.slice(-78)
+    }
+
+    const vwapBars: VWAPInputBar[] = intradayBars.map((b) => ({
       high: b.high,
       low: b.low,
       close: b.close,
@@ -280,7 +294,7 @@ export async function POST(request: NextRequest) {
     }))
     vwap = calculateVWAP(vwapBars, currentPrice)
 
-    const wyckoffBars: WyckoffBar[] = bars.map((b) => ({
+    const wyckoffBars: WyckoffBar[] = intradayBars.map((b) => ({
       open: b.open,
       high: b.high,
       low: b.low,
@@ -289,7 +303,7 @@ export async function POST(request: NextRequest) {
     }))
     wyckoff = detectWyckoff(wyckoffBars)
 
-    const algoBars: AlgoBar[] = bars.map((b) => ({
+    const algoBars: AlgoBar[] = intradayBars.map((b) => ({
       datetime: b.datetime,
       open: b.open,
       high: b.high,
@@ -304,7 +318,7 @@ export async function POST(request: NextRequest) {
         ? analyzeInvestorFlow(investorHistory)
         : null
 
-    // ===== 정교화 엔진들 =====
+    // ===== 정교화 엔진들 (다일 패턴이라 390봉 전체 사용) =====
     const phaseBars: PhaseBar[] = bars.map((b) => ({ ...b }))
     const phaseDailyBars: PhaseBar[] = dailyBars.map((b) => ({ ...b }))
     wyckoffPhase = detectWyckoffPhase(phaseBars, phaseDailyBars.length > 0 ? phaseDailyBars : undefined)
@@ -324,6 +338,8 @@ export async function POST(request: NextRequest) {
     }))
     traps = detectTraps(trapBars)
 
+    // VSA는 effort vs result로 단일 거래일 + 직전 1-2일 정도가 합리적이지만
+    // 엔진 자체가 최근 5봉만 actionable signal로 사용하므로 5일치도 안전
     const vsaBars: VSABar[] = bars.map((b) => ({
       open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
     }))
@@ -333,7 +349,6 @@ export async function POST(request: NextRequest) {
     session = analyzeSession(sessionBars, market)
 
     const newsBars: NewsBar[] = bars.map((b) => ({ ...b }))
-    // 뉴스 데이터는 현재 통합되어 있지 않으므로 빈 배열로 호출 → 엔진은 safe defaults 반환
     newsContext = analyzeNewsContext({
       bars: newsBars,
       signalDetails: [],
