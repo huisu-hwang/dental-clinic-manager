@@ -79,9 +79,19 @@ export const rlModelService = {
         return { success: false, error: text }
       }
       const json = (await resp.json()) as { path?: string }
+      if (!json.path) {
+        await supabase
+          .from('rl_models')
+          .update({
+            status: 'failed',
+            failure_reason: 'rl-inference-server response missing path field',
+          })
+          .eq('id', modelId)
+        return { success: false, error: 'rl-inference-server response missing path field' }
+      }
       await supabase
         .from('rl_models')
-        .update({ status: 'ready', checkpoint_path: json.path ?? null })
+        .update({ status: 'ready', checkpoint_path: json.path })
         .eq('id', modelId)
       return { success: true, error: null }
     } catch (err) {

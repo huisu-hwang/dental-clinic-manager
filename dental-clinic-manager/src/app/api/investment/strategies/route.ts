@@ -225,6 +225,13 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: '전략 ID가 필요합니다' }, { status: 400 })
   }
 
+  // strategy_type and rl_model_id are immutable after creation
+  if ('strategy_type' in updates || 'rl_model_id' in updates) {
+    return NextResponse.json({
+      error: 'strategy_type and rl_model_id cannot be changed after creation',
+    }, { status: 400 })
+  }
+
   // 소유권 확인
   const { data: existing } = await supabase
     .from('investment_strategies')
