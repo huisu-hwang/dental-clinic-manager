@@ -41,8 +41,8 @@ export interface Bar {
 
 // 분석에 필요한 최소 봉 개수
 const MIN_BARS = 10
-// 임펄스(impulse) 가격 변화 임계값 (1.0%)
-const IMPULSE_THRESHOLD = 0.01
+// 임펄스(impulse) 가격 변화 임계값 (0.5% — 한국 분봉/일봉에서 합리적)
+const IMPULSE_THRESHOLD = 0.005
 // 임펄스로 간주할 후속 봉 개수
 const IMPULSE_LOOKAHEAD = 3
 // 직전 swing 비교에 사용할 lookback 윈도우
