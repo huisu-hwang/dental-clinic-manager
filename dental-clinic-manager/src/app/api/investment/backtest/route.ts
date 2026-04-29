@@ -278,40 +278,69 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
-  const strategyId = searchParams.get('strategyId')
+  const strategyId = searchParams.get('strategyId') ?? searchParams.get('strategy_id')
+  const ticker = searchParams.get('ticker')?.trim() || null
+  const since = searchParams.get('since')
+  const until = searchParams.get('until')
+  const idsCsv = searchParams.get('ids')
+  const limitRaw = searchParams.get('limit')
 
+  // 1) 단일 결과 — 기존 호환
   if (id) {
-    // 단일 결과 조회
     const { data, error } = await supabase
       .from('backtest_runs')
       .select('*')
       .eq('id', id)
       .eq('user_id', userId)
       .single()
-
     if (error || !data) {
       return NextResponse.json({ error: '결과를 찾을 수 없습니다' }, { status: 404 })
     }
-
     return NextResponse.json({ data })
   }
 
-  if (strategyId) {
-    // 전략별 결과 목록
+  // 2) 다중 IDs (비교 view 로드용)
+  if (idsCsv) {
+    const ids = idsCsv.split(',').map(s => s.trim()).filter(Boolean)
+    if (ids.length > 50) {
+      return NextResponse.json({ error: 'ids는 최대 50개까지 가능합니다' }, { status: 400 })
+    }
     const { data, error } = await supabase
       .from('backtest_runs')
       .select('*')
-      .eq('strategy_id', strategyId)
       .eq('user_id', userId)
-      .order('executed_at', { ascending: false })
-      .limit(20)
-
+      .in('id', ids)
     if (error) {
       return NextResponse.json({ error: '조회 실패' }, { status: 500 })
     }
-
-    return NextResponse.json({ data })
+    return NextResponse.json({ data: data ?? [] })
   }
 
-  return NextResponse.json({ error: 'id 또는 strategyId 파라미터가 필요합니다' }, { status: 400 })
+  // 3) 필터 + 최신순 (히스토리 탭)
+  let query = supabase
+    .from('backtest_runs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+
+  if (strategyId) {
+    query = query.eq('strategy_id', strategyId)
+  }
+  if (ticker) {
+    query = query.eq('ticker', ticker.toUpperCase())
+  }
+  if (since) {
+    query = query.gte('executed_at', since)
+  }
+  if (until) {
+    query = query.lte('executed_at', until)
+  }
+  const limit = Math.min(Number(limitRaw) || 50, 200)
+  query = query.order('executed_at', { ascending: false }).limit(limit)
+
+  const { data, error } = await query
+  if (error) {
+    return NextResponse.json({ error: '조회 실패' }, { status: 500 })
+  }
+  return NextResponse.json({ data: data ?? [] })
 }
