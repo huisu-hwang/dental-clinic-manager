@@ -10,6 +10,9 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, 'src') },
   },
+  // Suppress @tailwindcss/postcss in vitest's internal Vite loader.
+  // Tailwind v4's postcss plugin uses a string format Vite's PostCSS doesn't accept;
+  // tests don't need CSS processing, so we override with empty plugins.
   css: {
     postcss: {
       plugins: [],

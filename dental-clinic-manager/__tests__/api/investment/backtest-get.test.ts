@@ -17,6 +17,10 @@ const supabaseChain = {
   single: vi.fn(),
 }
 
+const originalLimit = supabaseChain.limit
+const originalIn = supabaseChain.in
+const originalSingle = supabaseChain.single
+
 vi.mock('@/lib/supabase/admin', () => ({
   getSupabaseAdmin: vi.fn(() => supabaseChain),
 }))
@@ -30,8 +34,13 @@ function makeReq(qs: string): Request {
 describe('GET /api/investment/backtest filters', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    supabaseChain.limit = originalLimit
+    supabaseChain.in = originalIn
+    supabaseChain.single = originalSingle
     Object.values(supabaseChain).forEach((fn: any) => {
-      if (typeof fn === 'function' && 'mockReturnThis' in fn) fn.mockReturnThis()
+      if (fn && typeof fn === 'function' && 'mockReturnThis' in fn) {
+        fn.mockReturnThis()
+      }
     })
   })
 
