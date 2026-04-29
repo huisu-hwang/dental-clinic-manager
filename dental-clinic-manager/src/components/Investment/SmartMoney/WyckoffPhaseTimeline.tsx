@@ -55,7 +55,8 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
       : 'bg-slate-200'
 
   const activePhaseIdx = phase.phase ? PHASES.indexOf(phase.phase) : -1
-  const noData = phase.cycle === null || phase.events.length === 0
+  // cycle이 있으면 phase A~E 미확정이라도 의미 있는 정보(추세 기반 fallback) 표시
+  const noData = phase.cycle === null && phase.events.length === 0
 
   // 최근 5개 (이벤트 배열의 마지막 5개를 역순으로)
   const recentEvents = [...phase.events].slice(-5).reverse()
