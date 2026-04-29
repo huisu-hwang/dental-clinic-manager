@@ -46,6 +46,8 @@ export interface PhaseBar {
 
 const MIN_BARS = 30
 const VOL_WINDOW = 20
+/** 가시범위 최저/최고 근처 판정 허용 오차 (3% — 분봉/일봉 모두 합리적) */
+const VISIBLE_EXTREME_TOLERANCE = 0.03
 
 // ============================================
 // 보조 통계
@@ -118,7 +120,7 @@ function detectAccumulation(bars: PhaseBar[]): AccumulationEvents {
     if (lowerWickRatio(b) <= 0.5) continue
     // 가시범위 최저 근처 (±1%)
     if (visibleLow <= 0) continue
-    if (Math.abs(b.low - visibleLow) / visibleLow > 0.01) continue
+    if (Math.abs(b.low - visibleLow) / visibleLow > VISIBLE_EXTREME_TOLERANCE) continue
     const strength = volMul * (1 + lowerWickRatio(b))
     if (strength > scStrength) {
       scStrength = strength
@@ -178,7 +180,7 @@ function detectAccumulation(bars: PhaseBar[]): AccumulationEvents {
     for (let i = stStart; i < n; i++) {
       const b = bars[i]
       if (scLow <= 0) continue
-      if (Math.abs(b.low - scLow) / scLow > 0.01) continue
+      if (Math.abs(b.low - scLow) / scLow > VISIBLE_EXTREME_TOLERANCE) continue
       if (b.volume >= sc.volume) continue
       result.sts.push({
         type: 'ST',
@@ -288,7 +290,7 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
     if (b.close <= b.open) continue
     if (upperWickRatio(b) <= 0.5) continue
     if (visibleHigh <= 0) continue
-    if (Math.abs(b.high - visibleHigh) / visibleHigh > 0.01) continue
+    if (Math.abs(b.high - visibleHigh) / visibleHigh > VISIBLE_EXTREME_TOLERANCE) continue
     const strength = volMul * (1 + upperWickRatio(b))
     if (strength > bcStrength) {
       bcStrength = strength
@@ -348,7 +350,7 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
     for (let i = stStart; i < n; i++) {
       const b = bars[i]
       if (bcHigh <= 0) continue
-      if (Math.abs(b.high - bcHigh) / bcHigh > 0.01) continue
+      if (Math.abs(b.high - bcHigh) / bcHigh > VISIBLE_EXTREME_TOLERANCE) continue
       if (b.volume >= bc.volume) continue
       result.sts.push({
         type: 'ST',
@@ -427,15 +429,17 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
 // ============================================
 export function detectWyckoffPhase(
   bars: PhaseBar[],
-  _dailyBars?: PhaseBar[],
+  dailyBars?: PhaseBar[],
 ): WyckoffPhaseResult {
-  void _dailyBars
-  if (!bars || bars.length < MIN_BARS) {
+  // 와이코프 사이클은 본질적으로 다일(multi-day) 패턴이므로
+  // 일봉이 충분히 제공되면 일봉을 우선 사용한다 (분봉은 fallback).
+  const sourceBars = dailyBars && dailyBars.length >= MIN_BARS ? dailyBars : bars
+  if (!sourceBars || sourceBars.length < MIN_BARS) {
     return { cycle: null, phase: null, events: [], confidence: 0, description: '데이터 부족' }
   }
 
-  const acc = detectAccumulation(bars)
-  const dist = detectDistribution(bars)
+  const acc = detectAccumulation(sourceBars)
+  const dist = detectDistribution(sourceBars)
 
   const accEvents: WyckoffPhaseEvent[] = []
   if (acc.ps) accEvents.push(acc.ps)
