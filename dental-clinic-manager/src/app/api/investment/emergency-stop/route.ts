@@ -72,7 +72,16 @@ export async function POST() {
     }
   }
 
-  // 4. 감사 로그
+  // 4. RL kill switch 강제 활성화
+  await supabase
+    .from('user_investment_settings')
+    .upsert({
+      user_id: userId,
+      rl_paused_at: new Date().toISOString(),
+      rl_paused_reason: 'emergency-stop',
+    }, { onConflict: 'user_id' })
+
+  // 5. 감사 로그
   await supabase.from('investment_audit_logs').insert({
     user_id: userId,
     action: 'emergency_stop',

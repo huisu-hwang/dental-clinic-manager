@@ -99,6 +99,11 @@ export type Permission =
   // 월간 성과 보고서 권한
   | 'monthly_report_view'     // 월간 성과 보고서 조회
   | 'monthly_report_manage'   // 월간 성과 보고서 수동 재생성
+  // 소개환자 관리 권한
+  | 'referral_view'           // 소개환자 관리 조회
+  | 'referral_manage'         // 소개 등록/수정/삭제
+  | 'referral_sms_send'       // 감사 문자 발송
+  | 'referral_points_adjust'  // 포인트 적립/차감
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -147,7 +152,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 주식 자동매매 (모든 권한)
     'investment_view', 'investment_manage',
     // 월간 성과 보고서 (모든 권한)
-    'monthly_report_view', 'monthly_report_manage'
+    'monthly_report_view', 'monthly_report_manage',
+    // 소개환자 관리 (모든 권한)
+    'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -191,7 +198,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 마케팅 자동화 (조회)
     'marketing_view',
     // 월간 성과 보고서 (조회)
-    'monthly_report_view'
+    'monthly_report_view',
+    // 소개환자 관리 (모든 권한)
+    'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
@@ -228,7 +237,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 경영 현황 (조회)
     'financial_view',
     // 월간 성과 보고서 (조회)
-    'monthly_report_view'
+    'monthly_report_view',
+    // 소개환자 관리 (모든 권한)
+    'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -422,6 +433,12 @@ export const PERMISSION_GROUPS = {
     { key: 'monthly_report_view', label: '월간 성과 보고서 조회' },
     { key: 'monthly_report_manage', label: '보고서 수동 재생성' }
   ],
+  '소개환자 관리': [
+    { key: 'referral_view', label: '소개환자 관리 조회' },
+    { key: 'referral_manage', label: '소개 등록/수정/삭제' },
+    { key: 'referral_sms_send', label: '감사 문자 발송' },
+    { key: 'referral_points_adjust', label: '포인트 적립/차감' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -527,5 +544,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'investment_manage': '자동매매 전략을 설정하거나 주문을 관리할 수 있습니다.',
   // 월간 성과 보고서 권한 설명
   'monthly_report_view': '월간 성과 보고서(매출/신환/유입경로/연령대 분석)를 조회할 수 있습니다.',
-  'monthly_report_manage': '월간 성과 보고서를 수동으로 재생성할 수 있습니다.'
+  'monthly_report_manage': '월간 성과 보고서를 수동으로 재생성할 수 있습니다.',
+  // 소개환자 관리 권한 설명
+  'referral_view': '소개환자 관리 페이지의 소개 내역과 통계를 조회할 수 있습니다.',
+  'referral_manage': '환자 간 소개 관계를 등록·수정·삭제할 수 있습니다.',
+  'referral_sms_send': '소개해주신 분께 감사 문자를 발송할 수 있습니다.',
+  'referral_points_adjust': '환자에게 포인트를 적립하거나 차감할 수 있습니다.'
 }

@@ -99,7 +99,12 @@ export default function BulletinPage() {
           </div>
         ) : (
           <>
-            {activeTab === 'announcements' && <AnnouncementList canCreate={isAdmin} />}
+            {activeTab === 'announcements' && (
+              <AnnouncementList
+                canCreate={isAdmin}
+                initialAnnouncementId={searchParams.get('id')}
+              />
+            )}
             {activeTab === 'documents' && <DocumentList canCreate={isAdmin} />}
           </>
         )}
