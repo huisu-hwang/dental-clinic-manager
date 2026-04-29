@@ -23,6 +23,7 @@ import { startSignalProcessor, stopSignalProcessor } from './signalProcessor'
 import { startReconciler, stopReconciler } from './reconciler'
 import { runDailyRebalance } from './dailyRebalanceJob'
 import { buildDailyRebalanceDeps } from './dailyRebalanceDeps'
+import { runOhlcvIngestion, buildIngestionDeps, DEFAULT_UNIVERSE } from './ohlcvIngestionJob'
 
 let isShuttingDown = false
 
@@ -73,6 +74,19 @@ async function main() {
       logger.info({ result }, '[dailyRebalance] done')
     } catch (err) {
       logger.error({ err }, '[dailyRebalance] failed')
+    }
+  }, { timezone: 'Asia/Seoul' })
+
+  // 8. OHLCV 일일 수집 크론 (평일 KST 06:30)
+  // ET 마감(KST 05:00 EDT / 06:00 EST) 직후 → Yahoo Finance에서 Dow 30 일봉 30일치 fetch
+  cron.schedule('30 6 * * 2-6', async () => {
+    try {
+      logger.info('[ohlcvIngestion] start')
+      const deps = await buildIngestionDeps(getSupabase())
+      const r = await runOhlcvIngestion(DEFAULT_UNIVERSE, 30, deps)
+      logger.info({ result: r }, '[ohlcvIngestion] done')
+    } catch (err) {
+      logger.error({ err }, '[ohlcvIngestion] failed')
     }
   }, { timezone: 'Asia/Seoul' })
 
