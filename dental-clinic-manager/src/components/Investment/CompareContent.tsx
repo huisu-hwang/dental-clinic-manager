@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import HistoryTab from './CompareHistory/HistoryTab'
 import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight, Info, Wand2, TrendingUp, ArrowDown, ArrowUp, ArrowUpDown, LayoutGrid, List as ListIcon } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
@@ -124,7 +125,7 @@ interface SelectedTicker {
 
 type ViewMode = 'matrix' | 'list'
 
-export default function CompareContent() {
+function LiveCompareSection() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loadingStrategies, setLoadingStrategies] = useState(true)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -1695,4 +1696,37 @@ function emptyMetrics(): BacktestMetrics {
     winRate: 0, totalTrades: 0, profitFactor: 0,
     avgWin: 0, avgLoss: 0, maxConsecutiveWins: 0, maxConsecutiveLosses: 0, avgHoldingDays: 0,
   }
+}
+
+type CompareTab = 'live' | 'history'
+
+export default function CompareContent() {
+  const [tab, setTab] = useState<CompareTab>('live')
+
+  return (
+    <div className="bg-white min-h-screen">
+      <div className="sticky top-14 z-10 bg-white border-b border-at-border px-4 sm:px-6 pt-4 pb-3 -mx-4 sm:-mx-6 flex gap-2">
+        <button
+          onClick={() => setTab('live')}
+          className={`py-2 px-4 inline-flex items-center rounded-xl font-medium text-sm transition-colors ${
+            tab === 'live' ? 'bg-at-accent-light text-at-accent' : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+          }`}
+        >
+          새로 비교
+        </button>
+        <button
+          onClick={() => setTab('history')}
+          className={`py-2 px-4 inline-flex items-center rounded-xl font-medium text-sm transition-colors ${
+            tab === 'history' ? 'bg-at-accent-light text-at-accent' : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+          }`}
+        >
+          히스토리
+        </button>
+      </div>
+
+      <div className="pt-4">
+        {tab === 'live' ? <LiveCompareSection /> : <HistoryTab />}
+      </div>
+    </div>
+  )
 }
