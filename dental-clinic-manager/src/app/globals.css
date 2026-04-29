@@ -64,6 +64,30 @@ table a {
   -webkit-text-fill-color: currentColor;
 }
 
+/* Android/iOS Chrome 근로계약서 텍스트 색상 문제 해결 */
+/* 모바일 브라우저(다크모드 포함)에서 계약서 본문 글씨가 회색으로 보이는 문제 방지 */
+.contract-print-content,
+.contract-print-content * {
+  color: #000000;
+  -webkit-text-fill-color: #000000;
+}
+
+/* 디자인 시스템 색상은 그대로 유지 (상태 뱃지, 강조 텍스트, 버튼 등) */
+.contract-print-content [class*="text-white"],
+.contract-print-content [class*="text-green-"],
+.contract-print-content [class*="text-red-"],
+.contract-print-content [class*="text-yellow-"],
+.contract-print-content [class*="text-blue-"],
+.contract-print-content [class*="text-purple-"],
+.contract-print-content [class*="text-orange-"],
+.contract-print-content [class*="text-at-accent"],
+.contract-print-content [class*="text-at-error"],
+.contract-print-content [class*="text-at-success"],
+.contract-print-content [class*="text-at-warning"] {
+  color: revert;
+  -webkit-text-fill-color: currentColor;
+}
+
 /* placeholder 스타일 */
 input::placeholder,
 textarea::placeholder {
