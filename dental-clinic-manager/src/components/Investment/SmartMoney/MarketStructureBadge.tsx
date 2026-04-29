@@ -2,8 +2,16 @@
  * MarketStructureBadge — 시장구조(SMC) 트렌드 + 최근 BOS/CHoCH + 스윙 포인트
  */
 
-import { TrendingUp, TrendingDown, Activity } from 'lucide-react'
+'use client'
+
+import { useState } from 'react'
+import { TrendingUp, TrendingDown, Activity, Info, X } from 'lucide-react'
 import type { MarketStructureResult, SwingPoint } from '@/types/smartMoney'
+
+const HELP = {
+  title: '시장 구조 (SMC)',
+  body: '스마트머니 콘셉트(SMC)에서 정의하는 시장 구조 — 스윙 고점·저점이 HH(Higher High), HL(Higher Low), LH, LL 중 어떻게 배열되는지로 추세를 판단. BOS(Break of Structure)는 추세 지속, CHoCH(Change of Character)는 추세 반전 신호. CHoCH 출현 시 기관의 의도가 바뀐 것으로 해석.',
+}
 
 interface Props {
   structure: MarketStructureResult
@@ -24,6 +32,7 @@ const SWING_COLOR: Record<SwingPoint['kind'], string> = {
 }
 
 export function MarketStructureBadge({ structure }: Props) {
+  const [helpOpen, setHelpOpen] = useState(false)
   const trendBadge =
     structure.trend === 'bullish'
       ? 'bg-emerald-100 text-emerald-700'
@@ -59,11 +68,38 @@ export function MarketStructureBadge({ structure }: Props) {
   const lastSwings = [...structure.swings].slice(-5).reverse()
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+    <div className="relative bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-slate-900">시장 구조 (SMC)</h3>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${trendBadge}`}>{trendLabel}</span>
+        <div className="flex items-center gap-1">
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${trendBadge}`}>{trendLabel}</span>
+          <button
+            type="button"
+            onClick={() => setHelpOpen((o) => !o)}
+            className="flex-shrink-0 p-1 rounded-full text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            aria-label="설명 보기"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
+
+      {helpOpen && (
+        <div className="absolute right-2 top-9 z-20 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <p className="text-xs font-semibold text-slate-900">{HELP.title}</p>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(false)}
+              className="text-slate-400 hover:text-slate-700 -mt-0.5 -mr-0.5"
+              aria-label="닫기"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-600">{HELP.body}</p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">

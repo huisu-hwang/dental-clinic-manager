@@ -31,7 +31,7 @@ import {
   type KRInvestorDay,
 } from '@/lib/kisApiService'
 import { fetchIntradayPrices } from '@/lib/intradayDataService'
-import { fetchCurrentQuote } from '@/lib/stockDataService'
+import { fetchCurrentQuote, fetchPrices } from '@/lib/stockDataService'
 import { calculateVWAP, type VWAPInputBar } from '@/lib/smartMoney/vwapEngine'
 import { detectWyckoff, type WyckoffBar } from '@/lib/smartMoney/wyckoffEngine'
 import { analyzeAlgoFootprint, type AlgoBar } from '@/lib/smartMoney/algoFootprintEngine'
@@ -242,9 +242,29 @@ export async function POST(request: NextRequest) {
         close: b.close,
         volume: b.volume,
       }))
-      // US daily bars (60일치) — fetchIntradayPrices의 1d 호출은 별도 서비스가 없으므로
-      // 분봉을 일봉으로 압축하여 활용
-      dailyBars = aggregateBarsToDaily(bars)
+      // US daily bars (60일치) — fetchPrices(yahoo-finance2)로 실제 일봉 페치
+      try {
+        const todayUS = new Date()
+        const pastUS = new Date()
+        pastUS.setDate(pastUS.getDate() - 90)
+        const usDaily = await fetchPrices(ticker, 'US', toDateString(pastUS), toDateString(todayUS))
+        if (usDaily && usDaily.length > 0) {
+          dailyBars = usDaily.map((b) => ({
+            datetime: b.date,
+            open: b.open,
+            high: b.high,
+            low: b.low,
+            close: b.close,
+            volume: b.volume,
+          }))
+        } else {
+          // fallback: 분봉 압축
+          dailyBars = aggregateBarsToDaily(bars)
+        }
+      } catch (err) {
+        console.warn('[smart-money/analyze] US 일봉 페치 실패, 분봉 압축으로 fallback:', err)
+        dailyBars = aggregateBarsToDaily(bars)
+      }
 
       // 분봉으로 고저 추정 (US는 일봉 별도 호출 안함)
       const ctx = inferHighLowFromBars(bars)
