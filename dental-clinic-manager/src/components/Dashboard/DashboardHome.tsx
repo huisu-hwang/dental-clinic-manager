@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import MyTasksSection from './MyTasksSection'
 import ScheduleWidget from './ScheduleWidget'
+import ReferralPendingWidget from './ReferralPendingWidget'
 
 // 날씨 아이콘 매핑
 const weatherIcons: Record<string, React.ReactNode> = {
@@ -682,6 +683,9 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
+
+            {/* 소개환자 관리 위젯 */}
+            <ReferralPendingWidget />
 
             {/* 내 업무 (일회성 + 반복 업무 인스턴스) */}
             <MyTasksSection />

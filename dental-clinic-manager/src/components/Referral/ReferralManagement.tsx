@@ -7,11 +7,14 @@ import { referralService } from '@/lib/referralService'
 import type { PatientReferralWithPatients, ReferralKpi, PatientSearchResult } from '@/types/referral'
 import ReferralListTab from './ReferralListTab'
 import ReferrerRankingTab from './ReferrerRankingTab'
+import FamilyTab from './FamilyTab'
+import ReferralStatsTab from './ReferralStatsTab'
 import ReferralAddModal from './ReferralAddModal'
 import ThanksSmsModal from './ThanksSmsModal'
 import PointAdjustModal from './PointAdjustModal'
+import SettingsPopover from './SettingsPopover'
 
-type TabKey = 'list' | 'ranking'
+type TabKey = 'list' | 'ranking' | 'family' | 'stats'
 
 export default function ReferralManagement() {
   const { user } = useAuth()
@@ -108,6 +111,7 @@ export default function ReferralManagement() {
             <p className="text-xs text-[var(--at-text-secondary)]">소개해주신 분과 신환을 한 곳에서 관리하고 감사 문자·포인트·선물을 적립합니다.</p>
           </div>
         </div>
+        <SettingsPopover clinicId={clinicId} />
       </div>
 
       {/* KPI 카드 */}
@@ -147,10 +151,12 @@ export default function ReferralManagement() {
       </div>
 
       {/* 탭 */}
-      <div className="flex items-center gap-1 border-b border-[var(--at-border)]">
+      <div className="flex items-center gap-1 border-b border-[var(--at-border)] overflow-x-auto">
         {([
           { k: 'list', label: '소개 내역' },
           { k: 'ranking', label: '소개왕 랭킹' },
+          { k: 'family', label: '가족 묶음' },
+          { k: 'stats', label: '전환율 분석' },
         ] as const).map(t => (
           <button
             key={t.k}
@@ -181,6 +187,12 @@ export default function ReferralManagement() {
       )}
       {activeTab === 'ranking' && (
         <ReferrerRankingTab clinicId={clinicId} refreshKey={refreshKey} />
+      )}
+      {activeTab === 'family' && (
+        <FamilyTab clinicId={clinicId} refreshKey={refreshKey} />
+      )}
+      {activeTab === 'stats' && (
+        <ReferralStatsTab clinicId={clinicId} refreshKey={refreshKey} />
       )}
 
       <ReferralAddModal
