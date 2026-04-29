@@ -8,7 +8,7 @@ import type { DailyRebalanceDeps } from './dailyRebalanceJob'
 import { RLInferenceClient } from './rlInferenceClient'
 import { getSupabase } from './supabaseClient'
 import { logger } from './logger'
-import { sendSignalAlert } from './telegramNotifier'
+import { sendSystemNotice } from './telegramNotifier'
 import { executeAutoOrder } from './orderExecutor'
 
 export async function buildDailyRebalanceDeps(): Promise<DailyRebalanceDeps> {
@@ -138,21 +138,25 @@ export async function buildDailyRebalanceDeps(): Promise<DailyRebalanceDeps> {
 
     sendTelegram: async (userId, message) => {
       try {
-        // sendSignalAlert resolves the userId → chatId lookup internally.
-        // We piggy-back on it by passing a minimal signal payload whose formatted
-        // text is replaced by a custom note in the strategyName field.
-        // For a raw free-text message we use sendSignalAlert with type 'buy_signal'
-        // and embed the full message in strategyName — this is the closest available
-        // public API that takes a userId rather than a chatId.
-        await sendSignalAlert(userId, {
-          type: 'buy_signal',
-          strategyName: message,
-          ticker: '',
-          market: '',
-        })
+        await sendSystemNotice(userId, message)
       } catch (err) {
         logger.warn({ err, userId }, 'sendTelegram failed (non-fatal)')
       }
+    },
+
+    checkLogExists: async (strategyId, tradeDate) => {
+      const supabase = getSupabase()
+      const { data, error } = await supabase
+        .from('rl_inference_logs')
+        .select('id')
+        .eq('strategy_id', strategyId)
+        .eq('trade_date', tradeDate)
+        .maybeSingle()
+      if (error) {
+        logger.warn({ error, strategyId, tradeDate }, 'checkLogExists query failed; assuming no log')
+        return false
+      }
+      return Boolean(data)
     },
 
     executeAutoOrder: async (params) => {

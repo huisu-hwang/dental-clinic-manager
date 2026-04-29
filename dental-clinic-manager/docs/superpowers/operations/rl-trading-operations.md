@@ -72,6 +72,15 @@ require('./dist/dailyRebalanceDeps').buildDailyRebalanceDeps()
 
 > 주의: cron은 KST 07:00 (월~금 ET 마감 다음날 새벽). DST 시기에는 시간대 검토 필요.
 
+## DST 안전성
+
+cron은 `Asia/Seoul` 타임존 기준 매주 화~금 오전 7시(KST)에 발동. 미국 ET 마감(16:00 local)은:
+
+- **EDT (3월~11월):** ET 16:00 = KST 05:00 → 다음날 07:00까지 14시간 여유
+- **EST (11월~3월):** ET 16:00 = KST 06:00 → 다음날 07:00까지 13시간 여유
+
+따라서 ET 종가 데이터가 KIS 일봉 캐시에 안착할 때까지 항상 최소 ~1시간의 안전 마진이 확보된다.
+
 ## 트러블슈팅
 
 | 증상 | 원인 / 점검 |

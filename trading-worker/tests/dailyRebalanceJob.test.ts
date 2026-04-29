@@ -11,6 +11,7 @@ function makeDeps(overrides: Partial<DailyRebalanceDeps> = {}): DailyRebalanceDe
     insertInferenceLog: vi.fn().mockResolvedValue(undefined),
     sendTelegram: vi.fn().mockResolvedValue(undefined),
     executeAutoOrder: vi.fn().mockResolvedValue({ ok: true, orderId: 'o1' }),
+    checkLogExists: vi.fn().mockResolvedValue(false),
     today: '2026-04-29',
     ...overrides,
   }
@@ -63,7 +64,9 @@ describe('runDailyRebalance', () => {
   it('automation_level=2 invokes executeAutoOrder', async () => {
     const deps = makeDeps({
       fetchActiveRLStrategies: vi.fn().mockResolvedValue([{ ...baseStrategy, automation_level: 2 }]),
-      rlClient: { predict: vi.fn().mockResolvedValue({ kind: 'portfolio', weights: { AAPL: 1 }, confidence: 0.8, raw_action: [], metadata: {} }), health: vi.fn() } as any,
+      // positionsTotal = 5 * 100 = 500. weights: AAPL=0.5 → targetValue=250, currentValue=500 → diff=-250 → sell
+      fetchCurrentPositions: vi.fn().mockResolvedValue({ AAPL: { qty: 5, avg_price: 100 } }),
+      rlClient: { predict: vi.fn().mockResolvedValue({ kind: 'portfolio', weights: { AAPL: 0.5 }, confidence: 0.8, raw_action: [], metadata: {} }), health: vi.fn() } as any,
     })
     await runDailyRebalance(deps)
     expect(deps.executeAutoOrder).toHaveBeenCalled()
@@ -90,5 +93,32 @@ describe('runDailyRebalance', () => {
     expect(deps.insertInferenceLog).toHaveBeenCalledWith(
       expect.objectContaining({ decision: 'hold', blocked_reason: expect.stringContaining('rl_single') }),
     )
+  })
+
+  it('skips when log already exists for today (idempotency)', async () => {
+    const deps = makeDeps({
+      fetchActiveRLStrategies: vi.fn().mockResolvedValue([baseStrategy]),
+      checkLogExists: vi.fn().mockResolvedValue(true),
+    })
+    await runDailyRebalance(deps)
+    expect(deps.fetchOhlcvWindow).not.toHaveBeenCalled()
+    expect(deps.rlClient.predict).not.toHaveBeenCalled()
+  })
+
+  it('holds when positions empty (no capital baseline)', async () => {
+    const deps = makeDeps({
+      fetchActiveRLStrategies: vi.fn().mockResolvedValue([{ ...baseStrategy, automation_level: 2 }]),
+      fetchCurrentPositions: vi.fn().mockResolvedValue({}),
+      rlClient: {
+        predict: vi.fn().mockResolvedValue({ kind: 'portfolio', weights: { AAPL: 1 }, confidence: 0.9, raw_action: [], metadata: {} }),
+        health: vi.fn(),
+      } as any,
+    })
+    await runDailyRebalance(deps)
+    expect(deps.executeAutoOrder).not.toHaveBeenCalled()
+    expect(deps.insertInferenceLog).toHaveBeenCalledWith(expect.objectContaining({
+      decision: 'hold',
+      blocked_reason: expect.stringContaining('no_capital_baseline'),
+    }))
   })
 })

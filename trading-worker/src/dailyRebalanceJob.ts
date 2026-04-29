@@ -26,6 +26,7 @@ export interface DailyRebalanceDeps {
   rlClient: Pick<RLInferenceClient, 'predict' | 'health'>
   insertInferenceLog: (log: InferenceLogEntry) => Promise<void>
   sendTelegram: (userId: string, message: string) => Promise<void>
+  checkLogExists: (strategyId: string, tradeDate: string) => Promise<boolean>
   executeAutoOrder: (params: {
     userId: string; strategyId: string; ticker: string; orderType: 'buy' | 'sell';
     quantity: number; orderMethod: 'market' | 'limit'; signalData: Record<string, unknown>
@@ -66,6 +67,12 @@ export async function runDailyRebalance(deps: DailyRebalanceDeps): Promise<Rebal
       result.blocked++
       continue
     }
+
+    // Idempotency: skip strategies that already have today's log
+    if (await deps.checkLogExists(s.id, deps.today)) {
+      continue
+    }
+
     try {
       const settings = await deps.fetchUserSettings(s.user_id)
       if (settings.rl_paused_at) {
@@ -108,7 +115,24 @@ export async function runDailyRebalance(deps: DailyRebalanceDeps): Promise<Rebal
         continue
       }
 
-      const orders = computeOrdersFromWeights(prediction.weights, positions, 10000)
+      const positionsTotal = Object.values(positions).reduce((sum, p) => sum + p.qty * p.avg_price, 0)
+      if (positionsTotal <= 0) {
+        // No existing positions → cannot derive capital baseline. Log + notify, do not place orders.
+        await deps.insertInferenceLog({
+          strategy_id: s.id, rl_model_id: s.rl_model.id, user_id: s.user_id,
+          trade_date: deps.today, state_hash: '',
+          output: prediction as unknown as Record<string, unknown>,
+          confidence: prediction.confidence,
+          decision: 'hold',
+          blocked_reason: 'no_capital_baseline (positions empty); seed initial position manually',
+          latency_ms: latencyMs,
+        })
+        await deps.sendTelegram(s.user_id,
+          `[RL] ${s.id} 추론 신뢰도 ${prediction.confidence.toFixed(2)}이지만 보유 포지션이 없어 자동 주문을 보류했습니다. 첫 매수는 수동으로 진행하세요.`)
+        result.blocked++
+        continue
+      }
+      const orders = computeOrdersFromWeights(prediction.weights, positions, positionsTotal)
 
       if (s.automation_level === 1) {
         await deps.sendTelegram(s.user_id, `[RL] ${s.id} 신호: ${JSON.stringify(orders.slice(0, 5))}`)

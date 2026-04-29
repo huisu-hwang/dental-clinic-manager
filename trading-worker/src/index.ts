@@ -62,6 +62,9 @@ async function main() {
   startReconciler()
 
   // 7. RL 일일 리밸런스 크론 (평일 오전 7시, Asia/Seoul)
+  // DST 안전성: ET 마감(16:00 local) → KST 05:00 (EDT, UTC-4) / KST 06:00 (EST, UTC-5).
+  // KST 07:00은 항상 ET 마감 대비 최소 1시간(EDT) ~ 2시간(EST) 마진을 확보.
+  // node-cron의 timezone 옵션으로 KST 기준 고정되어 있어 미국 DST 전환에 무관.
   cron.schedule('0 7 * * 2-6', async () => {
     try {
       logger.info('[dailyRebalance] start')
