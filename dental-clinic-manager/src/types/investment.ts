@@ -194,6 +194,8 @@ export interface InvestmentStrategy {
   sell_conditions: ConditionGroup
   risk_settings: RiskSettings
   automation_level: AutomationLevel
+  strategy_type: 'rule' | 'rl_portfolio' | 'rl_single'
+  rl_model_id?: string | null
   credential_id: string | null
   is_active: boolean
   created_at: string
@@ -213,6 +215,8 @@ export interface StrategyInput {
   /** @deprecated 사용자별 자동매매 설정으로 이전됨. 하위 호환을 위해 유지. */
   riskSettings?: RiskSettings
   automationLevel: AutomationLevel
+  strategy_type?: 'rule' | 'rl_portfolio' | 'rl_single'  // default 'rule' on server side
+  rl_model_id?: string | null
 }
 
 /** 백테스트 등 기존 로직 호환을 위한 무효화된 RiskSettings (모든 안전장치 비활성) */
