@@ -14,12 +14,14 @@ import 'dotenv/config'
  * - SIGINT/SIGTERM 수신 시 WebSocket 해제 → 진행 중 작업 완료 대기 → 종료
  */
 
+import cron from 'node-cron'
 import { logger } from './logger'
 import { loadConfig } from './config'
 import { getSupabase } from './supabaseClient'
 import { startMarketScheduler, stopMarketScheduler } from './marketScheduler'
 import { startSignalProcessor, stopSignalProcessor } from './signalProcessor'
 import { startReconciler, stopReconciler } from './reconciler'
+import { runDailyRebalance } from './dailyRebalanceJob'
 
 let isShuttingDown = false
 
@@ -57,6 +59,17 @@ async function main() {
 
   // 6. 주문 재조정 배치 시작 (5분 주기)
   startReconciler()
+
+  // 7. RL 일일 리밸런스 크론 (평일 오전 7시, Asia/Seoul)
+  // Note: 실제 Supabase + KIS deps는 Task 11에서 연결됩니다. 현재는 placeholder입니다.
+  cron.schedule('0 7 * * 2-6', async () => {
+    try {
+      logger.info('[dailyRebalance] start')
+      logger.warn('[dailyRebalance] deps not wired yet; skipping (will be wired in Task 11)')
+    } catch (err) {
+      logger.error({ err }, '[dailyRebalance] failed')
+    }
+  }, { timezone: 'Asia/Seoul' })
 
   logger.info('=== 트레이딩 워커 준비 완료 ===')
 
