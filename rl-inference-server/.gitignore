@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .env
+
+# 학습된 모델 ckpt (sha256으로 재생성/캐시 가능)
+trained/
+.cache/
