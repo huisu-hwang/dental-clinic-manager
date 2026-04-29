@@ -38,6 +38,15 @@ import { analyzeAlgoFootprint, type AlgoBar } from '@/lib/smartMoney/algoFootpri
 import { analyzeInvestorFlow } from '@/lib/smartMoney/investorFlowAnalyzer'
 import { computeSmartMoneyScore } from '@/lib/smartMoney/smartMoneyScorer'
 import { generateLLMComment } from '@/lib/smartMoney/llmAnalyzer'
+// ===== 정교화 엔진 =====
+import { detectWyckoffPhase, type PhaseBar } from '@/lib/smartMoney/wyckoffPhaseEngine'
+import { analyzeLiquidity, type LiquidityBar } from '@/lib/smartMoney/liquidityEngine'
+import { analyzeMarketStructure, type Bar as StructureBar } from '@/lib/smartMoney/marketStructureEngine'
+import { detectOrderBlocksAndFvg, type Bar as OBBar } from '@/lib/smartMoney/orderBlockFvgEngine'
+import { detectTraps, type Bar as TrapBar } from '@/lib/smartMoney/trapEngine'
+import { analyzeVSA, type Bar as VSABar } from '@/lib/smartMoney/vsaEngine'
+import { analyzeSession, type SessionBar } from '@/lib/smartMoney/sessionAnalyzer'
+import { analyzeNewsContext, type NewsBar } from '@/lib/smartMoney/newsContextEngine'
 import type { Market, OHLCV } from '@/types/investment'
 import type {
   SmartMoneyAnalysis,
@@ -127,8 +136,9 @@ export async function POST(request: NextRequest) {
 
   // 4. 시장별 데이터 수집
   let bars: NormalizedBar[] = []
+  let dailyBars: NormalizedBar[] = []
   let currentPrice = 0
-  let name = ticker
+  const name = ticker
   let recent20DayHigh = 0
   let recent20DayLow = 0
   let investorHistory: KRInvestorDay[] = []
@@ -151,13 +161,13 @@ export async function POST(request: NextRequest) {
       currentPrice = quote.price
       // KRRealtimeQuote에는 name이 없으므로 ticker 그대로 사용
 
-      // 분봉 (5분봉 78개 ≈ 6.5시간)
+      // 분봉 (5분봉 390개 ≈ 5거래일치 — 와이코프 페이즈 탐지용)
       const krBars: KRMinuteBar[] = await getKRMinutePrices({
         credentialId: kisCredential.credentialId,
         credential: krCredential,
         ticker,
         intervalMinutes: 5,
-        count: 78,
+        count: 390,
       })
       bars = krBars.map((b) => ({
         datetime: b.datetime,
@@ -168,19 +178,27 @@ export async function POST(request: NextRequest) {
         volume: b.volume,
       }))
 
-      // 일봉 (영업일 보장 위해 45일치) → 20일 고저
+      // 일봉 (60일치 — 와이코프 페이즈/유동성 풀 컨텍스트)
       const today = new Date()
       const past = new Date()
-      past.setDate(past.getDate() - 45)
+      past.setDate(past.getDate() - 90)
       try {
-        const dailyBars = await getKRDailyPrices({
+        const krDailyBars = await getKRDailyPrices({
           credentialId: kisCredential.credentialId,
           credential: krCredential,
           ticker,
           startDate: toKisDateString(past),
           endDate: toKisDateString(today),
         })
-        const ctx = computeRecentHighLow(dailyBars, 20)
+        dailyBars = krDailyBars.map((b) => ({
+          datetime: b.date,
+          open: b.open,
+          high: b.high,
+          low: b.low,
+          close: b.close,
+          volume: b.volume,
+        }))
+        const ctx = computeRecentHighLow(krDailyBars, 20)
         recent20DayHigh = ctx.high
         recent20DayLow = ctx.low
       } catch (err) {
@@ -208,14 +226,14 @@ export async function POST(request: NextRequest) {
       const quote = await fetchCurrentQuote(ticker, 'US')
       currentPrice = quote.price ?? 0
 
-      // fetchIntradayPrices는 default로 30일치(≈2340봉)를 반환 → 인트라데이 분석에 과대.
-      // KR과 동일하게 "최근 1 거래일분(≈78봉, 6.5시간)" 만 사용.
+      // fetchIntradayPrices는 default로 30일치(≈2340봉)를 반환.
+      // 정교화 엔진(와이코프 페이즈/유동성)을 위해 5거래일치(≈390봉)로 확장.
       const usBars: OHLCV[] = await fetchIntradayPrices({
         ticker,
         market: 'US',
         timeframe: '5m',
       })
-      const recent = usBars.slice(-78)
+      const recent = usBars.slice(-390)
       bars = recent.map((b) => ({
         datetime: b.date,
         open: b.open,
@@ -224,6 +242,9 @@ export async function POST(request: NextRequest) {
         close: b.close,
         volume: b.volume,
       }))
+      // US daily bars (60일치) — fetchIntradayPrices의 1d 호출은 별도 서비스가 없으므로
+      // 분봉을 일봉으로 압축하여 활용
+      dailyBars = aggregateBarsToDaily(bars)
 
       // 분봉으로 고저 추정 (US는 일봉 별도 호출 안함)
       const ctx = inferHighLowFromBars(bars)
@@ -249,6 +270,7 @@ export async function POST(request: NextRequest) {
 
   // 5. 엔진 호출
   let vwap, wyckoff, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
+  let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
   try {
     const vwapBars: VWAPInputBar[] = bars.map((b) => ({
       high: b.high,
@@ -282,11 +304,55 @@ export async function POST(request: NextRequest) {
         ? analyzeInvestorFlow(investorHistory)
         : null
 
+    // ===== 정교화 엔진들 =====
+    const phaseBars: PhaseBar[] = bars.map((b) => ({ ...b }))
+    const phaseDailyBars: PhaseBar[] = dailyBars.map((b) => ({ ...b }))
+    wyckoffPhase = detectWyckoffPhase(phaseBars, phaseDailyBars.length > 0 ? phaseDailyBars : undefined)
+
+    const liqBars: LiquidityBar[] = bars.map((b) => ({ ...b }))
+    const liqDailyBars: LiquidityBar[] = dailyBars.map((b) => ({ ...b }))
+    liquidity = analyzeLiquidity(liqBars, liqDailyBars.length > 0 ? liqDailyBars : undefined)
+
+    const structureBars: StructureBar[] = bars.map((b) => ({ ...b }))
+    marketStructure = analyzeMarketStructure(structureBars)
+
+    const obBars: OBBar[] = bars.map((b) => ({ ...b }))
+    orderBlocksFvg = detectOrderBlocksAndFvg(obBars)
+
+    const trapBars: TrapBar[] = bars.map((b) => ({
+      open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+    }))
+    traps = detectTraps(trapBars)
+
+    const vsaBars: VSABar[] = bars.map((b) => ({
+      open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+    }))
+    vsa = analyzeVSA(vsaBars)
+
+    const sessionBars: SessionBar[] = bars.map((b) => ({ ...b }))
+    session = analyzeSession(sessionBars, market)
+
+    const newsBars: NewsBar[] = bars.map((b) => ({ ...b }))
+    // 뉴스 데이터는 현재 통합되어 있지 않으므로 빈 배열로 호출 → 엔진은 safe defaults 반환
+    newsContext = analyzeNewsContext({
+      bars: newsBars,
+      signalDetails: [],
+      newsEvents: [],
+    })
+
     scoreResult = computeSmartMoneyScore({
       vwap,
       investorFlow,
       wyckoff,
       algoFootprint,
+      wyckoffPhase,
+      liquidity,
+      marketStructure,
+      orderBlocksFvg,
+      traps,
+      vsa,
+      session,
+      newsContext,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : '분석 엔진 실패'
@@ -294,7 +360,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `분석 실패: ${message}` }, { status: 500 })
   }
 
-  // recent20DayHigh/Low는 향후 확장용 (Wyckoff context). 현재 detectWyckoff는 사용 안 함
+  // recent20DayHigh/Low — UI display용 (현재는 noop, 향후 사용 가능)
   void recent20DayHigh
   void recent20DayLow
 
@@ -308,6 +374,15 @@ export async function POST(request: NextRequest) {
     investorFlow,
     wyckoff,
     algoFootprint,
+    wyckoffPhase,
+    liquidity,
+    marketStructure,
+    orderBlocksFvg,
+    traps,
+    vsa,
+    session,
+    newsContext,
+    manipulationRiskScore: scoreResult.manipulationRiskScore,
     overallScore: scoreResult.overallScore,
     interpretation: scoreResult.interpretation,
     signalDetails: scoreResult.signalDetails,
@@ -390,6 +465,39 @@ function computeRecentHighLow(bars: OHLCV[], lookback: number): { high: number; 
     high: Number.isFinite(high) ? high : 0,
     low: Number.isFinite(low) ? low : 0,
   }
+}
+
+/** 분봉을 일봉으로 압축 (US용 — 일봉 별도 API가 없을 때 fallback) */
+function aggregateBarsToDaily(bars: NormalizedBar[]): NormalizedBar[] {
+  if (bars.length === 0) return []
+  const byDay = new Map<string, NormalizedBar[]>()
+  for (const b of bars) {
+    const key = b.datetime.slice(0, 10) // YYYY-MM-DD
+    if (!key) continue
+    const arr = byDay.get(key) ?? []
+    arr.push(b)
+    byDay.set(key, arr)
+  }
+  const days: NormalizedBar[] = []
+  for (const [day, dayBars] of byDay.entries()) {
+    if (dayBars.length === 0) continue
+    let high = -Infinity, low = Infinity, vol = 0
+    for (const b of dayBars) {
+      if (b.high > high) high = b.high
+      if (b.low < low) low = b.low
+      vol += b.volume
+    }
+    days.push({
+      datetime: day,
+      open: dayBars[0].open,
+      high: Number.isFinite(high) ? high : 0,
+      low: Number.isFinite(low) ? low : 0,
+      close: dayBars[dayBars.length - 1].close,
+      volume: vol,
+    })
+  }
+  days.sort((a, b) => a.datetime.localeCompare(b.datetime))
+  return days
 }
 
 function inferHighLowFromBars(bars: NormalizedBar[]): { high: number; low: number } {

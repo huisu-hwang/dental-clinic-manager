@@ -21,6 +21,27 @@ export type SignalType =
   | 'moc-accumulation' | 'moc-distribution'
   | 'foreigner-accumulation' | 'foreigner-distribution'
   | 'institution-accumulation' | 'institution-distribution'
+  // ===== 정교화 시그널 (2026-04 추가) =====
+  // 유동성 사냥
+  | 'liquidity-sweep-bullish' | 'liquidity-sweep-bearish'
+  // SMC 시장구조
+  | 'choch-bullish' | 'choch-bearish'
+  | 'bos-bullish' | 'bos-bearish'
+  // 오더블록 / FVG
+  | 'order-block-bullish' | 'order-block-bearish'
+  | 'fvg-bullish' | 'fvg-bearish'
+  // 트랩
+  | 'bull-trap' | 'bear-trap'
+  // VSA
+  | 'no-demand' | 'no-supply'
+  | 'buying-climax' | 'selling-climax' | 'stopping-volume'
+  // PO3 / 세션
+  | 'judas-swing' | 'po3-accumulation' | 'po3-distribution'
+  // 뉴스
+  | 'news-fade' | 'sell-the-news' | 'bad-news-accumulation'
+  // 와이코프 페이즈 이벤트
+  | 'wyckoff-phase-c' | 'wyckoff-sos' | 'wyckoff-lps'
+  | 'wyckoff-utad' | 'wyckoff-sow' | 'wyckoff-lpsy'
 
 export type Interpretation =
   | 'strong-accumulation'
@@ -85,6 +106,147 @@ export interface SignalDetail {
 }
 
 // ============================================
+// 정교화 엔진 결과 인터페이스 (2026-04 추가)
+// ============================================
+
+export type WyckoffPhase = 'A' | 'B' | 'C' | 'D' | 'E' | null
+export type WyckoffCycle = 'accumulation' | 'distribution' | null
+
+export interface WyckoffPhaseEvent {
+  type: 'PS' | 'SC' | 'AR' | 'ST' | 'Spring' | 'Test' | 'SOS' | 'LPS'
+      | 'PSY' | 'BC' | 'UTAD' | 'SOW' | 'LPSY'
+  barIndex: number
+  price: number
+  description: string
+}
+
+export interface WyckoffPhaseResult {
+  cycle: WyckoffCycle
+  phase: WyckoffPhase
+  events: WyckoffPhaseEvent[]
+  confidence: number
+  description: string
+}
+
+export interface LiquidityPool {
+  level: number
+  type: 'equal-highs' | 'equal-lows' | 'pdh' | 'pdl' | 'swing-high' | 'swing-low'
+  hits: number
+  swept: boolean
+}
+
+export interface SweepEvent {
+  direction: 'bullish-sweep' | 'bearish-sweep'
+  level: number
+  barIndex: number
+  wickRatio: number
+  volumeSpike: number
+  recoveredInside: boolean
+  description: string
+}
+
+export interface LiquidityResult {
+  pools: LiquidityPool[]
+  recentSweeps: SweepEvent[]
+  description: string
+}
+
+export type StructureTrend = 'bullish' | 'bearish' | 'range'
+export type StructureEventType = 'BOS' | 'CHoCH' | null
+
+export interface SwingPoint {
+  barIndex: number
+  price: number
+  kind: 'HH' | 'HL' | 'LH' | 'LL'
+}
+
+export interface MarketStructureResult {
+  trend: StructureTrend
+  lastEvent: StructureEventType
+  lastEventDirection: 'bullish' | 'bearish' | null
+  swings: SwingPoint[]
+  description: string
+}
+
+export interface OrderBlock {
+  barIndex: number
+  high: number
+  low: number
+  direction: 'bullish' | 'bearish'
+  mitigated: boolean
+}
+
+export interface FairValueGap {
+  startBarIndex: number
+  top: number
+  bottom: number
+  direction: 'bullish' | 'bearish'
+  filled: boolean
+}
+
+export interface OrderBlockFvgResult {
+  orderBlocks: OrderBlock[]
+  fvgs: FairValueGap[]
+  description: string
+}
+
+export interface TrapDetail {
+  type: 'bull-trap' | 'bear-trap'
+  breakoutBarIndex: number
+  level: number
+  reclaimedBarIndex: number
+  volumeDivergence: boolean
+  description: string
+}
+
+export interface TrapResult {
+  bullTrapDetected: boolean
+  bearTrapDetected: boolean
+  details: TrapDetail[]
+  description: string
+}
+
+export interface VSASignalEntry {
+  type: 'no-demand' | 'no-supply' | 'buying-climax' | 'selling-climax' | 'stopping-volume'
+  barIndex: number
+  confidence: number
+  description: string
+}
+
+export interface VSAResult {
+  signals: VSASignalEntry[]
+  effortVsResult: 'bullish' | 'bearish' | 'neutral'
+  description: string
+}
+
+export type MarketSession = 'pre-market' | 'open-30m' | 'midday' | 'close-30m'
+                          | 'asia' | 'london' | 'london-ny-overlap' | 'ny' | 'after-hours'
+
+export interface SessionResult {
+  currentSession: MarketSession | null
+  judasSwingDetected: boolean
+  judasSwingDirection: 'bullish-fake' | 'bearish-fake' | null
+  po3Pattern: 'po3-accumulation' | 'po3-distribution' | null
+  description: string
+}
+
+export interface NewsEventInput {
+  /** ISO timestamp */
+  timestamp: string
+  impact: 'low' | 'medium' | 'high'
+  sentiment?: 'positive' | 'negative' | 'neutral'
+  title?: string
+}
+
+export interface NewsContextResult {
+  recentEvents: NewsEventInput[]
+  /** signalDetails 중 뉴스 ±10분 윈도우에 걸린 시그널 인덱스 */
+  affectedSignalIndices: number[]
+  pattern: 'news-fade' | 'sell-the-news' | 'bad-news-accumulation' | null
+  description: string
+}
+
+// ============================================
 // 종합 분석 결과
 // ============================================
 
@@ -99,6 +261,17 @@ export interface SmartMoneyAnalysis {
   investorFlow: InvestorFlowResult | null
   wyckoff: WyckoffResult
   algoFootprint: AlgoFootprintResult
+  // ===== 정교화 엔진 (옵션 — 하위 호환) =====
+  wyckoffPhase?: WyckoffPhaseResult
+  liquidity?: LiquidityResult
+  marketStructure?: MarketStructureResult
+  orderBlocksFvg?: OrderBlockFvgResult
+  traps?: TrapResult
+  vsa?: VSAResult
+  session?: SessionResult
+  newsContext?: NewsContextResult
+  /** 0~100 — 시장 조작 위험도 (UI 노출용) */
+  manipulationRiskScore?: number
   /** -100 ~ +100 (음수=분배 / 양수=매집) */
   overallScore: number
   interpretation: Interpretation
