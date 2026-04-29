@@ -26,7 +26,7 @@ interface ContractDetailProps {
 
 export default function ContractDetail({ contractId, currentUser }: ContractDetailProps) {
   const router = useRouter()
-  const { hasPermission } = usePermissions()
+  const { hasPermission, isLoading: permissionsLoading } = usePermissions()
   const [contract, setContract] = useState<EmploymentContract | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -45,10 +45,11 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
   const [isPdfGenerating, setIsPdfGenerating] = useState(false)
   const contractContentRef = useRef<HTMLDivElement>(null)
 
-  // Load contract
+  // Load contract (권한 로딩 완료 후에만 실행 — hasPermission이 false로 잘못 평가되는 것 방지)
   useEffect(() => {
+    if (permissionsLoading) return
     loadContract()
-  }, [contractId])
+  }, [contractId, permissionsLoading])
 
   const loadContract = async () => {
     setError(null)

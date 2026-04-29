@@ -39,17 +39,28 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
 
 export default function ContractList({ currentUser, clinicId }: ContractListProps) {
   const router = useRouter()
-  const { hasPermission } = usePermissions()
+  const { hasPermission, isLoading: permissionsLoading } = usePermissions()
   const [contracts, setContracts] = useState<EmploymentContract[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // 전체 직원 계약서 조회 권한이 있으면 전체 조회, 아니면 본인 계약서만
+  // 주의: usePermissions는 비동기 로딩이므로 useEffect로 갱신 (useState 초기값에 넣으면 false로 고정됨)
   const isFullAccessRole = hasPermission('contract_view_all')
   const [filters, setFilters] = useState<ContractListFilters>({
     status: undefined,
-    employee_user_id: isFullAccessRole ? undefined : currentUser.id,
+    employee_user_id: undefined,
     search: undefined
   })
+
+  // 권한 로딩 완료 후 employee_user_id 필터 갱신
+  useEffect(() => {
+    if (permissionsLoading) return
+    setFilters(prev => {
+      const desired = isFullAccessRole ? undefined : currentUser.id
+      if (prev.employee_user_id === desired) return prev
+      return { ...prev, employee_user_id: desired }
+    })
+  }, [permissionsLoading, isFullAccessRole, currentUser.id])
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [contractToDelete, setContractToDelete] = useState<EmploymentContract | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -92,6 +103,11 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
   useEffect(() => {
     if (!isVerified) {
       console.log('[ContractList] Not verified yet, skipping contract load')
+      return
+    }
+    // 권한 로딩이 끝나기 전에는 fetch 보류 (필터가 잘못 적용되는 것 방지)
+    if (permissionsLoading) {
+      console.log('[ContractList] Permissions still loading, skipping contract load')
       return
     }
     const abortController = new AbortController()
@@ -163,7 +179,7 @@ export default function ContractList({ currentUser, clinicId }: ContractListProp
       abortController.abort()
       console.log('[ContractList] Cleanup: aborted pending requests')
     }
-  }, [clinicId, filters.status, filters.employee_user_id, filters.search, isVerified])
+  }, [clinicId, filters.status, filters.employee_user_id, filters.search, isVerified, permissionsLoading])
 
   const loadContracts = async () => {
     setError(null)
