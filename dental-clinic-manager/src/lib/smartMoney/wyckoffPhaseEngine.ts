@@ -462,39 +462,63 @@ export function detectWyckoffPhase(
   // cycle 결정
   let cycle: WyckoffPhaseResult['cycle'] = null
   let events: WyckoffPhaseEvent[] = []
-  if (accEvents.length === 0 && distEvents.length === 0) {
-    return { cycle: null, phase: null, events: [], confidence: 0, description: '이벤트 없음' }
-  }
   if (accEvents.length > distEvents.length && accEvents.length >= 2) {
     cycle = 'accumulation'
     events = accEvents
   } else if (distEvents.length > accEvents.length && distEvents.length >= 2) {
     cycle = 'distribution'
     events = distEvents
+  } else if (accEvents.length === 0 && distEvents.length === 0) {
+    // ★ Fallback: 클라이맥스 이벤트가 전혀 없는 추세 종목용
+    //   60일 추세 방향만 보고 cycle 추정. 실제 매집/분배 사이클 단계는
+    //   판별할 수 없으므로 phase=null로 둠.
+    const len = sourceBars.length
+    const startPrice = sourceBars[Math.max(0, len - 30)].close
+    const endPrice = sourceBars[len - 1].close
+    if (startPrice > 0) {
+      const trendPct = (endPrice - startPrice) / startPrice
+      if (trendPct >= 0.03) {
+        cycle = 'distribution' // 30일 +3% 이상 상승 → 고점 분배 가능성
+      } else if (trendPct <= -0.03) {
+        cycle = 'accumulation' // 30일 -3% 이상 하락 → 저점 매집 가능성
+      }
+    }
+    if (cycle) {
+      const trendDesc = cycle === 'accumulation' ? '하락 추세 — 매집 진행 가능성 (climax 미관측)' : '상승 추세 — 분배 진행 가능성 (climax 미관측)'
+      return {
+        cycle,
+        phase: null,
+        events: [],
+        confidence: 25,
+        description: trendDesc,
+      }
+    }
+    return { cycle: null, phase: null, events: [], confidence: 0, description: '이벤트 없음 — 횡보' }
   } else {
     // 동률 또는 2개 미만 — 더 많은 쪽만 노출, cycle 미정
     events = accEvents.length >= distEvents.length ? accEvents : distEvents
   }
 
-  // phase 결정
+  // phase 결정 — 핵심 마커가 발견되면 더 관대하게 인정
+  // (이전: hasA가 SC+AR+ST 모두, hasC가 hasA && spring 필수 → 너무 빡빡)
   let phase: WyckoffPhaseResult['phase'] = null
   if (cycle === 'accumulation') {
-    const hasA = !!(acc.sc && acc.ar && acc.sts.length >= 1)
-    const hasB = hasA && acc.sts.length >= 2
-    const hasC = (hasA || hasB) && !!acc.spring
-    const hasD = hasC && !!acc.sos
-    const hasE = hasD && !!acc.lps
+    const hasA = !!(acc.sc && acc.ar)              // SC + AR 만 있으면 A
+    const hasB = hasA && acc.sts.length >= 1       // ST 1개 이상 → B
+    const hasC = !!acc.spring                       // Spring 단독으로도 Phase C 인정
+    const hasD = !!acc.sos                          // SOS 단독으로도 Phase D 인정
+    const hasE = !!acc.lps                          // LPS 단독으로도 Phase E 인정
     if (hasE) phase = 'E'
     else if (hasD) phase = 'D'
     else if (hasC) phase = 'C'
     else if (hasB) phase = 'B'
     else if (hasA) phase = 'A'
   } else if (cycle === 'distribution') {
-    const hasA = !!(dist.psy && dist.bc && dist.ar)
-    const hasB = hasA && dist.sts.length >= 2
-    const hasC = (hasA || hasB) && !!dist.utad
-    const hasD = hasC && !!dist.sow
-    const hasE = hasD && !!dist.lpsy
+    const hasA = !!(dist.bc && dist.ar)            // BC + AR 만 있으면 A (PSY 필수 제거)
+    const hasB = hasA && dist.sts.length >= 1
+    const hasC = !!dist.utad
+    const hasD = !!dist.sow
+    const hasE = !!dist.lpsy
     if (hasE) phase = 'E'
     else if (hasD) phase = 'D'
     else if (hasC) phase = 'C'
