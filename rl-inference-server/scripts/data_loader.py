@@ -4,9 +4,11 @@ from pathlib import Path
 import pandas as pd
 
 DEFAULT_UNIVERSE = [
+    # WBA(Walgreens)는 2024-02 Dow에서 제외, AMZN로 대체.
+    # 학습용으로 데이터 수급 안정적인 30종목 유지.
     "AAPL","MSFT","UNH","JNJ","V","WMT","PG","JPM","HD","CVX",
     "MA","KO","PFE","DIS","CSCO","VZ","ADBE","NKE","CRM","INTC",
-    "MRK","WBA","BA","CAT","GS","IBM","MMM","AXP","TRV","DOW",
+    "MRK","AMZN","BA","CAT","GS","IBM","MMM","AXP","TRV","DOW",
 ]
 
 
