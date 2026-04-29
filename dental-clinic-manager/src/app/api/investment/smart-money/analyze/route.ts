@@ -261,11 +261,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  if (bars.length === 0) {
+  if (bars.length === 0 && dailyBars.length === 0) {
     return NextResponse.json(
-      { error: '분봉 데이터가 없습니다. 시장이 열려있지 않거나 종목이 유효하지 않을 수 있습니다.' },
+      { error: '분봉/일봉 데이터를 모두 받지 못했습니다. 종목 코드를 확인해주세요.' },
       { status: 422 }
     )
+  }
+  // 분봉이 비어있고 일봉만 있을 때(장 마감/주말/휴일) — 일봉을 분봉 자리에도 활용
+  if (bars.length === 0 && dailyBars.length > 0) {
+    bars = dailyBars
   }
 
   // 5. 엔진 호출
@@ -318,34 +322,40 @@ export async function POST(request: NextRequest) {
         ? analyzeInvestorFlow(investorHistory)
         : null
 
-    // ===== 정교화 엔진들 (다일 패턴이라 390봉 전체 사용) =====
+    // ===== 정교화 엔진들 (다일 패턴이라 일봉 우선 사용) =====
+    // 분봉 5일치(390봉)는 장 마감 후 KIS API가 적게 반환할 때 임계치 미달이 됨.
+    // 다일 SMC/구조 패턴은 일봉(60일치)이 더 자연스럽고 의미 있음.
+    // 일봉 30봉 이상이면 일봉을, 아니면 5일치 분봉을 fallback으로 사용.
+    const multiDayBars: NormalizedBar[] = dailyBars.length >= 30 ? dailyBars : bars
+
     const phaseBars: PhaseBar[] = bars.map((b) => ({ ...b }))
     const phaseDailyBars: PhaseBar[] = dailyBars.map((b) => ({ ...b }))
     wyckoffPhase = detectWyckoffPhase(phaseBars, phaseDailyBars.length > 0 ? phaseDailyBars : undefined)
 
-    const liqBars: LiquidityBar[] = bars.map((b) => ({ ...b }))
+    const liqBars: LiquidityBar[] = multiDayBars.map((b) => ({ ...b }))
     const liqDailyBars: LiquidityBar[] = dailyBars.map((b) => ({ ...b }))
     liquidity = analyzeLiquidity(liqBars, liqDailyBars.length > 0 ? liqDailyBars : undefined)
 
-    const structureBars: StructureBar[] = bars.map((b) => ({ ...b }))
+    const structureBars: StructureBar[] = multiDayBars.map((b) => ({ ...b }))
     marketStructure = analyzeMarketStructure(structureBars)
 
-    const obBars: OBBar[] = bars.map((b) => ({ ...b }))
+    const obBars: OBBar[] = multiDayBars.map((b) => ({ ...b }))
     orderBlocksFvg = detectOrderBlocksAndFvg(obBars)
 
-    const trapBars: TrapBar[] = bars.map((b) => ({
+    const trapBars: TrapBar[] = multiDayBars.map((b) => ({
       open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
     }))
     traps = detectTraps(trapBars)
 
     // VSA는 effort vs result로 단일 거래일 + 직전 1-2일 정도가 합리적이지만
-    // 엔진 자체가 최근 5봉만 actionable signal로 사용하므로 5일치도 안전
-    const vsaBars: VSABar[] = bars.map((b) => ({
+    // 엔진 자체가 최근 5봉만 actionable signal로 사용하므로 다일 입력도 안전
+    const vsaBars: VSABar[] = multiDayBars.map((b) => ({
       open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
     }))
     vsa = analyzeVSA(vsaBars)
 
-    const sessionBars: SessionBar[] = bars.map((b) => ({ ...b }))
+    // session은 datetime 기반 시간대 분류라서 분봉만 의미가 있음 (intraday 사용)
+    const sessionBars: SessionBar[] = (intradayBars.length > 0 ? intradayBars : bars).map((b) => ({ ...b }))
     session = analyzeSession(sessionBars, market)
 
     const newsBars: NewsBar[] = bars.map((b) => ({ ...b }))
