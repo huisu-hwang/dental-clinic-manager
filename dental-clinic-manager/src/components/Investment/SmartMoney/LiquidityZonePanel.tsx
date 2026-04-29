@@ -2,8 +2,16 @@
  * LiquidityZonePanel — 유동성 풀 + 최근 sweep 이벤트
  */
 
-import { ArrowUp, ArrowDown } from 'lucide-react'
+'use client'
+
+import { useState } from 'react'
+import { ArrowUp, ArrowDown, Info, X } from 'lucide-react'
 import type { LiquidityPool, LiquidityResult } from '@/types/smartMoney'
+
+const HELP = {
+  title: '유동성 존 (Liquidity Pools)',
+  body: "차트의 평행 고점·저점, 전일 고가/저가(PDH/PDL), 명확한 스윙 포인트 부근에는 개인 투자자의 손절매가 밀집됨. 기관은 이 '유동성 풀'을 사냥(sweep)해 자신들의 대규모 주문을 체결. 사냥 후 가격이 반대 방향으로 강하게 움직이는 패턴이 흔함.",
+}
 
 interface Props {
   liquidity: LiquidityResult
@@ -28,6 +36,7 @@ const POOL_TYPE_COLOR: Record<LiquidityPool['type'], string> = {
 }
 
 export function LiquidityZonePanel({ liquidity }: Props) {
+  const [helpOpen, setHelpOpen] = useState(false)
   const noPools = liquidity.pools.length === 0
   const noSweeps = liquidity.recentSweeps.length === 0
 
@@ -42,13 +51,40 @@ export function LiquidityZonePanel({ liquidity }: Props) {
   const recentSweeps = [...liquidity.recentSweeps].slice(-3).reverse()
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+    <div className="relative bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-slate-900">유동성 존</h3>
-        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700">
-          풀 {liquidity.pools.length} · 사냥 {liquidity.recentSweeps.length}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700">
+            풀 {liquidity.pools.length} · 사냥 {liquidity.recentSweeps.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setHelpOpen((o) => !o)}
+            className="flex-shrink-0 p-1 rounded-full text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            aria-label="설명 보기"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
+
+      {helpOpen && (
+        <div className="absolute right-2 top-9 z-20 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <p className="text-xs font-semibold text-slate-900">{HELP.title}</p>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(false)}
+              className="text-slate-400 hover:text-slate-700 -mt-0.5 -mr-0.5"
+              aria-label="닫기"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-600">{HELP.body}</p>
+        </div>
+      )}
 
       {noPools && noSweeps ? (
         <div className="text-[11px] text-slate-500 leading-relaxed py-2">

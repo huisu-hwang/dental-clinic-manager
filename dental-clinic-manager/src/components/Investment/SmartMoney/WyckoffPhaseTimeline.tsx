@@ -5,7 +5,16 @@
  * - 최근 이벤트는 최대 5개(역순) 작은 칩으로 표시
  */
 
+'use client'
+
+import { useState } from 'react'
+import { Info, X } from 'lucide-react'
 import type { WyckoffPhaseEvent, WyckoffPhaseResult } from '@/types/smartMoney'
+
+const HELP = {
+  title: '와이코프 페이즈 (Wyckoff Phase)',
+  body: "리처드 와이코프의 가격 사이클 이론 — 매집(Accumulation) / 분배(Distribution) 단계를 A→B→C→D→E의 5단계로 구분. SC(매도 클라이맥스), Spring(저점 거짓 이탈), SOS(강세 신호), UTAD(고점 거짓 돌파), SOW(약세 신호) 등의 핵심 이벤트가 어느 단계에 도달했는지 보여줌. Phase C 이후는 추세 전환 임박 신호.",
+}
 
 interface Props {
   phase: WyckoffPhaseResult
@@ -30,6 +39,7 @@ const EVENT_LABEL: Record<WyckoffPhaseEvent['type'], string> = {
 }
 
 export function WyckoffPhaseTimeline({ phase }: Props) {
+  const [helpOpen, setHelpOpen] = useState(false)
   const isAccumulation = phase.cycle === 'accumulation'
   const isDistribution = phase.cycle === 'distribution'
   const activeColor = isAccumulation
@@ -58,11 +68,38 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
       : 'bg-slate-100 text-slate-500'
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+    <div className="relative bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-slate-900">와이코프 페이즈</h3>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${cycleBadge}`}>{cycleLabel}</span>
+        <div className="flex items-center gap-1">
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${cycleBadge}`}>{cycleLabel}</span>
+          <button
+            type="button"
+            onClick={() => setHelpOpen((o) => !o)}
+            className="flex-shrink-0 p-1 rounded-full text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            aria-label="설명 보기"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
+
+      {helpOpen && (
+        <div className="absolute right-2 top-9 z-20 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <p className="text-xs font-semibold text-slate-900">{HELP.title}</p>
+            <button
+              type="button"
+              onClick={() => setHelpOpen(false)}
+              className="text-slate-400 hover:text-slate-700 -mt-0.5 -mr-0.5"
+              aria-label="닫기"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-600">{HELP.body}</p>
+        </div>
+      )}
 
       {noData ? (
         <div className="text-[11px] text-slate-500 leading-relaxed py-2">
