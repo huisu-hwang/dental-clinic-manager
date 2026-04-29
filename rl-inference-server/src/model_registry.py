@@ -59,5 +59,31 @@ class ModelRegistry:
         self._lru.move_to_end(key)
         return self._lru[key]
 
+    # ---- Public adapter cache (separate from byte cache) ----
+
+    def get_adapter(self, model_id: str) -> Any | None:
+        """Return cached adapter object for model_id, or None if not cached."""
+        if not hasattr(self, "_adapter_cache"):
+            self._adapter_cache: OrderedDict[str, Any] = OrderedDict()
+        if model_id not in self._adapter_cache:
+            return None
+        self._adapter_cache.move_to_end(model_id)
+        return self._adapter_cache[model_id]
+
+    def put_adapter(self, model_id: str, adapter: Any) -> None:
+        """Cache an adapter under model_id. LRU evicts oldest beyond capacity."""
+        if not hasattr(self, "_adapter_cache"):
+            self._adapter_cache = OrderedDict()
+        if model_id in self._adapter_cache:
+            self._adapter_cache.move_to_end(model_id)
+        self._adapter_cache[model_id] = adapter
+        while len(self._adapter_cache) > self._capacity:
+            self._adapter_cache.popitem(last=False)
+
     def loaded_models(self) -> list[str]:
-        return list(self._lru.keys())
+        keys: list[str] = list(self._lru.keys())
+        if hasattr(self, "_adapter_cache"):
+            for k in self._adapter_cache.keys():
+                if k not in keys:
+                    keys.append(k)
+        return keys

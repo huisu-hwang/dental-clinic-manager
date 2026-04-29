@@ -102,3 +102,18 @@ def test_download_endpoint_502_on_network_error(tmp_path, monkeypatch):
     body = {"model_id": "m_net_err", "checkpoint_url": "https://nope.invalid/x.zip", "checkpoint_sha256": "0" * 64}
     resp = client.post("/models/download", headers={"X-RL-API-KEY": "test-key"}, json=body)
     assert resp.status_code == 502, resp.text
+
+
+def test_adapter_cache_public_api():
+    from src.model_registry import ModelRegistry
+    registry = ModelRegistry(model_dir="/tmp", lru_capacity=2)
+    assert registry.get_adapter("a") is None
+    registry.put_adapter("a", "ADAPTER_A")
+    registry.put_adapter("b", "ADAPTER_B")
+    assert registry.get_adapter("a") == "ADAPTER_A"
+    assert registry.get_adapter("b") == "ADAPTER_B"
+    # LRU eviction
+    registry.put_adapter("c", "ADAPTER_C")
+    assert registry.get_adapter("a") is None  # 'a' evicted (least recent)
+    assert registry.get_adapter("b") == "ADAPTER_B"
+    assert registry.get_adapter("c") == "ADAPTER_C"

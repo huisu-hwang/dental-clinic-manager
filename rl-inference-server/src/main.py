@@ -16,11 +16,11 @@ app = FastAPI(title="rl-inference-server", version="0.1.0")
 
 
 def _get_or_load_adapter(req: PredictRequest) -> SB3Adapter:
-    cached = registry._cache_get(req.model_id)
+    cached = registry.get_adapter(req.model_id)
     if isinstance(cached, SB3Adapter):
         return cached
     adapter = SB3Adapter.load(req.checkpoint_path, req.algorithm)
-    registry._cache_set(req.model_id, adapter)
+    registry.put_adapter(req.model_id, adapter)
     return adapter
 
 

@@ -33,7 +33,9 @@ class PortfolioInferenceEngine:
         if raw.size != len(tickers):
             # dimension mismatch: equal split + low confidence
             weights = {t: 1.0 / len(tickers) for t in tickers}
-            confidence = min(confidence, 0.0)
+            # Dimension mismatch fallback: equal split + zero confidence.
+            # (fake 1.0 forbidden — see SB3Adapter.compute_confidence contract)
+            confidence = 0.0
         else:
             clipped = np.clip(raw, 0.0, None)
             s = clipped.sum()
