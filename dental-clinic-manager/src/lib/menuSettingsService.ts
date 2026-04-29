@@ -133,9 +133,11 @@ export function clearMenuSettingsCache(id?: string): void {
 }
 
 /**
- * 사용자의 메뉴 설정 조회 (사용자별 개인 설정)
+ * 사용자의 메뉴 설정 조회 (사용자별 개인 설정 - DB 기반)
+ * 한 계정에서 메뉴를 수정하면 어느 컴퓨터에서 로그인하든 동일한 메뉴 구조가 보임.
+ * localStorage는 빠른 첫 페인트를 위한 캐시로만 사용하고, DB가 source of truth.
  * @param userId 사용자 ID
- * @param useCache 캐시 사용 여부 (기본값: true)
+ * @param useCache 캐시(localStorage) 우선 사용 여부 (기본값: true) — DB 조회는 백그라운드로 수행되어 새 기기에서도 동기화됨
  * @returns 메뉴 설정
  */
 export async function getUserMenuSettings(
@@ -143,44 +145,108 @@ export async function getUserMenuSettings(
   useCache: boolean = true
 ): Promise<{ success: boolean; data: UserMenuSettings | null; error?: string }> {
   try {
-    // 캐시 확인
-    if (useCache) {
-      const cached = getCachedUserMenuSettings(userId)
-      if (cached) {
-        console.log('[menuSettingsService] Using cached user menu settings')
+    const supabase = createClient()
 
-        // 새로운 메뉴가 추가되었을 수 있으므로 항상 정규화 수행
+    // DB에서 조회 (source of truth)
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('user_menu_settings')
+        .select('settings, categories, updated_at')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (error) {
+        console.warn('[menuSettingsService] DB fetch error, falling back to cache:', error)
+      } else if (data) {
+        const normalizedCategories = normalizeCategorySettings(data.categories as MenuCategorySetting[] | undefined)
+        const normalizedSettings = normalizeMenuSettings(
+          (data.settings as MenuItemSetting[]) || [],
+          normalizedCategories
+        )
+
+        const userSettings: UserMenuSettings = {
+          user_id: userId,
+          settings: normalizedSettings,
+          categories: normalizedCategories,
+          updated_at: data.updated_at || new Date().toISOString()
+        }
+
+        // 캐시 업데이트
+        setCachedUserMenuSettings(userId, userSettings)
+        console.log('[menuSettingsService] Loaded user menu settings from DB')
+        return { success: true, data: userSettings }
+      }
+
+      // DB에 레코드가 없는 경우 — 캐시(localStorage)가 있으면 마이그레이션 차원에서 DB에 한 번 저장
+      const cached = getCachedUserMenuSettings(userId)
+      if (cached && cached.settings && cached.settings.length > 0) {
         const normalizedCategories = normalizeCategorySettings(cached.categories)
         const normalizedSettings = normalizeMenuSettings(cached.settings, normalizedCategories)
 
-        // 정규화된 설정 생성 (항상 최신 메뉴 포함)
-        const normalizedData: UserMenuSettings = {
-          ...cached,
+        const { error: upsertError } = await supabase
+          .from('user_menu_settings')
+          .upsert(
+            {
+              user_id: userId,
+              settings: normalizedSettings,
+              categories: normalizedCategories,
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: 'user_id' }
+          )
+
+        if (!upsertError) {
+          console.log('[menuSettingsService] Migrated localStorage settings to DB')
+        } else {
+          console.warn('[menuSettingsService] Failed to migrate cache to DB:', upsertError)
+        }
+
+        const migrated: UserMenuSettings = {
+          user_id: userId,
           settings: normalizedSettings,
           categories: normalizedCategories,
+          updated_at: new Date().toISOString()
         }
+        setCachedUserMenuSettings(userId, migrated)
+        return { success: true, data: migrated }
+      }
 
-        // 캐시와 정규화된 설정이 다르면 캐시 업데이트
-        if (normalizedSettings.length !== cached.settings.length) {
-          console.log('[menuSettingsService] New menu items detected, updating cache')
-          normalizedData.updated_at = new Date().toISOString()
-          setCachedUserMenuSettings(userId, normalizedData)
+      // DB에도 캐시에도 없으면 기본값
+      const defaultSettings: UserMenuSettings = {
+        user_id: userId,
+        settings: [...DEFAULT_MENU_ITEMS],
+        categories: [...DEFAULT_CATEGORIES],
+        updated_at: new Date().toISOString()
+      }
+      return { success: true, data: defaultSettings }
+    }
+
+    // Supabase 클라이언트가 없는 경우(SSR 등) — 캐시 fallback
+    if (useCache) {
+      const cached = getCachedUserMenuSettings(userId)
+      if (cached) {
+        const normalizedCategories = normalizeCategorySettings(cached.categories)
+        const normalizedSettings = normalizeMenuSettings(cached.settings, normalizedCategories)
+        return {
+          success: true,
+          data: {
+            ...cached,
+            settings: normalizedSettings,
+            categories: normalizedCategories,
+          }
         }
-
-        // 항상 정규화된 설정 반환 (새 메뉴가 포함됨)
-        return { success: true, data: normalizedData }
       }
     }
 
-    // 기본값 반환 (localStorage 기반이므로 캐시가 없으면 기본값)
-    const defaultSettings: UserMenuSettings = {
-      user_id: userId,
-      settings: [...DEFAULT_MENU_ITEMS],
-      categories: [...DEFAULT_CATEGORIES],
-      updated_at: new Date().toISOString()
+    return {
+      success: true,
+      data: {
+        user_id: userId,
+        settings: [...DEFAULT_MENU_ITEMS],
+        categories: [...DEFAULT_CATEGORIES],
+        updated_at: new Date().toISOString()
+      }
     }
-
-    return { success: true, data: defaultSettings }
   } catch (error) {
     console.error('[menuSettingsService] Unexpected error:', error)
     return {
@@ -195,7 +261,7 @@ export async function getUserMenuSettings(
 }
 
 /**
- * 사용자의 메뉴 설정 저장 (개인 설정)
+ * 사용자의 메뉴 설정 저장 (개인 설정 - DB 기반)
  * @param userId 사용자 ID
  * @param settings 메뉴 설정 배열
  * @param categories 카테고리 설정 배열
@@ -207,19 +273,42 @@ export async function saveUserMenuSettings(
   categories: MenuCategorySetting[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const userSettings: UserMenuSettings = {
-      user_id: userId,
-      settings,
-      categories,
-      updated_at: new Date().toISOString()
+    const supabase = createClient()
+    if (!supabase) {
+      return { success: false, error: '데이터베이스 연결에 실패했습니다.' }
     }
 
-    // 캐시에 저장
-    setCachedUserMenuSettings(userId, userSettings)
-    console.log('[menuSettingsService] User menu settings saved successfully')
+    const normalizedCategories = normalizeCategorySettings(categories)
+    const updatedAt = new Date().toISOString()
+
+    const { error } = await supabase
+      .from('user_menu_settings')
+      .upsert(
+        {
+          user_id: userId,
+          settings,
+          categories: normalizedCategories,
+          updated_at: updatedAt
+        },
+        { onConflict: 'user_id' }
+      )
+
+    if (error) {
+      console.error('[menuSettingsService] Error saving user menu settings:', error)
+      return { success: false, error: '메뉴 설정 저장에 실패했습니다.' }
+    }
+
+    // 캐시 업데이트 (다음 페이지 로드 시 빠른 표시용)
+    setCachedUserMenuSettings(userId, {
+      user_id: userId,
+      settings,
+      categories: normalizedCategories,
+      updated_at: updatedAt
+    })
+    console.log('[menuSettingsService] User menu settings saved to DB successfully')
 
     // 메뉴 설정 변경 이벤트 발생
-    emitMenuSettingsChanged(userId, settings, categories)
+    emitMenuSettingsChanged(userId, settings, normalizedCategories)
 
     return { success: true }
   } catch (error) {
@@ -229,7 +318,7 @@ export async function saveUserMenuSettings(
 }
 
 /**
- * 사용자의 메뉴 설정 초기화 (기본값으로 되돌리기)
+ * 사용자의 메뉴 설정 초기화 (기본값으로 되돌리기 - DB에서 삭제)
  * @param userId 사용자 ID
  * @returns 성공 여부
  */
@@ -237,7 +326,20 @@ export async function resetUserMenuSettings(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // 캐시 삭제
+    const supabase = createClient()
+    if (supabase) {
+      const { error } = await supabase
+        .from('user_menu_settings')
+        .delete()
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error('[menuSettingsService] Error resetting user menu settings:', error)
+        return { success: false, error: '메뉴 설정 초기화에 실패했습니다.' }
+      }
+    }
+
+    // 캐시도 함께 삭제
     clearMenuSettingsCache(userId)
     console.log('[menuSettingsService] User menu settings reset successfully')
 
