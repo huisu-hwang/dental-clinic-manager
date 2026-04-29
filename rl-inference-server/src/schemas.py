@@ -38,3 +38,22 @@ class SinglePredictResponse(BaseModel):
     size_hint: Optional[float] = None
     confidence: float
     metadata: dict
+
+
+class BacktestRequest(PredictRequest):
+    rebalance_dates: list[str]
+    initial_capital: float = 10000.0
+
+
+class EquityPoint(BaseModel):
+    date: str
+    equity: float
+
+
+class BacktestResponse(BaseModel):
+    total_return: float
+    sharpe_ratio: float
+    max_drawdown: float
+    n_rebalances: int
+    equity_curve: list[EquityPoint]
+    metadata: dict

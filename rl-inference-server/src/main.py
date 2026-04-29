@@ -5,7 +5,8 @@ from src.config import get_settings
 from src.model_registry import ModelRegistry
 from src.adapters.sb3 import SB3Adapter
 from src.inference.portfolio import PortfolioInferenceEngine
-from src.schemas import PredictRequest, PortfolioPredictResponse, SinglePredictResponse
+from src.schemas import PredictRequest, PortfolioPredictResponse, SinglePredictResponse, BacktestRequest, BacktestResponse
+from src.inference.backtest import run_backtest
 
 settings = get_settings()
 START_TIME = time.time()
@@ -45,3 +46,11 @@ def predict(req: PredictRequest):
         return engine.run(req)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/backtest", dependencies=[Depends(require_api_key)], response_model=BacktestResponse)
+def backtest(req: BacktestRequest):
+    if req.kind != "portfolio":
+        raise HTTPException(status_code=400, detail="single_asset backtest not supported in Phase 1")
+    adapter = _get_or_load_adapter(req)
+    return run_backtest(adapter, req)
