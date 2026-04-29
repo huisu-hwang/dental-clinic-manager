@@ -77,4 +77,18 @@ describe('runDailyRebalance', () => {
     await runDailyRebalance(deps)
     expect(deps.insertInferenceLog).toHaveBeenCalledWith(expect.objectContaining({ decision: 'error' }))
   })
+
+  it('skips rl_single strategies (Phase 1 portfolio-only)', async () => {
+    const deps = makeDeps({
+      fetchActiveRLStrategies: vi.fn().mockResolvedValue([
+        { ...baseStrategy, strategy_type: 'rl_single' },
+      ]),
+    })
+    await runDailyRebalance(deps)
+    expect(deps.rlClient.predict).not.toHaveBeenCalled()
+    expect(deps.executeAutoOrder).not.toHaveBeenCalled()
+    expect(deps.insertInferenceLog).toHaveBeenCalledWith(
+      expect.objectContaining({ decision: 'hold', blocked_reason: expect.stringContaining('rl_single') }),
+    )
+  })
 })

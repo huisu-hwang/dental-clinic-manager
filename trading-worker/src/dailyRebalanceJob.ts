@@ -55,6 +55,17 @@ export async function runDailyRebalance(deps: DailyRebalanceDeps): Promise<Rebal
 
   for (const s of strategies) {
     result.processed++
+    if (s.strategy_type !== 'rl_portfolio') {
+      // Phase 1 only supports rl_portfolio. rl_single is registered but not auto-traded.
+      await deps.insertInferenceLog({
+        strategy_id: s.id, rl_model_id: s.rl_model.id, user_id: s.user_id,
+        trade_date: deps.today, state_hash: '',
+        output: {}, confidence: null, decision: 'hold',
+        blocked_reason: `strategy_type ${s.strategy_type} not supported in Phase 1`,
+      })
+      result.blocked++
+      continue
+    }
     try {
       const settings = await deps.fetchUserSettings(s.user_id)
       if (settings.rl_paused_at) {
