@@ -53,3 +53,32 @@ def test_loaded_models_returns_cached_keys():
     registry._cache_set("a", "obj-a")
     registry._cache_set("b", "obj-b")
     assert sorted(registry.loaded_models()) == ["a", "b"]
+
+
+import hashlib
+
+def test_download_endpoint_writes_file_and_returns_path(tmp_path, monkeypatch):
+    monkeypatch.setenv("RL_API_KEY", "test-key")
+    monkeypatch.setenv("MODEL_DIR", str(tmp_path))
+    from src.main import app, registry
+    from fastapi.testclient import TestClient
+
+    payload = b"fake-model-bytes"
+    expected = hashlib.sha256(payload).hexdigest()
+
+    async def fake_fetch(_url: str) -> bytes:
+        return payload
+
+    monkeypatch.setattr(registry, "_fetch_bytes", fake_fetch)
+
+    client = TestClient(app)
+    body = {
+        "model_id": "m1",
+        "checkpoint_url": "https://example.com/m.zip",
+        "checkpoint_sha256": expected,
+    }
+    resp = client.post("/models/download", headers={"X-RL-API-KEY": "test-key"}, json=body)
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert "path" in data
+    assert expected in data["path"]

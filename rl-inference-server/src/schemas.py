@@ -57,3 +57,15 @@ class BacktestResponse(BaseModel):
     n_rebalances: int
     equity_curve: list[EquityPoint]
     metadata: dict
+
+
+class DownloadRequest(BaseModel):
+    model_id: str
+    checkpoint_url: str
+    checkpoint_sha256: str
+
+
+class DownloadResponse(BaseModel):
+    model_id: str
+    path: str
+    status: Literal["ready"] = "ready"

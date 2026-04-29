@@ -5,7 +5,8 @@ from src.config import get_settings
 from src.model_registry import ModelRegistry
 from src.adapters.sb3 import SB3Adapter
 from src.inference.portfolio import PortfolioInferenceEngine
-from src.schemas import PredictRequest, PortfolioPredictResponse, SinglePredictResponse, BacktestRequest, BacktestResponse
+from src.schemas import PredictRequest, PortfolioPredictResponse, SinglePredictResponse, BacktestRequest, BacktestResponse, DownloadRequest, DownloadResponse
+from src.model_registry import DownloadError, IntegrityError
 from src.inference.backtest import run_backtest
 
 settings = get_settings()
@@ -54,3 +55,14 @@ def backtest(req: BacktestRequest):
         raise HTTPException(status_code=400, detail="single_asset backtest not supported in Phase 1")
     adapter = _get_or_load_adapter(req)
     return run_backtest(adapter, req)
+
+
+@app.post("/models/download", dependencies=[Depends(require_api_key)], response_model=DownloadResponse)
+async def models_download(req: DownloadRequest):
+    try:
+        path = await registry.download(req.model_id, req.checkpoint_url, req.checkpoint_sha256)
+    except IntegrityError as e:
+        raise HTTPException(status_code=400, detail=f"sha256 mismatch: {e}")
+    except DownloadError as e:
+        raise HTTPException(status_code=502, detail=f"download failed: {e}")
+    return DownloadResponse(model_id=req.model_id, path=path)
