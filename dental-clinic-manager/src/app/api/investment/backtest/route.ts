@@ -10,7 +10,9 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { runBacktest } from '@/lib/backtestEngine'
 import { fetchPrices } from '@/lib/stockDataService'
+import { runRLBacktest } from '@/lib/rlBacktestService'
 import type { Market, ConditionGroup, IndicatorConfig, RiskSettings } from '@/types/investment'
+import type { RLModel } from '@/types/rlTrading'
 
 // ============================================
 // POST - 백테스트 실행
@@ -77,6 +79,73 @@ export async function POST(request: NextRequest) {
     if (!strategy) {
       return NextResponse.json({ error: '전략을 찾을 수 없습니다' }, { status: 404 })
     }
+
+    // RL 전략은 portfolio 단위 백테스트 → rl-inference-server로 위임
+    if (strategy.strategy_type === 'rl_portfolio' || strategy.strategy_type === 'rl_single') {
+      if (strategy.strategy_type === 'rl_single') {
+        return NextResponse.json({
+          error: 'rl_single 전략의 백테스트는 Phase 1에서 지원되지 않습니다',
+        }, { status: 400 })
+      }
+      if (!strategy.rl_model_id) {
+        return NextResponse.json({ error: 'RL 전략에 모델이 연결되지 않았습니다' }, { status: 400 })
+      }
+      const { data: model } = await supabase
+        .from('rl_models')
+        .select('*')
+        .eq('id', strategy.rl_model_id)
+        .single()
+      if (!model) {
+        return NextResponse.json({ error: 'RL 모델을 찾을 수 없습니다' }, { status: 404 })
+      }
+      try {
+        const rl = await runRLBacktest({
+          model: model as RLModel,
+          startDate: startDate as string,
+          endDate: endDate as string,
+          initialCapital: capital,
+        })
+        const { data: run, error: insertError } = await supabase
+          .from('backtest_runs')
+          .insert({
+            strategy_id: strategyId,
+            user_id: userId,
+            ticker: 'PORTFOLIO',  // RL portfolio는 단일 종목 아님
+            market: market as string,
+            start_date: startDate as string,
+            end_date: endDate as string,
+            initial_capital: capital,
+            status: 'completed',
+            total_return: rl.total_return,
+            annualized_return: 0,  // 별도 계산 X
+            max_drawdown: rl.max_drawdown,
+            sharpe_ratio: rl.sharpe_ratio,
+            win_rate: 0,
+            total_trades: rl.n_rebalances,  // rebalance 횟수를 trade로 표기
+            profit_factor: 0,
+            equity_curve: rl.equity_curve as unknown as object,
+            trades: [] as unknown as object,  // RL portfolio엔 개별 trade 개념 없음
+            full_metrics: {
+              kind: 'rl_portfolio',
+              n_rebalances: rl.n_rebalances,
+              rl_metadata: rl.rl_metadata,
+            } as unknown as object,
+            completed_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
+        if (insertError) {
+          console.error('RL 백테스트 결과 저장 실패:', insertError)
+          return NextResponse.json({ data: { ...rl, saved: false } })
+        }
+        return NextResponse.json({ data: { ...run, ...rl } })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'RL 백테스트 실행 실패'
+        console.error('RL 백테스트 오류:', msg)
+        return NextResponse.json({ error: msg }, { status: 500 })
+      }
+    }
+
     indicators = strategy.indicators as IndicatorConfig[]
     buyConditions = strategy.buy_conditions as ConditionGroup
     sellConditions = strategy.sell_conditions as ConditionGroup

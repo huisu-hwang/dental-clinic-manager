@@ -9,6 +9,9 @@ import type {
   ReferralListResponse,
   ReferralKpi,
   PatientSearchResult,
+  FamilyCandidate,
+  ConfirmedFamily,
+  MonthlyStatRow,
 } from '@/types/referral'
 
 const supabase = createClient()
@@ -385,6 +388,78 @@ export const referralService = {
       .single()
     if (error) throw error
     return data
+  },
+
+  async suggestFamilies(clinicId: string, limit = 30): Promise<FamilyCandidate[]> {
+    const { data, error } = await supabase.rpc('suggest_family_groups', {
+      p_clinic_id: clinicId,
+      p_limit: limit,
+    })
+    if (error) throw error
+    return (data ?? []) as FamilyCandidate[]
+  },
+
+  async confirmFamily(input: { clinicId: string; familyName: string; memberIds: string[] }) {
+    const { data: family, error: famErr } = await supabase
+      .from('patient_families')
+      .insert({ clinic_id: input.clinicId, family_name: input.familyName })
+      .select()
+      .single()
+    if (famErr) throw famErr
+
+    const rows = input.memberIds.map(id => ({ family_id: family.id, dentweb_patient_id: id }))
+    const { error: memErr } = await supabase.from('patient_family_members').insert(rows)
+    if (memErr) throw memErr
+    return family
+  },
+
+  async listConfirmedFamilies(clinicId: string): Promise<ConfirmedFamily[]> {
+    const { data, error } = await supabase
+      .from('patient_families')
+      .select(`
+        id, family_name, created_at,
+        members:patient_family_members (
+          relation_label,
+          patient:dentweb_patients (id, patient_name, birth_date, chart_number, gender)
+        )
+      `)
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    type Row = {
+      id: string
+      family_name: string
+      created_at: string
+      members: Array<{
+        relation_label: string | null
+        patient: { id: string; patient_name: string; birth_date: string | null; chart_number: string | null; gender: string | null } | null
+      }>
+    }
+    return ((data ?? []) as Row[]).map(f => ({
+      id: f.id,
+      family_name: f.family_name,
+      created_at: f.created_at,
+      members: f.members
+        .filter(m => m.patient)
+        .map(m => ({
+          ...(m.patient as NonNullable<typeof m.patient>),
+          relation_label: m.relation_label,
+        })),
+    }))
+  },
+
+  async deleteFamily(familyId: string) {
+    const { error } = await supabase.from('patient_families').delete().eq('id', familyId)
+    if (error) throw error
+  },
+
+  async monthlyStats(clinicId: string, months = 12): Promise<MonthlyStatRow[]> {
+    const { data, error } = await supabase.rpc('referral_monthly_stats', {
+      p_clinic_id: clinicId,
+      p_months: months,
+    })
+    if (error) throw error
+    return (data ?? []) as MonthlyStatRow[]
   },
 
   async listGiftsByPatient(clinicId: string, dentwebPatientId: string) {
