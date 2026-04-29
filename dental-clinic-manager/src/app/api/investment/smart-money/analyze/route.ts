@@ -296,21 +296,38 @@ export async function POST(request: NextRequest) {
   let vwap, wyckoff, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
   let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
   try {
-    // ===== Intraday window 추출 =====
-    // algoFootprint(TWAP/Iceberg/Sniper/MOO/MOC), VWAP, 단일봉 Wyckoff, VSA는
-    // 본질적으로 단일 거래일(intraday) 기반 패턴이다. 5일치(390봉)를 그대로 입력하면
-    // 일별 거래량 차이가 누적돼 CV 폭증 → 점수=0 등 오작동.
-    // 따라서 가장 최근 거래일(YYYY-MM-DD)의 봉만 추출해 intraday 엔진에 사용.
-    const lastDate = bars[bars.length - 1]?.datetime?.slice(0, 10) ?? ''
-    let intradayBars: NormalizedBar[] = lastDate
-      ? bars.filter((b) => b.datetime.slice(0, 10) === lastDate)
-      : []
-    // edge case: 새 날짜의 첫 봉이 아직 적으면 fallback 마지막 78봉
-    if (intradayBars.length < 20) {
-      intradayBars = bars.slice(-78)
-    }
+    // ================================================================
+    // 데이터 윈도우 라우팅 — 각 엔진의 자연스러운 데이터 타입에 맞춤
+    // ----------------------------------------------------------------
+    // [1일치 분봉] VWAP / algoFootprint / session
+    //   - 단일 거래일 기반 패턴. VWAP은 매일 리셋, MOO/MOC는 시·종가 동시호가,
+    //     session은 현재 시간대 분류. 5일치 섞으면 의미 흐려짐.
+    //
+    // [2일치 분봉] 단일봉 Wyckoff / VSA / news
+    //   - 단일봉 Wyckoff는 직전 20봉 lookback (≈1.5일), VSA는 22봉 최소,
+    //     news는 분봉 timestamp 매칭. 어제+오늘이면 임계치 충족.
+    //   - 장 마감 / 주말이면 가장 최근 2 거래일.
+    //
+    // [60일 일봉] wyckoffPhase / marketStructure / liquidity / OB-FVG / traps
+    //   - 다일 구조 패턴. 일봉이 본질적으로 옳고 안정적.
+    // ================================================================
+    const intradayLast1Day = extractLastNTradingDays(bars, 1)
+    const intradayLast2Days = extractLastNTradingDays(bars, 2)
+    const multiDayBars: NormalizedBar[] = dailyBars.length >= 30 ? dailyBars : bars
 
-    const vwapBars: VWAPInputBar[] = intradayBars.map((b) => ({
+    // 디버그 로그 — 각 윈도우별 봉 수
+    console.log('[smart-money/analyze] 데이터 윈도우:', {
+      ticker,
+      market,
+      total_intraday: bars.length,
+      intraday_1day: intradayLast1Day.length,
+      intraday_2days: intradayLast2Days.length,
+      daily: dailyBars.length,
+      multiDay: multiDayBars.length,
+    })
+
+    // ===== Intraday 1-day 엔진 =====
+    const vwapBars: VWAPInputBar[] = intradayLast1Day.map((b) => ({
       high: b.high,
       low: b.low,
       close: b.close,
@@ -318,16 +335,7 @@ export async function POST(request: NextRequest) {
     }))
     vwap = calculateVWAP(vwapBars, currentPrice)
 
-    const wyckoffBars: WyckoffBar[] = intradayBars.map((b) => ({
-      open: b.open,
-      high: b.high,
-      low: b.low,
-      close: b.close,
-      volume: b.volume,
-    }))
-    wyckoff = detectWyckoff(wyckoffBars)
-
-    const algoBars: AlgoBar[] = intradayBars.map((b) => ({
+    const algoBars: AlgoBar[] = intradayLast1Day.map((b) => ({
       datetime: b.datetime,
       open: b.open,
       high: b.high,
@@ -337,18 +345,34 @@ export async function POST(request: NextRequest) {
     }))
     algoFootprint = analyzeAlgoFootprint(algoBars)
 
+    const sessionBars: SessionBar[] = intradayLast1Day.map((b) => ({ ...b }))
+    session = analyzeSession(sessionBars, market)
+
+    // ===== Intraday 2-days 엔진 =====
+    const wyckoffBars: WyckoffBar[] = intradayLast2Days.map((b) => ({
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+      volume: b.volume,
+    }))
+    wyckoff = detectWyckoff(wyckoffBars)
+
+    const newsBars: NewsBar[] = intradayLast2Days.map((b) => ({ ...b }))
+    newsContext = analyzeNewsContext({
+      bars: newsBars,
+      signalDetails: [],
+      newsEvents: [],
+    })
+
+    // ===== 외인/기관 (KR 일별 매매 동향) =====
     investorFlow =
       market === 'KR' && investorHistory.length > 0
         ? analyzeInvestorFlow(investorHistory)
         : null
 
-    // ===== 정교화 엔진들 (다일 패턴이라 일봉 우선 사용) =====
-    // 분봉 5일치(390봉)는 장 마감 후 KIS API가 적게 반환할 때 임계치 미달이 됨.
-    // 다일 SMC/구조 패턴은 일봉(60일치)이 더 자연스럽고 의미 있음.
-    // 일봉 30봉 이상이면 일봉을, 아니면 5일치 분봉을 fallback으로 사용.
-    const multiDayBars: NormalizedBar[] = dailyBars.length >= 30 ? dailyBars : bars
-
-    const phaseBars: PhaseBar[] = bars.map((b) => ({ ...b }))
+    // ===== 다일 일봉 기반 엔진 =====
+    const phaseBars: PhaseBar[] = multiDayBars.map((b) => ({ ...b }))
     const phaseDailyBars: PhaseBar[] = dailyBars.map((b) => ({ ...b }))
     wyckoffPhase = detectWyckoffPhase(phaseBars, phaseDailyBars.length > 0 ? phaseDailyBars : undefined)
 
@@ -367,23 +391,10 @@ export async function POST(request: NextRequest) {
     }))
     traps = detectTraps(trapBars)
 
-    // VSA는 effort vs result로 단일 거래일 + 직전 1-2일 정도가 합리적이지만
-    // 엔진 자체가 최근 5봉만 actionable signal로 사용하므로 다일 입력도 안전
     const vsaBars: VSABar[] = multiDayBars.map((b) => ({
       open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
     }))
     vsa = analyzeVSA(vsaBars)
-
-    // session은 datetime 기반 시간대 분류라서 분봉만 의미가 있음 (intraday 사용)
-    const sessionBars: SessionBar[] = (intradayBars.length > 0 ? intradayBars : bars).map((b) => ({ ...b }))
-    session = analyzeSession(sessionBars, market)
-
-    const newsBars: NewsBar[] = bars.map((b) => ({ ...b }))
-    newsContext = analyzeNewsContext({
-      bars: newsBars,
-      signalDetails: [],
-      newsEvents: [],
-    })
 
     scoreResult = computeSmartMoneyScore({
       vwap,
@@ -510,6 +521,33 @@ function computeRecentHighLow(bars: OHLCV[], lookback: number): { high: number; 
     high: Number.isFinite(high) ? high : 0,
     low: Number.isFinite(low) ? low : 0,
   }
+}
+
+/**
+ * 가장 최근 N개 거래일에 해당하는 봉을 추출
+ *
+ * 동작:
+ *   - bars의 datetime을 'YYYY-MM-DD'로 슬라이스해 고유 거래일 추출
+ *   - 가장 최근 N개 거래일에 매칭되는 봉만 필터링하여 반환
+ *   - 장 마감 / 주말 / 휴일에도 자연스럽게 직전 N 거래일 분봉을 사용
+ *   - bars가 비어있거나 datetime이 비어있으면 빈 배열 반환
+ *
+ * 예) 오늘 휴장이고 bars 마지막 날짜가 어제면:
+ *   N=1 → 어제 분봉만
+ *   N=2 → 어제+그저께 분봉
+ */
+function extractLastNTradingDays(bars: NormalizedBar[], n: number): NormalizedBar[] {
+  if (!bars || bars.length === 0 || n <= 0) return []
+  // 고유 거래일 (오래된 → 최신 순)
+  const dates = new Set<string>()
+  for (const b of bars) {
+    const d = (b.datetime ?? '').slice(0, 10)
+    if (d) dates.add(d)
+  }
+  if (dates.size === 0) return []
+  const sortedDates = [...dates].sort()
+  const lastN = new Set(sortedDates.slice(-n))
+  return bars.filter((b) => lastN.has((b.datetime ?? '').slice(0, 10)))
 }
 
 /** 분봉을 일봉으로 압축 (US용 — 일봉 별도 API가 없을 때 fallback) */
