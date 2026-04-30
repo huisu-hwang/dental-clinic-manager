@@ -161,13 +161,14 @@ export async function POST(request: NextRequest) {
       currentPrice = quote.price
       // KRRealtimeQuote에는 name이 없으므로 ticker 그대로 사용
 
-      // 분봉 (5분봉 390개 ≈ 5거래일치 — 와이코프 페이즈 탐지용)
+      // 분봉 (1분봉 780개 ≈ 2거래일치 — 알고리즘 풋프린트 정밀도 ↑)
+      // 1분봉이 5분봉보다 패턴 인식(VWAP U-shape, Iceberg 클러스터, MOO/MOC)에 정교함
       const krBars: KRMinuteBar[] = await getKRMinutePrices({
         credentialId: kisCredential.credentialId,
         credential: krCredential,
         ticker,
-        intervalMinutes: 5,
-        count: 390,
+        intervalMinutes: 1,
+        count: 780,
       })
       bars = krBars.map((b) => ({
         datetime: b.datetime,
@@ -226,14 +227,14 @@ export async function POST(request: NextRequest) {
       const quote = await fetchCurrentQuote(ticker, 'US')
       currentPrice = quote.price ?? 0
 
-      // fetchIntradayPrices는 default로 30일치(≈2340봉)를 반환.
-      // 정교화 엔진(와이코프 페이즈/유동성)을 위해 5거래일치(≈390봉)로 확장.
+      // 1분봉으로 변경 — 알고리즘 풋프린트 정밀도 ↑ (yahoo 1m은 7일까지 제공)
+      // 마지막 780봉(≈2거래일치) 사용
       const usBars: OHLCV[] = await fetchIntradayPrices({
         ticker,
         market: 'US',
-        timeframe: '5m',
+        timeframe: '1m',
       })
-      const recent = usBars.slice(-390)
+      const recent = usBars.slice(-780)
       bars = recent.map((b) => ({
         datetime: b.date,
         open: b.open,
@@ -316,8 +317,8 @@ export async function POST(request: NextRequest) {
     const multiDayBars: NormalizedBar[] = dailyBars.length >= 30 ? dailyBars : bars
 
     // 진행 중인 거래일이 짧으면(장 시작 직후) 알고리즘/VWAP 패턴 인식이 부족함
-    // → 60봉(≈5시간) 미만이면 2거래일치로 fallback (어제 풀 거래일 + 오늘 진행분)
-    const MIN_INTRADAY_BARS = 60
+    // → 300봉(1분봉 ≈ 5시간) 미만이면 2거래일치로 fallback (어제 풀 거래일 + 오늘 진행분)
+    const MIN_INTRADAY_BARS = 300
     const intradayForAlgo =
       intradayLast1Day.length >= MIN_INTRADAY_BARS ? intradayLast1Day : intradayLast2Days
 
