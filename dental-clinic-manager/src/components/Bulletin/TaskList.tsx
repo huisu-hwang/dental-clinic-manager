@@ -13,7 +13,6 @@ import {
   CalendarDays,
   Users,
   Repeat,
-  CheckSquare,
   X,
   Tag,
 } from 'lucide-react'
@@ -107,8 +106,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [completedPeriod, setCompletedPeriod] = useState<CompletedPeriod>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('')
   const [completedSearchQuery, setCompletedSearchQuery] = useState('')
-  // 일괄 선택 모드 (대표 원장만 사용)
-  const [selectionMode, setSelectionMode] = useState(false)
+  // 대표 원장은 항상 체크박스로 선택 가능 (별도 토글 없이)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showBulkAssigneeModal, setShowBulkAssigneeModal] = useState(false)
   const [stats, setStats] = useState<{
@@ -334,17 +332,16 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     })
   }, [displayedTasks])
 
-  const exitSelectionMode = useCallback(() => {
-    setSelectionMode(false)
+  const clearSelection = useCallback(() => {
     setSelectedIds(new Set())
   }, [])
 
   const handleBulkAssigneeSuccess = useCallback(async (updatedCount: number) => {
     setShowBulkAssigneeModal(false)
-    exitSelectionMode()
+    clearSelection()
     await Promise.all([fetchTasks(), fetchStats()])
     await appAlert(`${updatedCount}건의 담당자가 변경되었습니다.`)
-  }, [exitSelectionMode, fetchTasks, fetchStats])
+  }, [clearSelection, fetchTasks, fetchStats])
 
   // TaskForm 표시
   if (showForm) {
@@ -386,16 +383,6 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           )}
         </div>
         <div className="flex items-center gap-2">
-          {canBulkReassign && activeTab !== 'recurring' && !selectionMode && (
-            <Button
-              variant="outline"
-              onClick={() => setSelectionMode(true)}
-              className="flex items-center gap-2"
-            >
-              <CheckSquare className="w-4 h-4" />
-              일괄 선택
-            </Button>
-          )}
           {canCreate && (
             <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
@@ -405,10 +392,13 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       </div>
 
-      {/* 일괄 선택 모드 액션바 */}
-      {selectionMode && (
+      {/* 선택된 업무가 있을 때만 액션바 노출 */}
+      {canBulkReassign && activeTab !== 'recurring' && selectedIds.size > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-at-accent-light border border-at-accent rounded-xl">
           <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-at-accent">
+              {selectedIds.size}건 선택됨
+            </span>
             <button
               type="button"
               onClick={toggleSelectAll}
@@ -418,22 +408,18 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                 ? '전체 해제'
                 : '현재 보이는 업무 전체 선택'}
             </button>
-            <span className="text-sm text-at-text-secondary">
-              {selectedIds.size}건 선택됨
-            </span>
           </div>
           <div className="flex items-center gap-2">
             <Button
               onClick={() => setShowBulkAssigneeModal(true)}
-              disabled={selectedIds.size === 0}
               className="flex items-center gap-2"
             >
               <Users className="w-4 h-4" />
               담당자 일괄 변경
             </Button>
-            <Button variant="outline" onClick={exitSelectionMode} className="flex items-center gap-2">
+            <Button variant="outline" onClick={clearSelection} className="flex items-center gap-2">
               <X className="w-4 h-4" />
-              취소
+              선택 해제
             </Button>
           </div>
         </div>
@@ -728,7 +714,7 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         <TaskCardView
           tasks={displayedTasks}
           onTaskClick={handleTaskClick}
-          selectionMode={selectionMode}
+          selectionMode={canBulkReassign}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
         />
