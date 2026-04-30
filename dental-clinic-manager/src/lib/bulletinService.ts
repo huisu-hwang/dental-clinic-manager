@@ -1406,6 +1406,66 @@ export const recurringTaskTemplateService = {
   },
 
   /**
+   * 반복 업무 템플릿 다수의 담당자 일괄 변경
+   */
+  async bulkUpdateAssignee(
+    templateIds: string[],
+    newAssigneeId: string
+  ): Promise<{ success: boolean; updatedCount: number; error: string | null }> {
+    try {
+      if (!templateIds.length) return { success: true, updatedCount: 0, error: null }
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { error, count } = await (supabase as any)
+        .from('recurring_task_templates')
+        .update({ assignee_id: newAssigneeId }, { count: 'exact' })
+        .in('id', templateIds)
+        .eq('clinic_id', clinicId)
+        .neq('assignee_id', newAssigneeId)
+
+      if (error) throw error
+      return { success: true, updatedCount: count || 0, error: null }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.bulkUpdateAssignee] Error:', error)
+      return { success: false, updatedCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 반복 업무 템플릿 다수 일괄 삭제
+   */
+  async bulkDeleteTemplates(
+    templateIds: string[]
+  ): Promise<{ success: boolean; deletedCount: number; error: string | null }> {
+    try {
+      if (!templateIds.length) return { success: true, deletedCount: 0, error: null }
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { error, count } = await (supabase as any)
+        .from('recurring_task_templates')
+        .delete({ count: 'exact' })
+        .in('id', templateIds)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+      return { success: true, deletedCount: count || templateIds.length, error: null }
+    } catch (error) {
+      console.error('[recurringTaskTemplateService.bulkDeleteTemplates] Error:', error)
+      return { success: false, deletedCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 오늘(또는 지정한 날짜)이 매칭되는 모든 활성 템플릿을 순회해
    * tasks 테이블에 인스턴스를 upsert. 유니크 인덱스가 중복을 막으므로 멱등적.
    * 일반 직원도 호출 가능하도록 DB 측에서 SECURITY DEFINER RPC로 구현.

@@ -750,7 +750,10 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
       {showBulkAssigneeModal && (
         <BulkAssigneeChangeModal
           selectedCount={selectedIds.size}
-          selectedTaskIds={Array.from(selectedIds)}
+          itemLabel="업무"
+          onConfirm={(newAssigneeId) =>
+            taskService.bulkUpdateAssignee(Array.from(selectedIds), newAssigneeId)
+          }
           onClose={() => setShowBulkAssigneeModal(false)}
           onSuccess={handleBulkAssigneeSuccess}
         />

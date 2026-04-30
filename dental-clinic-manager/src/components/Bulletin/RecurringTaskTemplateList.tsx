@@ -5,13 +5,13 @@ import {
   Repeat,
   Pencil,
   Trash2,
-  Play,
-  Pause,
   User,
   CalendarRange,
   AlertCircle,
   Loader2,
   Download,
+  Users,
+  X,
 } from 'lucide-react'
 import { recurringTaskTemplateService } from '@/lib/bulletinService'
 import type { RecurringTaskTemplate } from '@/types/bulletin'
@@ -21,6 +21,8 @@ import {
 } from '@/types/bulletin'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 import RecurringTaskTemplateForm from './RecurringTaskTemplateForm'
+import BulkAssigneeChangeModal from './BulkAssigneeChangeModal'
+import { Button } from '@/components/ui/Button'
 
 const PRIORITY_BADGE: Record<string, string> = {
   urgent: 'bg-at-error-bg text-at-error',
@@ -35,18 +37,34 @@ const formatDate = (dateString: string) => {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
 }
 
+// 현재 사용자 role 체크 (담당자 일괄 변경/삭제 권한)
+const getCurrentUserRole = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
+  if (!userStr) return null
+  try {
+    return JSON.parse(userStr).role || null
+  } catch {
+    return null
+  }
+}
+
 /**
  * 반복 업무 템플릿 관리 목록
  * TaskList의 "반복 템플릿" 탭 안에서 렌더링됨. 관리자 전용.
- * 디자인: AT 토큰, rounded-xl, 기존 TaskCardView 카드 스타일과 동일 계열
  */
 export default function RecurringTaskTemplateList() {
   const [templates, setTemplates] = useState<RecurringTaskTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<RecurringTaskTemplate | null>(null)
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [seeding, setSeeding] = useState(false)
+
+  // 다중 선택 (대표 원장/마스터)
+  const role = getCurrentUserRole()
+  const canBulk = role === 'owner' || role === 'master_admin'
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkAssigneeModal, setShowBulkAssigneeModal] = useState(false)
 
   const fetchTemplates = useCallback(async () => {
     setError(null)
@@ -63,18 +81,23 @@ export default function RecurringTaskTemplateList() {
     fetchTemplates()
   }, [fetchTemplates])
 
-  const handleToggleActive = async (template: RecurringTaskTemplate) => {
-    setUpdatingId(template.id)
-    const { error: updateError } = await recurringTaskTemplateService.updateTemplate(template.id, {
-      is_active: !template.is_active,
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
     })
-    setUpdatingId(null)
-    if (updateError) {
-      await appAlert(`상태 변경에 실패했습니다: ${updateError}`)
-      return
-    }
-    fetchTemplates()
   }
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      if (prev.size === templates.length && templates.length > 0) return new Set()
+      return new Set(templates.map(t => t.id))
+    })
+  }
+
+  const clearSelection = () => setSelectedIds(new Set())
 
   const handleDelete = async (template: RecurringTaskTemplate) => {
     const confirmed = await appConfirm(
@@ -90,6 +113,33 @@ export default function RecurringTaskTemplateList() {
       return
     }
     fetchTemplates()
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    const ok = await appConfirm(
+      `선택한 ${selectedIds.size}개 반복 템플릿을 삭제하시겠습니까?\n\n` +
+        '이미 생성된 과거 업무 인스턴스는 그대로 유지됩니다.\n' +
+        '이후로는 새 인스턴스가 자동 생성되지 않습니다.'
+    )
+    if (!ok) return
+    const { success, deletedCount, error } = await recurringTaskTemplateService.bulkDeleteTemplates(
+      Array.from(selectedIds)
+    )
+    if (!success) {
+      await appAlert(error || '삭제에 실패했습니다.')
+      return
+    }
+    clearSelection()
+    await fetchTemplates()
+    await appAlert(`${deletedCount}개 템플릿이 삭제되었습니다.`)
+  }
+
+  const handleBulkAssigneeSuccess = async (updatedCount: number) => {
+    setShowBulkAssigneeModal(false)
+    clearSelection()
+    await fetchTemplates()
+    await appAlert(`${updatedCount}개 템플릿의 담당자가 변경되었습니다.`)
   }
 
   const handleSeedDefaults = async () => {
@@ -137,7 +187,7 @@ export default function RecurringTaskTemplateList() {
       <div className="p-3 bg-at-accent-light/40 border border-at-border rounded-xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="text-xs text-at-text-secondary leading-relaxed flex-1">
-            주간·월간·연간 주기로 반복되는 업무를 등록하면, 해당일이 될 때마다 담당자의
+            주간·월간·분기·연간 주기로 반복되는 업무를 등록하면, 해당일이 될 때마다 담당자의
             대시보드에 자동으로 업무가 생성됩니다. 새 템플릿 등록은 <strong>새 업무 할당</strong>{' '}
             버튼에서 <strong>&ldquo;반복 업무로 지정&rdquo;</strong>을 체크하여 만들 수 있습니다.
           </div>
@@ -156,6 +206,47 @@ export default function RecurringTaskTemplateList() {
           </button>
         </div>
       </div>
+
+      {/* 일괄 선택 액션바 */}
+      {canBulk && selectedIds.size > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-at-accent-light border border-at-accent rounded-xl">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-at-accent">
+              {selectedIds.size}개 선택됨
+            </span>
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="text-sm font-medium text-at-accent hover:underline"
+            >
+              {selectedIds.size === templates.length && templates.length > 0
+                ? '전체 해제'
+                : '전체 선택'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={() => setShowBulkAssigneeModal(true)}
+              className="flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              담당자 일괄 변경
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 text-at-error hover:text-at-error hover:bg-at-error-bg border-red-200"
+            >
+              <Trash2 className="w-4 h-4" />
+              일괄 삭제
+            </Button>
+            <Button variant="outline" onClick={clearSelection} className="flex items-center gap-2">
+              <X className="w-4 h-4" />
+              선택 해제
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 에러 */}
       {error && (
@@ -183,70 +274,59 @@ export default function RecurringTaskTemplateList() {
       ) : (
         <div className="bg-white rounded-2xl border border-at-border divide-y divide-at-border">
           {templates.map((template) => {
-            const isInactive = !template.is_active
+            const isChecked = selectedIds.has(template.id)
             return (
               <div
                 key={template.id}
                 className={`px-4 py-3 transition-colors ${
-                  isInactive ? 'opacity-60 bg-at-surface-alt/40' : 'hover:bg-at-surface-alt'
+                  isChecked ? 'bg-at-accent-light/40' : 'hover:bg-at-surface-alt'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  {/* 왼쪽: 정보 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center flex-wrap gap-2 mb-1">
-                      <Repeat className="w-3.5 h-3.5 text-at-accent flex-shrink-0" />
-                      <span className="text-sm font-medium text-at-text truncate">
-                        {template.title}
-                      </span>
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-full ${
-                          PRIORITY_BADGE[template.priority] || PRIORITY_BADGE.medium
-                        }`}
-                      >
-                        {TASK_PRIORITY_LABELS[template.priority]}
-                      </span>
-                      {isInactive && (
-                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-at-surface-alt text-at-text-weak border border-at-border">
-                          일시중지
+                  {/* 왼쪽: 체크박스 + 정보 */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    {canBulk && (
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSelect(template.id)}
+                        className="mt-1 w-4 h-4 rounded border-at-border text-at-accent focus:ring-2 focus:ring-at-accent flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center flex-wrap gap-2 mb-1">
+                        <Repeat className="w-3.5 h-3.5 text-at-accent flex-shrink-0" />
+                        <span className="text-sm font-medium text-at-text truncate">
+                          {template.title}
                         </span>
-                      )}
-                    </div>
-                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-at-text-secondary">
-                      <span className="inline-flex items-center gap-1">
-                        <Repeat className="w-3 h-3" />
-                        {formatRecurrenceRule(template)}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {template.assignee_name || '미지정'}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <CalendarRange className="w-3 h-3" />
-                        {formatDate(template.start_date)}
-                        {template.end_date ? ` ~ ${formatDate(template.end_date)}` : ' ~'}
-                      </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 text-[10px] font-medium rounded-full ${
+                            PRIORITY_BADGE[template.priority] || PRIORITY_BADGE.medium
+                          }`}
+                        >
+                          {TASK_PRIORITY_LABELS[template.priority]}
+                        </span>
+                      </div>
+                      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-at-text-secondary">
+                        <span className="inline-flex items-center gap-1">
+                          <Repeat className="w-3 h-3" />
+                          {formatRecurrenceRule(template)}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {template.assignee_name || '미지정'}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarRange className="w-3 h-3" />
+                          {formatDate(template.start_date)}
+                          {template.end_date ? ` ~ ${formatDate(template.end_date)}` : ' ~'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 오른쪽: 액션 */}
+                  {/* 오른쪽: 편집 / 삭제 (일시정지 제거) */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleActive(template)}
-                      disabled={updatingId === template.id}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-at-text-secondary bg-white hover:bg-at-surface-alt border border-at-border rounded-xl transition-colors disabled:opacity-50"
-                      title={isInactive ? '재개' : '일시중지'}
-                    >
-                      {updatingId === template.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : isInactive ? (
-                        <Play className="w-3.5 h-3.5" />
-                      ) : (
-                        <Pause className="w-3.5 h-3.5" />
-                      )}
-                      <span className="hidden sm:inline">{isInactive ? '재개' : '일시중지'}</span>
-                    </button>
                     <button
                       type="button"
                       onClick={() => setEditing(template)}
@@ -282,6 +362,19 @@ export default function RecurringTaskTemplateList() {
             fetchTemplates()
           }}
           onCancel={() => setEditing(null)}
+        />
+      )}
+
+      {/* 담당자 일괄 변경 모달 */}
+      {showBulkAssigneeModal && (
+        <BulkAssigneeChangeModal
+          selectedCount={selectedIds.size}
+          itemLabel="반복 템플릿"
+          onConfirm={(newAssigneeId) =>
+            recurringTaskTemplateService.bulkUpdateAssignee(Array.from(selectedIds), newAssigneeId)
+          }
+          onClose={() => setShowBulkAssigneeModal(false)}
+          onSuccess={handleBulkAssigneeSuccess}
         />
       )}
     </div>

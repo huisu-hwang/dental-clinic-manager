@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { X, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ensureConnection } from '@/lib/supabase/connectionCheck'
-import { taskService } from '@/lib/bulletinService'
 import { appAlert } from '@/components/ui/AppDialog'
 
 interface StaffMember {
@@ -15,7 +14,14 @@ interface StaffMember {
 
 interface BulkAssigneeChangeModalProps {
   selectedCount: number
-  selectedTaskIds: string[]
+  /** 헤더 타이틀 (default: "담당자 일괄 변경") */
+  title?: string
+  /** 본문 설명에 들어갈 대상 명사 (default: "업무") — "선택된 N건의 {label} 담당자를…" */
+  itemLabel?: string
+  /** 실제 변경 동작 — 호출자가 적절한 service 함수를 주입 */
+  onConfirm: (
+    newAssigneeId: string
+  ) => Promise<{ success: boolean; updatedCount: number; error: string | null }>
   onClose: () => void
   onSuccess: (updatedCount: number) => void
 }
@@ -34,7 +40,9 @@ const roleLabel = (role: string) => {
 
 export default function BulkAssigneeChangeModal({
   selectedCount,
-  selectedTaskIds,
+  title = '담당자 일괄 변경',
+  itemLabel = '업무',
+  onConfirm,
   onClose,
   onSuccess,
 }: BulkAssigneeChangeModalProps) {
@@ -74,10 +82,7 @@ export default function BulkAssigneeChangeModal({
       return
     }
     setLoading(true)
-    const { success, updatedCount, error } = await taskService.bulkUpdateAssignee(
-      selectedTaskIds,
-      newAssigneeId
-    )
+    const { success, updatedCount, error } = await onConfirm(newAssigneeId)
     setLoading(false)
     if (!success) {
       await appAlert(error || '담당자 변경에 실패했습니다.')
@@ -98,7 +103,7 @@ export default function BulkAssigneeChangeModal({
         <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-at-border">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-at-accent" />
-            <h3 className="text-base font-semibold text-at-text">담당자 일괄 변경</h3>
+            <h3 className="text-base font-semibold text-at-text">{title}</h3>
           </div>
           <button
             type="button"
@@ -113,7 +118,7 @@ export default function BulkAssigneeChangeModal({
         <div className="p-6 space-y-4">
           <p className="text-sm text-at-text-secondary">
             선택된 <span className="font-semibold text-at-accent">{selectedCount}건</span>의
-            업무 담당자를 한꺼번에 변경합니다.
+            {' '}{itemLabel} 담당자를 한꺼번에 변경합니다.
           </p>
 
           <div>
@@ -137,10 +142,6 @@ export default function BulkAssigneeChangeModal({
               </select>
             )}
           </div>
-
-          <p className="text-xs text-at-text-weak">
-            변경된 담당자에게는 업무 할당 알림이 발송됩니다.
-          </p>
         </div>
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-at-border">
