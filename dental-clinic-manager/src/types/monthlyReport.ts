@@ -23,16 +23,18 @@ export const AGE_GROUP_LABELS: Record<AgeGroupKey, string> = {
   unknown: '미상',
 }
 
-// 범례/스택 표시 순서: 10대 → 60대+ → (10세 미만/미상)
-// 사용자 요구사항: 10대부터 60대 이상으로 순서대로 배열
+// 범례/스택 표시 순서: 어린 연령대 → 높은 연령대 → 미상
+// 스택 차트에서 맨 아래(=배열 첫 항목)가 가장 어린 연령대,
+// 맨 위가 가장 높은 연령대가 되도록 오름차순 정렬한다.
+// 범례도 동일 순서로 좌측부터 어린 나이 순으로 표시된다.
 export const AGE_GROUP_ORDER: AgeGroupKey[] = [
+  'under_10',
   'teens',
   'twenties',
   'thirties',
   'forties',
   'fifties',
   'sixties_plus',
-  'under_10',
   'unknown',
 ]
 
