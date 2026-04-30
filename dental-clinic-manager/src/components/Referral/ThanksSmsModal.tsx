@@ -89,7 +89,8 @@ export default function ThanksSmsModal({ clinicId, open, onClose, referralId, re
         onSent()
         setTimeout(() => onClose(), 900)
       } else {
-        setError(json.error ?? '발송에 실패했습니다.')
+        const base = json.error ?? '발송에 실패했습니다.'
+        setError(json.hint ? `${base}\n→ ${json.hint}` : base)
       }
     } catch (e) {
       console.error(e)
@@ -147,7 +148,7 @@ export default function ThanksSmsModal({ clinicId, open, onClose, referralId, re
             </>
           )}
 
-          {error && <div className="rounded-lg bg-[var(--at-error-bg)] px-3 py-2 text-sm text-[var(--at-error)]">{error}</div>}
+          {error && <div className="whitespace-pre-line rounded-lg bg-[var(--at-error-bg)] px-3 py-2 text-sm text-[var(--at-error)]">{error}</div>}
           {success && <div className="rounded-lg bg-[var(--at-success-bg)] px-3 py-2 text-sm text-[var(--at-success)]">{success}</div>}
         </div>
 
