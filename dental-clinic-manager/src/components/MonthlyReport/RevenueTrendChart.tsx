@@ -28,8 +28,13 @@ function timelineLabel(year: number, month: number): string {
 
 const MONTH_LABELS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
 
-// 연도별 라인 색상 — 진하기로 시간 흐름 표현 (오래된 → 옅게, 최근 → 진하게)
-const YEAR_COLOR_PALETTE = ['#86efac', '#34d399', '#10b981', '#059669']
+// 연도별 라인 색상 — 각 연도가 색상(hue) 자체로 구분되도록 다른 계열을 사용
+// 인덱스 [-2년, -1년, 올해] 순서. 올해는 별도 강조 처리(strokeWidth/dot 크기)로 구분
+const YEAR_LINE_STYLES = [
+  { stroke: '#94a3b8', strokeDasharray: '6 4' }, // 재작년: slate-400 점선
+  { stroke: '#f59e0b', strokeDasharray: '0' },   // 작년: amber-500 실선
+  { stroke: '#4f46e5', strokeDasharray: '0' },   // 올해(타깃): indigo-600 실선
+]
 
 export default function RevenueTrendChart({ data, targetYear, targetMonth }: RevenueTrendChartProps) {
   const [view, setView] = useState<ViewMode>('timeline')
@@ -165,16 +170,20 @@ export default function RevenueTrendChart({ data, targetYear, targetMonth }: Rev
                   <Legend formatter={(value: string) => `${value}년`} />
                   {overlay.years.map((y, idx) => {
                     const isTargetYear = y === targetYear
+                    const style = YEAR_LINE_STYLES[idx] ?? YEAR_LINE_STYLES[YEAR_LINE_STYLES.length - 1]
                     return (
                       <Line
                         key={y}
                         type="monotone"
                         dataKey={String(y)}
                         name={String(y)}
-                        stroke={YEAR_COLOR_PALETTE[idx + (4 - overlay.years.length)] ?? '#10b981'}
-                        strokeWidth={isTargetYear ? 3 : 2}
-                        dot={{ r: isTargetYear ? 4 : 3 }}
-                        activeDot={{ r: 6 }}
+                        stroke={style.stroke}
+                        strokeWidth={isTargetYear ? 4 : 2}
+                        strokeDasharray={style.strokeDasharray}
+                        dot={isTargetYear
+                          ? { r: 5, fill: style.stroke, stroke: '#ffffff', strokeWidth: 2 }
+                          : { r: 3, fill: style.stroke }}
+                        activeDot={isTargetYear ? { r: 8 } : { r: 6 }}
                         connectNulls={false}
                       />
                     )
