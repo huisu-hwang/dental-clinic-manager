@@ -554,8 +554,6 @@ export default function DashboardHome() {
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* 왼쪽: 메인 콘텐츠 */}
           <div className="flex-1 space-y-4 sm:space-y-5">
-            {/* 오늘의 현황 + 병원 일정 (lg에서 가로 2컬럼) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
             {/* 오늘의 현황 */}
             <div>
               <h3 className="text-sm font-semibold text-at-text mb-3 tracking-[0.08px] flex items-center gap-2">
@@ -682,15 +680,15 @@ export default function DashboardHome() {
                 </div>
               )}
             </div>
-            {/* 병원 일정 */}
-            <ScheduleWidget />
-            </div>
 
             {/* 소개환자 관리 위젯 */}
             <ReferralPendingWidget />
 
-            {/* 내 업무 (일회성 + 반복 업무 인스턴스) */}
-            <MyTasksSection />
+            {/* 내 업무 + 병원 일정 (lg에서 가로 2컬럼) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+              <MyTasksSection />
+              <ScheduleWidget />
+            </div>
 
             {/* 팀 출퇴근 현황 */}
             <div>
