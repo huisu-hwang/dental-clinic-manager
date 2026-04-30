@@ -315,6 +315,12 @@ export async function POST(request: NextRequest) {
     const intradayLast2Days = extractLastNTradingDays(bars, 2)
     const multiDayBars: NormalizedBar[] = dailyBars.length >= 30 ? dailyBars : bars
 
+    // 진행 중인 거래일이 짧으면(장 시작 직후) 알고리즘/VWAP 패턴 인식이 부족함
+    // → 60봉(≈5시간) 미만이면 2거래일치로 fallback (어제 풀 거래일 + 오늘 진행분)
+    const MIN_INTRADAY_BARS = 60
+    const intradayForAlgo =
+      intradayLast1Day.length >= MIN_INTRADAY_BARS ? intradayLast1Day : intradayLast2Days
+
     // 디버그 로그 — 각 윈도우별 봉 수
     console.log('[smart-money/analyze] 데이터 윈도우:', {
       ticker,
@@ -322,12 +328,13 @@ export async function POST(request: NextRequest) {
       total_intraday: bars.length,
       intraday_1day: intradayLast1Day.length,
       intraday_2days: intradayLast2Days.length,
+      intraday_for_algo: intradayForAlgo.length,
       daily: dailyBars.length,
       multiDay: multiDayBars.length,
     })
 
-    // ===== Intraday 1-day 엔진 =====
-    const vwapBars: VWAPInputBar[] = intradayLast1Day.map((b) => ({
+    // ===== Intraday 엔진 (1~2일치 적응) =====
+    const vwapBars: VWAPInputBar[] = intradayForAlgo.map((b) => ({
       high: b.high,
       low: b.low,
       close: b.close,
@@ -335,7 +342,7 @@ export async function POST(request: NextRequest) {
     }))
     vwap = calculateVWAP(vwapBars, currentPrice)
 
-    const algoBars: AlgoBar[] = intradayLast1Day.map((b) => ({
+    const algoBars: AlgoBar[] = intradayForAlgo.map((b) => ({
       datetime: b.datetime,
       open: b.open,
       high: b.high,
@@ -343,8 +350,18 @@ export async function POST(request: NextRequest) {
       close: b.close,
       volume: b.volume,
     }))
-    algoFootprint = analyzeAlgoFootprint(algoBars)
+    // MOO/MOC는 반드시 단일 거래일 기준 — 시·종가 봉이 양 끝에 정확히 있어야 함
+    const auctionBars: AlgoBar[] = intradayLast1Day.map((b) => ({
+      datetime: b.datetime,
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+      volume: b.volume,
+    }))
+    algoFootprint = analyzeAlgoFootprint(algoBars, auctionBars)
 
+    // session은 항상 "현재" 시간대 분류이므로 1일치 유지
     const sessionBars: SessionBar[] = intradayLast1Day.map((b) => ({ ...b }))
     session = analyzeSession(sessionBars, market)
 
