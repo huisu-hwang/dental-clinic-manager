@@ -272,8 +272,16 @@ function detectDirection(bars: AlgoBar[]): 'accumulation' | 'distribution' | 'ne
 
 // ============================================
 // 메인 엔트리
+//
+// bars        : TWAP / VWAP / Iceberg / Sniper 점수 계산용 (1~2 거래일치 권장)
+// auctionBars : MOO / MOC 점수 계산용 (반드시 단일 거래일치 — 시·종가 봉이 양 끝)
+//               생략 시 bars 전체로 계산 (단일 거래일이라 가정).
+//               2일치 이상이면 첫·마지막 봉이 어제·오늘에 걸쳐있어 MOO/MOC가 왜곡됨.
 // ============================================
-export function analyzeAlgoFootprint(bars: AlgoBar[]): AlgoFootprintResult {
+export function analyzeAlgoFootprint(
+  bars: AlgoBar[],
+  auctionBars?: AlgoBar[],
+): AlgoFootprintResult {
   if (!bars || bars.length === 0) {
     return {
       twapScore: 0,
@@ -292,7 +300,9 @@ export function analyzeAlgoFootprint(bars: AlgoBar[]): AlgoFootprintResult {
   const vwapScore = scoreVwap(bars)
   const icebergScore = scoreIceberg(bars)
   const sniperScore = scoreSniper(bars)
-  const { mooScore, mocScore, auctionDirection } = detectAuctionFootprint(bars)
+  const { mooScore, mocScore, auctionDirection } = detectAuctionFootprint(
+    auctionBars && auctionBars.length > 0 ? auctionBars : bars,
+  )
 
   type AlgoLabel = 'TWAP' | 'VWAP' | 'Iceberg' | 'Sniper' | 'MOO' | 'MOC'
   const scores: { algo: AlgoLabel; score: number }[] = [
