@@ -15,6 +15,7 @@ import {
   Repeat,
   X,
   Tag,
+  Trash2,
 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -343,6 +344,23 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
     await appAlert(`${updatedCount}건의 담당자가 변경되었습니다.`)
   }, [clearSelection, fetchTasks, fetchStats])
 
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    const ok = await appConfirm(
+      `선택한 ${selectedIds.size}건의 업무를 삭제하시겠습니까?\n삭제된 업무는 복구할 수 없습니다.`
+    )
+    if (!ok) return
+    const ids = Array.from(selectedIds)
+    const { success, deletedCount, error } = await taskService.bulkDeleteTasks(ids)
+    if (!success) {
+      await appAlert(error || '삭제에 실패했습니다.')
+      return
+    }
+    clearSelection()
+    await Promise.all([fetchTasks(), fetchStats()])
+    await appAlert(`${deletedCount}건의 업무가 삭제되었습니다.`)
+  }, [selectedIds, clearSelection, fetchTasks, fetchStats])
+
   // TaskForm 표시
   if (showForm) {
     return (
@@ -409,13 +427,21 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
                 : '현재 보이는 업무 전체 선택'}
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               onClick={() => setShowBulkAssigneeModal(true)}
               className="flex items-center gap-2"
             >
               <Users className="w-4 h-4" />
               담당자 일괄 변경
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 text-at-error hover:text-at-error hover:bg-at-error-bg border-red-200"
+            >
+              <Trash2 className="w-4 h-4" />
+              일괄 삭제
             </Button>
             <Button variant="outline" onClick={clearSelection} className="flex items-center gap-2">
               <X className="w-4 h-4" />
