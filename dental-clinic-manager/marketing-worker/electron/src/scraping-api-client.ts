@@ -6,28 +6,29 @@ export interface ScrapingJob {
   id: string;
   clinic_id: string;
   data_types: string[];
-  date_from: string;
-  date_to: string;
+  target_year: number;
+  target_month: number;
+  target_date: string | null;
   priority: number;
   retry_count: number;
-  max_retries: number;
 }
 
 export interface HometaxCredentials {
   hometax_user_id: string;
   password: string;
   resident_number?: string;
-  session_data?: { cookies: any[] };
+  session_data?: { cookies: Array<Record<string, unknown>> };
+  session_expires_at?: string | null;
 }
 
 export interface ScrapedDataPayload {
-  job_id: string;
-  clinic_id: string;
-  data_type: string;
-  date_from: string;
-  date_to: string;
-  raw_data: any[];
-  record_count: number;
+  jobId?: string;
+  clinicId: string;
+  dataType: string;
+  year: number;
+  month: number;
+  rawData: Record<string, unknown>[];
+  summary?: { totalCount?: number; totalAmount?: number };
 }
 
 export class ScrapingApiClient {
@@ -77,11 +78,20 @@ export class ScrapingApiClient {
 
   // 인증정보 조회 - GET /api/marketing/worker-api/scraping/credentials/{clinicId}
   async getCredentials(clinicId: string): Promise<HometaxCredentials> {
-    const data = await this.request<{ credentials: HometaxCredentials }>(
-      'GET',
-      `/api/marketing/worker-api/scraping/credentials/${clinicId}`
-    );
-    return data.credentials;
+    const data = await this.request<{
+      userId: string;
+      password: string;
+      residentNumber?: string;
+      sessionData?: { cookies: Array<Record<string, unknown>> } | null;
+      sessionExpiresAt?: string | null;
+    }>('GET', `/api/marketing/worker-api/scraping/credentials/${clinicId}`);
+    return {
+      hometax_user_id: data.userId,
+      password: data.password,
+      resident_number: data.residentNumber,
+      session_data: data.sessionData ?? undefined,
+      session_expires_at: data.sessionExpiresAt ?? null,
+    };
   }
 
   // 데이터 저장 - POST /api/marketing/worker-api/scraping/data
@@ -95,10 +105,11 @@ export class ScrapingApiClient {
     status: string,
     currentJobId?: string
   ): Promise<{ stop_requested: boolean }> {
-    return this.request<{ stop_requested: boolean }>(
+    const data = await this.request<{ ok: boolean; stopRequested: boolean }>(
       'POST',
       '/api/marketing/worker-api/scraping/heartbeat',
-      { worker_id: workerId, status, current_job_id: currentJobId }
+      { workerId, status, currentJobId }
     );
+    return { stop_requested: data.stopRequested ?? false };
   }
 }
