@@ -152,18 +152,11 @@ export default function TaskCardView({
             <div className={`bg-white rounded-2xl border ${style.border} divide-y divide-at-border`}>
               {statusTasks.map((task) => {
                 const isChecked = selectedIds?.has(task.id) ?? false
-                const handleRowClick = () => {
-                  if (selectionMode) {
-                    onToggleSelect?.(task.id)
-                  } else {
-                    onTaskClick(task)
-                  }
-                }
                 const period: TaskPeriod = task.task_period || 'general'
                 return (
                 <div
                   key={task.id}
-                  onClick={handleRowClick}
+                  onClick={() => onTaskClick(task)}
                   className={`px-4 py-3 hover:bg-at-surface-alt cursor-pointer transition-colors group ${isChecked ? 'bg-at-accent-light/40' : ''}`}
                 >
                   {/* 모바일 레이아웃 */}
