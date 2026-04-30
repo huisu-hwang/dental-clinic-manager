@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWorkerApiKey } from '@/lib/marketing/workerApiAuth';
 
-// POST: Job 상태 업데이트
+// POST: Job 상태 업데이트 (워커 → 대시보드)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,10 +12,10 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, result, error: errorMessage, retry } = body as {
+    const { status, result_summary, error_message, retry } = body as {
       status: 'completed' | 'failed';
-      result?: Record<string, unknown>;
-      error?: string;
+      result_summary?: Record<string, unknown>;
+      error_message?: string;
       retry?: boolean;
     };
 
@@ -29,7 +29,7 @@ export async function POST(
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          result: result ?? null,
+          result_summary: result_summary ?? null,
         })
         .eq('id', id);
 
@@ -41,16 +41,21 @@ export async function POST(
         // 재시도: retry_count++ 후 pending으로 되돌림
         const { data: job } = await admin
           .from('scraping_jobs')
-          .select('retry_count')
+          .select('retry_count, max_retries')
           .eq('id', id)
           .single();
+
+        const nextRetryCount = (job?.retry_count ?? 0) + 1;
+        const maxRetries = job?.max_retries ?? 3;
+        const shouldRetry = nextRetryCount < maxRetries;
 
         const { error } = await admin
           .from('scraping_jobs')
           .update({
-            status: 'pending',
-            retry_count: (job?.retry_count ?? 0) + 1,
-            error_message: errorMessage ?? null,
+            status: shouldRetry ? 'pending' : 'failed',
+            retry_count: nextRetryCount,
+            error_message: error_message ?? null,
+            completed_at: shouldRetry ? null : new Date().toISOString(),
           })
           .eq('id', id);
 
@@ -64,7 +69,8 @@ export async function POST(
           .update({
             status: 'failed',
             completed_at: new Date().toISOString(),
-            error_message: errorMessage ?? null,
+            error_message: error_message ?? null,
+            result_summary: result_summary ?? null,
           })
           .eq('id', id);
 
