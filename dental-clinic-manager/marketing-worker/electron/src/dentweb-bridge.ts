@@ -93,53 +93,38 @@ function formatDentwebDate(dateStr: string | null | undefined): string | null {
   return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 }
 
-// TB_환자정보에 존재할 가능성이 있는 내원경로/고객구분 컬럼 후보들
-// 실제 컬럼명을 INFORMATION_SCHEMA 조회로 찾아 매핑
-const ACQUISITION_CHANNEL_CANDIDATES = [
-  'sz내원경로', 'sz경로', 'sz유입경로', 'sz소개', 'sz채널', 'szChannel', 'szRoute', 'sz가입경로'
-];
-const CUSTOMER_TYPE_CANDIDATES = [
-  'sz고객구분', 'sz환자구분', 'sz구분', 'sz분류', 'szType', 'sz고객유형'
-];
-
-let resolvedAcquisitionColumn: string | null = null;
-let resolvedCustomerTypeColumn: string | null = null;
+// 덴트웹 TB_환자정보에는 다음과 같은 INTEGER FK 컬럼이 존재한다 (실측):
+//   n내원경로 → TB_내원경로(nID, sz내용)
+//   n고객구분 → TB_고객구분(nID, sz구분내용)
+//   n고객구분2 → TB_고객구분2(nID, sz구분내용) (보조)
+// 동기화 시 LEFT JOIN으로 텍스트를 가져온다. 컬럼이 없는 버전의 덴트웹을 위해
+// INFORMATION_SCHEMA 사전 점검 후 SELECT를 동적으로 구성한다.
+let hasRouteColumn = false;       // TB_환자정보.n내원경로 존재 여부
+let hasCustomerColumn = false;    // TB_환자정보.n고객구분 존재 여부
+let hasRouteTable = false;        // TB_내원경로 존재 여부
+let hasCustomerTable = false;     // TB_고객구분 존재 여부
 let columnDiscoveryDone = false;
 
 async function discoverPatientColumns(pool: sql.ConnectionPool): Promise<void> {
   if (columnDiscoveryDone) return;
   try {
-    const result = await pool.request().query(`
+    const colResult = await pool.request().query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
       WHERE TABLE_NAME = 'TB_환자정보'
     `);
-    const columnNames = result.recordset.map((r: { COLUMN_NAME: string }) => r.COLUMN_NAME);
-    const lowerSet = new Set(columnNames.map((n) => n.toLowerCase()));
+    const columnNames = new Set(colResult.recordset.map((r: { COLUMN_NAME: string }) => r.COLUMN_NAME));
+    hasRouteColumn = columnNames.has('n내원경로');
+    hasCustomerColumn = columnNames.has('n고객구분');
 
-    for (const candidate of ACQUISITION_CHANNEL_CANDIDATES) {
-      if (lowerSet.has(candidate.toLowerCase())) {
-        resolvedAcquisitionColumn = candidate;
-        break;
-      }
-    }
-    if (!resolvedAcquisitionColumn) {
-      // 부분 일치: 한글 키워드 포함
-      const found = columnNames.find((n) => /경로|채널|유입|소개/.test(n));
-      if (found) resolvedAcquisitionColumn = found;
-    }
+    const tableResult = await pool.request().query(`
+      SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+      WHERE TABLE_NAME IN ('TB_내원경로', 'TB_고객구분')
+    `);
+    const tableNames = new Set(tableResult.recordset.map((r: { TABLE_NAME: string }) => r.TABLE_NAME));
+    hasRouteTable = tableNames.has('TB_내원경로');
+    hasCustomerTable = tableNames.has('TB_고객구분');
 
-    for (const candidate of CUSTOMER_TYPE_CANDIDATES) {
-      if (lowerSet.has(candidate.toLowerCase())) {
-        resolvedCustomerTypeColumn = candidate;
-        break;
-      }
-    }
-    if (!resolvedCustomerTypeColumn) {
-      const found = columnNames.find((n) => /구분|분류|유형/.test(n) && !/성별|진료/.test(n));
-      if (found) resolvedCustomerTypeColumn = found;
-    }
-
-    log('info', `[DentWeb] 컬럼 발견: 내원경로=${resolvedAcquisitionColumn ?? 'none'}, 고객구분=${resolvedCustomerTypeColumn ?? 'none'}`);
+    log('info', `[DentWeb] 컬럼 발견: n내원경로=${hasRouteColumn} (lookup=${hasRouteTable}), n고객구분=${hasCustomerColumn} (lookup=${hasCustomerTable})`);
   } catch (err) {
     log('warn', `[DentWeb] 컬럼 발견 실패 (계속 진행): ${err instanceof Error ? err.message : String(err)}`);
   } finally {
@@ -152,21 +137,12 @@ function formatPatientRow(row: Record<string, unknown>) {
   const genderBit = row['b성별'];
   const gender = genderBit === true || genderBit === 1 ? 'F' : genderBit === false || genderBit === 0 ? 'M' : null;
 
-  const acquisitionChannel = resolvedAcquisitionColumn
-    ? (() => {
-        const v = row[resolvedAcquisitionColumn!];
-        if (typeof v === 'string') return v.trim() || null;
-        return null;
-      })()
-    : null;
+  // SELECT에서 alias로 추출되어 들어오는 텍스트 (없으면 NULL)
+  const rawChannel = row['acquisition_channel'];
+  const acquisitionChannel = typeof rawChannel === 'string' && rawChannel.trim() ? rawChannel.trim() : null;
 
-  const customerType = resolvedCustomerTypeColumn
-    ? (() => {
-        const v = row[resolvedCustomerTypeColumn!];
-        if (typeof v === 'string') return v.trim() || null;
-        return null;
-      })()
-    : null;
+  const rawCustomerType = row['customer_type'];
+  const customerType = typeof rawCustomerType === 'string' && rawCustomerType.trim() ? rawCustomerType.trim() : null;
 
   return {
     dentweb_patient_id: String(row['n환자ID']),
@@ -200,10 +176,15 @@ function formatPatientRow(row: Record<string, unknown>) {
  */
 
 function buildPatientQueryBase(): string {
-  const extraColumns: string[] = [];
-  if (resolvedAcquisitionColumn) extraColumns.push(`p.[${resolvedAcquisitionColumn}]`);
-  if (resolvedCustomerTypeColumn) extraColumns.push(`p.[${resolvedCustomerTypeColumn}]`);
-  const extraSelect = extraColumns.length > 0 ? `,\n    ${extraColumns.join(',\n    ')}` : '';
+  // 내원경로 텍스트: TB_내원경로의 sz내용 (코드 → 텍스트)
+  const channelSelect = (hasRouteColumn && hasRouteTable)
+    ? `(SELECT TOP 1 r.sz내용 FROM TB_내원경로 r WHERE r.nID = p.n내원경로) AS acquisition_channel`
+    : `CAST(NULL AS NVARCHAR(100)) AS acquisition_channel`;
+
+  // 고객구분 텍스트: TB_고객구분의 sz구분내용
+  const customerSelect = (hasCustomerColumn && hasCustomerTable)
+    ? `(SELECT TOP 1 c.sz구분내용 FROM TB_고객구분 c WHERE c.nID = p.n고객구분) AS customer_type`
+    : `CAST(NULL AS NVARCHAR(100)) AS customer_type`;
 
   return `
     SELECT
@@ -214,7 +195,9 @@ function buildPatientQueryBase(): string {
       p.sz생년월일,
       p.b성별,
       p.sz최종내원일,
-      p.sz등록시각${extraSelect},
+      p.sz등록시각,
+      ${channelSelect},
+      ${customerSelect},
       -- 최근 진료 코드 (세부처치내역에서 취소되지 않은 최신 항목)
       (SELECT TOP 1 t.sz수가코드
        FROM TB_세부처치내역 t
