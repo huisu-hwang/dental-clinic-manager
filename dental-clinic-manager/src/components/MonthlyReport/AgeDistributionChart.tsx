@@ -108,7 +108,25 @@ export default function AgeDistributionChart({ data, targetYear, targetMonth }: 
                     }}
                     contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb' }}
                   />
-                  <Legend formatter={(value: string) => AGE_GROUP_LABELS[value as keyof typeof AGE_GROUP_LABELS] ?? value} />
+                  {/*
+                    recharts Legend 기본 정렬이 dataKey 알파벳 순이라 어린 → 높은 연령 순서가 깨진다.
+                    content 커스텀 렌더로 AGE_GROUP_ORDER 그대로 표시.
+                  */}
+                  <Legend
+                    content={() => (
+                      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-2 text-xs text-at-text-secondary">
+                        {AGE_GROUP_ORDER.map((g) => (
+                          <span key={g} className="inline-flex items-center gap-1.5">
+                            <span
+                              className="inline-block w-3 h-3 rounded-sm"
+                              style={{ backgroundColor: AGE_GROUP_COLORS[g] }}
+                            />
+                            {AGE_GROUP_LABELS[g]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  />
                   {AGE_GROUP_ORDER.map((g) => (
                     <Bar
                       key={g}
