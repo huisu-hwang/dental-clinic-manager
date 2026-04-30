@@ -736,6 +736,7 @@ export const taskService = {
           title: input.title,
           description: input.description || null,
           priority: input.priority || 'medium',
+          task_period: input.task_period || 'general',
           assignee_id: input.assignee_id,
           assigner_id: userId,
           due_date: input.due_date || null,
@@ -782,6 +783,7 @@ export const taskService = {
         }
       }
       if (input.priority !== undefined) updateData.priority = input.priority
+      if (input.task_period !== undefined) updateData.task_period = input.task_period
       if (input.assignee_id !== undefined) updateData.assignee_id = input.assignee_id
       if (input.due_date !== undefined) updateData.due_date = input.due_date || null
       if (input.progress !== undefined) updateData.progress = input.progress
@@ -832,6 +834,62 @@ export const taskService = {
     } catch (error) {
       console.error('[taskService.updateTask] Error:', error)
       return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
+   * 다수 업무의 담당자 일괄 변경 (대표 원장 권한)
+   * - 각 업무에 대해 새 담당자에게 알림 전송
+   * - 권한은 RLS UPDATE 정책 + 페이지의 owner 체크로 이중 보호됨
+   */
+  async bulkUpdateAssignee(
+    taskIds: string[],
+    newAssigneeId: string
+  ): Promise<{ success: boolean; updatedCount: number; error: string | null }> {
+    try {
+      if (!taskIds.length) return { success: true, updatedCount: 0, error: null }
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { data: existing, error: fetchErr } = await (supabase as any)
+        .from('tasks')
+        .select('id, title, assignee_id')
+        .in('id', taskIds)
+        .eq('clinic_id', clinicId)
+
+      if (fetchErr) throw fetchErr
+
+      const targetIds = (existing || [])
+        .filter((t: any) => t.assignee_id !== newAssigneeId)
+        .map((t: any) => t.id)
+
+      if (!targetIds.length) {
+        return { success: true, updatedCount: 0, error: null }
+      }
+
+      const { error: updateErr } = await (supabase as any)
+        .from('tasks')
+        .update({ assignee_id: newAssigneeId })
+        .in('id', targetIds)
+
+      if (updateErr) throw updateErr
+
+      const userName = getCurrentUserName()
+      const tasksToNotify = (existing || []).filter((t: any) => targetIds.includes(t.id))
+      tasksToNotify.forEach((t: any) => {
+        userNotificationService
+          .notifyTaskAssigned(newAssigneeId, userName || '관리자', t.title, t.id)
+          .catch((err) => console.error('[taskService.bulkUpdateAssignee] Notify error:', err))
+      })
+
+      return { success: true, updatedCount: targetIds.length, error: null }
+    } catch (error) {
+      console.error('[taskService.bulkUpdateAssignee] Error:', error)
+      return { success: false, updatedCount: 0, error: extractErrorMessage(error) }
     }
   },
 

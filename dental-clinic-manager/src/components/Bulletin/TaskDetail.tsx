@@ -14,18 +14,22 @@ import {
   Loader2,
   Pause,
   XCircle,
-  Eye
+  Eye,
+  UserCog,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { taskService, taskCommentService } from '@/lib/bulletinService'
-import type { Task, TaskStatus, TaskComment } from '@/types/bulletin'
+import { ensureConnection } from '@/lib/supabase/connectionCheck'
+import type { Task, TaskStatus, TaskComment, TaskPeriod } from '@/types/bulletin'
 import {
   TASK_STATUS_LABELS,
   TASK_STATUS_COLORS,
   TASK_PRIORITY_LABELS,
-  TASK_PRIORITY_COLORS
+  TASK_PRIORITY_COLORS,
+  TASK_PERIOD_LABELS,
+  TASK_PERIOD_COLORS,
 } from '@/types/bulletin'
-import { appConfirm } from '@/components/ui/AppDialog'
+import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 import { sanitizeHtml } from '@/utils/sanitize'
 
 interface TaskDetailProps {
@@ -51,6 +55,9 @@ export default function TaskDetail({
   const [submittingComment, setSubmittingComment] = useState(false)
   const [progress, setProgress] = useState(task.progress)
   const [updatingProgress, setUpdatingProgress] = useState(false)
+  const [showAssigneePicker, setShowAssigneePicker] = useState(false)
+  const [staff, setStaff] = useState<Array<{ id: string; name: string; role: string }>>([])
+  const [updatingAssignee, setUpdatingAssignee] = useState(false)
 
   useEffect(() => {
     fetchComments()
@@ -161,6 +168,49 @@ export default function TaskDetail({
   const isAssignee = currentUserId === task.assignee_id
   const isAssigner = currentUserId === task.assigner_id
   const isOwner = currentUser?.role === 'owner'
+  const canChangeAssignee = isOwner || currentUser?.role === 'master_admin'
+
+  const period: TaskPeriod = task.task_period || 'general'
+
+  const openAssigneePicker = async () => {
+    if (staff.length === 0) {
+      try {
+        const supabase = await ensureConnection()
+        if (supabase) {
+          const clinicId =
+            sessionStorage.getItem('dental_clinic_id') || localStorage.getItem('dental_clinic_id')
+          if (clinicId) {
+            const { data } = await (supabase as any)
+              .from('users')
+              .select('id, name, role')
+              .eq('clinic_id', clinicId)
+              .eq('status', 'active')
+              .order('name')
+            setStaff(data || [])
+          }
+        }
+      } catch (err) {
+        console.error('[TaskDetail.openAssigneePicker] Error:', err)
+      }
+    }
+    setShowAssigneePicker(true)
+  }
+
+  const handleAssigneeChange = async (newAssigneeId: string) => {
+    if (!newAssigneeId || newAssigneeId === task.assignee_id) {
+      setShowAssigneePicker(false)
+      return
+    }
+    setUpdatingAssignee(true)
+    const { error } = await taskService.updateTask(task.id, { assignee_id: newAssigneeId })
+    setUpdatingAssignee(false)
+    if (error) {
+      await appAlert(`담당자 변경에 실패했습니다: ${error}`)
+      return
+    }
+    setShowAssigneePicker(false)
+    onRefresh()
+  }
 
   return (
     <div className="space-y-6">
@@ -199,10 +249,15 @@ export default function TaskDetail({
       <div className="bg-white rounded-2xl border border-at-border overflow-hidden">
         {/* 제목 영역 */}
         <div className="p-6 border-b border-at-border">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
             <span className={`text-xs px-2 py-0.5 rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
               {TASK_PRIORITY_LABELS[task.priority]}
             </span>
+            {period !== 'general' && (
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${TASK_PERIOD_COLORS[period]}`}>
+                {TASK_PERIOD_LABELS[period]} 업무
+              </span>
+            )}
             <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
               {getStatusIcon(task.status)}
               {TASK_STATUS_LABELS[task.status]}
@@ -217,11 +272,43 @@ export default function TaskDetail({
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-at-text-weak">담당자</span>
-              <p className="flex items-center gap-1 font-medium text-at-text mt-1">
-                <User className="w-4 h-4" />
-                {task.assignee_name}
-              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-at-text-weak">담당자</span>
+                {canChangeAssignee && task.status !== 'completed' && task.status !== 'cancelled' && (
+                  <button
+                    type="button"
+                    onClick={openAssigneePicker}
+                    className="inline-flex items-center gap-1 text-xs text-at-accent hover:underline"
+                  >
+                    <UserCog className="w-3.5 h-3.5" />
+                    변경
+                  </button>
+                )}
+              </div>
+              {showAssigneePicker ? (
+                <div className="mt-1">
+                  <select
+                    autoFocus
+                    disabled={updatingAssignee}
+                    defaultValue={task.assignee_id}
+                    onChange={(e) => handleAssigneeChange(e.target.value)}
+                    onBlur={() => setShowAssigneePicker(false)}
+                    className="w-full px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent bg-white"
+                  >
+                    {staff.length === 0 && <option>불러오는 중...</option>}
+                    {staff.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <p className="flex items-center gap-1 font-medium text-at-text mt-1">
+                  <User className="w-4 h-4" />
+                  {task.assignee_name}
+                </p>
+              )}
             </div>
             <div>
               <span className="text-at-text-weak">할당자</span>

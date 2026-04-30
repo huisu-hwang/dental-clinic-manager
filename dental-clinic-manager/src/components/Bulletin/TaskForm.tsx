@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { taskService, recurringTaskTemplateService } from '@/lib/bulletinService'
 import { ensureConnection } from '@/lib/supabase/connectionCheck'
-import type { Task, TaskPriority, CreateTaskDto } from '@/types/bulletin'
-import { TASK_PRIORITY_LABELS } from '@/types/bulletin'
+import type { Task, TaskPriority, TaskPeriod, CreateTaskDto } from '@/types/bulletin'
+import { TASK_PRIORITY_LABELS, TASK_PERIOD_LABELS } from '@/types/bulletin'
 import EnhancedTiptapEditor from '@/components/Protocol/EnhancedTiptapEditor'
 import RecurrenceFields, { validateRecurrence, type RecurrenceFieldsValue } from './RecurrenceFields'
 
@@ -32,6 +32,7 @@ export default function TaskForm({
     title: task?.title || '',
     description: task?.description || '',
     priority: task?.priority || 'medium',
+    task_period: task?.task_period || 'general',
     assignee_id: task?.assignee_id || '',
     due_date: task?.due_date || '',
   })
@@ -125,6 +126,7 @@ export default function TaskForm({
         // 오늘 해당 패턴과 일치하면 즉시 첫 인스턴스 생성
         await recurringTaskTemplateService.materializeDueInstances()
       } else {
+        // 일회성 업무: 사용자가 명시한 task_period 그대로 저장 (default 'general')
         const { error: createError } = await taskService.createTask(formData)
         if (createError) throw new Error(createError)
       }
@@ -208,20 +210,40 @@ export default function TaskForm({
           )}
         </div>
 
-        {/* 우선순위 */}
-        <div>
-          <label className="block text-sm font-medium text-at-text-secondary mb-2">
-            우선순위
-          </label>
-          <select
-            value={formData.priority}
-            onChange={(e) => setFormData({ ...formData, priority: e.target.value as TaskPriority })}
-            className="w-full border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-at-accent"
-          >
-            {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+        {/* 우선순위 + 업무 분류 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-at-text-secondary mb-2">
+              우선순위
+            </label>
+            <select
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value as TaskPriority })}
+              className="w-full border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-at-accent"
+            >
+              {Object.entries(TASK_PRIORITY_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 일회성 업무 또는 편집 모드에서만 노출 — 반복 업무는 recurrence_type을 따라감 */}
+          {(!recurrence.enabled || isEditing) && (
+            <div>
+              <label className="block text-sm font-medium text-at-text-secondary mb-2">
+                업무 분류
+              </label>
+              <select
+                value={formData.task_period || 'general'}
+                onChange={(e) => setFormData({ ...formData, task_period: e.target.value as TaskPeriod })}
+                className="w-full border border-at-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-at-accent"
+              >
+                {Object.entries(TASK_PERIOD_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* 마감일 (일회성 업무용) */}

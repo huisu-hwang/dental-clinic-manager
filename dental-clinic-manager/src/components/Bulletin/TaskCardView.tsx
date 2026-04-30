@@ -12,15 +12,20 @@ import {
   Flag,
   Eye,
 } from 'lucide-react'
-import type { Task, TaskStatus, TaskPriority } from '@/types/bulletin'
+import type { Task, TaskStatus, TaskPriority, TaskPeriod } from '@/types/bulletin'
 import {
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
+  TASK_PERIOD_LABELS,
+  TASK_PERIOD_COLORS,
 } from '@/types/bulletin'
 
 interface TaskCardViewProps {
   tasks: Task[]
   onTaskClick: (task: Task) => void
+  selectionMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?: (taskId: string) => void
 }
 
 const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'review', 'completed', 'on_hold', 'cancelled']
@@ -89,7 +94,13 @@ const getAvatarColor = (name: string) => {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
-export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) {
+export default function TaskCardView({
+  tasks,
+  onTaskClick,
+  selectionMode = false,
+  selectedIds,
+  onToggleSelect,
+}: TaskCardViewProps) {
   // 상태별로 그룹핑
   const grouped = STATUS_ORDER.reduce((acc, status) => {
     acc[status] = tasks.filter(t => t.status === status)
@@ -101,11 +112,20 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
 
   if (tasks.length === 0) return null
 
+  // selectionMode면 첫 컬럼(체크박스 36px)을 앞에 추가
+  const colsCompleted = selectionMode
+    ? 'sm:grid-cols-[36px_1fr_120px_120px_120px_100px]'
+    : 'sm:grid-cols-[1fr_120px_120px_120px_100px]'
+  const colsDefault = selectionMode
+    ? 'sm:grid-cols-[36px_1fr_120px_120px_100px]'
+    : 'sm:grid-cols-[1fr_120px_120px_100px]'
+
   return (
     <div className="space-y-6">
       {activeStatuses.map((status) => {
         const style = STATUS_BADGE_STYLES[status]
         const statusTasks = grouped[status]
+        const gridCols = status === 'completed' ? colsCompleted : colsDefault
 
         return (
           <div key={status}>
@@ -119,7 +139,8 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
             </div>
 
             {/* 테이블 헤더 */}
-            <div className={`hidden sm:grid ${status === 'completed' ? 'sm:grid-cols-[1fr_120px_120px_120px_100px]' : 'sm:grid-cols-[1fr_120px_120px_100px]'} gap-4 px-4 py-2 text-xs font-medium text-at-text-weak uppercase tracking-wider`}>
+            <div className={`hidden sm:grid ${gridCols} gap-4 px-4 py-2 text-xs font-medium text-at-text-weak uppercase tracking-wider`}>
+              {selectionMode && <span></span>}
               <span>업무명</span>
               <span>담당자</span>
               <span>마감일</span>
@@ -129,20 +150,46 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
 
             {/* 업무 카드 목록 */}
             <div className={`bg-white rounded-2xl border ${style.border} divide-y divide-at-border`}>
-              {statusTasks.map((task) => (
+              {statusTasks.map((task) => {
+                const isChecked = selectedIds?.has(task.id) ?? false
+                const handleRowClick = () => {
+                  if (selectionMode) {
+                    onToggleSelect?.(task.id)
+                  } else {
+                    onTaskClick(task)
+                  }
+                }
+                const period: TaskPeriod = task.task_period || 'general'
+                return (
                 <div
                   key={task.id}
-                  onClick={() => onTaskClick(task)}
-                  className="px-4 py-3 hover:bg-at-surface-alt cursor-pointer transition-colors group"
+                  onClick={handleRowClick}
+                  className={`px-4 py-3 hover:bg-at-surface-alt cursor-pointer transition-colors group ${isChecked ? 'bg-at-accent-light/40' : ''}`}
                 >
                   {/* 모바일 레이아웃 */}
                   <div className="sm:hidden space-y-2">
                     <div className="flex items-start gap-2">
+                      {selectionMode && (
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => onToggleSelect?.(task.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 w-4 h-4 rounded border-at-border text-at-accent focus:ring-2 focus:ring-at-accent"
+                        />
+                      )}
                       <div className={`mt-0.5 ${style.text}`}>
                         {getStatusIcon(task.status)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-at-text truncate">{task.title}</h4>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-sm font-medium text-at-text truncate">{task.title}</h4>
+                          {period !== 'general' && (
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${TASK_PERIOD_COLORS[period]}`}>
+                              {TASK_PERIOD_LABELS[period]}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 mt-1.5 text-xs text-at-text-weak">
                           <span className="flex items-center gap-1">
                             <User className="w-3 h-3" />
@@ -170,7 +217,18 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                   </div>
 
                   {/* 데스크탑 레이아웃 (테이블 형태) */}
-                  <div className={`hidden sm:grid ${status === 'completed' ? 'sm:grid-cols-[1fr_120px_120px_120px_100px]' : 'sm:grid-cols-[1fr_120px_120px_100px]'} gap-4 items-center`}>
+                  <div className={`hidden sm:grid ${gridCols} gap-4 items-center`}>
+                    {selectionMode && (
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => onToggleSelect?.(task.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-2 focus:ring-at-accent"
+                        />
+                      </div>
+                    )}
                     {/* 업무명 */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`flex-shrink-0 ${style.text}`}>
@@ -180,6 +238,11 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                         <span className="text-sm font-medium text-at-text truncate group-hover:text-at-accent transition-colors">
                           {task.title}
                         </span>
+                        {period !== 'general' && (
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${TASK_PERIOD_COLORS[period]}`}>
+                            {TASK_PERIOD_LABELS[period]}
+                          </span>
+                        )}
                         {task.comments_count > 0 && (
                           <span className="flex items-center gap-0.5 text-xs text-at-text-weak flex-shrink-0">
                             <MessageCircle className="w-3 h-3" />
@@ -236,7 +299,8 @@ export default function TaskCardView({ tasks, onTaskClick }: TaskCardViewProps) 
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )

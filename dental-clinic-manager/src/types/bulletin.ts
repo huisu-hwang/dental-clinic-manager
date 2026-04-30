@@ -114,6 +114,14 @@ export type TaskPriority =
   | 'high'          // 높음
   | 'urgent'        // 긴급
 
+// 업무 분류 (주간/월간/분기별/연간/일반)
+export type TaskPeriod =
+  | 'general'       // 일반 (분류 없음)
+  | 'weekly'        // 주간 업무
+  | 'monthly'       // 월간 업무
+  | 'quarterly'     // 분기별 업무
+  | 'yearly'        // 연간 업무
+
 // 업무 할당
 export interface Task {
   id: string
@@ -122,6 +130,7 @@ export interface Task {
   description?: string
   status: TaskStatus
   priority: TaskPriority
+  task_period?: TaskPeriod     // 업무 분류 (주간/월간/분기/연간/일반)
   assignee_id: string          // 담당자 ID
   assignee_name?: string       // 담당자 이름
   assigner_id: string          // 할당자 ID
@@ -140,6 +149,7 @@ export interface CreateTaskDto {
   title: string
   description?: string
   priority?: TaskPriority
+  task_period?: TaskPeriod
   assignee_id: string
   due_date?: string
 }
@@ -150,6 +160,7 @@ export interface UpdateTaskDto {
   description?: string
   status?: TaskStatus
   priority?: TaskPriority
+  task_period?: TaskPeriod
   assignee_id?: string
   due_date?: string
   progress?: number
@@ -226,12 +237,30 @@ export const TASK_PRIORITY_COLORS: Record<TaskPriority, string> = {
   urgent: 'bg-red-100 text-red-600'
 }
 
+// 업무 분류 라벨
+export const TASK_PERIOD_LABELS: Record<TaskPeriod, string> = {
+  general: '일반',
+  weekly: '주간',
+  monthly: '월간',
+  quarterly: '분기',
+  yearly: '연간',
+}
+
+// 업무 분류 색상 (배지용)
+export const TASK_PERIOD_COLORS: Record<TaskPeriod, string> = {
+  general: 'bg-gray-100 text-gray-600 border-gray-200',
+  weekly: 'bg-sky-50 text-sky-700 border-sky-200',
+  monthly: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  quarterly: 'bg-amber-50 text-amber-700 border-amber-200',
+  yearly: 'bg-rose-50 text-rose-700 border-rose-200',
+}
+
 // =====================================================
 // 반복 업무 템플릿
 // =====================================================
 
 // 반복 주기 유형
-export type RecurrenceType = 'weekly' | 'monthly' | 'yearly'
+export type RecurrenceType = 'weekly' | 'monthly' | 'quarterly' | 'yearly'
 
 // 반복 업무 템플릿
 export interface RecurringTaskTemplate {
@@ -299,7 +328,15 @@ export const WEEKDAY_LABELS: Record<number, string> = {
 export const RECURRENCE_TYPE_LABELS: Record<RecurrenceType, string> = {
   weekly: '주간',
   monthly: '월간',
+  quarterly: '분기',
   yearly: '연간',
+}
+
+// 분기별 반복: recurrence_month는 분기 내 몇 번째 달인지(1=첫 달, 2=둘째 달, 3=셋째 달)
+const QUARTER_OFFSET_LABELS: Record<number, string> = {
+  1: '첫째 달',
+  2: '둘째 달',
+  3: '셋째 달',
 }
 
 // 반복 설정을 사람이 읽을 수 있는 문구로 변환
@@ -309,6 +346,8 @@ export const formatRecurrenceRule = (template: Pick<RecurringTaskTemplate, 'recu
       return `매주 ${WEEKDAY_LABELS[template.recurrence_weekday ?? 0]}요일`
     case 'monthly':
       return `매월 ${template.recurrence_day_of_month ?? 1}일`
+    case 'quarterly':
+      return `매분기 ${QUARTER_OFFSET_LABELS[template.recurrence_month ?? 1] ?? '첫째 달'} ${template.recurrence_day_of_month ?? 1}일`
     case 'yearly':
       return `매년 ${template.recurrence_month ?? 1}월 ${template.recurrence_day_of_month ?? 1}일`
     default:
