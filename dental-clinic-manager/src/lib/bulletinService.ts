@@ -894,6 +894,37 @@ export const taskService = {
   },
 
   /**
+   * 다수 업무 일괄 삭제 (대표 원장 권한)
+   * - 같은 clinic의 업무만 삭제 (RLS + clinic_id 이중 가드)
+   */
+  async bulkDeleteTasks(
+    taskIds: string[]
+  ): Promise<{ success: boolean; deletedCount: number; error: string | null }> {
+    try {
+      if (!taskIds.length) return { success: true, deletedCount: 0, error: null }
+
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      const clinicId = getCurrentClinicId()
+      if (!clinicId) throw new Error('Clinic not found')
+
+      const { error, count } = await (supabase as any)
+        .from('tasks')
+        .delete({ count: 'exact' })
+        .in('id', taskIds)
+        .eq('clinic_id', clinicId)
+
+      if (error) throw error
+
+      return { success: true, deletedCount: count || taskIds.length, error: null }
+    } catch (error) {
+      console.error('[taskService.bulkDeleteTasks] Error:', error)
+      return { success: false, deletedCount: 0, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 업무 삭제
    */
   async deleteTask(id: string): Promise<{ success: boolean; error: string | null }> {
