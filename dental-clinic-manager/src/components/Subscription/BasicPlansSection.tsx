@@ -28,7 +28,7 @@ export default function BasicPlansSection({ plans, current, activeCount, onSelec
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {headcountPlans.map((plan) => {
           const isCurrent = plan.id === currentId
           const isDisabled = plan.max_users != null && plan.max_users < activeCount

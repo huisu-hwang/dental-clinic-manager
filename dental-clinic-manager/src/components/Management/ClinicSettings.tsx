@@ -198,8 +198,7 @@ const [formData, setFormData] = useState<ClinicFormData>({
   const getSubscriptionTierLabel = (tier: string) => {
     const labels = {
       basic: '기본',
-      professional: '프로페셔널',
-      enterprise: '엔터프라이즈'
+      professional: '프로페셔널'
     }
     return labels[tier as keyof typeof labels] || tier
   }

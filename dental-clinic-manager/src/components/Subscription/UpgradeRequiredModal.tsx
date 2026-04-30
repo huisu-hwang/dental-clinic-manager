@@ -51,12 +51,7 @@ export default function UpgradeRequiredModal({ open, onClose, onPayNow, context 
         </DialogHeader>
 
         <div className="space-y-3 text-sm">
-          {plan && plan.name === 'enterprise' ? (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
-              <div className="text-base font-semibold">{plan.display_name}</div>
-              <div className="text-sm text-muted-foreground">{formatPlanPrice(plan)}</div>
-            </div>
-          ) : plan ? (
+          {plan ? (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
               <div className="text-base font-semibold">{plan.display_name}</div>
               <div className="text-sm text-muted-foreground">
@@ -68,9 +63,7 @@ export default function UpgradeRequiredModal({ open, onClose, onPayNow, context 
 
         <DialogFooter className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>나중에 결제</Button>
-          <Button onClick={onPayNow}>
-            {plan?.name === 'enterprise' ? '문의하기' : '지금 결제하기'}
-          </Button>
+          <Button onClick={onPayNow}>지금 결제하기</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
