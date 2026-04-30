@@ -218,6 +218,7 @@ export interface FinancialSummary {
   insurance_expense: number;
   other_expense: number;
   hometax_tracked_expense: number;
+  business_card_purchase: number; // 홈택스 사업용카드 매입 (총 지출에 포함)
 
   // 세금
   income_tax: number;

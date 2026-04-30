@@ -506,6 +506,7 @@ export default function FinancialDashboard() {
                   <div className="space-y-4">
                     {[
                       { label: '인건비', value: summary.personnel_expense, color: 'bg-rose-500' },
+                      { label: '사업용카드 매입', value: summary.business_card_purchase || 0, color: 'bg-indigo-500' },
                       { label: '임대료', value: summary.rent_expense, color: 'bg-purple-500' },
                       { label: '재료비', value: summary.material_expense, color: 'bg-emerald-500' },
                       { label: '유지비', value: summary.utilities_expense, color: 'bg-amber-500' },
