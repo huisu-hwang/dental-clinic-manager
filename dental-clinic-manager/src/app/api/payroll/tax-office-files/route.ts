@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const zipFile = formData.get('zipFile') as File | null
+    const pdfFilesRaw = formData.getAll('pdfFiles')
+    const pdfFiles = pdfFilesRaw.filter((v): v is File => v instanceof File)
     const year = formData.get('year') as string | null
     const month = formData.get('month') as string | null
     const clinicId = formData.get('clinicId') as string | null
@@ -69,10 +71,18 @@ export async function POST(request: NextRequest) {
         { status: 413 }
       )
     }
+    for (const pdf of pdfFiles) {
+      if (pdf.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { success: false, error: `PDF 파일 크기는 10MB 이하여야 합니다. (${pdf.name})` },
+          { status: 413 }
+        )
+      }
+    }
 
-    if (!zipFile || !year || !month || !clinicId || !uploadedBy || !matchesJson) {
+    if ((!zipFile && pdfFiles.length === 0) || !year || !month || !clinicId || !uploadedBy || !matchesJson) {
       return NextResponse.json(
-        { ...result, errors: ['필수 정보가 누락되었습니다. (zipFile, year, month, clinicId, uploadedBy, matches)'] },
+        { ...result, errors: ['필수 정보가 누락되었습니다. (zipFile 또는 pdfFiles, year, month, clinicId, uploadedBy, matches)'] },
         { status: 400 }
       )
     }
@@ -97,9 +107,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ZIP 파일 읽기
-    const zipArrayBuffer = await zipFile.arrayBuffer()
-    const zip = await JSZip.loadAsync(zipArrayBuffer)
+    // ZIP 또는 PDF에서 PDF 바이트를 가져오는 통합 헬퍼
+    const zip = zipFile ? await JSZip.loadAsync(await zipFile.arrayBuffer()) : null
+    const pdfByName = new Map<string, File>()
+    for (const pdf of pdfFiles) {
+      pdfByName.set(pdf.name, pdf)
+    }
+
+    const getPdfArrayBuffer = async (fileName: string): Promise<ArrayBuffer | null> => {
+      if (zip) {
+        let zipEntry = zip.file(fileName)
+        if (!zipEntry) {
+          const baseName = fileName.split('/').pop() || fileName
+          zip.forEach((path, entry) => {
+            if (!entry.dir && (path === fileName || path.endsWith('/' + baseName) || path === baseName)) {
+              zipEntry = entry
+            }
+          })
+        }
+        if (!zipEntry) return null
+        return await zipEntry.async('arraybuffer')
+      }
+      const pdf = pdfByName.get(fileName)
+      if (!pdf) return null
+      return await pdf.arrayBuffer()
+    }
 
     const supabase = getServiceRoleClient()
 
@@ -110,19 +142,9 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // ZIP에서 해당 파일 찾기 (fileName은 ZIP 내부 전체 경로)
-      let zipEntry = zip.file(match.fileName)
-      if (!zipEntry) {
-        // 폴더 구조 없이 파일명으로도 시도
-        const baseName = match.fileName.split('/').pop() || match.fileName
-        zip.forEach((path, entry) => {
-          if (!entry.dir && (path === match.fileName || path.endsWith('/' + baseName) || path === baseName)) {
-            zipEntry = entry
-          }
-        })
-      }
-      if (!zipEntry) {
-        result.errors.push(`파일을 ZIP에서 찾을 수 없음: ${match.fileName}`)
+      const pdfArrayBuffer = await getPdfArrayBuffer(match.fileName)
+      if (!pdfArrayBuffer) {
+        result.errors.push(`파일을 찾을 수 없음: ${match.fileName}`)
         result.skippedCount++
         continue
       }
@@ -131,7 +153,6 @@ export async function POST(request: NextRequest) {
       const displayFileName = match.fileName.split('/').pop() || match.fileName
 
       try {
-        const pdfArrayBuffer = await zipEntry.async('arraybuffer')
         const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' })
 
         const storagePath = `${clinicId}/${paymentYear}/${paymentMonth}/${match.matchedEmployeeId}.pdf`

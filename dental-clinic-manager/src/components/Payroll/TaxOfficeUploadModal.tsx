@@ -50,7 +50,7 @@ export default function TaxOfficeUploadModal({
 }: TaxOfficeUploadModalProps) {
   const currentDate = new Date()
   const [step, setStep] = useState<Step>(1)
-  const [zipFile, setZipFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [year, setYear] = useState(currentDate.getFullYear())
   const [month, setMonth] = useState(currentDate.getMonth() + 1)
@@ -63,9 +63,15 @@ export default function TaxOfficeUploadModal({
   const [uploadResult, setUploadResult] = useState<{ count: number; error?: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const isZipMode =
+    selectedFiles.length === 1 && selectedFiles[0].name.toLowerCase().endsWith('.zip')
+  const isPdfMode =
+    selectedFiles.length > 0 &&
+    selectedFiles.every((f) => f.name.toLowerCase().endsWith('.pdf'))
+
   const resetState = useCallback(() => {
     setStep(1)
-    setZipFile(null)
+    setSelectedFiles([])
     setIsDragging(false)
     setYear(new Date().getFullYear())
     setMonth(new Date().getMonth() + 1)
@@ -103,63 +109,85 @@ export default function TaxOfficeUploadModal({
     [employees]
   )
 
-  const handleFileSelect = useCallback((file: File) => {
-    if (!file.name.toLowerCase().endsWith('.zip')) {
+  const handleFilesSelect = useCallback((filesArr: File[]) => {
+    if (filesArr.length === 0) return
+
+    const allPdf = filesArr.every((f) => f.name.toLowerCase().endsWith('.pdf'))
+    const singleZip =
+      filesArr.length === 1 && filesArr[0].name.toLowerCase().endsWith('.zip')
+
+    if (!singleZip && !allPdf) {
+      setParseError('ZIP 파일 1개 또는 PDF 파일만 선택할 수 있습니다.')
       return
     }
-    setZipFile(file)
+
+    setParseError(null)
+    setSelectedFiles(filesArr)
   }, [])
 
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault()
       setIsDragging(false)
-      const file = e.dataTransfer.files[0]
-      if (file) handleFileSelect(file)
+      const filesArr = Array.from(e.dataTransfer.files)
+      if (filesArr.length > 0) handleFilesSelect(filesArr)
     },
-    [handleFileSelect]
+    [handleFilesSelect]
   )
 
   const handleNext = useCallback(async () => {
-    if (!zipFile) return
+    if (selectedFiles.length === 0) return
     setIsParsing(true)
     setParseError(null)
 
     try {
-      const formData = new FormData()
-      formData.append('zipFile', zipFile)
+      if (isZipMode) {
+        const formData = new FormData()
+        formData.append('zipFile', selectedFiles[0])
 
-      const res = await fetch('/api/payroll/tax-office-files/parse-zip', {
-        method: 'POST',
-        body: formData,
-      })
+        const res = await fetch('/api/payroll/tax-office-files/parse-zip', {
+          method: 'POST',
+          body: formData,
+        })
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || `서버 오류 (${res.status})`)
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || `서버 오류 (${res.status})`)
+        }
+
+        const data = await res.json()
+        const files: { name: string; path: string }[] = data.data ?? []
+        setPdfFiles(files.map((f) => f.name))
+        setMatches(autoMatch(files))
+        setStep(2)
+      } else if (isPdfMode) {
+        const files = selectedFiles.map((f) => ({ name: f.name, path: f.name }))
+        setPdfFiles(files.map((f) => f.name))
+        setMatches(autoMatch(files))
+        setStep(2)
+      } else {
+        throw new Error('ZIP 파일 1개 또는 PDF 파일만 업로드할 수 있습니다.')
       }
-
-      const data = await res.json()
-      const files: { name: string; path: string }[] = data.data ?? []
-      setPdfFiles(files.map(f => f.name))
-      setMatches(autoMatch(files))
-      setStep(2)
     } catch (err) {
-      setParseError(err instanceof Error ? err.message : 'ZIP 파일 파싱 중 오류가 발생했습니다.')
+      setParseError(err instanceof Error ? err.message : '파일 분석 중 오류가 발생했습니다.')
     } finally {
       setIsParsing(false)
     }
-  }, [zipFile, autoMatch])
+  }, [selectedFiles, isZipMode, isPdfMode, autoMatch])
 
   const handleUpload = useCallback(async () => {
-    if (!zipFile) return
+    if (selectedFiles.length === 0) return
     setIsUploading(true)
     setUploadProgress(10)
     setStep(3)
 
     try {
       const formData = new FormData()
-      formData.append('zipFile', zipFile)
+      if (isZipMode) {
+        formData.append('zipFile', selectedFiles[0])
+      } else {
+        selectedFiles.forEach((f) => formData.append('pdfFiles', f))
+      }
       formData.append('year', String(year))
       formData.append('month', String(month))
       formData.append('clinicId', clinicId)
@@ -203,7 +231,7 @@ export default function TaxOfficeUploadModal({
     } finally {
       setIsUploading(false)
     }
-  }, [zipFile, year, month, clinicId, matches])
+  }, [selectedFiles, isZipMode, year, month, clinicId, uploadedBy, matches, employees])
 
   const handleMatchChange = useCallback((fileName: string, employeeId: string) => {
     setMatches((prev) =>
@@ -294,38 +322,53 @@ export default function TaxOfficeUploadModal({
 
               {/* Drag & Drop Zone */}
               <div>
-                <label className="block text-sm font-medium text-at-text-secondary mb-1">ZIP 파일 선택</label>
+                <label className="block text-sm font-medium text-at-text-secondary mb-1">파일 선택</label>
                 <div
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors
-                    ${isDragging ? 'border-blue-400 bg-at-accent-light' : zipFile ? 'border-green-400 bg-at-success-bg' : 'border-at-border hover:border-blue-400 hover:bg-at-accent-light'}`}
+                    ${isDragging ? 'border-blue-400 bg-at-accent-light' : selectedFiles.length > 0 ? 'border-green-400 bg-at-success-bg' : 'border-at-border hover:border-blue-400 hover:bg-at-accent-light'}`}
                 >
-                  {zipFile ? (
+                  {selectedFiles.length > 0 ? (
                     <>
                       <FileText className="w-10 h-10 text-green-500 mb-2" />
-                      <p className="font-medium text-at-success">{zipFile.name}</p>
-                      <p className="text-sm text-at-success mt-1">{formatFileSize(zipFile.size)}</p>
+                      {isZipMode ? (
+                        <>
+                          <p className="font-medium text-at-success">{selectedFiles[0].name}</p>
+                          <p className="text-sm text-at-success mt-1">{formatFileSize(selectedFiles[0].size)}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-medium text-at-success">PDF 파일 {selectedFiles.length}개 선택됨</p>
+                          <p className="text-sm text-at-success mt-1">
+                            총 {formatFileSize(selectedFiles.reduce((sum, f) => sum + f.size, 0))}
+                          </p>
+                          <p className="text-xs text-at-text-weak mt-1 max-w-full truncate">
+                            {selectedFiles.map((f) => f.name).join(', ')}
+                          </p>
+                        </>
+                      )}
                       <p className="text-xs text-at-text-weak mt-2">클릭하여 다른 파일 선택</p>
                     </>
                   ) : (
                     <>
                       <Upload className="w-10 h-10 text-at-text-weak mb-2" />
-                      <p className="text-at-text-secondary font-medium">ZIP 파일을 드래그하거나 클릭하여 선택</p>
-                      <p className="text-sm text-at-text-weak mt-1">.zip 파일만 지원됩니다</p>
+                      <p className="text-at-text-secondary font-medium">ZIP 또는 PDF 파일을 드래그하거나 클릭하여 선택</p>
+                      <p className="text-sm text-at-text-weak mt-1">.zip 1개 또는 .pdf 1개 이상 지원</p>
                     </>
                   )}
                 </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".zip"
+                  accept=".zip,.pdf"
+                  multiple
                   className="hidden"
                   onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleFileSelect(file)
+                    const filesArr = Array.from(e.target.files ?? [])
+                    if (filesArr.length > 0) handleFilesSelect(filesArr)
                     e.target.value = ''
                   }}
                 />
@@ -341,7 +384,7 @@ export default function TaxOfficeUploadModal({
               <div className="flex justify-end">
                 <button
                   onClick={handleNext}
-                  disabled={!zipFile || isParsing}
+                  disabled={selectedFiles.length === 0 || isParsing}
                   className="flex items-center gap-2 px-5 py-2 bg-at-accent text-white rounded-xl text-sm font-medium hover:bg-at-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isParsing ? (
