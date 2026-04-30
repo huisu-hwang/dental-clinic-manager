@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
     const aligoRes = await fetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: formData })
     const aligoJson = (await aligoRes.json()) as { result_code: string; message: string; msg_id?: string }
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[referral sms]', JSON.stringify(aligoJson), 'type:', actualType, 'bytes:', msgBytes)
+    }
+
     const ok = aligoJson.result_code === '1'
 
     await supabase.from('referral_sms_logs').insert({
@@ -80,11 +84,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, msg_id: aligoJson.msg_id })
     }
 
-    let errorMessage = aligoJson.message || '문자 발송에 실패했습니다.'
-    if (errorMessage.includes('ip') || errorMessage.includes('IP') || errorMessage.includes('인증오류')) {
-      errorMessage = 'IP 인증 오류: 알리고 관리자 페이지(smartsms.aligo.in)에서 서버 IP를 등록해주세요.'
+    // 알리고 원본 메시지를 그대로 노출 — 발신번호 LMS 미등록·잔액 부족 등 실제 원인 확인용
+    const aligoMsg = aligoJson.message || '문자 발송에 실패했습니다.'
+    const lower = aligoMsg.toLowerCase()
+    let hint: string | null = null
+    if (lower.includes('인증되지') || lower.includes('등록되지 않은 ip') || lower.includes('등록된 ip')) {
+      hint = '알리고 관리자(smartsms.aligo.in)에서 발송 서버 IP 인증을 해제하거나 현재 IP를 등록해주세요.'
+    } else if (lower.includes('발신번호') || lower.includes('sender')) {
+      hint = `발신번호(${aligo.sender_number})가 알리고에 사전 등록되지 않았거나 LMS/MMS용으로 등록되지 않았습니다.`
+    } else if (lower.includes('잔액') || lower.includes('충전') || lower.includes('포인트')) {
+      hint = '알리고 잔액(포인트)이 부족합니다.'
     }
-    return NextResponse.json({ success: false, error: errorMessage })
+
+    return NextResponse.json({
+      success: false,
+      error: aligoMsg,
+      hint,
+      aligoCode: aligoJson.result_code,
+    })
   } catch (e) {
     console.error('[referral sms] error:', e)
     return NextResponse.json({ success: false, error: '서버 오류가 발생했습니다.' }, { status: 500 })

@@ -8,8 +8,8 @@ import { getSupabase } from '@/lib/supabase'
 
 // 번들 구독 시 포함되는 기능 ID 매핑
 const BUNDLE_FEATURE_MAP: Record<string, readonly string[]> = {
-  'standard-bundle': ['recall', 'ai-analysis', 'financial'],
-  'premium-bundle': ['recall', 'ai-analysis', 'financial', 'marketing'],
+  'standard-bundle': ['recall', 'ai-analysis', 'financial', 'monthly-report', 'referral'],
+  'premium-bundle': ['recall', 'ai-analysis', 'financial', 'monthly-report', 'referral', 'marketing'],
 } as const
 
 export function usePremiumFeatures() {

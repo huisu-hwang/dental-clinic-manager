@@ -18,7 +18,7 @@ export const INVESTMENT_ALLOWED_CLINIC_IDS = [
 ] as const
 
 // 프리미엄 기능 ID 상수
-export const PREMIUM_FEATURE_IDS = ['recall', 'ai-analysis', 'financial', 'marketing', 'investment'] as const
+export const PREMIUM_FEATURE_IDS = ['recall', 'ai-analysis', 'financial', 'monthly-report', 'referral', 'marketing', 'investment'] as const
 export type PremiumFeatureId = typeof PREMIUM_FEATURE_IDS[number]
 
 // 프리미엄 기능 라벨 맵
@@ -26,6 +26,8 @@ export const PREMIUM_FEATURE_LABELS: Record<PremiumFeatureId, string> = {
   'recall': '리콜 관리',
   'ai-analysis': 'AI 데이터 분석',
   'financial': '경영 현황',
+  'monthly-report': '월간 성과 보고서',
+  'referral': '소개환자 관리',
   'marketing': '마케팅 자동화',
   'investment': '주식 자동매매',
 }
@@ -49,31 +51,47 @@ export const PREMIUM_FEATURE_INFO: Record<PremiumFeatureId, {
     title: '리콜 관리',
     description: '미내원 환자를 자동으로 관리하고 리콜 캠페인을 실행합니다.',
     plans: [
-      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황'], recommended: true },
-      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'] },
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리', '마케팅 자동화'] },
     ],
   },
   'ai-analysis': {
     title: 'AI 데이터 분석',
     description: 'AI가 병원 데이터를 분석하여 경영 인사이트를 제공합니다.',
     plans: [
-      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황'], recommended: true },
-      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'] },
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리', '마케팅 자동화'] },
     ],
   },
   'financial': {
     title: '경영 현황',
     description: '수입/지출을 체계적으로 관리하고 손익을 분석합니다.',
     plans: [
-      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황'], recommended: true },
-      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'] },
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리', '마케팅 자동화'] },
+    ],
+  },
+  'monthly-report': {
+    title: '월간 성과 보고서',
+    description: '병원 매출·환자·연령대 등 핵심 지표를 한 페이지로 자동 정리합니다.',
+    plans: [
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리', '마케팅 자동화'] },
+    ],
+  },
+  'referral': {
+    title: '소개환자 관리',
+    description: '소개 관계와 가족 그룹을 추적하고, 자동 감사문자·포인트 적립으로 소개를 활성화합니다.',
+    plans: [
+      { planFeatureId: 'standard-bundle', name: '스탠다드', priceLabel: '월 99,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리', '마케팅 자동화'] },
     ],
   },
   'marketing': {
     title: '마케팅 자동화',
     description: '네이버 블로그 임상글을 AI로 자동 생성하고 관리합니다.',
     plans: [
-      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '마케팅 자동화'], recommended: true },
+      { planFeatureId: 'premium-bundle', name: '프리미엄', priceLabel: '월 499,000원', includes: ['리콜 관리', 'AI 데이터 분석', '경영 현황', '월간 성과 보고서', '소개환자 관리', '마케팅 자동화'], recommended: true },
     ],
   },
   'investment': {
@@ -329,6 +347,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     categoryId: 'operations',
     order: 15.5,
     visible: true,
+    premiumFeature: true,
   },
   {
     id: 'referral',
@@ -339,6 +358,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     categoryId: 'operations',
     order: 15.7,
     visible: true,
+    premiumFeature: true,
   },
   {
     id: 'marketing',
