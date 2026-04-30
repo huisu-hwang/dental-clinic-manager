@@ -1,30 +1,27 @@
 // src/lib/subscriptionPlans.ts
 import type { SubscriptionPlan } from '@/types/subscription'
 
-export type HeadcountPlanName = 'free' | 'starter' | 'growth' | 'pro' | 'enterprise'
+export type HeadcountPlanName = 'free' | 'starter' | 'growth' | 'pro'
 
 /**
  * 총 재직자 수에 맞는 헤드카운트 플랜 이름을 반환한다.
- * 경계: Free 1~4, Starter 5~10, Growth 11~20, Pro 21~50, Enterprise 51+
+ * 경계: Free 1~4, Starter 5~10, Growth 11~20, Pro 21+
  */
 export function findPlanByHeadcount(total: number): HeadcountPlanName {
   if (total <= 4) return 'free'
   if (total <= 10) return 'starter'
   if (total <= 20) return 'growth'
-  if (total <= 50) return 'pro'
-  return 'enterprise'
+  return 'pro'
 }
 
 /**
  * 플랜 가격을 일관된 문구로 포맷한다.
  * - 주식 자동매매(feature_id='investment'): "수익의 5%"
- * - Enterprise: "맞춤 문의"
  * - price=0: "무료"
  * - 그 외: "월 N,NNN원"
  */
 export function formatPlanPrice(plan: Pick<SubscriptionPlan, 'name' | 'price' | 'feature_id'>): string {
   if (plan.feature_id === 'investment') return '수익의 5%'
-  if (plan.name === 'enterprise') return '맞춤 문의'
   if (plan.price === 0) return '무료'
   return `월 ${plan.price.toLocaleString()}원`
 }

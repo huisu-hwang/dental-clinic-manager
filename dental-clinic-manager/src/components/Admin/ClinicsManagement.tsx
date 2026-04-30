@@ -26,7 +26,7 @@ export default function ClinicsManagement() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'cancelled'>('all')
-  const [filterTier, setFilterTier] = useState<'all' | 'basic' | 'professional' | 'enterprise'>('all')
+  const [filterTier, setFilterTier] = useState<'all' | 'basic' | 'professional'>('all')
   const [selectedClinic, setSelectedClinic] = useState<ExtendedClinic | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [error, setError] = useState('')
@@ -96,7 +96,7 @@ export default function ClinicsManagement() {
               phone: '02-2072-2114',
               email: 'info@snudh.org',
               business_number: '234-56-78901',
-              subscription_tier: 'enterprise',
+              subscription_tier: 'professional',
               subscription_expires_at: '2025-03-31',
               max_users: 50,
               status: 'active',
@@ -217,8 +217,7 @@ export default function ClinicsManagement() {
       if (!revenueError && clinicsForRevenue) {
         const tierPrices = {
           basic: 50000,
-          professional: 150000,
-          enterprise: 500000
+          professional: 150000
         }
 
         monthlyRevenue = clinicsForRevenue.reduce((total: number, clinic: any) => {
@@ -345,13 +344,11 @@ export default function ClinicsManagement() {
   const getTierBadge = (tier: string) => {
     const badges = {
       basic: 'bg-at-surface-alt text-at-text',
-      professional: 'bg-at-tag text-at-accent',
-      enterprise: 'bg-purple-100 text-purple-800'
+      professional: 'bg-at-tag text-at-accent'
     }
     const labels = {
       basic: '기본',
-      professional: '프로페셔널',
-      enterprise: '엔터프라이즈'
+      professional: '프로페셔널'
     }
     return (
       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${badges[tier as keyof typeof badges] || 'bg-at-surface-alt text-at-text'}`}>
@@ -453,7 +450,6 @@ export default function ClinicsManagement() {
                 <option value="all">모든 플랜</option>
                 <option value="basic">기본</option>
                 <option value="professional">프로페셔널</option>
-                <option value="enterprise">엔터프라이즈</option>
               </select>
             </div>
           </div>
@@ -610,7 +606,6 @@ export default function ClinicsManagement() {
                     >
                       <option value="basic">기본</option>
                       <option value="professional">프로페셔널</option>
-                      <option value="enterprise">엔터프라이즈</option>
                     </select>
                   </div>
                   <div>

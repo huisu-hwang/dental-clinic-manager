@@ -136,14 +136,10 @@ INSERT INTO subscription_plans (name, display_name, type, min_users, max_users, 
    '11~20인 사업장',
    '["기본 대시보드", "직원 관리", "출퇴근 관리", "게시판", "스케줄 관리", "리콜 관리"]',
    2),
-  ('pro', 'Pro', 'headcount', 21, 50, 149000,
-   '21~50인 사업장',
+  ('pro', 'Pro', 'headcount', 21, 9999, 149000,
+   '21인 이상 사업장',
    '["기본 대시보드", "직원 관리", "출퇴근 관리", "게시판", "스케줄 관리", "리콜 관리", "급여 관리"]',
-   3),
-  ('enterprise', 'Enterprise', 'headcount', 51, 9999, 0,
-   '51인 이상 맞춤 계약',
-   '["Pro 플랜 전체 기능", "전담 지원", "맞춤 계약"]',
-   4)
+   3)
 ON CONFLICT (name) DO NOTHING;
 
 -- 11. 기본 기능별 프리미엄 플랜 데이터

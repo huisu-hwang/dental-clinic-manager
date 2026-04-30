@@ -492,7 +492,7 @@ export async function getSubscriptionStatus(clinicId: string): Promise<Subscript
     plan,
     payments,
     isFreePlan,
-    canUpgrade: isFreePlan || (plan?.type === 'headcount' && plan.name !== 'enterprise'),
+    canUpgrade: isFreePlan || plan?.type === 'headcount',
     daysUntilExpiry,
   }
 }

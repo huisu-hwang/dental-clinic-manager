@@ -1,5 +1,5 @@
 export type UserRole = 'master_admin' | 'owner' | 'vice_director' | 'manager' | 'team_leader' | 'staff'
-export type SubscriptionTier = 'basic' | 'professional' | 'enterprise'
+export type SubscriptionTier = 'basic' | 'professional'
 export type ClinicStatus = 'active' | 'suspended' | 'cancelled'
 
 export interface User {
