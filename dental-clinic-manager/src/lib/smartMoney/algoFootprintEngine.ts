@@ -122,9 +122,13 @@ function scoreIceberg(bars: AlgoBar[]): number {
     }
   }
 
-  // 4 클러스터 → 0점, 8 → ~50점, 12 이상 → 100점
-  if (bestCluster < 4) return 0
-  return Math.max(0, Math.min(100, ((bestCluster - 4) / 8) * 100))
+  // 데이터 양에 비례한 임계값 — 봉 수의 5%(min 4) → 0점, 15%(min 12) → 100점
+  // (5분봉 78봉: 4~12, 1분봉 780봉: 39~117)
+  const minCluster = Math.max(4, Math.ceil(bars.length * 0.05))
+  const maxCluster = Math.max(12, Math.ceil(bars.length * 0.15))
+  if (bestCluster < minCluster) return 0
+  const range = Math.max(1, maxCluster - minCluster)
+  return Math.max(0, Math.min(100, ((bestCluster - minCluster) / range) * 100))
 }
 
 // ============================================
