@@ -7,12 +7,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { estimateTax } from '@/utils/taxCalculator';
 import type { ClinicTaxSettings } from '@/types/financial';
+import { extractMonthAmount } from '@/utils/hometaxAmount';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function getServiceClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// 홈택스 사업용카드 매입금액 조회 (해당 월 데이터만)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function loadBusinessCardPurchase(supabase: any, clinicId: string, year: number, month: number): Promise<number> {
+  const { data } = await supabase
+    .from('hometax_raw_data')
+    .select('raw_data')
+    .eq('clinic_id', clinicId)
+    .eq('year', year)
+    .eq('month', month)
+    .eq('data_type', 'business_card_purchase')
+    .maybeSingle();
+
+  if (!data?.raw_data) return 0;
+  const records = Array.isArray(data.raw_data) ? data.raw_data : [];
+  return extractMonthAmount(records as Record<string, unknown>[], year, month);
 }
 
 // clinic_tax_settings 조회 (없으면 null → 기본값으로 동작)
@@ -114,6 +132,7 @@ export async function GET(request: NextRequest) {
         syncPending,
         ytdMonths,
         settings,
+        businessCardPurchase,
       ] = await Promise.all([
         // 1. 재무 요약 조회
         supabase
@@ -137,6 +156,8 @@ export async function GET(request: NextRequest) {
         loadYtdMonths(supabase, clinicId, yearNum, monthNum),
         // 5. 세무 설정
         loadTaxSettings(supabase, clinicId),
+        // 6. 홈택스 사업용카드 매입 (총 지출 합산용)
+        loadBusinessCardPurchase(supabase, clinicId, yearNum, monthNum),
       ]);
 
       const { data, error } = summaryResult;
@@ -147,12 +168,29 @@ export async function GET(request: NextRequest) {
 
       const revenueRecord = revenueResult.data;
 
-      const ytdNetIncome = ytdMonths.reduce(
+      // 사업용카드 매입을 총 지출에 합산 (별도 카테고리로 분류 — 기존 expense_records와 중복 없음)
+      const baseExpense = Number(data?.total_expense || 0);
+      const totalExpenseWithCard = baseExpense + businessCardPurchase;
+      const totalRevenue = Number(data?.total_revenue || 0);
+      const preTaxProfit = totalRevenue - totalExpenseWithCard;
+
+      // YTD 누적 순이익에도 사업용카드 매입 반영
+      const ytdMonthsWithCard = await Promise.all(
+        ytdMonths.map(async m => {
+          const cardAmount = await loadBusinessCardPurchase(supabase, clinicId, yearNum, m.month);
+          return {
+            ...m,
+            total_expense: (m.total_expense || 0) + cardAmount,
+          };
+        })
+      );
+
+      const ytdNetIncome = ytdMonthsWithCard.reduce(
         (sum, m) => sum + ((m.total_revenue || 0) - (m.total_expense || 0)),
         0
       );
-      const elapsed = ytdMonths.length > 0
-        ? Math.max(...ytdMonths.map(m => m.month))
+      const elapsed = ytdMonthsWithCard.length > 0
+        ? Math.max(...ytdMonthsWithCard.map(m => m.month))
         : monthNum;
       const est = estimateTax(ytdNetIncome, settings, elapsed);
 
@@ -161,6 +199,9 @@ export async function GET(request: NextRequest) {
         sync_pending: syncPending,
         data: {
           ...(data || {}),
+          total_expense: totalExpenseWithCard,
+          business_card_purchase: businessCardPurchase,
+          pre_tax_profit: preTaxProfit,
           revenue_source_type: revenueRecord?.source_type || null,
           ytd_net_income: est.ytd_net_income,
           estimated_taxable_income: est.estimated_taxable_income,
