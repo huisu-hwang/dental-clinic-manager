@@ -86,6 +86,34 @@ function dedupeByDateAndTitle(events: ScheduleEvent[]): ScheduleEvent[] {
   return result
 }
 
+function nextDayIso(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`)
+  d.setDate(d.getDate() + 1)
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
+// 같은 source/title을 가진 연속 단일일(또는 인접 기간) 이벤트를 단일 기간 이벤트로 병합.
+// holidayService가 clinic 휴무 기간을 개별 일짜로 펼쳐 반환하므로, 위젯에서 다시 합쳐서 보여준다.
+function mergeConsecutiveSameTitle(events: ScheduleEvent[]): ScheduleEvent[] {
+  const sorted = [...events].sort((a, b) => a.startDate.localeCompare(b.startDate))
+  const result: ScheduleEvent[] = []
+  for (const ev of sorted) {
+    const last = result[result.length - 1]
+    if (
+      last &&
+      last.source === ev.source &&
+      last.title === ev.title &&
+      last.badgeKind === ev.badgeKind &&
+      (last.endDate === ev.startDate || nextDayIso(last.endDate) === ev.startDate)
+    ) {
+      last.endDate = ev.endDate > last.endDate ? ev.endDate : last.endDate
+      continue
+    }
+    result.push({ ...ev })
+  }
+  return result
+}
+
 interface UseScheduleDataResult {
   events: ScheduleEvent[]
   loading: boolean
@@ -207,7 +235,9 @@ export function useScheduleData(
         }
 
         const merged = sortEvents(
-          dedupeByDateAndTitle([...annEvents, ...clinicHolidayEvents, ...publicHolidayEvents])
+          mergeConsecutiveSameTitle(
+            dedupeByDateAndTitle([...annEvents, ...clinicHolidayEvents, ...publicHolidayEvents])
+          )
         )
 
         if (!controller.signal.aborted) {

@@ -16,6 +16,7 @@ import {
 } from '@/types/monthlyReport'
 
 const MONTH_WINDOW = 12
+const REVENUE_MONTH_WINDOW = 36 // 매출은 최근 3개년 추이로 표시
 
 /**
  * 직전 N개월 윈도우의 (year, month) 시퀀스를 오래된 순으로 반환.
@@ -296,8 +297,8 @@ export interface GenerateMonthlyReportInput {
 }
 
 /**
- * 보고서 생성: 매출/신환/유입경로/연령대 12개월 데이터 집계 후 monthly_reports에 upsert.
- * 기존 row가 있으면 덮어쓴다.
+ * 보고서 생성: 매출은 36개월(3개년), 그 외(신환/유입경로/연령대)는 12개월 윈도우로
+ * 집계한 후 monthly_reports에 upsert. 기존 row가 있으면 덮어쓴다.
  */
 export async function generateMonthlyReport({
   supabase,
@@ -307,9 +308,10 @@ export async function generateMonthlyReport({
   generatedBy,
 }: GenerateMonthlyReportInput): Promise<MonthlyReport> {
   const range = buildMonthRange(year, month, MONTH_WINDOW)
+  const revenueRange = buildMonthRange(year, month, REVENUE_MONTH_WINDOW)
 
   const [revenue, patients] = await Promise.all([
-    fetchRevenueSeries(supabase, clinicId, range),
+    fetchRevenueSeries(supabase, clinicId, revenueRange),
     fetchPatientsForRange(supabase, clinicId, range),
   ])
 

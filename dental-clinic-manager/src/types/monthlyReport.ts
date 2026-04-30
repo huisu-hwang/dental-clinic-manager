@@ -23,26 +23,30 @@ export const AGE_GROUP_LABELS: Record<AgeGroupKey, string> = {
   unknown: '미상',
 }
 
+// 범례/스택 표시 순서: 10대 → 60대+ → (10세 미만/미상)
+// 사용자 요구사항: 10대부터 60대 이상으로 순서대로 배열
 export const AGE_GROUP_ORDER: AgeGroupKey[] = [
-  'under_10',
   'teens',
   'twenties',
   'thirties',
   'forties',
   'fifties',
   'sixties_plus',
+  'under_10',
   'unknown',
 ]
 
+// 색상 팔레트: 10대 → 60대+ 인접 그룹 간 색상 차이를 명확히 구분
+// (이전 보라/파랑/보라 중복 → 컬러 휠을 균등 분할)
 export const AGE_GROUP_COLORS: Record<AgeGroupKey, string> = {
-  under_10: '#a78bfa',
-  teens: '#60a5fa',
-  twenties: '#34d399',
-  thirties: '#fbbf24',
-  forties: '#fb923c',
-  fifties: '#f87171',
-  sixties_plus: '#c084fc',
-  unknown: '#9ca3af',
+  teens: '#0ea5e9',         // sky-500 - 청록색 (10대)
+  twenties: '#10b981',      // emerald-500 - 녹색 (20대)
+  thirties: '#eab308',      // yellow-500 - 노랑 (30대)
+  forties: '#f97316',       // orange-500 - 주황 (40대)
+  fifties: '#dc2626',       // red-600 - 빨강 (50대)
+  sixties_plus: '#7c3aed',  // violet-600 - 진보라 (60대+)
+  under_10: '#ec4899',      // pink-500 - 분홍 (10세 미만)
+  unknown: '#6b7280',       // gray-500 - 회색 (미상)
 }
 
 export interface MonthlyRevenuePoint {
