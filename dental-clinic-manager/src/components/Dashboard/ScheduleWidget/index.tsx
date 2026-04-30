@@ -36,7 +36,7 @@ export default function ScheduleWidget() {
   const todayIso = useMemo(() => todayIsoSeoul(), [])
   const anchorDate = useMemo(() => new Date(`${todayIso}T00:00:00`), [todayIso])
 
-  const { events, loading } = useScheduleData(user?.clinic_id ?? null, activeTab, anchorDate)
+  const { events, loading, range } = useScheduleData(user?.clinic_id ?? null, activeTab, anchorDate)
 
   const handleItemClick = (ev: ScheduleEvent) => {
     if (ev.source !== 'announcement' || !ev.announcementId) return
@@ -82,10 +82,10 @@ export default function ScheduleWidget() {
           <TodayView events={events} loading={loading} todayIso={todayIso} onItemClick={handleItemClick} />
         )}
         {activeTab === 'week' && (
-          <WeekView events={events} loading={loading} todayIso={todayIso} onItemClick={handleItemClick} />
+          <WeekView events={events} loading={loading} todayIso={todayIso} rangeStart={range.start} onItemClick={handleItemClick} />
         )}
         {activeTab === 'month' && (
-          <MonthView events={events} loading={loading} todayIso={todayIso} onItemClick={handleItemClick} />
+          <MonthView events={events} loading={loading} todayIso={todayIso} rangeStart={range.start} onItemClick={handleItemClick} />
         )}
       </CardContent>
       <ScheduleDetailModal event={modalEvent} open={modalOpen} onOpenChange={setModalOpen} />

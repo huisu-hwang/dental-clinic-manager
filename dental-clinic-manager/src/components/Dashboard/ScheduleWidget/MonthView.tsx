@@ -9,37 +9,24 @@ interface MonthViewProps {
   events: ScheduleEvent[]
   loading: boolean
   todayIso: string
+  rangeStart: string
   onItemClick: (event: ScheduleEvent) => void
 }
 
-function expandEventToDates(ev: ScheduleEvent): string[] {
-  const dates: string[] = []
-  const start = new Date(`${ev.startDate}T00:00:00`)
-  const end = new Date(`${ev.endDate}T00:00:00`)
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const dy = String(d.getDate()).padStart(2, '0')
-    dates.push(`${y}-${m}-${dy}`)
-  }
-  return dates
-}
-
-function groupByDate(events: ScheduleEvent[]): Map<string, ScheduleEvent[]> {
+// 윈도우 내 첫 등장일에 한 번만 등록 (연속 일정을 단일 항목으로 표시)
+function groupByDate(events: ScheduleEvent[], rangeStart: string): Map<string, ScheduleEvent[]> {
   const map = new Map<string, ScheduleEvent[]>()
   for (const ev of events) {
-    const dates = expandEventToDates(ev)
-    for (const d of dates) {
-      const list = map.get(d) || []
-      list.push(ev)
-      map.set(d, list)
-    }
+    const placement = ev.startDate < rangeStart ? rangeStart : ev.startDate
+    const list = map.get(placement) || []
+    list.push(ev)
+    map.set(placement, list)
   }
   return map
 }
 
-export default function MonthView({ events, loading, todayIso, onItemClick }: MonthViewProps) {
-  const groups = useMemo(() => groupByDate(events), [events])
+export default function MonthView({ events, loading, todayIso, rangeStart, onItemClick }: MonthViewProps) {
+  const groups = useMemo(() => groupByDate(events, rangeStart), [events, rangeStart])
 
   if (loading) {
     return (
