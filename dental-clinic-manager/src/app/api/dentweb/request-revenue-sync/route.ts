@@ -6,8 +6,9 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 /**
  * POST: 특정 월 또는 전체 과거 데이터 수입 동기화 요청
- * - mode: 'single' (단일 월) 또는 'backfill' (직전 N개월, default 24)
- * - months_back: backfill 모드에서 직전 몇 개월을 채울지 (1~48, default 24)
+ * - mode: 'single' (단일 월), 'backfill' (직전 N개월), 'all' (덴트웹의 모든 과거 매출)
+ * - months_back: backfill 모드에서 직전 몇 개월을 채울지 (1~360, default 24)
+ *   * all 모드는 360개월(30년) 윈도우로 자동 확장하여 사실상 모든 데이터를 끌어온다
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,10 +37,12 @@ export async function POST(request: NextRequest) {
 
     let newMonths: Array<{ year: number; month: number }> = []
 
-    if (mode === 'backfill') {
-      // 직전 N개월 (default 24, 최대 48) — 월간 보고서 12개월 윈도우 + 여유분
-      const requestedBack = Number.isFinite(Number(months_back)) ? parseInt(months_back) : 24
-      const monthsBack = Math.max(1, Math.min(48, requestedBack))
+    if (mode === 'backfill' || mode === 'all') {
+      // backfill: 직전 N개월 (default 24, 최대 360 = 30년)
+      // all: 360개월 강제 (덴트웹에 있는 사실상 모든 매출)
+      const defaultBack = mode === 'all' ? 360 : 24
+      const requestedBack = Number.isFinite(Number(months_back)) ? parseInt(months_back) : defaultBack
+      const monthsBack = Math.max(1, Math.min(360, requestedBack))
       const now = new Date()
       for (let i = monthsBack; i >= 1; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
