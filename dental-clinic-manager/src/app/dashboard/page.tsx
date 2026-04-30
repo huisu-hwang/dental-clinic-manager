@@ -841,7 +841,9 @@ export default function DashboardPage() {
 
           {/* 소개환자 관리 */}
           {activeTab === 'referral' && (
-            <ReferralManagement />
+            <PremiumGate featureId="referral">
+              <ReferralManagement />
+            </PremiumGate>
           )}
 
           {/* 업무 체크리스트 */}
