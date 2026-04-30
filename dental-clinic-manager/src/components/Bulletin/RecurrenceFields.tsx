@@ -47,14 +47,24 @@ export default function RecurrenceFields({
 
   const handleTypeChange = (type: RecurrenceType) => {
     // 주기 변경 시 이전 주기 필드 초기화
+    // quarterly: recurrence_month는 분기 내 몇 번째 달(1~3), recurrence_day_of_month는 일자
+    let nextMonth: number | undefined
+    if (type === 'yearly') {
+      nextMonth = value.recurrence_month ?? new Date().getMonth() + 1
+    } else if (type === 'quarterly') {
+      const m = value.recurrence_month
+      nextMonth = m && m >= 1 && m <= 3 ? m : 1
+    } else {
+      nextMonth = undefined
+    }
     update({
       recurrence_type: type,
       recurrence_weekday: type === 'weekly' ? (value.recurrence_weekday ?? new Date().getDay()) : undefined,
       recurrence_day_of_month:
-        type === 'monthly' || type === 'yearly'
+        type === 'monthly' || type === 'yearly' || type === 'quarterly'
           ? (value.recurrence_day_of_month ?? new Date().getDate())
           : undefined,
-      recurrence_month: type === 'yearly' ? (value.recurrence_month ?? new Date().getMonth() + 1) : undefined,
+      recurrence_month: nextMonth,
     })
   }
 
@@ -157,6 +167,40 @@ export default function RecurrenceFields({
             </div>
           )}
 
+          {/* 분기별: 분기 내 N번째 달 + 일자 */}
+          {value.recurrence_type === 'quarterly' && (
+            <div>
+              <label className="block text-sm font-medium text-at-text mb-1.5">
+                매분기 <span className="text-at-error">*</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={value.recurrence_month ?? 1}
+                  onChange={(e) => update({ recurrence_month: Number(e.target.value) })}
+                  className="px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors bg-white"
+                >
+                  <option value={1}>첫째 달</option>
+                  <option value={2}>둘째 달</option>
+                  <option value={3}>셋째 달</option>
+                </select>
+                <select
+                  value={value.recurrence_day_of_month ?? ''}
+                  onChange={(e) => update({ recurrence_day_of_month: Number(e.target.value) })}
+                  className="w-24 px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors bg-white"
+                >
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                    <option key={day} value={day}>
+                      {day}일
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-at-text-weak mt-1.5">
+                * 분기는 1·2·3월 / 4·5·6월 / 7·8·9월 / 10·11·12월 기준입니다.
+              </p>
+            </div>
+          )}
+
           {/* 연간: 월·일 선택 */}
           {value.recurrence_type === 'yearly' && (
             <div>
@@ -235,6 +279,12 @@ export function validateRecurrence(value: RecurrenceFieldsValue): string | null 
       }
       break
     case 'monthly':
+      if (!value.recurrence_day_of_month) return '반복할 일자를 선택해주세요.'
+      break
+    case 'quarterly':
+      if (!value.recurrence_month || value.recurrence_month < 1 || value.recurrence_month > 3) {
+        return '분기 내 반복할 달(첫째/둘째/셋째)을 선택해주세요.'
+      }
       if (!value.recurrence_day_of_month) return '반복할 일자를 선택해주세요.'
       break
     case 'yearly':

@@ -13,20 +13,25 @@ import {
   CalendarDays,
   Users,
   Repeat,
+  CheckSquare,
+  X,
+  Tag,
 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { taskService } from '@/lib/bulletinService'
-import type { Task, TaskStatus, TaskPriority } from '@/types/bulletin'
+import type { Task, TaskStatus, TaskPriority, TaskPeriod } from '@/types/bulletin'
 import {
   TASK_STATUS_LABELS,
   TASK_PRIORITY_LABELS,
+  TASK_PERIOD_LABELS,
 } from '@/types/bulletin'
 import TaskDetail from './TaskDetail'
 import TaskForm from './TaskForm'
 import TaskCardView from './TaskCardView'
 import RecurringTaskTemplateList from './RecurringTaskTemplateList'
+import BulkAssigneeChangeModal from './BulkAssigneeChangeModal'
 import { appConfirm, appAlert } from '@/components/ui/AppDialog'
 
 type ViewTab = 'active' | 'completed' | 'recurring'
@@ -70,14 +75,29 @@ const getCurrentUserId = (): string | null => {
   }
 }
 
+// 현재 사용자 role 가져오기 (대표 원장 일괄 변경 권한 체크용)
+const getCurrentUserRole = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const userStr = sessionStorage.getItem('dental_user') || localStorage.getItem('dental_user')
+  if (!userStr) return null
+  try {
+    return JSON.parse(userStr).role || null
+  } catch {
+    return null
+  }
+}
+
 export default function TaskList({ canCreate = false, showMyTasksOnly = false }: TaskListProps) {
   const searchParams = useSearchParams()
   const [allTasks, setAllTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const currentUserId = getCurrentUserId()
+  const currentUserRole = getCurrentUserRole()
+  const canBulkReassign = currentUserRole === 'owner' || currentUserRole === 'master_admin'
   const autoOpenedRef = useRef(false)
   const [selectedPriority, setSelectedPriority] = useState<TaskPriority | ''>('')
+  const [periodFilter, setPeriodFilter] = useState<TaskPeriod | ''>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -87,6 +107,10 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
   const [completedPeriod, setCompletedPeriod] = useState<CompletedPeriod>('all')
   const [assigneeFilter, setAssigneeFilter] = useState<string>('')
   const [completedSearchQuery, setCompletedSearchQuery] = useState('')
+  // 일괄 선택 모드 (대표 원장만 사용)
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkAssigneeModal, setShowBulkAssigneeModal] = useState(false)
   const [stats, setStats] = useState<{
     total: number
     pending: number
@@ -275,16 +299,52 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
 
   // 상태 필터 적용
   const displayedTasks = useMemo(() => {
+    let base: Task[]
     if (statusFilter === 'overdue') {
-      return allTasks.filter(t => isOverdue(t))
+      base = allTasks.filter(t => isOverdue(t))
     } else if (statusFilter === 'completed') {
-      return filteredCompletedTasks
+      base = filteredCompletedTasks
     } else if (statusFilter) {
-      return allTasks.filter(t => t.status === statusFilter)
+      base = allTasks.filter(t => t.status === statusFilter)
     } else {
-      return activeTab === 'active' ? activeTasks : filteredCompletedTasks
+      base = activeTab === 'active' ? activeTasks : filteredCompletedTasks
     }
-  }, [allTasks, activeTasks, filteredCompletedTasks, statusFilter, activeTab])
+    // 분류(주간/월간/분기/연간/일반) 필터
+    if (periodFilter) {
+      base = base.filter(t => (t.task_period || 'general') === periodFilter)
+    }
+    return base
+  }, [allTasks, activeTasks, filteredCompletedTasks, statusFilter, activeTab, periodFilter])
+
+  const toggleSelect = useCallback((taskId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      if (prev.size === displayedTasks.length && displayedTasks.length > 0) {
+        return new Set()
+      }
+      return new Set(displayedTasks.map(t => t.id))
+    })
+  }, [displayedTasks])
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }, [])
+
+  const handleBulkAssigneeSuccess = useCallback(async (updatedCount: number) => {
+    setShowBulkAssigneeModal(false)
+    exitSelectionMode()
+    await Promise.all([fetchTasks(), fetchStats()])
+    await appAlert(`${updatedCount}건의 담당자가 변경되었습니다.`)
+  }, [exitSelectionMode, fetchTasks, fetchStats])
 
   // TaskForm 표시
   if (showForm) {
@@ -325,13 +385,59 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
             <span className="text-xs text-at-text-weak font-normal ml-1">총 {allTasks.length}건</span>
           )}
         </div>
-        {canCreate && (
-          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            새 업무 할당
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canBulkReassign && activeTab !== 'recurring' && !selectionMode && (
+            <Button
+              variant="outline"
+              onClick={() => setSelectionMode(true)}
+              className="flex items-center gap-2"
+            >
+              <CheckSquare className="w-4 h-4" />
+              일괄 선택
+            </Button>
+          )}
+          {canCreate && (
+            <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              새 업무 할당
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* 일괄 선택 모드 액션바 */}
+      {selectionMode && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-at-accent-light border border-at-accent rounded-xl">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="text-sm font-medium text-at-accent hover:underline"
+            >
+              {selectedIds.size === displayedTasks.length && displayedTasks.length > 0
+                ? '전체 해제'
+                : '현재 보이는 업무 전체 선택'}
+            </button>
+            <span className="text-sm text-at-text-secondary">
+              {selectedIds.size}건 선택됨
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowBulkAssigneeModal(true)}
+              disabled={selectedIds.size === 0}
+              className="flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              담당자 일괄 변경
+            </Button>
+            <Button variant="outline" onClick={exitSelectionMode} className="flex items-center gap-2">
+              <X className="w-4 h-4" />
+              취소
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 통계 (클릭하면 해당 상태 필터링) */}
       {stats && (
@@ -435,9 +541,9 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         <RecurringTaskTemplateList />
       )}
 
-      {/* 진행 업무 탭: 검색 및 우선순위 필터 */}
+      {/* 진행 업무 탭: 검색 및 우선순위 + 분류 필터 */}
       {activeTab === 'active' && !statusFilter && (
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-at-text-weak" />
             <select
@@ -451,7 +557,20 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
               ))}
             </select>
           </div>
-          <form onSubmit={handleSearch} className="flex-1 flex gap-2">
+          <div className="flex items-center gap-2">
+            <Tag className="w-4 h-4 text-at-text-weak" />
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value as TaskPeriod | '')}
+              className="border border-at-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-at-accent"
+            >
+              <option value="">전체 분류</option>
+              {Object.entries(TASK_PERIOD_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <form onSubmit={handleSearch} className="flex-1 flex gap-2 min-w-[200px]">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-at-text-weak" />
               <Input
@@ -606,8 +725,24 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           </p>
         </div>
       ) : (
-        <TaskCardView tasks={displayedTasks} onTaskClick={handleTaskClick} />
+        <TaskCardView
+          tasks={displayedTasks}
+          onTaskClick={handleTaskClick}
+          selectionMode={selectionMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+        />
       ))}
+
+      {/* 담당자 일괄 변경 모달 */}
+      {showBulkAssigneeModal && (
+        <BulkAssigneeChangeModal
+          selectedCount={selectedIds.size}
+          selectedTaskIds={Array.from(selectedIds)}
+          onClose={() => setShowBulkAssigneeModal(false)}
+          onSuccess={handleBulkAssigneeSuccess}
+        />
+      )}
     </div>
   )
 }
