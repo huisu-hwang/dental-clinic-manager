@@ -22,7 +22,7 @@ function nodeModulesPath(sub: string): string {
  * PDF 버퍼에서 텍스트 전체를 추출.
  * 한국어 폰트(cMap) 지원 포함.
  */
-async function extractPdfText(buffer: Buffer | Uint8Array): Promise<string> {
+export async function extractPdfText(buffer: Buffer | Uint8Array): Promise<string> {
   const pdfjs = await getPdfjs()
   const data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
   const doc = await pdfjs.getDocument({
@@ -80,6 +80,23 @@ export async function extractPayslipTotalPayment(buffer: Buffer | Uint8Array): P
     return parseTotalPaymentFromText(text)
   } catch (err) {
     console.error('[payslipPdfParser] 추출 실패:', err)
+    return null
+  }
+}
+
+/**
+ * PDF 버퍼에서 직원 이름 추출.
+ * "성 명 :XXX" 패턴 (한국 세무사무실 표준 양식)
+ */
+export async function extractPayslipEmployeeName(buffer: Buffer | Uint8Array): Promise<string | null> {
+  try {
+    const text = await extractPdfText(buffer)
+    const normalized = text.replace(/\s+/g, ' ')
+    // "성 명 : 김지성" / "성명: 김지성" / "성 명 :김지성"
+    const m = normalized.match(/성\s*명\s*[:：]\s*([가-힣]{2,4})/)
+    return m ? m[1] : null
+  } catch (err) {
+    console.error('[payslipPdfParser] 이름 추출 실패:', err)
     return null
   }
 }
