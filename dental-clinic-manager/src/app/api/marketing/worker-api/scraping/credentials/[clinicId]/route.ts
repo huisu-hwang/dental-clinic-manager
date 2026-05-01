@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWorkerApiKey } from '@/lib/marketing/workerApiAuth';
-import crypto from 'crypto';
-
-const ALGORITHM = 'aes-256-gcm';
-
-interface EncryptedData {
-  iv: string;
-  encrypted: string;
-  tag: string;
-}
-
-function decrypt(encryptedJson: string, hexKey: string): string {
-  const data: EncryptedData = JSON.parse(encryptedJson);
-  const key = Buffer.from(hexKey, 'hex');
-  const iv = Buffer.from(data.iv, 'hex');
-  const tag = Buffer.from(data.tag, 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(tag);
-  let decrypted = decipher.update(data.encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
-}
+import { hometaxDecryptFromJson } from '@/lib/hometaxCrypto';
 
 // GET: 클리닉의 홈택스 인증정보 (서버에서 복호화하여 전달)
 export async function GET(
@@ -33,26 +13,27 @@ export async function GET(
 
     const { clinicId } = await params;
 
-    const encryptionKey = process.env.ENCRYPTION_KEY;
-    if (!encryptionKey) {
-      console.error('[worker-api/scraping/credentials] ENCRYPTION_KEY not set');
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
     const { data: cred, error } = await admin
       .from('hometax_credentials')
-      .select('user_id, password_encrypted, resident_number_encrypted, session_data, session_expires_at')
+      .select('hometax_user_id, encrypted_password, encrypted_resident_number, business_number, login_method, is_active')
       .eq('clinic_id', clinicId)
       .single();
 
     if (error || !cred) {
-      return NextResponse.json({ error: 'Credentials not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Credentials not found', detail: error?.message },
+        { status: 404 }
+      );
+    }
+
+    if (!cred.is_active) {
+      return NextResponse.json({ error: 'Credentials inactive' }, { status: 403 });
     }
 
     // 비밀번호 복호화
     let password: string;
     try {
-      password = decrypt(cred.password_encrypted, encryptionKey);
+      password = hometaxDecryptFromJson(cred.encrypted_password);
     } catch (e) {
       console.error('[worker-api/scraping/credentials] password decrypt failed:', e);
       return NextResponse.json({ error: 'Decryption failed' }, { status: 500 });
@@ -60,9 +41,9 @@ export async function GET(
 
     // 주민등록번호 복호화 (있는 경우)
     let residentNumber: string | undefined;
-    if (cred.resident_number_encrypted) {
+    if (cred.encrypted_resident_number) {
       try {
-        residentNumber = decrypt(cred.resident_number_encrypted, encryptionKey);
+        residentNumber = hometaxDecryptFromJson(cred.encrypted_resident_number);
       } catch (e) {
         console.error('[worker-api/scraping/credentials] residentNumber decrypt failed:', e);
         // 복호화 실패해도 계속 진행 (선택 필드)
@@ -70,11 +51,11 @@ export async function GET(
     }
 
     return NextResponse.json({
-      userId: cred.user_id,
+      userId: cred.hometax_user_id,
       password,
       residentNumber,
-      sessionData: cred.session_data ?? null,
-      sessionExpiresAt: cred.session_expires_at ?? null,
+      businessNumber: cred.business_number,
+      loginMethod: cred.login_method,
     });
   } catch (error) {
     console.error('[worker-api/scraping/credentials GET]', error);
