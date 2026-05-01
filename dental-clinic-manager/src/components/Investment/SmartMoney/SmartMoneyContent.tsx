@@ -113,6 +113,23 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10)
 }
 
+/** YYYY-MM-DD → "MM/DD (요일)" */
+function formatDayLabel(date: string): string {
+  const [, m, d] = date.split('-')
+  const day = new Date(date).getDay()
+  const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][day]
+  return `${parseInt(m, 10)}/${parseInt(d, 10)} (${dayLabel})`
+}
+
+/** "오늘" / "어제" / "그제" 라벨 — 가장 최근(마지막)이 오늘 */
+function formatDayRelative(_date: string, total: number, idx: number): string {
+  const offset = total - 1 - idx // 마지막=0(오늘), 그 앞=1(어제), ...
+  if (offset === 0) return '오늘'
+  if (offset === 1) return '전 거래일'
+  if (offset === 2) return '그 전'
+  return `${offset}일 전`
+}
+
 export function SmartMoneyContent() {
   const [selected, setSelected] = useState<Selected | null>(null)
   const [analysis, setAnalysis] = useState<SmartMoneyAnalysis | null>(null)
@@ -126,6 +143,9 @@ export function SmartMoneyContent() {
   const [editingAlert, setEditingAlert] = useState<{ ticker: string; market: Market; name: string | null } | null>(null)
   const [alertListRefresh, setAlertListRefresh] = useState(0)
 
+  // 일자별 탭 — null이면 가장 최근 일자(byDay 마지막) 또는 메인 분석
+  const [activeDayIdx, setActiveDayIdx] = useState<number | null>(null)
+
   // 메모리 캐시 (ticker:market:date → analysis)
   const cacheRef = useRef<Map<string, SmartMoneyAnalysis>>(new Map())
 
@@ -137,6 +157,7 @@ export function SmartMoneyContent() {
     setSelected(next)
     setError(null)
     setErrorCode(null)
+    setActiveDayIdx(null)
     // 캐시에 있으면 즉시 표시
     const cached = cacheRef.current.get(`${next.market}:${next.ticker}:${todayKey()}`)
     if (cached) setAnalysis(cached)
@@ -171,6 +192,7 @@ export function SmartMoneyContent() {
         return
       }
       setAnalysis(data)
+      setActiveDayIdx(null) // 가장 최근 일자 default
       cacheRef.current.set(cacheKey(selected), data)
 
       // LLM 코멘트가 비어 있으면 별도 호출
@@ -207,18 +229,52 @@ export function SmartMoneyContent() {
     }
   }, [selected])
 
+  // 활성 일자 분석 객체 — byDay에서 선택된 일자가 있으면 그 항목으로 SmartMoneyAnalysis를 합성.
+  // 일자별 탭이 클릭됐을 때 표시 데이터(점수/시그널/패널/LLM)가 모두 그 일자 기준으로 전환됨.
+  const viewAnalysis = useMemo<SmartMoneyAnalysis | null>(() => {
+    if (!analysis) return null
+    const byDay = analysis.byDay ?? []
+    if (byDay.length === 0) return analysis
+    const idx = activeDayIdx ?? byDay.length - 1
+    const day = byDay[Math.max(0, Math.min(byDay.length - 1, idx))]
+    if (!day) return analysis
+    // byDay 마지막 일자(가장 최근)는 메인 분석과 동일 — 효율을 위해 메인을 그대로 사용
+    if (idx === byDay.length - 1) return analysis
+    return {
+      ...analysis,
+      asOfDate: day.asOfDate,
+      currentPrice: day.closePrice,
+      vwap: day.vwap,
+      wyckoff: day.wyckoff,
+      algoFootprint: day.algoFootprint,
+      wyckoffPhase: day.wyckoffPhase,
+      liquidity: day.liquidity,
+      marketStructure: day.marketStructure,
+      orderBlocksFvg: day.orderBlocksFvg,
+      traps: day.traps,
+      vsa: day.vsa,
+      session: day.session,
+      newsContext: day.newsContext,
+      manipulationRiskScore: day.manipulationRiskScore,
+      overallScore: day.overallScore,
+      interpretation: day.interpretation,
+      signalDetails: day.signalDetails,
+      naturalLanguageComment: day.naturalLanguageComment,
+    }
+  }, [analysis, activeDayIdx])
+
   const topSignals = useMemo(() => {
-    if (!analysis) return []
-    return [...analysis.signalDetails]
+    if (!viewAnalysis) return []
+    return [...viewAnalysis.signalDetails]
       .sort((a, b) => {
         const at = a.triggeredAt ? new Date(a.triggeredAt).getTime() : 0
         const bt = b.triggeredAt ? new Date(b.triggeredAt).getTime() : 0
         return bt - at || b.confidence - a.confidence
       })
       .slice(0, 5)
-  }, [analysis])
+  }, [viewAnalysis])
 
-  const overallScore = analysis?.overallScore ?? 0
+  const overallScore = viewAnalysis?.overallScore ?? 0
   const scorePct = Math.max(0, Math.min(100, (overallScore + 100) / 2))
   const scoreColor =
     overallScore > 30 ? 'bg-emerald-500' : overallScore < -30 ? 'bg-rose-500' : 'bg-slate-400'
@@ -302,31 +358,59 @@ export function SmartMoneyContent() {
       </section>
 
       {/* 분석 결과 */}
-      {analysis && (
+      {analysis && viewAnalysis && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-4">
+            {/* 일자별 탭 (byDay 2개 이상일 때만) */}
+            {analysis.byDay && analysis.byDay.length > 1 && (
+              <section className="bg-white rounded-2xl border border-slate-200 p-2 shadow-sm">
+                <div role="tablist" className="flex gap-1">
+                  {analysis.byDay.map((day, i) => {
+                    const isActive = (activeDayIdx ?? analysis.byDay!.length - 1) === i
+                    return (
+                      <button
+                        key={day.asOfDate}
+                        role="tab"
+                        type="button"
+                        onClick={() => setActiveDayIdx(i)}
+                        aria-selected={isActive}
+                        className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="block text-[10px] opacity-75">{formatDayRelative(day.asOfDate, analysis.byDay!.length, i)}</span>
+                        <span>{formatDayLabel(day.asOfDate)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
             {/* 결과 헤더 */}
             <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-bold text-blue-600">{analysis.ticker}</span>
-                    <span className="text-base font-bold text-slate-900">{analysis.name}</span>
+                    <span className="font-mono text-sm font-bold text-blue-600">{viewAnalysis.ticker}</span>
+                    <span className="text-base font-bold text-slate-900">{viewAnalysis.name}</span>
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                        analysis.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        viewAnalysis.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
                       }`}
                     >
-                      {analysis.market === 'KR' ? '국내' : '미국'}
+                      {viewAnalysis.market === 'KR' ? '국내' : '미국'}
                     </span>
                   </div>
                   <div className="mt-1 text-2xl font-bold text-slate-900">
-                    {analysis.market === 'KR'
-                      ? `${Math.round(analysis.currentPrice).toLocaleString()}원`
-                      : `$${analysis.currentPrice.toFixed(2)}`}
+                    {viewAnalysis.market === 'KR'
+                      ? `${Math.round(viewAnalysis.currentPrice).toLocaleString()}원`
+                      : `$${viewAnalysis.currentPrice.toFixed(2)}`}
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    기준일 {analysis.asOfDate} · 생성 {new Date(analysis.generatedAt).toLocaleTimeString('ko-KR')}
+                    기준일 {viewAnalysis.asOfDate} · 생성 {new Date(analysis.generatedAt).toLocaleTimeString('ko-KR')}
                   </p>
                 </div>
 
@@ -369,10 +453,10 @@ export function SmartMoneyContent() {
                     </span>
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        INTERPRETATION_COLOR[analysis.interpretation]
+                        INTERPRETATION_COLOR[viewAnalysis.interpretation]
                       }`}
                     >
-                      {INTERPRETATION_LABEL[analysis.interpretation]}
+                      {INTERPRETATION_LABEL[viewAnalysis.interpretation]}
                     </span>
                   </div>
                 </div>
@@ -397,16 +481,16 @@ export function SmartMoneyContent() {
                 <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold text-purple-900 mb-1">AI 분석 코멘트</p>
-                  {analysis.naturalLanguageComment ? (
+                  {viewAnalysis.naturalLanguageComment ? (
                     <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-line">
-                      {analysis.naturalLanguageComment}
+                      {viewAnalysis.naturalLanguageComment}
                     </p>
                   ) : llmLoading ? (
                     <p className="text-xs text-slate-500 inline-flex items-center gap-1.5">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       분석 코멘트 생성 중...
                     </p>
-                  ) : (
+                  ) : viewAnalysis.asOfDate === analysis.asOfDate ? (
                     <button
                       type="button"
                       onClick={() => analysis && fetchLlmComment(analysis)}
@@ -414,13 +498,17 @@ export function SmartMoneyContent() {
                     >
                       AI 코멘트 생성하기
                     </button>
+                  ) : (
+                    <p className="text-[11px] text-slate-500">
+                      AI 코멘트는 가장 최근 일자에서만 제공됩니다.
+                    </p>
                   )}
                 </div>
               </div>
             </section>
 
             {/* 시그널 패널 (4개 카드) */}
-            <SignalPanel analysis={analysis} />
+            <SignalPanel analysis={viewAnalysis} />
 
             {/* VWAP 차트 placeholder */}
             <section className="bg-white rounded-2xl border border-dashed border-slate-300 p-6 text-center">
