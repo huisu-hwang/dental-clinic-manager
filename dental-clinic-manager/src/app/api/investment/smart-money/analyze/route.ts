@@ -227,13 +227,14 @@ export async function POST(request: NextRequest) {
       const quote = await fetchCurrentQuote(ticker, 'US')
       currentPrice = quote.price ?? 0
 
-      // 1분봉 — 마지막 2400봉(≈4거래일치) 사용 (byDay에 최신 3일 + 여유분)
+      // 1분봉 — yahoo가 주는 6일치 데이터를 모두 사용 (캐시 우회로 fresh 데이터 보장)
       const usBars: OHLCV[] = await fetchIntradayPrices({
         ticker,
         market: 'US',
         timeframe: '1m',
+        forceRefresh: true,
       })
-      const recent = usBars.slice(-2400)
+      const recent = usBars
       bars = recent.map((b) => ({
         datetime: b.date,
         open: b.open,
@@ -433,16 +434,41 @@ export async function POST(request: NextRequest) {
     // 다일 기반 엔진(wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa)은
     // 본질적으로 N일 컨텍스트가 필요하므로 모든 일자에 동일하게 표시.
     // intraday 엔진(vwap, wyckoff(단일봉), algoFootprint, session, newsContext)은 일자별로 다르게 계산.
-    const dayKeys = Array.from(new Set(bars.map((b) => (b.datetime ?? '').slice(0, 10)).filter(Boolean))).sort()
-    // 봉 수가 너무 적은(잘린) 일자는 제외하고 가장 최근 3 거래일만 사용
-    const MIN_BARS_PER_DAY = 200
+    // datetime → 시장의 거래일 기준 YYYY-MM-DD 키
+    // yahoo/KIS 분봉이 UTC ISO이면 한 거래일이 UTC 2일에 걸쳐 분리되어 잘못 묶임
+    // → 미국=America/New_York, 한국=Asia/Seoul timezone으로 normalize
+    const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
+    const dayKeyOf = (dt: string): string => {
+      if (!dt) return ''
+      // ISO에 timezone offset(Z 또는 ±HH:MM)이 없으면 UTC로 가정
+      const hasTz = /Z$|[+-]\d{2}:?\d{2}$/.test(dt)
+      const d = new Date(hasTz ? dt : dt + 'Z')
+      if (isNaN(d.getTime())) return dt.slice(0, 10)
+      try {
+        const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' })
+        return fmt.format(d) // YYYY-MM-DD
+      } catch {
+        return dt.slice(0, 10)
+      }
+    }
+    const dayKeys = Array.from(new Set(bars.map((b) => dayKeyOf(b.datetime)).filter(Boolean))).sort()
+    // 일자별 봉 수 (timezone normalized)
+    const dayBarCounts = new Map<string, number>()
+    for (const b of bars) {
+      const k = dayKeyOf(b.datetime)
+      if (!k) continue
+      dayBarCounts.set(k, (dayBarCounts.get(k) ?? 0) + 1)
+    }
+    console.log('[smart-money/analyze] 일자별 봉 수:', Array.from(dayBarCounts.entries()))
+    // 가장 최근 3 거래일을 보장하도록 — 임계값(>=100)을 완화하여 부분 일자도 가능하면 포함
+    const MIN_BARS_PER_DAY = 100
     const fullDays = dayKeys.filter(
-      (k) => bars.filter((b) => (b.datetime ?? '').startsWith(k)).length >= MIN_BARS_PER_DAY
-        || k === dayKeys[dayKeys.length - 1], // 진행 중 오늘은 항상 포함
+      (k) => (dayBarCounts.get(k) ?? 0) >= MIN_BARS_PER_DAY
+        || k === dayKeys[dayKeys.length - 1],
     )
     const recentDayKeys = fullDays.slice(-3)
     for (const dayKey of recentDayKeys) {
-      const dayBars = bars.filter((b) => (b.datetime ?? '').startsWith(dayKey))
+      const dayBars = bars.filter((b) => dayKeyOf(b.datetime) === dayKey)
       if (dayBars.length < 5) continue
       const closePrice = dayBars[dayBars.length - 1].close
 

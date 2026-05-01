@@ -37,8 +37,8 @@ function scoreTwap(bars: AlgoBar[]): number {
   for (const v of volumes) varSum += (v - mean) ** 2
   const std = Math.sqrt(varSum / n)
   const cv = std / mean  // 변동계수
-  // cv=0 → 100, cv=1 → 0 (대략)
-  return Math.max(0, Math.min(100, (1 - cv) * 100))
+  // cv=0 → 100, cv=2 → 0 (인트라데이는 보통 cv≈1이라 종전 매핑은 항상 0)
+  return Math.max(0, Math.min(100, ((2 - cv) / 2) * 100))
 }
 
 // ============================================
@@ -122,10 +122,10 @@ function scoreIceberg(bars: AlgoBar[]): number {
     }
   }
 
-  // 데이터 양에 비례한 임계값 — 봉 수의 5%(min 4) → 0점, 15%(min 12) → 100점
-  // (5분봉 78봉: 4~12, 1분봉 780봉: 39~117)
-  const minCluster = Math.max(4, Math.ceil(bars.length * 0.05))
-  const maxCluster = Math.max(12, Math.ceil(bars.length * 0.15))
+  // 데이터 양에 비례한 임계값 — 봉 수의 3%(min 4) → 0점, 10%(min 12) → 100점
+  // 1분봉이 5분봉보다 봉당 거래량 작아 클러스터 형성 더 어려움 → 임계 완화
+  const minCluster = Math.max(4, Math.ceil(bars.length * 0.03))
+  const maxCluster = Math.max(12, Math.ceil(bars.length * 0.10))
   if (bestCluster < minCluster) return 0
   const range = Math.max(1, maxCluster - minCluster)
   return Math.max(0, Math.min(100, ((bestCluster - minCluster) / range) * 100))
@@ -181,12 +181,12 @@ function median(arr: number[]): number {
 
 /**
  * 봉 거래량이 중앙값 대비 ratio일 때 점수:
- * ratio ≤ 1.5 → 0 / ratio = 3 → 60 / ratio = 5 → 100 / 그 이상 클램프
+ * ratio ≤ 1.2 → 0 / ratio = 4 → 100
+ * (1분봉은 봉당 거래량이 작아 정규장 시초/종가 봉도 baseline 1.2~3배 정도라 종전 1.5~5 매핑은 항상 0)
  */
 function ratioToScore(ratio: number): number {
-  if (ratio <= 1.5) return 0
-  // 1.5 → 0, 5 → 100 선형
-  return Math.max(0, Math.min(100, ((ratio - 1.5) / 3.5) * 100))
+  if (ratio <= 1.2) return 0
+  return Math.max(0, Math.min(100, ((ratio - 1.2) / 2.8) * 100))
 }
 
 interface AuctionResult {
