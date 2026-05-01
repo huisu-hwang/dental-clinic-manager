@@ -113,12 +113,14 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10)
 }
 
-/** YYYY-MM-DD → "MM/DD (요일)" */
+/** YYYY-MM-DD → "MM/DD (요일)" — timezone에 영향받지 않도록 UTC로 명시 파싱 */
 function formatDayLabel(date: string): string {
-  const [, m, d] = date.split('-')
-  const day = new Date(date).getDay()
+  const [y, m, d] = date.split('-').map(Number)
+  if (!y || !m || !d) return date
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  const day = dt.getUTCDay()
   const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][day]
-  return `${parseInt(m, 10)}/${parseInt(d, 10)} (${dayLabel})`
+  return `${m}/${d} (${dayLabel})`
 }
 
 /** "오늘" / "어제" / "그제" 라벨 — 가장 최근(마지막)이 오늘 */

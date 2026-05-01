@@ -225,6 +225,7 @@ export function SignalPanel({ analysis }: Props) {
           {algoBars.map(b => {
             const isDominant = algoFootprint.dominantAlgo === b.label
             const pct = Math.max(0, Math.min(100, b.score))
+            const isZero = b.score === 0
             return (
               <div key={b.label}>
                 <div className="flex items-center justify-between text-[11px] mb-0.5">
@@ -232,13 +233,21 @@ export function SignalPanel({ analysis }: Props) {
                     {b.label}
                     {isDominant && <span className="ml-1 text-[9px]">★</span>}
                   </span>
-                  <span className="font-mono text-slate-600">{b.score.toFixed(0)}</span>
+                  <span className={`font-mono ${isZero ? 'text-slate-400' : 'text-slate-600'}`}>
+                    {isZero ? '신호 없음' : b.score.toFixed(0)}
+                  </span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all ${isDominant ? 'bg-blue-600' : 'bg-slate-400'}`}
-                    style={{ width: `${pct}%` }}
-                  />
+                <div
+                  className={`w-full h-1.5 rounded-full overflow-hidden ${
+                    isZero ? 'bg-slate-200/40 border border-dashed border-slate-300' : 'bg-slate-100'
+                  }`}
+                >
+                  {!isZero && (
+                    <div
+                      className={`h-full transition-all ${isDominant ? 'bg-blue-600' : 'bg-slate-400'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  )}
                 </div>
               </div>
             )

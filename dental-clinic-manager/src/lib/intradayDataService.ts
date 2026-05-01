@@ -29,6 +29,8 @@ export interface FetchIntradayParams {
   startDate?: string
   /** 종료 날짜 (YYYY-MM-DD). 미지정 시 오늘 */
   endDate?: string
+  /** true면 DB 캐시를 무시하고 yahoo에서 직접 받아와 캐시 갱신 */
+  forceRefresh?: boolean
 }
 
 // ============================================
@@ -43,13 +45,15 @@ export interface FetchIntradayParams {
  * - 한국 종목이 yahoo에서 미지원이면 빈 배열 반환
  */
 export async function fetchIntradayPrices(params: FetchIntradayParams): Promise<OHLCV[]> {
-  const { ticker, market, timeframe } = params
+  const { ticker, market, timeframe, forceRefresh } = params
   const endDate = params.endDate ?? toDateString(new Date())
   const startDate = params.startDate ?? defaultStartDate(timeframe)
 
-  // 1. DB 캐시 조회
-  const cached = await getCachedIntraday(ticker, market, timeframe, startDate, endDate)
-  if (cached.length > 0) {
+  // 1. DB 캐시 조회 (forceRefresh=true면 스킵)
+  const cached = forceRefresh
+    ? []
+    : await getCachedIntraday(ticker, market, timeframe, startDate, endDate)
+  if (!forceRefresh && cached.length > 0) {
     // 분봉 데이터 자체는 외부에서 가져오는 게 비싸므로 캐시가 어느 정도 있으면 사용
     // 하루 단위로 신선도가 다르므로 보수적으로 (요청 일수 * 일봉 60% 수준 이상이면 캐시 사용)
     const requestDays = daysBetween(startDate, endDate)
