@@ -92,14 +92,18 @@ export default function TaxOfficeUploadModal({
   }, [resetState, onClose])
 
   const autoMatch = useCallback(
-    (files: { name: string; path: string }[]): FileMatch[] => {
+    (files: { name: string; path: string; extractedName?: string | null }[]): FileMatch[] => {
       return files.map((file) => {
-        const candidates = extractKoreanNames(file.name)
+        // 후보 우선순위: PDF 내용 추출 이름 > 파일명 한글 시퀀스
+        const candidates: string[] = []
+        if (file.extractedName) candidates.push(file.extractedName)
+        candidates.push(...extractKoreanNames(file.name))
+
         if (candidates.length === 0) {
           return { fileName: file.name, zipPath: file.path, employeeId: null, autoMatched: false }
         }
 
-        // 1순위: 정확 매칭 (모든 후보를 직원과 비교)
+        // 1순위: 정확 매칭
         for (const c of candidates) {
           const exact = employees.find((e) => e.name === c)
           if (exact) return { fileName: file.name, zipPath: file.path, employeeId: exact.id, autoMatched: true }
@@ -151,33 +155,33 @@ export default function TaxOfficeUploadModal({
     setParseError(null)
 
     try {
-      if (isZipMode) {
-        const formData = new FormData()
-        formData.append('zipFile', selectedFiles[0])
-
-        const res = await fetch('/api/payroll/tax-office-files/parse-zip', {
-          method: 'POST',
-          body: formData,
-        })
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          throw new Error(data.error || `서버 오류 (${res.status})`)
-        }
-
-        const data = await res.json()
-        const files: { name: string; path: string }[] = data.data ?? []
-        setPdfFiles(files.map((f) => f.name))
-        setMatches(autoMatch(files))
-        setStep(2)
-      } else if (isPdfMode) {
-        const files = selectedFiles.map((f) => ({ name: f.name, path: f.name }))
-        setPdfFiles(files.map((f) => f.name))
-        setMatches(autoMatch(files))
-        setStep(2)
-      } else {
+      if (!isZipMode && !isPdfMode) {
         throw new Error('ZIP 파일 1개 또는 PDF 파일만 업로드할 수 있습니다.')
       }
+
+      // ZIP/PDF 모두 parse-zip API에 위임 — PDF 내용에서 직원 이름 추출까지 수행
+      const formData = new FormData()
+      if (isZipMode) {
+        formData.append('zipFile', selectedFiles[0])
+      } else {
+        selectedFiles.forEach((f) => formData.append('pdfFiles', f))
+      }
+
+      const res = await fetch('/api/payroll/tax-office-files/parse-zip', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `서버 오류 (${res.status})`)
+      }
+
+      const data = await res.json()
+      const files: { name: string; path: string; extractedName: string | null }[] = data.data ?? []
+      setPdfFiles(files.map((f) => f.name))
+      setMatches(autoMatch(files))
+      setStep(2)
     } catch (err) {
       setParseError(err instanceof Error ? err.message : '파일 분석 중 오류가 발생했습니다.')
     } finally {
