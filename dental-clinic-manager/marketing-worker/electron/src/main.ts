@@ -66,18 +66,41 @@ async function autoRegister(): Promise<boolean> {
  * 시스템 기본 경로(`AppData\Local\ms-playwright`)에 의존하지 않도록 명시 설정
  */
 function setupPlaywrightBrowsersPath(): string {
+  // 번들된 browsers 폴더에 실제 chromium 실행 파일이 있는지 검증.
+  // Program Files 하위는 일반 사용자 권한으로 쓰기 불가 → 자동 설치도 실패하므로,
+  // 비어 있으면 사용자 데이터 폴더로 폴백한다.
   if (app.isPackaged) {
     const bundledPath = path.join(process.resourcesPath, 'browsers');
-    if (fs.existsSync(bundledPath)) {
+    if (fs.existsSync(bundledPath) && hasPlaywrightChromium(bundledPath)) {
       process.env.PLAYWRIGHT_BROWSERS_PATH = bundledPath;
       log('info', `[Playwright] 번들된 브라우저 사용: ${bundledPath}`);
       return bundledPath;
     }
+    log('warn', `[Playwright] 번들된 browsers 폴더에 chromium 실행 파일 없음 → 사용자 데이터 경로로 폴백`);
   }
   const userPath = path.join(app.getPath('userData'), 'playwright-browsers');
   process.env.PLAYWRIGHT_BROWSERS_PATH = userPath;
   log('info', `[Playwright] 사용자 데이터 경로 사용: ${userPath}`);
   return userPath;
+}
+
+/** browsers 디렉토리 내에 chromium 또는 chromium_headless_shell 실제 실행 파일이 있는지 검증 */
+function hasPlaywrightChromium(browsersPath: string): boolean {
+  try {
+    const entries = fs.readdirSync(browsersPath);
+    return entries.some((entry) => {
+      if (!entry.startsWith('chromium')) return false;
+      const candidates = [
+        path.join(browsersPath, entry, 'chrome-win', 'chrome.exe'),
+        path.join(browsersPath, entry, 'chrome-headless-shell-win64', 'chrome-headless-shell.exe'),
+        path.join(browsersPath, entry, 'chrome-mac', 'Chromium.app', 'Contents', 'MacOS', 'Chromium'),
+        path.join(browsersPath, entry, 'chrome-linux', 'chrome'),
+      ];
+      return candidates.some((p) => fs.existsSync(p));
+    });
+  } catch {
+    return false;
+  }
 }
 
 /**
