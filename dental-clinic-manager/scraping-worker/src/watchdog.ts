@@ -82,12 +82,22 @@ async function updateStatus(): Promise<void> {
 async function poll(): Promise<void> {
   const { data, error } = await supabase
     .from('worker_control')
-    .select('start_requested')
+    .select('start_requested, disabled')
     .eq('id', CONTROL_ID)
     .single();
 
   if (error) {
     console.warn('[Watchdog] 폴링 오류:', error.message);
+    return;
+  }
+
+  // 비활성화 플래그: Mac mini 워커가 사용자 PC로 이전된 경우 워커를 시작하지 않고
+  // 실행 중이면 종료시킨다.
+  if (data?.disabled) {
+    if (isWorkerRunning()) {
+      console.log('[Watchdog] worker_control.disabled=true → 실행 중인 워커 종료');
+      try { workerProcess?.kill('SIGTERM'); } catch { /* ignore */ }
+    }
     return;
   }
 
