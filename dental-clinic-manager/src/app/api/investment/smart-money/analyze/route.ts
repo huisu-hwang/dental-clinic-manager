@@ -53,6 +53,7 @@ import type {
   SmartMoneyAlert,
   InvestorTrendRow,
   InvestorFlowResult,
+  DailyAnalysis,
 } from '@/types/smartMoney'
 
 export const dynamic = 'force-dynamic'
@@ -161,14 +162,13 @@ export async function POST(request: NextRequest) {
       currentPrice = quote.price
       // KRRealtimeQuote에는 name이 없으므로 ticker 그대로 사용
 
-      // 분봉 (1분봉 780개 ≈ 2거래일치 — 알고리즘 풋프린트 정밀도 ↑)
-      // 1분봉이 5분봉보다 패턴 인식(VWAP U-shape, Iceberg 클러스터, MOO/MOC)에 정교함
+      // 분봉 (1분봉 2400개 ≈ 4거래일치 — 첫·끝 일자 잘림 여유분 포함, byDay에 최신 3일 사용)
       const krBars: KRMinuteBar[] = await getKRMinutePrices({
         credentialId: kisCredential.credentialId,
         credential: krCredential,
         ticker,
         intervalMinutes: 1,
-        count: 780,
+        count: 2400,
       })
       bars = krBars.map((b) => ({
         datetime: b.datetime,
@@ -227,14 +227,13 @@ export async function POST(request: NextRequest) {
       const quote = await fetchCurrentQuote(ticker, 'US')
       currentPrice = quote.price ?? 0
 
-      // 1분봉으로 변경 — 알고리즘 풋프린트 정밀도 ↑ (yahoo 1m은 7일까지 제공)
-      // 마지막 780봉(≈2거래일치) 사용
+      // 1분봉 — 마지막 2400봉(≈4거래일치) 사용 (byDay에 최신 3일 + 여유분)
       const usBars: OHLCV[] = await fetchIntradayPrices({
         ticker,
         market: 'US',
         timeframe: '1m',
       })
-      const recent = usBars.slice(-780)
+      const recent = usBars.slice(-2400)
       bars = recent.map((b) => ({
         datetime: b.date,
         open: b.open,
@@ -296,6 +295,7 @@ export async function POST(request: NextRequest) {
   // 5. 엔진 호출
   let vwap, wyckoff, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
   let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
+  let byDay: DailyAnalysis[] = []
   try {
     // ================================================================
     // 데이터 윈도우 라우팅 — 각 엔진의 자연스러운 데이터 타입에 맞춤
@@ -428,6 +428,99 @@ export async function POST(request: NextRequest) {
       session,
       newsContext,
     })
+
+    // ===== byDay: 최근 3 거래일치 일자별 분석 =====
+    // 다일 기반 엔진(wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa)은
+    // 본질적으로 N일 컨텍스트가 필요하므로 모든 일자에 동일하게 표시.
+    // intraday 엔진(vwap, wyckoff(단일봉), algoFootprint, session, newsContext)은 일자별로 다르게 계산.
+    const dayKeys = Array.from(new Set(bars.map((b) => (b.datetime ?? '').slice(0, 10)).filter(Boolean))).sort()
+    // 봉 수가 너무 적은(잘린) 일자는 제외하고 가장 최근 3 거래일만 사용
+    const MIN_BARS_PER_DAY = 200
+    const fullDays = dayKeys.filter(
+      (k) => bars.filter((b) => (b.datetime ?? '').startsWith(k)).length >= MIN_BARS_PER_DAY
+        || k === dayKeys[dayKeys.length - 1], // 진행 중 오늘은 항상 포함
+    )
+    const recentDayKeys = fullDays.slice(-3)
+    for (const dayKey of recentDayKeys) {
+      const dayBars = bars.filter((b) => (b.datetime ?? '').startsWith(dayKey))
+      if (dayBars.length < 5) continue
+      const closePrice = dayBars[dayBars.length - 1].close
+
+      const dVwapBars: VWAPInputBar[] = dayBars.map((b) => ({
+        high: b.high, low: b.low, close: b.close, volume: b.volume,
+      }))
+      const dVwap = calculateVWAP(dVwapBars, closePrice)
+
+      const dAlgoBars: AlgoBar[] = dayBars.map((b) => ({
+        datetime: b.datetime, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+      }))
+      const dAlgoFootprint = analyzeAlgoFootprint(dAlgoBars, dAlgoBars)
+
+      const dWyckoffBars: WyckoffBar[] = dayBars.map((b) => ({
+        open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+      }))
+      const dWyckoff = detectWyckoff(dWyckoffBars)
+
+      const dSessionBars: SessionBar[] = dayBars.map((b) => ({ ...b }))
+      const dSession = analyzeSession(dSessionBars, market)
+
+      const dNewsBars: NewsBar[] = dayBars.map((b) => ({ ...b }))
+      const dNewsContext = analyzeNewsContext({
+        bars: dNewsBars,
+        signalDetails: [],
+        newsEvents: [],
+      })
+
+      const dScore = computeSmartMoneyScore({
+        vwap: dVwap,
+        investorFlow,
+        wyckoff: dWyckoff,
+        algoFootprint: dAlgoFootprint,
+        wyckoffPhase,
+        liquidity,
+        marketStructure,
+        orderBlocksFvg,
+        traps,
+        vsa,
+        session: dSession,
+        newsContext: dNewsContext,
+      })
+
+      byDay.push({
+        ticker,
+        market,
+        asOfDate: dayKey,
+        closePrice,
+        vwap: dVwap,
+        wyckoff: dWyckoff,
+        algoFootprint: dAlgoFootprint,
+        wyckoffPhase,
+        liquidity,
+        marketStructure,
+        orderBlocksFvg,
+        traps,
+        vsa,
+        session: dSession,
+        newsContext: dNewsContext,
+        manipulationRiskScore: dScore.manipulationRiskScore,
+        overallScore: dScore.overallScore,
+        interpretation: dScore.interpretation,
+        signalDetails: dScore.signalDetails,
+      })
+    }
+    // 가장 최근 일자(byDay 마지막)는 메인 분석과 정렬되도록 메인 결과를 덮어씌움
+    if (byDay.length > 0) {
+      const lastDay = byDay[byDay.length - 1]
+      lastDay.vwap = vwap
+      lastDay.wyckoff = wyckoff
+      lastDay.algoFootprint = algoFootprint
+      lastDay.session = session
+      lastDay.newsContext = newsContext
+      lastDay.manipulationRiskScore = scoreResult.manipulationRiskScore
+      lastDay.overallScore = scoreResult.overallScore
+      lastDay.interpretation = scoreResult.interpretation
+      lastDay.signalDetails = scoreResult.signalDetails
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : '분석 엔진 실패'
     console.error('[smart-money/analyze] 엔진 실행 실패:', err)
@@ -461,12 +554,17 @@ export async function POST(request: NextRequest) {
     interpretation: scoreResult.interpretation,
     signalDetails: scoreResult.signalDetails,
     generatedAt: new Date().toISOString(),
+    byDay,
   }
 
-  // 6. LLM 코멘트 (옵션)
+  // 6. LLM 코멘트 (옵션) — 가장 최근 일자(byDay 마지막 = 메인 분석)에만 생성
   if (includeLLM) {
     try {
       analysis.naturalLanguageComment = await generateLLMComment(analysis)
+      // byDay가 있으면 마지막 일자에도 같은 코멘트 노출
+      if (byDay.length > 0) {
+        byDay[byDay.length - 1].naturalLanguageComment = analysis.naturalLanguageComment
+      }
     } catch (err) {
       console.warn('[smart-money/analyze] LLM 코멘트 생성 스킵:', err)
     }

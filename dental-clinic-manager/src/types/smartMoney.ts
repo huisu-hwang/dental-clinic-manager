@@ -279,6 +279,38 @@ export interface SmartMoneyAnalysis {
   naturalLanguageComment?: string
   /** ISO timestamp */
   generatedAt: string
+  /** 최근 N일치 일자별 분석 (오래된 → 최신 순). 가장 최근 일자(마지막 항목)는 본 객체와 동일. */
+  byDay?: DailyAnalysis[]
+}
+
+/**
+ * 일자별 단일일 분석 — byDay 항목.
+ * SmartMoneyAnalysis의 일자별 부분집합(LLM 코멘트는 가장 최근 일자만 포함되므로 옵션).
+ */
+export interface DailyAnalysis {
+  ticker: string
+  market: Market
+  /** YYYY-MM-DD — 이 분석이 대상으로 하는 거래일 */
+  asOfDate: string
+  /** 그 거래일의 종가(가장 최근 일자라면 진행 중 가격) */
+  closePrice: number
+  vwap: VWAPResult
+  wyckoff: WyckoffResult
+  algoFootprint: AlgoFootprintResult
+  wyckoffPhase?: WyckoffPhaseResult
+  liquidity?: LiquidityResult
+  marketStructure?: MarketStructureResult
+  orderBlocksFvg?: OrderBlockFvgResult
+  traps?: TrapResult
+  vsa?: VSAResult
+  session?: SessionResult
+  newsContext?: NewsContextResult
+  manipulationRiskScore?: number
+  overallScore: number
+  interpretation: Interpretation
+  signalDetails: SignalDetail[]
+  /** 가장 최근 일자에만 포함됨 (비용 절감) */
+  naturalLanguageComment?: string
 }
 
 // ============================================
