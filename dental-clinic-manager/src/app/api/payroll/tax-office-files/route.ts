@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import JSZip from 'jszip'
 import type { TaxOfficeFileMatch, TaxOfficeUploadResult } from '@/types/payroll'
+import { extractPayslipTotalPayment } from '@/utils/payslipPdfParser'
 
 const STORAGE_BUCKET = 'payroll-documents'
 
@@ -188,6 +189,17 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // PDF에서 총 지급액 자동 추출 (실패 시 null — 후속 동기화 스킵)
+        let totalPayment: number | null = null
+        try {
+          totalPayment = await extractPayslipTotalPayment(Buffer.from(pdfArrayBuffer))
+        } catch (parseErr) {
+          console.error(`[tax-office-files] PDF 파싱 오류 (${match.fileName}):`, parseErr)
+        }
+        if (totalPayment == null) {
+          result.errors.push(`총 지급액 인식 실패: ${match.fileName} (수동 입력이 필요할 수 있습니다)`)
+        }
+
         // DB에 메타데이터 저장 (upsert)
         const dbRecord = {
           clinic_id: clinicId,
@@ -197,6 +209,7 @@ export async function POST(request: NextRequest) {
           file_name: displayFileName,
           storage_path: storagePath,
           uploaded_by: uploadedBy,
+          total_payment: totalPayment,
           created_at: new Date().toISOString()
         }
 
@@ -207,6 +220,7 @@ export async function POST(request: NextRequest) {
               file_name: displayFileName,
               storage_path: storagePath,
               uploaded_by: uploadedBy,
+              total_payment: totalPayment,
               created_at: new Date().toISOString()
             })
             .eq('id', existingRecord.id)
