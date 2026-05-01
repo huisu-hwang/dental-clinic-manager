@@ -62,7 +62,12 @@ export default function TaxOfficeUploadModal({
   const [parseError, setParseError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadResult, setUploadResult] = useState<{ count: number; error?: string } | null>(null)
+  const [uploadResult, setUploadResult] = useState<{
+    uploadedCount: number
+    skippedCount: number
+    errors: string[]
+    error?: string
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isZipMode =
@@ -235,10 +240,16 @@ export default function TaxOfficeUploadModal({
 
       const data = await res.json()
       setUploadProgress(100)
-      setUploadResult({ count: data.count ?? matches.filter((m) => m.employeeId !== null).length })
+      setUploadResult({
+        uploadedCount: typeof data.uploadedCount === 'number' ? data.uploadedCount : 0,
+        skippedCount: typeof data.skippedCount === 'number' ? data.skippedCount : 0,
+        errors: Array.isArray(data.errors) ? data.errors : [],
+      })
     } catch (err) {
       setUploadResult({
-        count: 0,
+        uploadedCount: 0,
+        skippedCount: 0,
+        errors: [],
         error: err instanceof Error ? err.message : '업로드 중 오류가 발생했습니다.',
       })
       setUploadProgress(100)
@@ -535,6 +546,33 @@ export default function TaxOfficeUploadModal({
                         <p className="text-sm text-at-error mt-1">{uploadResult.error}</p>
                       </div>
                     </>
+                  ) : uploadResult.uploadedCount === 0 ? (
+                    <>
+                      <div className="flex justify-center">
+                        <div className="w-16 h-16 bg-at-error-bg rounded-full flex items-center justify-center">
+                          <AlertCircle className="w-8 h-8 text-red-500" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-at-text">업로드된 파일이 없습니다</p>
+                        <p className="text-sm text-at-text-weak mt-1">
+                          {uploadResult.skippedCount}개 파일이 스킵되었습니다.
+                        </p>
+                        {uploadResult.errors.length > 0 && (
+                          <div className="mt-3 p-3 bg-at-error-bg rounded-lg text-left">
+                            <p className="text-xs font-medium text-at-error mb-1">스킵 사유:</p>
+                            <ul className="text-xs text-at-error space-y-0.5 list-disc list-inside">
+                              {uploadResult.errors.slice(0, 5).map((e, i) => (
+                                <li key={i}>{e}</li>
+                              ))}
+                              {uploadResult.errors.length > 5 && (
+                                <li>외 {uploadResult.errors.length - 5}개 더…</li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   ) : (
                     <>
                       <div className="flex justify-center">
@@ -544,11 +582,29 @@ export default function TaxOfficeUploadModal({
                       </div>
                       <div>
                         <p className="text-lg font-bold text-at-text">
-                          {uploadResult.count}개 파일 업로드 완료
+                          {uploadResult.uploadedCount}개 파일 업로드 완료
+                          {uploadResult.skippedCount > 0 && (
+                            <span className="text-sm font-normal text-at-error ml-2">
+                              ({uploadResult.skippedCount}개 스킵)
+                            </span>
+                          )}
                         </p>
                         <p className="text-sm text-at-text-weak mt-1">
                           {year}년 {month}월 급여명세서가 등록되었습니다.
                         </p>
+                        {uploadResult.errors.length > 0 && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-left">
+                            <p className="text-xs font-medium text-amber-800 mb-1">일부 파일 스킵:</p>
+                            <ul className="text-xs text-amber-700 space-y-0.5 list-disc list-inside">
+                              {uploadResult.errors.slice(0, 5).map((e, i) => (
+                                <li key={i}>{e}</li>
+                              ))}
+                              {uploadResult.errors.length > 5 && (
+                                <li>외 {uploadResult.errors.length - 5}개 더…</li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
