@@ -35,9 +35,11 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function extractKoreanName(fileName: string): string | null {
+function extractKoreanNames(fileName: string): string[] {
+  // 파일명의 모든 한글 2~4자 시퀀스 (예: "71_유지혜_202604.pdf" → ["유지혜"],
+  // "급여명세서_홍길동_2026.pdf" → ["급여명세서", "홍길동"])
   const matches = fileName.match(/[가-힣]{2,4}/g)
-  return matches ? matches[0] : null
+  return matches ?? []
 }
 
 export default function TaxOfficeUploadModal({
@@ -92,16 +94,24 @@ export default function TaxOfficeUploadModal({
   const autoMatch = useCallback(
     (files: { name: string; path: string }[]): FileMatch[] => {
       return files.map((file) => {
-        const extracted = extractKoreanName(file.name)
-        if (!extracted) return { fileName: file.name, zipPath: file.path, employeeId: null, autoMatched: false }
+        const candidates = extractKoreanNames(file.name)
+        if (candidates.length === 0) {
+          return { fileName: file.name, zipPath: file.path, employeeId: null, autoMatched: false }
+        }
 
-        const exact = employees.find((e) => e.name === extracted)
-        if (exact) return { fileName: file.name, zipPath: file.path, employeeId: exact.id, autoMatched: true }
+        // 1순위: 정확 매칭 (모든 후보를 직원과 비교)
+        for (const c of candidates) {
+          const exact = employees.find((e) => e.name === c)
+          if (exact) return { fileName: file.name, zipPath: file.path, employeeId: exact.id, autoMatched: true }
+        }
 
-        const partial = employees.find(
-          (e) => e.name.includes(extracted) || extracted.includes(e.name)
-        )
-        if (partial) return { fileName: file.name, zipPath: file.path, employeeId: partial.id, autoMatched: true }
+        // 2순위: 부분 매칭 (포함 관계)
+        for (const c of candidates) {
+          const partial = employees.find(
+            (e) => e.name.includes(c) || c.includes(e.name)
+          )
+          if (partial) return { fileName: file.name, zipPath: file.path, employeeId: partial.id, autoMatched: true }
+        }
 
         return { fileName: file.name, zipPath: file.path, employeeId: null, autoMatched: false }
       })
