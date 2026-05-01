@@ -46,6 +46,23 @@ async function shutdown(signal: string): Promise<void> {
   process.exit(0);
 }
 
+/** worker_control.disabled 플래그 체크 — true이면 즉시 종료 */
+async function checkDisabledFlag(): Promise<boolean> {
+  try {
+    const { getSupabaseClient } = await import('./db/supabaseClient.js');
+    const supabase = getSupabaseClient();
+    const { data } = await supabase
+      .from('worker_control')
+      .select('disabled')
+      .eq('id', 'main')
+      .single();
+    return data?.disabled === true;
+  } catch (err) {
+    log.warn({ err }, 'disabled 플래그 조회 실패 — 정상 진행');
+    return false;
+  }
+}
+
 /** 메인 엔트리 포인트 */
 async function main(): Promise<void> {
   log.info({
@@ -54,6 +71,12 @@ async function main(): Promise<void> {
     heartbeatInterval: config.worker.heartbeatIntervalMs,
     maxConcurrent: config.worker.maxConcurrent,
   }, '홈택스 스크래핑 워커 시작');
+
+  // 0. 비활성화 플래그 체크 (사용자 PC marketing-worker로 이전된 경우)
+  if (await checkDisabledFlag()) {
+    log.warn('worker_control.disabled=true → 즉시 종료 (PM2가 max_restarts 후 stopped 상태로 전환)');
+    process.exit(0);
+  }
 
   // 1. Supabase 연결 테스트
   const connected = await testConnection();
