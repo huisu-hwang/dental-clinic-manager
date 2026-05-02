@@ -583,16 +583,54 @@ export async function POST(request: NextRequest) {
     byDay,
   }
 
-  // 6. LLM 코멘트 (옵션) — 가장 최근 일자(byDay 마지막 = 메인 분석)에만 생성
+  // 6. LLM 코멘트 (옵션) — byDay 모든 일자별로 그날 데이터 기준 코멘트 병렬 생성
   if (includeLLM) {
-    try {
-      analysis.naturalLanguageComment = await generateLLMComment(analysis)
-      // byDay가 있으면 마지막 일자에도 같은 코멘트 노출
-      if (byDay.length > 0) {
-        byDay[byDay.length - 1].naturalLanguageComment = analysis.naturalLanguageComment
+    if (byDay.length > 0) {
+      const tasks = byDay.map(async (day, idx) => {
+        const isLast = idx === byDay.length - 1
+        // 가장 최근 일자(byDay 마지막)는 메인 analysis와 동일 → analysis 그대로 사용
+        // 그 외 과거 일자는 DailyAnalysis → SmartMoneyAnalysis 호환 객체로 변환
+        const target: SmartMoneyAnalysis = isLast
+          ? analysis
+          : {
+              ticker: day.ticker,
+              market: day.market,
+              name,
+              asOfDate: day.asOfDate,
+              currentPrice: day.closePrice,
+              vwap: day.vwap,
+              investorFlow,
+              wyckoff: day.wyckoff,
+              algoFootprint: day.algoFootprint,
+              wyckoffPhase: day.wyckoffPhase,
+              liquidity: day.liquidity,
+              marketStructure: day.marketStructure,
+              orderBlocksFvg: day.orderBlocksFvg,
+              traps: day.traps,
+              vsa: day.vsa,
+              session: day.session,
+              newsContext: day.newsContext,
+              manipulationRiskScore: day.manipulationRiskScore,
+              overallScore: day.overallScore,
+              interpretation: day.interpretation,
+              signalDetails: day.signalDetails,
+              generatedAt: analysis.generatedAt,
+            }
+        try {
+          const comment = await generateLLMComment(target)
+          day.naturalLanguageComment = comment
+          if (isLast) analysis.naturalLanguageComment = comment
+        } catch (err) {
+          console.warn(`[smart-money/analyze] LLM 코멘트 생성 스킵 (${day.asOfDate}):`, err)
+        }
+      })
+      await Promise.all(tasks)
+    } else {
+      try {
+        analysis.naturalLanguageComment = await generateLLMComment(analysis)
+      } catch (err) {
+        console.warn('[smart-money/analyze] LLM 코멘트 생성 스킵:', err)
       }
-    } catch (err) {
-      console.warn('[smart-money/analyze] LLM 코멘트 생성 스킵:', err)
     }
   }
 

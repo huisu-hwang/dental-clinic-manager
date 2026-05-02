@@ -502,7 +502,7 @@ export function SmartMoneyContent() {
                     </button>
                   ) : (
                     <p className="text-[11px] text-slate-500">
-                      AI 코멘트는 가장 최근 일자에서만 제공됩니다.
+                      이 일자의 AI 코멘트가 아직 준비되지 않았습니다.
                     </p>
                   )}
                 </div>
