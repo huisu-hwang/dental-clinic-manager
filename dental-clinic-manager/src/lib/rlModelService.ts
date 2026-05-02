@@ -1,8 +1,13 @@
 import type { RLModel, RLModelCreateInput } from '@/types/rlTrading'
 import { createClient } from '@/lib/supabase/server'
 
-const RL_SERVER_URL = process.env.RL_SERVER_URL ?? 'http://127.0.0.1:8001'
-const RL_API_KEY = process.env.RL_API_KEY ?? ''
+// 모듈 로드 시점이 아닌 호출 시점에 env를 읽어 .env.local hot reload에 즉시 반응
+function getServerConfig() {
+  return {
+    url: process.env.RL_SERVER_URL ?? 'http://127.0.0.1:8001',
+    apiKey: process.env.RL_API_KEY ?? '',
+  }
+}
 
 export const rlModelService = {
   async listForClinic(clinicId: string): Promise<{ data: RLModel[]; error: string | null }> {
@@ -60,10 +65,11 @@ export const rlModelService = {
 
     await supabase.from('rl_models').update({ status: 'downloading' }).eq('id', modelId)
 
+    const { url: rlUrl, apiKey: rlApiKey } = getServerConfig()
     try {
-      const resp = await fetch(`${RL_SERVER_URL}/models/download`, {
+      const resp = await fetch(`${rlUrl}/models/download`, {
         method: 'POST',
-        headers: { 'X-RL-API-KEY': RL_API_KEY, 'content-type': 'application/json' },
+        headers: { 'X-RL-API-KEY': rlApiKey, 'content-type': 'application/json' },
         body: JSON.stringify({
           model_id: modelId,
           checkpoint_url: model.checkpoint_url,
