@@ -24,21 +24,31 @@ export interface AlgoBar {
 }
 
 // ============================================
-// TWAP — 거래량의 균등성 (변동계수 역수)
+// TWAP — 가운데 시간대 거래량 균등성 (robust CV 기반)
+//
+// 원리: TWAP(Time-Weighted Average Price) 알고리즘은 정해진 시간 간격으로
+// 동일량을 균등 매매. 시초·마감 동시호가는 자연 폭증이라 측정에서 제외하고,
+// 가운데 시간대 거래량 분포가 균등할수록 TWAP 시그니처 강함.
+//
+// outlier에 민감한 std/mean 대신 IQR/median 사용 (robust)
 // ============================================
 function scoreTwap(bars: AlgoBar[]): number {
-  if (bars.length < 5) return 0
-  const volumes = bars.map(b => b.volume).filter(v => v >= 0)
-  const n = volumes.length
-  if (n === 0) return 0
-  const mean = volumes.reduce((s, v) => s + v, 0) / n
-  if (mean <= 0) return 0
-  let varSum = 0
-  for (const v of volumes) varSum += (v - mean) ** 2
-  const std = Math.sqrt(varSum / n)
-  const cv = std / mean  // 변동계수
-  // cv=0 → 100, cv=2 → 0 (인트라데이는 보통 cv≈1이라 종전 매핑은 항상 0)
-  return Math.max(0, Math.min(100, ((2 - cv) / 2) * 100))
+  if (bars.length < 60) return 0 // 1시간 미만이면 측정 불가
+  // 시초 30분 + 마감 30분 제외 — 정규장 자연 폭증 구간 outlier 제거
+  const trim = Math.min(30, Math.floor(bars.length * 0.1))
+  const middle = bars.slice(trim, bars.length - trim)
+  if (middle.length < 30) return 0
+  const volumes = middle.map(b => b.volume).filter(v => v > 0)
+  if (volumes.length < 30) return 0
+  const sorted = [...volumes].sort((a, b) => a - b)
+  const q1 = sorted[Math.floor(sorted.length * 0.25)]
+  const q3 = sorted[Math.floor(sorted.length * 0.75)]
+  const median = sorted[Math.floor(sorted.length * 0.5)]
+  if (median <= 0) return 0
+  const iqrRatio = (q3 - q1) / median // robust CV (1차 분산/중심)
+  // iqrRatio = 0 → 완전 균등 (TWAP 100점), iqrRatio = 2 → 자연 거래 (0점)
+  // 실제 TWAP 알고가 일부 시간대 매매하면 iqrRatio 0.3~0.8 정도로 줄어듦
+  return Math.max(0, Math.min(100, ((2 - iqrRatio) / 2) * 100))
 }
 
 // ============================================
