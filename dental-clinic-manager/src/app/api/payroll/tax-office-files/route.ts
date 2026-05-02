@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import JSZip from 'jszip'
 import type { TaxOfficeFileMatch, TaxOfficeUploadResult } from '@/types/payroll'
-import { extractPayslipTotalPayment } from '@/utils/payslipPdfParser'
+import { extractPayslipTotalPayment, extractPayslipEmployeeName } from '@/utils/payslipPdfParser'
 
 const STORAGE_BUCKET = 'payroll-documents'
 
@@ -137,12 +137,6 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceRoleClient()
 
     for (const match of matches) {
-      // 매칭되지 않은 파일은 건너뜀
-      if (!match.matchedEmployeeId) {
-        result.skippedCount++
-        continue
-      }
-
       const pdfArrayBuffer = await getPdfArrayBuffer(match.fileName)
       if (!pdfArrayBuffer) {
         result.errors.push(`파일을 찾을 수 없음: ${match.fileName}`)
@@ -154,63 +148,74 @@ export async function POST(request: NextRequest) {
       const displayFileName = match.fileName.split('/').pop() || match.fileName
 
       try {
+        const pdfBuf = Buffer.from(pdfArrayBuffer)
         const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' })
 
-        const storagePath = `${clinicId}/${paymentYear}/${paymentMonth}/${match.matchedEmployeeId}.pdf`
+        // PDF에서 총 지급액 + 직원명 자동 추출 (Vercel cMap 번들 포함)
+        const [totalPayment, extractedName] = await Promise.all([
+          extractPayslipTotalPayment(pdfBuf).catch(err => {
+            console.error(`[tax-office-files] 금액 추출 오류 (${match.fileName}):`, err)
+            return null
+          }),
+          extractPayslipEmployeeName(pdfBuf).catch(err => {
+            console.error(`[tax-office-files] 이름 추출 오류 (${match.fileName}):`, err)
+            return null
+          }),
+        ])
 
-        // 기존 파일 확인 (upsert: 기존 파일 삭제 후 재업로드)
-        const { data: existingRecord } = await supabase
-          .from('payroll_tax_office_files')
-          .select('id, storage_path')
-          .eq('clinic_id', clinicId)
-          .eq('employee_user_id', match.matchedEmployeeId)
-          .eq('payment_year', paymentYear)
-          .eq('payment_month', paymentMonth)
-          .maybeSingle()
-
-        if (existingRecord?.storage_path) {
-          // 기존 Storage 파일 삭제
-          await supabase.storage
-            .from(STORAGE_BUCKET)
-            .remove([existingRecord.storage_path])
+        if (totalPayment == null) {
+          result.errors.push(`총 지급액 인식 실패: ${displayFileName} (PDF 형식 확인 필요)`)
         }
 
-        // Storage에 업로드
+        const isMatched = !!match.matchedEmployeeId
+
+        // Storage 경로: 매칭된 직원은 employee_user_id 기반(같은 월 재업로드 시 덮어쓰기)
+        // 미가입(매칭 실패): 고유 UUID 기반 (중복 저장 허용)
+        const storagePath = isMatched
+          ? `${clinicId}/${paymentYear}/${paymentMonth}/${match.matchedEmployeeId}.pdf`
+          : `${clinicId}/${paymentYear}/${paymentMonth}/unmatched/${crypto.randomUUID()}_${displayFileName}`
+
+        // 매칭된 직원만 기존 파일 확인 (upsert)
+        let existingRecord: { id: string; storage_path: string } | null = null
+        if (isMatched) {
+          const { data } = await supabase
+            .from('payroll_tax_office_files')
+            .select('id, storage_path')
+            .eq('clinic_id', clinicId)
+            .eq('employee_user_id', match.matchedEmployeeId)
+            .eq('payment_year', paymentYear)
+            .eq('payment_month', paymentMonth)
+            .maybeSingle()
+          existingRecord = data
+        }
+
+        if (existingRecord?.storage_path) {
+          await supabase.storage.from(STORAGE_BUCKET).remove([existingRecord.storage_path])
+        }
+
+        // Storage 업로드
         const { error: uploadError } = await supabase.storage
           .from(STORAGE_BUCKET)
-          .upload(storagePath, pdfBlob, {
-            contentType: 'application/pdf',
-            upsert: true
-          })
+          .upload(storagePath, pdfBlob, { contentType: 'application/pdf', upsert: true })
 
         if (uploadError) {
-          result.errors.push(`Storage 업로드 실패 (${match.fileName}): ${uploadError.message}`)
+          result.errors.push(`Storage 업로드 실패 (${displayFileName}): ${uploadError.message}`)
           result.skippedCount++
           continue
         }
 
-        // PDF에서 총 지급액 자동 추출 (실패 시 null — 후속 동기화 스킵)
-        let totalPayment: number | null = null
-        try {
-          totalPayment = await extractPayslipTotalPayment(Buffer.from(pdfArrayBuffer))
-        } catch (parseErr) {
-          console.error(`[tax-office-files] PDF 파싱 오류 (${match.fileName}):`, parseErr)
-        }
-        if (totalPayment == null) {
-          result.errors.push(`총 지급액 인식 실패: ${match.fileName} (수동 입력이 필요할 수 있습니다)`)
-        }
-
-        // DB에 메타데이터 저장 (upsert)
+        // DB 저장 (매칭/미매칭 공통)
         const dbRecord = {
           clinic_id: clinicId,
-          employee_user_id: match.matchedEmployeeId,
+          employee_user_id: match.matchedEmployeeId, // null 가능
+          extracted_employee_name: extractedName,    // PDF에서 추출한 이름
           payment_year: paymentYear,
           payment_month: paymentMonth,
           file_name: displayFileName,
           storage_path: storagePath,
           uploaded_by: uploadedBy,
           total_payment: totalPayment,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         }
 
         if (existingRecord?.id) {
@@ -221,12 +226,13 @@ export async function POST(request: NextRequest) {
               storage_path: storagePath,
               uploaded_by: uploadedBy,
               total_payment: totalPayment,
-              created_at: new Date().toISOString()
+              extracted_employee_name: extractedName,
+              created_at: new Date().toISOString(),
             })
             .eq('id', existingRecord.id)
 
           if (updateError) {
-            result.errors.push(`DB 업데이트 실패 (${match.fileName}): ${updateError.message}`)
+            result.errors.push(`DB 업데이트 실패 (${displayFileName}): ${updateError.message}`)
             result.skippedCount++
             continue
           }
@@ -236,7 +242,7 @@ export async function POST(request: NextRequest) {
             .insert(dbRecord)
 
           if (insertError) {
-            result.errors.push(`DB 저장 실패 (${match.fileName}): ${insertError.message}`)
+            result.errors.push(`DB 저장 실패 (${displayFileName}): ${insertError.message}`)
             result.skippedCount++
             continue
           }

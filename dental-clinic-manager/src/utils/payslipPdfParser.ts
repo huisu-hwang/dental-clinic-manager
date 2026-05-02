@@ -3,8 +3,12 @@
 // "지 급 액 계" 라벨 다음의 총 지급액(=총급여) 추출
 // ============================================
 import path from 'path'
+import { createRequire } from 'module'
+
+const require = createRequire(import.meta.url)
 
 let cachedPdfjs: typeof import('pdfjs-dist/legacy/build/pdf.mjs') | null = null
+let cachedPkgDir: string | null = null
 
 async function getPdfjs() {
   if (!cachedPdfjs) {
@@ -13,9 +17,22 @@ async function getPdfjs() {
   return cachedPdfjs
 }
 
+function getPdfjsPackageDir(): string {
+  if (cachedPkgDir) return cachedPkgDir
+  // require.resolve로 pdfjs-dist 패키지 위치 안정적으로 찾기
+  // (Vercel/serverless에서 process.cwd() 의존을 피하기 위함)
+  try {
+    const pkgJson = require.resolve('pdfjs-dist/package.json')
+    cachedPkgDir = path.dirname(pkgJson)
+  } catch {
+    // 폴백: process.cwd() 기반
+    cachedPkgDir = path.join(process.cwd(), 'node_modules', 'pdfjs-dist')
+  }
+  return cachedPkgDir
+}
+
 function nodeModulesPath(sub: string): string {
-  // process.cwd()는 Next.js 실행 시 프로젝트 루트
-  return path.join(process.cwd(), 'node_modules', 'pdfjs-dist', sub)
+  return path.join(getPdfjsPackageDir(), sub)
 }
 
 /**
