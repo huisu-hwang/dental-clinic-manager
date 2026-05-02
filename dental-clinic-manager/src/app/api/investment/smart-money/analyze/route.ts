@@ -293,6 +293,15 @@ export async function POST(request: NextRequest) {
     bars = dailyBars
   }
 
+  // 정규장 시간만 필터 — 프리/포스트마켓 봉은 거래량 분포·시·종가 식별에 노이즈
+  // (US: ET 09:30~16:00, KR: KST 09:00~15:30)
+  // dailyBars로 fallback된 경우는 시간 정보가 없으므로 그대로 유지
+  if (bars !== dailyBars && bars.length > 0) {
+    const filtered = bars.filter((b) => isRegularTradingHours(b.datetime, market))
+    if (filtered.length >= 30) bars = filtered
+    // 필터 후 너무 적으면(예: 데이터 형식 문제) 원본 유지
+  }
+
   // 5. 엔진 호출
   let vwap, wyckoff, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
   let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
@@ -905,4 +914,37 @@ function toDateString(d: Date): string {
 function toKisDateString(d: Date): string {
   // KIS는 YYYYMMDD 포맷
   return toDateString(d).replace(/-/g, '')
+}
+
+/**
+ * 시장의 정규장 시간(Regular Trading Hours) 내인지 판단.
+ * - US: ET 09:30~16:00 (16:00 미포함)
+ * - KR: KST 09:00~15:30 (15:30 미포함)
+ * 프리/포스트마켓 봉은 거래량 분포 분석에 노이즈가 되므로 분석 입력에서 제외용.
+ */
+function isRegularTradingHours(dt: string, market: Market): boolean {
+  if (!dt) return false
+  const hasTz = /Z$|[+-]\d{2}:?\d{2}$/.test(dt)
+  const d = new Date(hasTz ? dt : dt + 'Z')
+  if (isNaN(d.getTime())) return true
+  const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
+  let hh = 0
+  let mm = 0
+  try {
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+    })
+    const parts = fmt.formatToParts(d)
+    const hourPart = parts.find((p) => p.type === 'hour')?.value ?? '00'
+    const minutePart = parts.find((p) => p.type === 'minute')?.value ?? '00'
+    hh = parseInt(hourPart, 10)
+    mm = parseInt(minutePart, 10)
+  } catch {
+    return true
+  }
+  const minutes = hh * 60 + mm
+  if (market === 'US') {
+    return minutes >= 9 * 60 + 30 && minutes < 16 * 60
+  }
+  return minutes >= 9 * 60 && minutes < 15 * 60 + 30
 }
