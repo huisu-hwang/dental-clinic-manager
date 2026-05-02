@@ -299,7 +299,6 @@ export async function POST(request: NextRequest) {
   if (bars !== dailyBars && bars.length > 0) {
     const filtered = bars.filter((b) => isRegularTradingHours(b.datetime, market))
     if (filtered.length >= 30) bars = filtered
-    // 필터 후 너무 적으면(예: 데이터 형식 문제) 원본 유지
   }
 
   // 5. 엔진 호출
