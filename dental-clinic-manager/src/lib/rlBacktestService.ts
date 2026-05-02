@@ -60,16 +60,39 @@ export async function runRLBacktest(params: RLBacktestParams): Promise<RLBacktes
     initial_capital: initialCapital,
   }
 
+  if (!RL_API_KEY) {
+    throw new Error(
+      `RL_API_KEY 환경변수가 설정되지 않았습니다. .env.local 또는 배포 환경의 환경변수에 ` +
+      `RL_SERVER_URL과 RL_API_KEY를 추가하고 서버를 재시작하세요. (서버: ${RL_SERVER_URL})`
+    )
+  }
+
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 120_000)  // 2 min — yfinance fetch + simulation
 
   try {
-    const resp = await fetch(`${RL_SERVER_URL}/backtest_universe`, {
-      method: 'POST',
-      headers: { 'X-RL-API-KEY': RL_API_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    })
+    let resp: Response
+    try {
+      resp = await fetch(`${RL_SERVER_URL}/backtest_universe`, {
+        method: 'POST',
+        headers: { 'X-RL-API-KEY': RL_API_KEY, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      })
+    } catch (fetchErr) {
+      // Node native fetch는 ECONNREFUSED/DNS 실패 등에서 "fetch failed" (cause 포함) 던진다.
+      // 사용자에게 원인을 명확히 전달하기 위해 cause 정보를 풀어 메시지로 노출한다.
+      if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+        throw new Error('RL 백테스트가 120초 안에 완료되지 않아 중단되었습니다. 기간을 줄이거나 종목 수를 줄여 다시 시도하세요.')
+      }
+      const cause = (fetchErr as { cause?: { code?: string; message?: string } } | undefined)?.cause
+      const reason = cause?.code ?? cause?.message ?? (fetchErr instanceof Error ? fetchErr.message : String(fetchErr))
+      throw new Error(
+        `RL 추론 서버에 연결할 수 없습니다 (${RL_SERVER_URL}, ${reason}). ` +
+        `로컬에서는 rl-inference-server가 실행 중인지(\`uvicorn src.main:app --port 8001\`), ` +
+        `배포 환경에서는 RL_SERVER_URL이 외부에서 접근 가능한 주소인지 확인하세요.`
+      )
+    }
     if (!resp.ok) {
       const text = await resp.text().catch(() => '')
       throw new Error(`rl-inference-server /backtest_universe ${resp.status}: ${text.slice(0, 300)}`)
