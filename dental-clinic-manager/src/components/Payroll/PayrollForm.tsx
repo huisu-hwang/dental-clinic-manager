@@ -756,12 +756,43 @@ export default function PayrollForm() {
                   새 탭에서 열기
                 </a>
               </div>
-              <div className="border border-at-border rounded-xl overflow-hidden" style={{ height: '80vh' }}>
+
+              {/* 데스크톱: iframe 미리보기 (안드로이드 크롬 등 모바일은 iframe 내 PDF 미지원) */}
+              <div className="hidden md:block border border-at-border rounded-xl overflow-hidden" style={{ height: '80vh' }}>
                 <iframe
                   src={taxOfficeFileUrl}
                   className="w-full h-full"
                   title="세무사무실 급여명세서"
                 />
+              </div>
+
+              {/* 모바일: 다운로드/새 탭 카드 (PDF inline 미지원 환경 대응) */}
+              <div className="md:hidden border border-at-border rounded-xl p-6 bg-at-surface-alt/40 text-center space-y-4">
+                <FileText className="w-12 h-12 mx-auto text-at-accent" />
+                <div>
+                  <p className="text-sm font-medium text-at-text break-all">{taxOfficeFileName}</p>
+                  <p className="text-xs text-at-text-weak mt-1">
+                    모바일 브라우저에서는 미리보기가 지원되지 않을 수 있습니다.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <a
+                    href={taxOfficeFileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-at-accent text-white font-medium rounded-xl text-sm"
+                  >
+                    <FileText className="w-4 h-4" />
+                    PDF 새 탭에서 열기
+                  </a>
+                  <a
+                    href={taxOfficeFileUrl}
+                    download={taxOfficeFileName || 'payslip.pdf'}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-at-border text-at-text font-medium rounded-xl text-sm"
+                  >
+                    PDF 다운로드
+                  </a>
+                </div>
               </div>
             </div>
           ) : (
