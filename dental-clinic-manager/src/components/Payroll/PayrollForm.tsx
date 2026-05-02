@@ -501,16 +501,15 @@ export default function PayrollForm() {
             savedPayroll.payments?.bonus !== adjustedBonus
 
           if (settingsChanged && isOwner) {
-            // 설정이 변경되었으면 새로운 값으로 저장
+            // 이미 저장된 명세서의 설정이 변경되었으면 새로운 값으로 갱신
             await autoSavePayroll(employee, newFormState, result, currentAttendanceSummary, currentAttendanceDeduction)
           }
           setHasSavedPayroll(true)
         } else {
-          // 저장된 명세서가 없으면 자동 저장 (owner만)
-          if (isOwner) {
-            await autoSavePayroll(employee, newFormState, result, currentAttendanceSummary, currentAttendanceDeduction)
-          }
-          setHasSavedPayroll(true)
+          // 저장된 명세서가 없으면 화면에는 자동 계산만 표시하고 DB 저장은 하지 않음
+          // (원장이 단순히 화면을 열어보기만 해도 자동 저장돼서 인건비가 잡히던 버그 방지)
+          // 사용자가 폼을 직접 수정하거나 명시적으로 저장 액션을 했을 때만 저장됨
+          setHasSavedPayroll(false)
         }
       } catch (error) {
         console.error('Error loading payroll:', error)
