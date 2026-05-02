@@ -259,7 +259,10 @@ export interface SmartMoneyAnalysis {
   currentPrice: number
   vwap: VWAPResult
   investorFlow: InvestorFlowResult | null
+  /** 메인 Wyckoff (일봉 기반, Wyckoff 원전 표준) */
   wyckoff: WyckoffResult
+  /** 분봉 기반 Wyckoff (단기 트레이더용 보조) */
+  wyckoffIntraday?: WyckoffResult
   algoFootprint: AlgoFootprintResult
   // ===== 정교화 엔진 (옵션 — 하위 호환) =====
   wyckoffPhase?: WyckoffPhaseResult
@@ -308,7 +311,10 @@ export interface DailyAnalysis {
   /** 그 거래일의 종가(가장 최근 일자라면 진행 중 가격) */
   closePrice: number
   vwap: VWAPResult
+  /** 메인 Wyckoff (일봉) — DailyAnalysis의 모든 일자에 동일한 값(일봉은 일자 내내 고정) */
   wyckoff: WyckoffResult
+  /** 분봉 Wyckoff (그 거래일 분봉 기준) */
+  wyckoffIntraday?: WyckoffResult
   algoFootprint: AlgoFootprintResult
   wyckoffPhase?: WyckoffPhaseResult
   liquidity?: LiquidityResult
