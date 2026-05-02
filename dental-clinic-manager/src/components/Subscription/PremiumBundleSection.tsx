@@ -48,15 +48,15 @@ function BundleCard({ plan, isCurrent, onSelect, variant }: BundleCardProps) {
       {isCurrent && (
         <div className={`mb-1 text-[10px] font-semibold ${styles.currentText}`}>현재 이용 중</div>
       )}
-      <div className="text-base font-semibold">{plan.display_name}</div>
+      <div className="text-base font-semibold text-gray-900 dark:text-gray-100">{plan.display_name}</div>
       {plan.features?.length > 0 && (
-        <ul className="mt-2 list-inside list-disc text-xs text-muted-foreground">
+        <ul className="mt-2 list-inside list-disc text-xs text-gray-700 dark:text-gray-300">
           {plan.features.map((feature) => (
             <li key={feature}>{feature}</li>
           ))}
         </ul>
       )}
-      <div className="mt-3 text-sm font-bold">{formatPlanPrice(plan)}</div>
+      <div className="mt-3 text-sm font-bold text-gray-900 dark:text-gray-100">{formatPlanPrice(plan)}</div>
     </button>
   )
 }

@@ -53,8 +53,8 @@ export default function UpgradeRequiredModal({ open, onClose, onPayNow, context 
         <div className="space-y-3 text-sm">
           {plan ? (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
-              <div className="text-base font-semibold">{plan.display_name}</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-base font-semibold text-gray-900 dark:text-gray-100">{plan.display_name}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
                 {plan.min_users}~{plan.max_users}인 · {formatPlanPrice(plan)}
               </div>
             </div>

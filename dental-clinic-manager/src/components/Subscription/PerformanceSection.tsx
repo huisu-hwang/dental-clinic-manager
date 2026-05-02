@@ -57,9 +57,9 @@ export default function PerformanceSection({ plans, onSelect }: Props) {
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/30">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-base font-semibold">주식 자동매매</div>
-            <div className="mt-1 text-sm font-bold">구독료 0원 · 수익의 5%</div>
-            <div className="text-xs text-muted-foreground">매월 실현 수익이 있을 때만 정산됩니다.</div>
+            <div className="text-base font-semibold text-gray-900 dark:text-gray-100">주식 자동매매</div>
+            <div className="mt-1 text-sm font-bold text-gray-900 dark:text-gray-100">구독료 0원 · 수익의 5%</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">매월 실현 수익이 있을 때만 정산됩니다.</div>
           </div>
           <button type="button" onClick={() => onSelect(investment)}
             className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700">
