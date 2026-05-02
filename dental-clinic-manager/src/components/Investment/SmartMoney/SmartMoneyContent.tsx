@@ -219,8 +219,9 @@ export function SmartMoneyContent() {
       })
       const json = await res.json().catch(() => ({}))
       const comment: string | undefined = json?.data?.comment
+      const perCard = json?.data?.perCard as SmartMoneyAnalysis['perCardComments']
       if (comment) {
-        const updated: SmartMoneyAnalysis = { ...base, naturalLanguageComment: comment }
+        const updated: SmartMoneyAnalysis = { ...base, naturalLanguageComment: comment, perCardComments: perCard }
         setAnalysis(prev => (prev && prev.ticker === base.ticker ? updated : prev))
         if (selected) cacheRef.current.set(cacheKey(selected), updated)
       }
@@ -262,6 +263,8 @@ export function SmartMoneyContent() {
       interpretation: day.interpretation,
       signalDetails: day.signalDetails,
       naturalLanguageComment: day.naturalLanguageComment,
+      // byDay 항목은 카드별 코멘트를 갖지 않음(가장 최근 일자만 메인에 보유)
+      perCardComments: idx === byDay.length - 1 ? analysis.perCardComments : undefined,
     }
   }, [analysis, activeDayIdx])
 
@@ -509,8 +512,8 @@ export function SmartMoneyContent() {
               </div>
             </section>
 
-            {/* 시그널 패널 (4개 카드) */}
-            <SignalPanel analysis={viewAnalysis} />
+            {/* 시그널 패널 (4개 카드) — 카드별 AI 해석 포함 */}
+            <SignalPanel analysis={viewAnalysis} cardComments={viewAnalysis.perCardComments} />
 
             {/* VWAP 차트 placeholder */}
             <section className="bg-white rounded-2xl border border-dashed border-slate-300 p-6 text-center">

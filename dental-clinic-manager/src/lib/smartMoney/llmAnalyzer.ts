@@ -8,16 +8,23 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import type { SmartMoneyAnalysis } from '@/types/smartMoney'
+import type { SmartMoneyAnalysis, PerCardComments } from '@/types/smartMoney'
 
 const MODEL_ID = 'claude-haiku-4-5-20251001'
-const MAX_TOKENS = 600
+const MAX_TOKENS = 900
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24h
 /** 캐시 키에 포함되는 프롬프트 버전 — 프롬프트 구조 변경 시 무효화 */
-const PROMPT_VERSION = 'v3-plain'
+const PROMPT_VERSION = 'v4-cards'
+
+export interface LlmCommentResult {
+  /** 종합 코멘트 (기존 [큰손의 의도]/[일반 투자자 행동 가이드]) */
+  comment: string
+  /** 카드별 한 문장 해석 — 파싱 실패 시 undefined */
+  perCard?: PerCardComments
+}
 
 interface CacheEntry {
-  comment: string
+  result: LlmCommentResult
   expiresAt: number
 }
 
@@ -28,34 +35,46 @@ function cacheKey(analysis: SmartMoneyAnalysis): string {
   return `${PROMPT_VERSION}:${analysis.market}:${analysis.ticker}:${analysis.asOfDate}`
 }
 
-function getCached(key: string): string | null {
+function getCached(key: string): LlmCommentResult | null {
   const entry = llmCache.get(key)
   if (!entry) return null
   if (entry.expiresAt < Date.now()) {
     llmCache.delete(key)
     return null
   }
-  return entry.comment
+  return entry.result
 }
 
-function setCached(key: string, comment: string): void {
+function setCached(key: string, result: LlmCommentResult): void {
   if (llmCache.size >= MAX_CACHE_SIZE) {
-    // 가장 오래된 항목 제거 (Map은 삽입 순서 유지)
     const firstKey = llmCache.keys().next().value
     if (firstKey !== undefined) llmCache.delete(firstKey)
   }
-  llmCache.set(key, { comment, expiresAt: Date.now() + CACHE_TTL_MS })
+  llmCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS })
 }
 
 const SYSTEM_PROMPT = `당신은 일반 개인 투자자에게 주식시장의 큰손(기관·외국인) 움직임을 쉽게 풀어 설명해주는 친절한 가이드입니다. 다양한 분석 데이터를 받지만, 답변에는 전문용어를 가급적 쓰지 말고 **일반인이 처음 들어도 이해할 수 있는 평범한 한국어**로 설명하세요.
 
-반드시 아래 두 섹션을 모두 포함해야 합니다:
+응답은 **반드시 아래 JSON 한 개만** 출력하세요. 다른 설명, 코드펜스, 머리말·꼬리말 절대 금지.
 
-[큰손의 의도]
-- 2~3문장. 기관·외국인 같은 "큰손"이 지금 이 종목을 사 모으는 중인지, 팔아 치우는 중인지, 아니면 관망 중인지를 일반인 눈높이에서 설명. 그렇게 판단한 이유를 비유나 쉬운 풀이로.
+{
+  "summary": "[큰손의 의도]\\n...2~3문장...\\n\\n[일반 투자자 행동 가이드]\\n...2~3문장...",
+  "perCard": {
+    "vwap": "오늘 평균거래가격 대비 어떤 위치인지, 매수/매도 우위를 한 문장으로",
+    "wyckoff": "큰 자금이 매물을 흡수/분배 중인지를 한 문장으로",
+    "algo": "기관이 어떤 방식으로 자금을 집행 중인지 한 문장으로",
+    "flow": "외국인·기관 수급 흐름을 한 문장으로 (미국 종목이면 \\"미국 종목은 수급 데이터 없음\\")"
+  }
+}
 
-[일반 투자자 행동 가이드]
-- 2~3문장. 위 분석을 토대로 평범한 개인이 지금 어떻게 행동하는 게 안전한지(추격 매수를 자제할지, 천천히 나눠서 살지, 일단 지켜볼지). 위험한 함정 신호가 있으면 분명히 경고.
+summary 필드 작성 규칙:
+- 반드시 [큰손의 의도] 와 [일반 투자자 행동 가이드] 두 섹션 헤더 그대로 포함.
+- [큰손의 의도]: 2~3문장. 큰손이 사 모으는지/팔아 치우는지/관망인지 + 이유.
+- [일반 투자자 행동 가이드]: 2~3문장. 추격 매수 자제/분할 매수/관망 중 어느 것이 안전한지. 함정 신호 있으면 경고.
+
+perCard 필드 작성 규칙:
+- 각 항목 1문장(60자 내외). 데이터가 없으면 "데이터 없음" 한 단어.
+- 카드별로 평이한 한국어. JSON 문자열 안에서 역따옴표·이스케이프 주의.
 
 전문용어 사용 규칙 (매우 중요):
 - 다음 단어들은 **사용하지 말고** 쉬운 표현으로 바꿔 쓰세요:
@@ -205,8 +224,9 @@ function summarizeAnalysis(analysis: SmartMoneyAnalysis): Record<string, unknown
  *
  * - 동일 ticker+asOfDate 24시간 캐시
  * - 실패 시 fallback 메시지 반환 (throw 하지 않음)
+ * - 응답은 JSON: { summary, perCard }. JSON 파싱 실패 시 텍스트 전체를 summary로 사용
  */
-export async function generateLLMComment(analysis: SmartMoneyAnalysis): Promise<string> {
+export async function generateLLMComment(analysis: SmartMoneyAnalysis): Promise<LlmCommentResult> {
   const key = cacheKey(analysis)
   const cached = getCached(key)
   if (cached) return cached
@@ -214,31 +234,91 @@ export async function generateLLMComment(analysis: SmartMoneyAnalysis): Promise<
   try {
     const client = getAnthropic()
     const summary = summarizeAnalysis(analysis)
-    const userMessage = `다음은 오늘 (${analysis.asOfDate}) ${analysis.name}(${analysis.ticker}) 종목에 대한 큰손(기관·외국인) 움직임 분석 결과입니다.\n\n${JSON.stringify(summary, null, 2)}\n\n위 데이터를 바탕으로 [큰손의 의도]와 [일반 투자자 행동 가이드]를 작성해주세요. 전문용어는 절대 그대로 쓰지 말고 평범한 한국어로 풀어 설명해주세요.`
+    const userMessage = `다음은 오늘 (${analysis.asOfDate}) ${analysis.name}(${analysis.ticker}) 종목에 대한 큰손(기관·외국인) 움직임 분석 결과입니다.\n\n${JSON.stringify(summary, null, 2)}\n\n위 데이터를 바탕으로 지정된 JSON 형식만 반환해주세요.`
 
     const response = await client.messages.create({
       model: MODEL_ID,
       max_tokens: MAX_TOKENS,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userMessage }],
+      messages: [
+        { role: 'user', content: userMessage },
+        // JSON으로 시작하도록 prefill
+        { role: 'assistant', content: '{' },
+      ],
     })
 
-    // 첫 텍스트 블록 추출
     const textBlock = response.content.find(
       (block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text'
     )
-    const comment = textBlock?.text?.trim() ?? ''
-    if (!comment) {
-      return '현재 데이터로는 명확한 코멘트를 생성하기 어렵습니다.'
+    const raw = textBlock?.text?.trim() ?? ''
+    if (!raw) {
+      return { comment: '현재 데이터로는 명확한 코멘트를 생성하기 어렵습니다.' }
     }
 
-    setCached(key, comment)
-    return comment
+    // prefill로 시작한 '{'를 다시 붙여 완전한 JSON으로 만든 뒤 파싱
+    const result = parseLlmJson(`{${raw}`)
+    setCached(key, result)
+    return result
   } catch (err) {
     console.error('[smartMoney/llmAnalyzer] LLM 코멘트 생성 실패:', err)
-    // 실패해도 분석 흐름을 막지 않도록 fallback
-    return `${analysis.name}(${analysis.ticker}) — ${interpretationToKorean(analysis.interpretation)}로 해석됩니다. (LLM 코멘트 일시 사용 불가)`
+    return {
+      comment: `${analysis.name}(${analysis.ticker}) — ${interpretationToKorean(analysis.interpretation)}로 해석됩니다. (LLM 코멘트 일시 사용 불가)`,
+    }
   }
+}
+
+/**
+ * LLM JSON 응답 파싱.
+ * 실패 시 원문 전체를 summary로 fallback.
+ */
+function parseLlmJson(text: string): LlmCommentResult {
+  // 후행 텍스트 제거 시도: 첫 '{' ~ 매칭되는 '}'까지만 추출
+  const start = text.indexOf('{')
+  if (start === -1) return { comment: text.trim() }
+  // 균형 매칭으로 마지막 '}' 위치 찾기
+  let depth = 0
+  let end = -1
+  let inString = false
+  let escape = false
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]
+    if (escape) { escape = false; continue }
+    if (ch === '\\') { escape = true; continue }
+    if (ch === '"') inString = !inString
+    if (inString) continue
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) { end = i; break }
+    }
+  }
+  if (end === -1) return { comment: text.trim() }
+
+  const jsonStr = text.slice(start, end + 1)
+  try {
+    const parsed = JSON.parse(jsonStr) as { summary?: unknown; perCard?: unknown }
+    const comment = typeof parsed.summary === 'string' && parsed.summary.trim()
+      ? parsed.summary.trim()
+      : text.trim()
+    const perCard = sanitizePerCard(parsed.perCard)
+    return perCard ? { comment, perCard } : { comment }
+  } catch {
+    return { comment: text.trim() }
+  }
+}
+
+function sanitizePerCard(input: unknown): PerCardComments | undefined {
+  if (!input || typeof input !== 'object') return undefined
+  const obj = input as Record<string, unknown>
+  const result: PerCardComments = {}
+  const keys: Array<keyof PerCardComments> = ['vwap', 'wyckoff', 'algo', 'flow']
+  for (const k of keys) {
+    const v = obj[k]
+    if (typeof v === 'string' && v.trim().length > 0) {
+      result[k] = v.trim()
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined
 }
 
 function interpretationToKorean(interp: SmartMoneyAnalysis['interpretation']): string {

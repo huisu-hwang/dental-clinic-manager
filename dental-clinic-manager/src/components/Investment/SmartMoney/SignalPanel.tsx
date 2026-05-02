@@ -10,8 +10,8 @@
  */
 
 import { useState } from 'react'
-import { Info, ArrowUp, ArrowDown, Minus, X } from 'lucide-react'
-import type { SmartMoneyAnalysis } from '@/types/smartMoney'
+import { Info, ArrowUp, ArrowDown, Minus, X, Sparkles } from 'lucide-react'
+import type { SmartMoneyAnalysis, PerCardComments } from '@/types/smartMoney'
 import { WyckoffPhaseTimeline } from './WyckoffPhaseTimeline'
 import { MarketStructureBadge } from './MarketStructureBadge'
 import { LiquidityZonePanel } from './LiquidityZonePanel'
@@ -20,6 +20,8 @@ import { VSASignalList } from './VSASignalList'
 
 interface Props {
   analysis: SmartMoneyAnalysis
+  /** LLM이 만든 카드별 한 문장 해석 — 없으면 카드 하단에 표시 안 함 */
+  cardComments?: PerCardComments
 }
 
 type CardKey = 'vwap' | 'wyckoff' | 'algo' | 'flow'
@@ -68,17 +70,19 @@ function SignalCard({
   cardKey,
   openHelp,
   onToggleHelp,
+  comment,
   children,
 }: {
   title: string
   cardKey: CardKey
   openHelp: CardKey | null
   onToggleHelp: (k: CardKey | null) => void
+  comment?: string
   children: React.ReactNode
 }) {
   const isOpen = openHelp === cardKey
   return (
-    <div className="relative bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+    <div className="relative bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col">
       <div className="flex items-start justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
         <button
@@ -90,13 +94,21 @@ function SignalCard({
           <Info className="w-3.5 h-3.5" />
         </button>
       </div>
-      {children}
+      <div className="flex-1">{children}</div>
+      {comment && (
+        <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+          <div className="flex items-start gap-1.5">
+            <Sparkles className="w-3 h-3 text-purple-500 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-snug text-slate-600">{comment}</p>
+          </div>
+        </div>
+      )}
       {isOpen && <HelpPopover cardKey={cardKey} onClose={() => onToggleHelp(null)} />}
     </div>
   )
 }
 
-export function SignalPanel({ analysis }: Props) {
+export function SignalPanel({ analysis, cardComments }: Props) {
   const [openHelp, setOpenHelp] = useState<CardKey | null>(null)
   const { vwap, wyckoff, algoFootprint, investorFlow, market } = analysis
 
@@ -163,7 +175,7 @@ export function SignalPanel({ analysis }: Props) {
     <>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* 1. VWAP */}
-      <SignalCard title="VWAP 분석" cardKey="vwap" openHelp={openHelp} onToggleHelp={setOpenHelp}>
+      <SignalCard title="VWAP 분석" cardKey="vwap" openHelp={openHelp} onToggleHelp={setOpenHelp} comment={cardComments?.vwap}>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-500">현재가 - VWAP</span>
@@ -183,7 +195,7 @@ export function SignalPanel({ analysis }: Props) {
       </SignalCard>
 
       {/* 2. Wyckoff */}
-      <SignalCard title="Wyckoff 패턴" cardKey="wyckoff" openHelp={openHelp} onToggleHelp={setOpenHelp}>
+      <SignalCard title="Wyckoff 패턴" cardKey="wyckoff" openHelp={openHelp} onToggleHelp={setOpenHelp} comment={cardComments?.wyckoff}>
         <div className="space-y-2">
           {wyckoffSignals.map(s => (
             <div key={s.label} className="flex items-center justify-between text-xs">
@@ -220,7 +232,7 @@ export function SignalPanel({ analysis }: Props) {
       </SignalCard>
 
       {/* 3. 알고리즘 풋프린트 */}
-      <SignalCard title="알고리즘 풋프린트" cardKey="algo" openHelp={openHelp} onToggleHelp={setOpenHelp}>
+      <SignalCard title="알고리즘 풋프린트" cardKey="algo" openHelp={openHelp} onToggleHelp={setOpenHelp} comment={cardComments?.algo}>
         <div className="space-y-2">
           {algoBars.map(b => {
             const isDominant = algoFootprint.dominantAlgo === b.label
@@ -266,7 +278,7 @@ export function SignalPanel({ analysis }: Props) {
       </SignalCard>
 
       {/* 4. 외국인·기관 */}
-      <SignalCard title="외국인 · 기관" cardKey="flow" openHelp={openHelp} onToggleHelp={setOpenHelp}>
+      <SignalCard title="외국인 · 기관" cardKey="flow" openHelp={openHelp} onToggleHelp={setOpenHelp} comment={cardComments?.flow}>
         {!isKR ? (
           <div className="text-[11px] text-slate-500 leading-relaxed">
             미국 주식은 투자자별 수급 데이터를 제공하지 않습니다.

@@ -625,9 +625,12 @@ export async function POST(request: NextRequest) {
               generatedAt: analysis.generatedAt,
             }
         try {
-          const comment = await generateLLMComment(target)
-          day.naturalLanguageComment = comment
-          if (isLast) analysis.naturalLanguageComment = comment
+          const result = await generateLLMComment(target)
+          day.naturalLanguageComment = result.comment
+          if (isLast) {
+            analysis.naturalLanguageComment = result.comment
+            analysis.perCardComments = result.perCard
+          }
         } catch (err) {
           console.warn(`[smart-money/analyze] LLM 코멘트 생성 스킵 (${day.asOfDate}):`, err)
         }
@@ -635,7 +638,9 @@ export async function POST(request: NextRequest) {
       await Promise.all(tasks)
     } else {
       try {
-        analysis.naturalLanguageComment = await generateLLMComment(analysis)
+        const result = await generateLLMComment(analysis)
+        analysis.naturalLanguageComment = result.comment
+        analysis.perCardComments = result.perCard
       } catch (err) {
         console.warn('[smart-money/analyze] LLM 코멘트 생성 스킵:', err)
       }
