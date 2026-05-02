@@ -277,10 +277,23 @@ export interface SmartMoneyAnalysis {
   interpretation: Interpretation
   signalDetails: SignalDetail[]
   naturalLanguageComment?: string
+  /** 카드별 한 문장 해석 (LLM 생성, 평이한 한국어) */
+  perCardComments?: PerCardComments
   /** ISO timestamp */
   generatedAt: string
   /** 최근 N일치 일자별 분석 (오래된 → 최신 순). 가장 최근 일자(마지막 항목)는 본 객체와 동일. */
   byDay?: DailyAnalysis[]
+}
+
+export interface PerCardComments {
+  /** VWAP 카드 한 문장 해석 */
+  vwap?: string
+  /** Wyckoff 카드 한 문장 해석 */
+  wyckoff?: string
+  /** 알고리즘 풋프린트 카드 한 문장 해석 */
+  algo?: string
+  /** 외국인·기관 카드 한 문장 해석 */
+  flow?: string
 }
 
 /**

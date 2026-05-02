@@ -68,10 +68,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const comment = await generateLLMComment(analysis)
+    const result = await generateLLMComment(analysis)
     return NextResponse.json({
       data: {
-        comment,
+        comment: result.comment,
+        perCard: result.perCard,
         generatedAt: new Date().toISOString(),
       },
     })
