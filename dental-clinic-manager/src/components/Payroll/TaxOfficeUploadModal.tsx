@@ -211,17 +211,18 @@ export default function TaxOfficeUploadModal({
       formData.append('month', String(month))
       formData.append('clinicId', clinicId)
       formData.append('uploadedBy', uploadedBy)
-      // API expects matchedEmployeeId field name, and fileName must be the ZIP-internal path
-      const apiMatches = matches
-        .filter((m) => m.employeeId !== null)
-        .map((m, i) => ({
-          fileName: m.zipPath,  // ZIP 내부 전체 경로 (zip.file() 조회용)
-          fileIndex: i,
-          matchedEmployeeId: m.employeeId,
-          matchedEmployeeName: employees.find(e => e.id === m.employeeId)?.name || null,
-          autoMatched: m.autoMatched,
-          confidence: m.autoMatched ? 'exact' : 'none',
-        }))
+      // 매칭된 직원 + 미가입(매칭 실패) PDF 모두 전송
+      // (미가입 직원도 PDF 추출 금액으로 경비 처리됨)
+      const apiMatches = matches.map((m, i) => ({
+        fileName: m.zipPath,  // ZIP 내부 전체 경로 (zip.file() 조회용)
+        fileIndex: i,
+        matchedEmployeeId: m.employeeId,  // null 가능 — 미가입 직원
+        matchedEmployeeName: m.employeeId
+          ? (employees.find(e => e.id === m.employeeId)?.name || null)
+          : null,
+        autoMatched: m.autoMatched,
+        confidence: m.autoMatched ? 'exact' : 'none',
+      }))
       formData.append('matches', JSON.stringify(apiMatches))
 
       setUploadProgress(40)
