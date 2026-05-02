@@ -265,11 +265,20 @@ export function SignalPanel({ analysis, cardComments }: Props) {
 
       {/* 3. 알고리즘 풋프린트 */}
       <SignalCard title="알고리즘 풋프린트" cardKey="algo" openHelp={openHelp} onToggleHelp={setOpenHelp} comment={cardComments?.algo}>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {algoBars.map(b => {
             const isDominant = algoFootprint.dominantAlgo === b.label
             const pct = Math.max(0, Math.min(100, b.score))
             const isZero = b.score === 0
+            // 지표별 코멘트 키 매핑 (UI label → algoDetails key)
+            const detailKey =
+              b.label === 'TWAP' ? 'twap'
+                : b.label === 'VWAP' ? 'vwap'
+                : b.label === 'Iceberg' ? 'iceberg'
+                : b.label === 'Sniper' ? 'sniper'
+                : b.label === 'MOO' ? 'moo'
+                : 'moc'
+            const detailComment = cardComments?.algoDetails?.[detailKey]
             return (
               <div key={b.label}>
                 <div className="flex items-center justify-between text-[11px] mb-0.5">
@@ -293,6 +302,9 @@ export function SignalPanel({ analysis, cardComments }: Props) {
                     />
                   )}
                 </div>
+                {detailComment && (
+                  <p className="mt-1 text-[10px] leading-snug text-slate-500">{detailComment}</p>
+                )}
               </div>
             )
           })}
@@ -357,7 +369,7 @@ export function SignalPanel({ analysis, cardComments }: Props) {
             <MarketStructureBadge structure={analysis.marketStructure} />
           )}
           {analysis.liquidity && (
-            <LiquidityZonePanel liquidity={analysis.liquidity} />
+            <LiquidityZonePanel liquidity={analysis.liquidity} comment={cardComments?.liquidity} />
           )}
           {analysis.traps && (
             <TrapWarningCard
