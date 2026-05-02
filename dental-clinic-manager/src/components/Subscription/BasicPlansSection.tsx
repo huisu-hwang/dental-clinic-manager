@@ -47,11 +47,11 @@ export default function BasicPlansSection({ plans, current, activeCount, onSelec
               title={isDisabled ? `현재 ${activeCount}명 재직 중` : undefined}
             >
               {isCurrent && <span className="text-[10px] font-semibold text-blue-700">현재 이용 중</span>}
-              <div className="text-sm font-semibold">{plan.display_name}</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{plan.display_name}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">
                 {plan.min_users}~{plan.max_users}인
               </div>
-              <div className="mt-1 text-sm font-bold">{formatPlanPrice(plan)}</div>
+              <div className="mt-1 text-sm font-bold text-gray-900 dark:text-gray-100">{formatPlanPrice(plan)}</div>
             </button>
           )
         })}
