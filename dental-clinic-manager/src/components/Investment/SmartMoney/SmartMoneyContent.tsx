@@ -249,6 +249,7 @@ export function SmartMoneyContent() {
       currentPrice: day.closePrice,
       vwap: day.vwap,
       wyckoff: day.wyckoff,
+      wyckoffIntraday: day.wyckoffIntraday,
       algoFootprint: day.algoFootprint,
       wyckoffPhase: day.wyckoffPhase,
       liquidity: day.liquidity,

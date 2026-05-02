@@ -110,7 +110,7 @@ function SignalCard({
 
 export function SignalPanel({ analysis, cardComments }: Props) {
   const [openHelp, setOpenHelp] = useState<CardKey | null>(null)
-  const { vwap, wyckoff, algoFootprint, investorFlow, market } = analysis
+  const { vwap, wyckoff, wyckoffIntraday, algoFootprint, investorFlow, market } = analysis
 
   // 1) VWAP
   const vwapZoneColor =
@@ -197,6 +197,10 @@ export function SignalPanel({ analysis, cardComments }: Props) {
       {/* 2. Wyckoff */}
       <SignalCard title="Wyckoff 패턴" cardKey="wyckoff" openHelp={openHelp} onToggleHelp={setOpenHelp} comment={cardComments?.wyckoff}>
         <div className="space-y-2">
+          <div className="flex items-center gap-1 text-[10px] text-slate-400">
+            <span className="px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold">일봉</span>
+            <span>Wyckoff 원전 표준</span>
+          </div>
           {wyckoffSignals.map(s => (
             <div key={s.label} className="flex items-center justify-between text-xs">
               <span className="text-slate-700">{s.label}</span>
@@ -227,6 +231,34 @@ export function SignalPanel({ analysis, cardComments }: Props) {
           </div>
           {wyckoff.description && (
             <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3">{wyckoff.description}</p>
+          )}
+
+          {/* 보조: 분봉 Wyckoff (단기 트레이더용) */}
+          {wyckoffIntraday && (
+            <div className="mt-3 pt-2 border-t border-dashed border-slate-200 bg-slate-50/50 -mx-2 px-2 pb-1 rounded-md">
+              <div className="flex items-center gap-1 text-[10px] text-slate-400 mb-1.5">
+                <span className="px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold">분봉</span>
+                <span>단기 트레이더용 보조</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1 text-[10px]">
+                <div className="rounded bg-white p-1 text-center">
+                  <div className="text-slate-400">Spring</div>
+                  <div className={`font-bold ${wyckoffIntraday.springDetected ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {wyckoffIntraday.springDetected ? '감지' : '없음'}
+                  </div>
+                </div>
+                <div className="rounded bg-white p-1 text-center">
+                  <div className="text-slate-400">Upthrust</div>
+                  <div className={`font-bold ${wyckoffIntraday.upthrustDetected ? 'text-rose-600' : 'text-slate-400'}`}>
+                    {wyckoffIntraday.upthrustDetected ? '감지' : '없음'}
+                  </div>
+                </div>
+                <div className="rounded bg-white p-1 text-center">
+                  <div className="text-slate-400">흡수</div>
+                  <div className="font-bold font-mono text-slate-700">{wyckoffIntraday.absorptionScore}</div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </SignalCard>

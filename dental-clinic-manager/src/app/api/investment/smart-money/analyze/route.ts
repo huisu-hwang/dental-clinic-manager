@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 5. 엔진 호출
-  let vwap, wyckoff, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
+  let vwap, wyckoff, wyckoffIntraday, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
   let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
   let byDay: DailyAnalysis[] = []
   try {
@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
     const sessionBars: SessionBar[] = intradayLast1Day.map((b) => ({ ...b }))
     session = analyzeSession(sessionBars, market)
 
-    // ===== Intraday 2-days 엔진 =====
+    // ===== Intraday 2-days 엔진 (Wyckoff 분봉 — 보조) =====
     const wyckoffBars: WyckoffBar[] = intradayLast2Days.map((b) => ({
       open: b.open,
       high: b.high,
@@ -383,7 +383,7 @@ export async function POST(request: NextRequest) {
       close: b.close,
       volume: b.volume,
     }))
-    wyckoff = detectWyckoff(wyckoffBars)
+    wyckoffIntraday = detectWyckoff(wyckoffBars, { timeframe: 'minute' })
 
     const newsBars: NewsBar[] = intradayLast2Days.map((b) => ({ ...b }))
     newsContext = analyzeNewsContext({
@@ -399,6 +399,12 @@ export async function POST(request: NextRequest) {
         : null
 
     // ===== 다일 일봉 기반 엔진 =====
+    // Wyckoff 메인 — 일봉 기반 (Wyckoff 원전 표준). dailyBars 없으면 빈 결과.
+    const wyckoffDailyBars: WyckoffBar[] = dailyBars.map((b) => ({
+      open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+    }))
+    wyckoff = detectWyckoff(wyckoffDailyBars, { timeframe: 'day' })
+
     const phaseBars: PhaseBar[] = multiDayBars.map((b) => ({ ...b }))
     const phaseDailyBars: PhaseBar[] = dailyBars.map((b) => ({ ...b }))
     wyckoffPhase = detectWyckoffPhase(phaseBars, phaseDailyBars.length > 0 ? phaseDailyBars : undefined)
@@ -490,10 +496,11 @@ export async function POST(request: NextRequest) {
       }))
       const dAlgoFootprint = analyzeAlgoFootprint(dAlgoBars, dAlgoBars)
 
+      // 일자별 분봉 Wyckoff (보조). 메인 wyckoff(일봉)는 모든 일자에 동일.
       const dWyckoffBars: WyckoffBar[] = dayBars.map((b) => ({
         open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
       }))
-      const dWyckoff = detectWyckoff(dWyckoffBars)
+      const dWyckoffIntraday = detectWyckoff(dWyckoffBars, { timeframe: 'minute' })
 
       const dSessionBars: SessionBar[] = dayBars.map((b) => ({ ...b }))
       const dSession = analyzeSession(dSessionBars, market)
@@ -508,7 +515,7 @@ export async function POST(request: NextRequest) {
       const dScore = computeSmartMoneyScore({
         vwap: dVwap,
         investorFlow,
-        wyckoff: dWyckoff,
+        wyckoff,                    // 메인은 일봉 — 모든 일자에 동일
         algoFootprint: dAlgoFootprint,
         wyckoffPhase,
         liquidity,
@@ -526,7 +533,8 @@ export async function POST(request: NextRequest) {
         asOfDate: dayKey,
         closePrice,
         vwap: dVwap,
-        wyckoff: dWyckoff,
+        wyckoff,                    // 메인 일봉 — 모든 일자에 동일
+        wyckoffIntraday: dWyckoffIntraday,
         algoFootprint: dAlgoFootprint,
         wyckoffPhase,
         liquidity,
@@ -547,6 +555,7 @@ export async function POST(request: NextRequest) {
       const lastDay = byDay[byDay.length - 1]
       lastDay.vwap = vwap
       lastDay.wyckoff = wyckoff
+      lastDay.wyckoffIntraday = wyckoffIntraday
       lastDay.algoFootprint = algoFootprint
       lastDay.session = session
       lastDay.newsContext = newsContext
@@ -574,6 +583,7 @@ export async function POST(request: NextRequest) {
     vwap,
     investorFlow,
     wyckoff,
+    wyckoffIntraday,
     algoFootprint,
     wyckoffPhase,
     liquidity,
@@ -609,6 +619,7 @@ export async function POST(request: NextRequest) {
               vwap: day.vwap,
               investorFlow,
               wyckoff: day.wyckoff,
+              wyckoffIntraday: day.wyckoffIntraday,
               algoFootprint: day.algoFootprint,
               wyckoffPhase: day.wyckoffPhase,
               liquidity: day.liquidity,
