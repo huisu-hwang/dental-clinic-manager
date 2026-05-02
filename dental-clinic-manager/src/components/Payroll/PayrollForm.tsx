@@ -30,7 +30,18 @@ import {
 import { formatCurrency } from '@/utils/taxCalculationUtils'
 import { getPublicHolidaySet } from '@/lib/holidayService'
 import PayrollPreview from './PayrollPreview'
+import dynamic from 'next/dynamic'
 import { AlertCircle, FileText, Settings, Clock, Calendar, AlertTriangle, Lock, UserPlus, Coins, Calculator } from 'lucide-react'
+
+// 모바일 PDF 뷰어는 client-side에서만 로드 (react-pdf는 SSR 비호환)
+const PayslipMobileViewer = dynamic(() => import('./PayslipMobileViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="border border-at-border rounded-xl p-8 text-center text-at-text-weak text-xs">
+      PDF 뷰어 로드 중...
+    </div>
+  ),
+})
 import type { WorkSchedule } from '@/types/workSchedule'
 import { workScheduleService } from '@/lib/workScheduleService'
 
@@ -766,33 +777,9 @@ export default function PayrollForm() {
                 />
               </div>
 
-              {/* 모바일: 다운로드/새 탭 카드 (PDF inline 미지원 환경 대응) */}
-              <div className="md:hidden border border-at-border rounded-xl p-6 bg-at-surface-alt/40 text-center space-y-4">
-                <FileText className="w-12 h-12 mx-auto text-at-accent" />
-                <div>
-                  <p className="text-sm font-medium text-at-text break-all">{taxOfficeFileName}</p>
-                  <p className="text-xs text-at-text-weak mt-1">
-                    모바일 브라우저에서는 미리보기가 지원되지 않을 수 있습니다.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <a
-                    href={taxOfficeFileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-at-accent text-white font-medium rounded-xl text-sm"
-                  >
-                    <FileText className="w-4 h-4" />
-                    PDF 새 탭에서 열기
-                  </a>
-                  <a
-                    href={taxOfficeFileUrl}
-                    download={taxOfficeFileName || 'payslip.pdf'}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-white border border-at-border text-at-text font-medium rounded-xl text-sm"
-                  >
-                    PDF 다운로드
-                  </a>
-                </div>
+              {/* 모바일: react-pdf 인라인 뷰어 (안드로이드 크롬에서도 작동) */}
+              <div className="md:hidden">
+                <PayslipMobileViewer fileUrl={taxOfficeFileUrl} fileName={taxOfficeFileName} />
               </div>
             </div>
           ) : (
