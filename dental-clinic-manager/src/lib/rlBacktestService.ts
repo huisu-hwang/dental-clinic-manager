@@ -8,8 +8,14 @@
 
 import type { RLModel } from '@/types/rlTrading'
 
-const RL_SERVER_URL = process.env.RL_SERVER_URL ?? 'http://127.0.0.1:8001'
-const RL_API_KEY = process.env.RL_API_KEY ?? ''
+// 함수 호출 시점에 환경변수를 읽어야 .env.local 변경 후 재시작 없이도 즉시 반영된다.
+// (모듈 로드 시점에 캡처하면 dev hot reload가 모듈을 새로 평가하지 않을 때 stale 값 사용)
+function getServerConfig() {
+  return {
+    url: process.env.RL_SERVER_URL ?? 'http://127.0.0.1:8001',
+    apiKey: process.env.RL_API_KEY ?? '',
+  }
+}
 
 interface RLBacktestResponse {
   total_return: number
@@ -60,10 +66,12 @@ export async function runRLBacktest(params: RLBacktestParams): Promise<RLBacktes
     initial_capital: initialCapital,
   }
 
-  if (!RL_API_KEY) {
+  const { url: rlUrl, apiKey: rlApiKey } = getServerConfig()
+
+  if (!rlApiKey) {
     throw new Error(
       `RL_API_KEY 환경변수가 설정되지 않았습니다. .env.local 또는 배포 환경의 환경변수에 ` +
-      `RL_SERVER_URL과 RL_API_KEY를 추가하고 서버를 재시작하세요. (서버: ${RL_SERVER_URL})`
+      `RL_SERVER_URL과 RL_API_KEY를 추가하고 서버를 재시작하세요. (서버: ${rlUrl})`
     )
   }
 
@@ -73,9 +81,9 @@ export async function runRLBacktest(params: RLBacktestParams): Promise<RLBacktes
   try {
     let resp: Response
     try {
-      resp = await fetch(`${RL_SERVER_URL}/backtest_universe`, {
+      resp = await fetch(`${rlUrl}/backtest_universe`, {
         method: 'POST',
-        headers: { 'X-RL-API-KEY': RL_API_KEY, 'content-type': 'application/json' },
+        headers: { 'X-RL-API-KEY': rlApiKey, 'content-type': 'application/json' },
         body: JSON.stringify(body),
         signal: ctrl.signal,
       })
@@ -88,7 +96,7 @@ export async function runRLBacktest(params: RLBacktestParams): Promise<RLBacktes
       const cause = (fetchErr as { cause?: { code?: string; message?: string } } | undefined)?.cause
       const reason = cause?.code ?? cause?.message ?? (fetchErr instanceof Error ? fetchErr.message : String(fetchErr))
       throw new Error(
-        `RL 추론 서버에 연결할 수 없습니다 (${RL_SERVER_URL}, ${reason}). ` +
+        `RL 추론 서버에 연결할 수 없습니다 (${rlUrl}, ${reason}). ` +
         `로컬에서는 rl-inference-server가 실행 중인지(\`uvicorn src.main:app --port 8001\`), ` +
         `배포 환경에서는 RL_SERVER_URL이 외부에서 접근 가능한 주소인지 확인하세요.`
       )
