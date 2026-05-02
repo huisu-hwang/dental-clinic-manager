@@ -181,12 +181,18 @@ function median(arr: number[]): number {
 
 /**
  * 봉 거래량이 중앙값 대비 ratio일 때 점수:
- * ratio ≤ 1.2 → 0 / ratio = 4 → 100
- * (1분봉은 봉당 거래량이 작아 정규장 시초/종가 봉도 baseline 1.2~3배 정도라 종전 1.5~5 매핑은 항상 0)
+ * ratio ≤ 5 → 0 / ratio = 20 → 100
+ *
+ * 미국 정규장 시초가/종가 봉은 자연 패턴으로도 baseline의 5~15배 거래량이 흔함
+ * (점심·중간 봉이 작아 median 자체가 작기 때문). 종전 1.2~4 매핑은 모든 종목에서
+ * MOO/MOC=100을 만들어 변별력이 없었음.
+ *
+ * 진짜 MOO/MOC 알고리즘 신호(인덱스/패시브 펀드 NAV 추종 매매)는 그보다 더 큰
+ * 거래량 집중을 보여야 하므로 임계 상향.
  */
 function ratioToScore(ratio: number): number {
-  if (ratio <= 1.2) return 0
-  return Math.max(0, Math.min(100, ((ratio - 1.2) / 2.8) * 100))
+  if (ratio <= 5) return 0
+  return Math.max(0, Math.min(100, ((ratio - 5) / 15) * 100))
 }
 
 interface AuctionResult {
