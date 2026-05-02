@@ -142,8 +142,9 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
           equityCurve: data.equityCurve || data.equity_curve || [],
           buyHold: data.buyHold || data.buy_hold || undefined,
         }
-      } catch {
-        return { ticker: entry.ticker, error: '네트워크 오류' }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : '네트워크 오류'
+        return { ticker: entry.ticker, error: reason }
       } finally {
         setRunningTickers(prev => { const next = new Set(prev); next.delete(entry.ticker); return next })
       }
