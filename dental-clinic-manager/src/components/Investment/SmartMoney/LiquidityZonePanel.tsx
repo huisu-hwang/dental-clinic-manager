@@ -5,7 +5,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowUp, ArrowDown, Info, X } from 'lucide-react'
+import { ArrowUp, ArrowDown, Info, X, Sparkles } from 'lucide-react'
 import type { LiquidityPool, LiquidityResult } from '@/types/smartMoney'
 
 const HELP = {
@@ -15,6 +15,8 @@ const HELP = {
 
 interface Props {
   liquidity: LiquidityResult
+  /** LLM이 만든 한 문장 해석 — 없으면 미표시 */
+  comment?: string
 }
 
 const POOL_TYPE_LABEL: Record<LiquidityPool['type'], string> = {
@@ -35,7 +37,7 @@ const POOL_TYPE_COLOR: Record<LiquidityPool['type'], string> = {
   'swing-low': 'bg-emerald-50 text-emerald-700 border-emerald-200',
 }
 
-export function LiquidityZonePanel({ liquidity }: Props) {
+export function LiquidityZonePanel({ liquidity, comment }: Props) {
   const [helpOpen, setHelpOpen] = useState(false)
   const noPools = liquidity.pools.length === 0
   const noSweeps = liquidity.recentSweeps.length === 0
@@ -149,6 +151,15 @@ export function LiquidityZonePanel({ liquidity }: Props) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {comment && (
+        <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+          <div className="flex items-start gap-1.5">
+            <Sparkles className="w-3 h-3 text-purple-500 flex-shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-snug text-slate-600">{comment}</p>
+          </div>
         </div>
       )}
     </div>

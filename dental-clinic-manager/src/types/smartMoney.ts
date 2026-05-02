@@ -293,10 +293,21 @@ export interface PerCardComments {
   vwap?: string
   /** Wyckoff 카드 한 문장 해석 */
   wyckoff?: string
-  /** 알고리즘 풋프린트 카드 한 문장 해석 */
+  /** 알고리즘 풋프린트 카드 종합 한 문장 해석 */
   algo?: string
   /** 외국인·기관 카드 한 문장 해석 */
   flow?: string
+  /** 유동성 존 한 문장 해석 (활성 풀·최근 사냥 의미) */
+  liquidity?: string
+  /** 알고리즘 풋프린트 6개 지표별 한 문장 해석 */
+  algoDetails?: {
+    twap?: string
+    vwap?: string
+    iceberg?: string
+    sniper?: string
+    moo?: string
+    moc?: string
+  }
 }
 
 /**
