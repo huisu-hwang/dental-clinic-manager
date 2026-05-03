@@ -556,9 +556,14 @@ export async function getKRMinutePrices(params: MinutePriceParams): Promise<KRMi
   // count <= 30이라도 페이지네이션 경로 통과 (1번만 호출되고 종료)
   const accumulated = new Map<string, KRMinuteBar>()
   let cursor: string | undefined = undefined
-  const MAX_REQUESTS = 60 // 안전장치 (1800봉 = 정규장 4.6일)
+  // 안전장치 — 호출 빈도 + Vercel timeout(60s) 안에서 가능한 봉 수
+  // KIS rate limit 20 req/sec, 호출당 응답 200~400ms → 50ms 간격으로 안전하게
+  // MAX_REQUESTS 40 = 약 30봉 × 40 = 1200봉 (정규장 ≈ 3거래일치) — 충분
+  const MAX_REQUESTS = 40
+  const REQUEST_DELAY_MS = 60 // KIS rate limit 회피
 
   for (let i = 0; i < MAX_REQUESTS; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, REQUEST_DELAY_MS))
     const chunk = await fetchKRMinutesAtCursor(credentialId, credential, ticker, cursor, 1, 30)
     if (chunk.length === 0) break
 

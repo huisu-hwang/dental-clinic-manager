@@ -57,6 +57,9 @@ import type {
 } from '@/types/smartMoney'
 
 export const dynamic = 'force-dynamic'
+// KIS 분봉 페이지네이션 + 멀티 엔진 + LLM 병렬 호출 시간 확보
+// 기본 10초로는 KR 종목 분석 시 KIS 60 req 페이지네이션이 timeout
+export const maxDuration = 60
 
 // ============================================
 // 내부 타입
@@ -162,13 +165,14 @@ export async function POST(request: NextRequest) {
       currentPrice = quote.price
       // KRRealtimeQuote에는 name이 없으므로 ticker 그대로 사용
 
-      // 분봉 (1분봉 2400개 ≈ 4거래일치 — 첫·끝 일자 잘림 여유분 포함, byDay에 최신 3일 사용)
+      // 분봉 (1분봉 1200개 ≈ 정규장 3거래일치 — KIS 페이지네이션 40 req로 ~3초 소요)
+      // KIS rate limit + Vercel function timeout(60s) 안에서 안정적으로 받을 수 있는 양
       const krBars: KRMinuteBar[] = await getKRMinutePrices({
         credentialId: kisCredential.credentialId,
         credential: krCredential,
         ticker,
         intervalMinutes: 1,
-        count: 2400,
+        count: 1200,
       })
       bars = krBars.map((b) => ({
         datetime: b.datetime,
