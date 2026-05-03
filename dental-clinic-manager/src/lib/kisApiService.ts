@@ -541,24 +541,103 @@ interface MinutePriceParams {
 }
 
 /**
- * 국내 분봉 (당일) 조회
+ * 국내 분봉 (다일) 조회 — 페이지네이션 자동 처리
  *
  * KIS endpoint: /uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice (TR_ID: FHKST03010200)
  *   응답 output2: 최신 → 과거 순 (최대 30개)
  *
+ * count > 30이면 가장 오래된 봉의 직전 시간을 cursor로 다음 호출 → 누적
  * 5/10/30분봉이 요청되면 1분봉을 N개 단위로 집계하여 반환.
  */
 export async function getKRMinutePrices(params: MinutePriceParams): Promise<KRMinuteBar[]> {
   const { credentialId, credential, ticker, intervalMinutes = 1, count = 30 } = params
+
+  // 페이지네이션 — 가장 오래된 봉의 시간 - 1분을 다음 cursor로
+  // count <= 30이라도 페이지네이션 경로 통과 (1번만 호출되고 종료)
+  const accumulated = new Map<string, KRMinuteBar>()
+  let cursor: string | undefined = undefined
+  const MAX_REQUESTS = 60 // 안전장치 (1800봉 = 정규장 4.6일)
+
+  for (let i = 0; i < MAX_REQUESTS; i++) {
+    const chunk = await fetchKRMinutesAtCursor(credentialId, credential, ticker, cursor, 1, 30)
+    if (chunk.length === 0) break
+
+    let added = 0
+    for (const bar of chunk) {
+      if (!accumulated.has(bar.datetime)) {
+        accumulated.set(bar.datetime, bar)
+        added += 1
+      }
+    }
+    if (added === 0) break // 모두 중복 → 더 이상 받을 데이터 없음
+
+    if (accumulated.size >= count) break
+
+    // 다음 cursor: 이번 chunk에서 가장 오래된 봉의 시간 - 1분
+    const oldest = chunk[0]
+    const oldestDate = new Date(oldest.datetime)
+    oldestDate.setMinutes(oldestDate.getMinutes() - 1)
+    const kstDate = new Date(oldestDate.getTime() + 9 * 3600_000)
+    const hh2 = String(kstDate.getUTCHours()).padStart(2, '0')
+    const mm2 = String(kstDate.getUTCMinutes()).padStart(2, '0')
+    cursor = `${hh2}${mm2}00`
+  }
+
+  // 시간 순(과거→최신) 정렬 후 마지막 count
+  const sorted = Array.from(accumulated.values()).sort((a, b) => a.datetime.localeCompare(b.datetime))
+  const sliced = sorted.slice(-count)
+
+  if (intervalMinutes === 1) return sliced
+
+  // N분봉 집계
+  const aggregated: KRMinuteBar[] = []
+  for (let i = 0; i < sliced.length; i += intervalMinutes) {
+    const chunk = sliced.slice(i, i + intervalMinutes)
+    if (chunk.length === 0) continue
+    const open = chunk[0].open
+    const close = chunk[chunk.length - 1].close
+    let high = -Infinity
+    let low = Infinity
+    let volume = 0
+    let value = 0
+    for (const b of chunk) {
+      if (b.high > high) high = b.high
+      if (b.low < low) low = b.low
+      volume += b.volume
+      value += b.value
+    }
+    aggregated.push({
+      datetime: chunk[0].datetime,
+      open,
+      high,
+      low,
+      close,
+      volume,
+      value,
+    })
+  }
+  return aggregated
+}
+
+/** 단일 KIS 분봉 호출 (30봉 max) — cursor=HHmmss 시점 이전 30봉 반환 */
+async function fetchKRMinutesAtCursor(
+  credentialId: string,
+  credential: { appKey: string; appSecret: string; isPaperTrading: boolean },
+  ticker: string,
+  cursorHHmmss: string | undefined,
+  intervalMinutes: 1 | 5 | 10 | 30,
+  count: number,
+): Promise<KRMinuteBar[]> {
   const token = await getAccessToken(credentialId, credential)
   const baseUrl = getBaseUrl(credential.isPaperTrading)
 
-  // 현재 한국 시간 HHmmss
-  const nowKst = new Date(Date.now() + 9 * 3600_000)
-  const hh = String(nowKst.getUTCHours()).padStart(2, '0')
-  const mm = String(nowKst.getUTCMinutes()).padStart(2, '0')
-  const ss = String(nowKst.getUTCSeconds()).padStart(2, '0')
-  const inputHour = `${hh}${mm}${ss}`
+  const inputHour = cursorHHmmss ?? (() => {
+    const nowKst = new Date(Date.now() + 9 * 3600_000)
+    const hh = String(nowKst.getUTCHours()).padStart(2, '0')
+    const mm = String(nowKst.getUTCMinutes()).padStart(2, '0')
+    const ss = String(nowKst.getUTCSeconds()).padStart(2, '0')
+    return `${hh}${mm}${ss}`
+  })()
 
   const queryParams = new URLSearchParams({
     FID_ETC_CLS_CODE: '',
@@ -629,39 +708,10 @@ export async function getKRMinutePrices(params: MinutePriceParams): Promise<KRMi
     })
     .reverse()
 
-  // 1분봉 그대로 반환
-  if (intervalMinutes === 1) {
-    return bars1m.slice(-count)
-  }
-
-  // N분봉 집계
-  const aggregated: KRMinuteBar[] = []
-  for (let i = 0; i < bars1m.length; i += intervalMinutes) {
-    const chunk = bars1m.slice(i, i + intervalMinutes)
-    if (chunk.length === 0) continue
-    const open = chunk[0].open
-    const close = chunk[chunk.length - 1].close
-    let high = -Infinity
-    let low = Infinity
-    let volume = 0
-    let value = 0
-    for (const b of chunk) {
-      if (b.high > high) high = b.high
-      if (b.low < low) low = b.low
-      volume += b.volume
-      value += b.value
-    }
-    aggregated.push({
-      datetime: chunk[0].datetime,
-      open,
-      high,
-      low,
-      close,
-      volume,
-      value,
-    })
-  }
-  return aggregated.slice(-count)
+  // intervalMinutes는 헬퍼에서 사용하지 않음 (1분봉 raw만 반환).
+  // N분봉 집계는 호출 측(getKRMinutePrices)에서 처리.
+  void intervalMinutes
+  return bars1m.slice(-count)
 }
 
 // ============================================
