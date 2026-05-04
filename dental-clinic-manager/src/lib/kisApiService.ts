@@ -783,6 +783,7 @@ async function fetchKRMinutesPastDay(
   ticker: string,
   date: string,  // YYYYMMDD
   hour: string,  // HHMMSS
+  attempt = 0,
 ): Promise<KRMinuteBar[]> {
   const token = await getAccessToken(credentialId, credential)
   const baseUrl = getBaseUrl(credential.isPaperTrading)
@@ -793,7 +794,7 @@ async function fetchKRMinutesPastDay(
     FID_INPUT_HOUR_1: hour,
     FID_INPUT_DATE_1: date,
     FID_PW_DATA_INCU_YN: 'N',
-    FID_FAKE_TICK_INCU_YN: '',
+    FID_FAKE_TICK_INCU_YN: 'N',
   })
 
   const response = await fetch(
@@ -811,16 +812,27 @@ async function fetchKRMinutesPastDay(
   )
 
   if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    // 토큰 만료 → invalidate + 1회 재시도
+    if (attempt === 0 && (response.status === 401 || isTokenExpiredResponse(text))) {
+      invalidateToken(credentialId)
+      return fetchKRMinutesPastDay(credentialId, credential, ticker, date, hour, attempt + 1)
+    }
+    console.warn('[KIS FHKST03010230] HTTP error', { status: response.status, date, hour, body: text.slice(0, 300) })
     throw new Error(`KIS 일별 분봉 조회 실패 (${response.status})`)
   }
 
   const json = await response.json()
   if (json.rt_cd !== '0') {
-    // 휴장일/조회 데이터 없음 등은 빈 배열로 반환 (호출 측에서 cursor 점프)
-    if (json.msg_cd === 'EGW00121' || /조회.*없|데이터.*없/.test(json.msg1 ?? '')) {
-      return []
+    // 토큰 만료 → invalidate + 1회 재시도
+    if (attempt === 0 && json.msg_cd === TOKEN_EXPIRED_MSG_CD) {
+      invalidateToken(credentialId)
+      return fetchKRMinutesPastDay(credentialId, credential, ticker, date, hour, attempt + 1)
     }
-    throw new Error(`KIS 일별 분봉 조회 실패: [${json.msg_cd}] ${json.msg1}`)
+    // rt_cd != '0'은 모두 "데이터 없음"으로 간주하고 호출 측이 cursor 점프하도록
+    // (휴장일/공휴일/장 시작 전 미래 시각 등 다양한 코드 — KIS msg_cd가 표준화되어 있지 않음)
+    console.warn('[KIS FHKST03010230] empty response', { msg_cd: json.msg_cd, msg1: json.msg1, date, hour })
+    return []
   }
 
   interface KISMinuteItem {
