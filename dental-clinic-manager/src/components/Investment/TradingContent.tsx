@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Activity, Send, ArrowUpCircle, ArrowDownCircle, Clock, Loader2 } from 'lucide-react'
 import type { TradeOrder, Market, OrderType, OrderMethod } from '@/types/investment'
 import TradingSettingsPanel from './TradingSettingsPanel'
+import TickerSearch from './TickerSearch'
 
 export default function TradingContent() {
   const [orders, setOrders] = useState<TradeOrder[]>([])
@@ -11,6 +12,7 @@ export default function TradingContent() {
   const [submitting, setSubmitting] = useState(false)
 
   const [ticker, setTicker] = useState('')
+  const [tickerName, setTickerName] = useState('')
   const [market, setMarket] = useState<Market>('KR')
   const [orderType, setOrderType] = useState<OrderType>('buy')
   const [orderMethod, setOrderMethod] = useState<OrderMethod>('limit')
@@ -46,7 +48,7 @@ export default function TradingContent() {
         }),
       })
       const json = await res.json()
-      if (res.ok) { setTicker(''); setQuantity(''); setPrice(''); loadOrders() }
+      if (res.ok) { setTicker(''); setTickerName(''); setQuantity(''); setPrice(''); loadOrders() }
       else alert(json.error || '주문 실패')
     } catch { alert('네트워크 오류') } finally { setSubmitting(false) }
   }
@@ -84,7 +86,16 @@ export default function TradingContent() {
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <select value={market} onChange={e => setMarket(e.target.value as Market)}
+              <select
+                value={market}
+                onChange={e => {
+                  const next = e.target.value as Market
+                  if (next !== market) {
+                    setMarket(next)
+                    setTicker('')
+                    setTickerName('')
+                  }
+                }}
                 className="px-3 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm focus:outline-none focus:border-at-accent">
                 <option value="KR">국내</option><option value="US">미국</option>
               </select>
@@ -94,9 +105,35 @@ export default function TradingContent() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-at-text-secondary mb-1">종목 코드</label>
-              <input type="text" value={ticker} onChange={e => setTicker(e.target.value)} placeholder={market === 'KR' ? '005930' : 'AAPL'}
-                className="w-full px-3 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm font-mono focus:outline-none focus:border-at-accent" />
+              <label className="block text-xs text-at-text-secondary mb-1">
+                종목 <span className="text-at-text-weak font-normal">(종목명 또는 코드로 검색)</span>
+              </label>
+              <TickerSearch
+                market={market}
+                onSelect={(t, name, m) => {
+                  setTicker(t)
+                  setTickerName(name || '')
+                  if (m && m !== market) setMarket(m)
+                }}
+                placeholder={market === 'KR' ? '예: 삼성전자, 005930' : '예: AAPL, Apple'}
+                clearOnSelect={false}
+              />
+              {ticker && (
+                <p className="mt-1.5 text-[11px] text-at-text-secondary">
+                  선택됨:
+                  <span className="ml-1 font-mono font-semibold text-at-text">{ticker}</span>
+                  {tickerName && tickerName !== ticker && (
+                    <span className="ml-1.5">{tickerName}</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setTicker(''); setTickerName('') }}
+                    className="ml-2 text-at-text-weak hover:text-at-accent underline"
+                  >
+                    초기화
+                  </button>
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
