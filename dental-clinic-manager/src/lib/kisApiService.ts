@@ -543,49 +543,101 @@ interface MinutePriceParams {
 /**
  * 국내 분봉 (다일) 조회 — 페이지네이션 자동 처리
  *
- * KIS endpoint: /uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice (TR_ID: FHKST03010200)
- *   응답 output2: 최신 → 과거 순 (최대 30개)
+ * 실전계좌(`isPaperTrading=false`):
+ *   `inquire-time-dailychartprice` (TR_ID: FHKST03010230) — 회당 120봉, 1년치 보관
+ *   FID_INPUT_DATE_1/HOUR_1 cursor로 과거 거래일까지 거슬러 페이징
  *
- * count > 30이면 가장 오래된 봉의 직전 시간을 cursor로 다음 호출 → 누적
+ * 모의계좌(`isPaperTrading=true`):
+ *   `inquire-time-itemchartprice` (TR_ID: FHKST03010200) — 당일 분봉만, 회당 30봉
+ *   (FHKST03010230은 모의 미지원)
+ *
  * 5/10/30분봉이 요청되면 1분봉을 N개 단위로 집계하여 반환.
  */
 export async function getKRMinutePrices(params: MinutePriceParams): Promise<KRMinuteBar[]> {
   const { credentialId, credential, ticker, intervalMinutes = 1, count = 30 } = params
 
-  // 페이지네이션 — 가장 오래된 봉의 시간 - 1분을 다음 cursor로
-  // count <= 30이라도 페이지네이션 경로 통과 (1번만 호출되고 종료)
   const accumulated = new Map<string, KRMinuteBar>()
-  let cursor: string | undefined = undefined
-  // 안전장치 — 호출 빈도 + Vercel timeout(60s) 안에서 가능한 봉 수
-  // KIS rate limit 20 req/sec, 호출당 응답 200~400ms → 50ms 간격으로 안전하게
-  // MAX_REQUESTS 40 = 약 30봉 × 40 = 1200봉 (정규장 ≈ 3거래일치) — 충분
-  const MAX_REQUESTS = 40
-  const REQUEST_DELAY_MS = 60 // KIS rate limit 회피
+  const REQUEST_DELAY_MS = 60 // KIS rate limit 회피 (20 req/sec)
 
-  for (let i = 0; i < MAX_REQUESTS; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, REQUEST_DELAY_MS))
-    const chunk = await fetchKRMinutesAtCursor(credentialId, credential, ticker, cursor, 1, 30)
-    if (chunk.length === 0) break
+  if (!credential.isPaperTrading) {
+    // ===== 실전계좌: FHKST03010230 (date+hour cursor, 120봉/req) =====
+    // 1200봉(≈3거래일) ≤ 11회 호출 + 안전 마진 = 16회
+    const MAX_REQUESTS = 16
+    let cursorDate = kstYyyymmdd(new Date())
+    let cursorHour = kstHhmmss(new Date())
 
-    let added = 0
-    for (const bar of chunk) {
-      if (!accumulated.has(bar.datetime)) {
-        accumulated.set(bar.datetime, bar)
-        added += 1
+    for (let i = 0; i < MAX_REQUESTS; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, REQUEST_DELAY_MS))
+      const chunk = await fetchKRMinutesPastDay(credentialId, credential, ticker, cursorDate, cursorHour)
+
+      if (chunk.length === 0) {
+        // 빈 응답 → 휴장/공휴일 → 직전 영업일 15:30:00로 점프
+        const prev = previousBusinessDay(cursorDate)
+        cursorDate = prev
+        cursorHour = '153000'
+        continue
+      }
+
+      let added = 0
+      for (const bar of chunk) {
+        if (!accumulated.has(bar.datetime)) {
+          accumulated.set(bar.datetime, bar)
+          added += 1
+        }
+      }
+
+      if (accumulated.size >= count) break
+
+      // 다음 cursor: 이번 chunk에서 가장 오래된 봉의 시각 - 1분
+      const oldest = chunk[0]
+      const m = oldest.datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/)
+      if (!m) break
+      const [, y, mo, d, hh, mm] = m
+      const oldestDateStr = `${y}${mo}${d}`
+      const oldestMinutes = parseInt(hh, 10) * 60 + parseInt(mm, 10)
+      const KR_OPEN_MIN = 9 * 60 // 09:00
+
+      if (added === 0 || oldestMinutes <= KR_OPEN_MIN) {
+        // 더 받을 게 없거나 장 시작 도달 → 직전 영업일로 점프
+        cursorDate = previousBusinessDay(oldestDateStr)
+        cursorHour = '153000'
+      } else {
+        const prevMin = oldestMinutes - 1
+        const phh = String(Math.floor(prevMin / 60)).padStart(2, '0')
+        const pmm = String(prevMin % 60).padStart(2, '0')
+        cursorDate = oldestDateStr
+        cursorHour = `${phh}${pmm}00`
       }
     }
-    if (added === 0) break // 모두 중복 → 더 이상 받을 데이터 없음
+  } else {
+    // ===== 모의계좌: FHKST03010200 (당일만, 30봉/req) =====
+    let cursor: string | undefined = undefined
+    const MAX_REQUESTS = 40
 
-    if (accumulated.size >= count) break
+    for (let i = 0; i < MAX_REQUESTS; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, REQUEST_DELAY_MS))
+      const chunk = await fetchKRMinutesAtCursor(credentialId, credential, ticker, cursor, 1, 30)
+      if (chunk.length === 0) break
 
-    // 다음 cursor: 이번 chunk에서 가장 오래된 봉의 시간 - 1분
-    const oldest = chunk[0]
-    const oldestDate = new Date(oldest.datetime)
-    oldestDate.setMinutes(oldestDate.getMinutes() - 1)
-    const kstDate = new Date(oldestDate.getTime() + 9 * 3600_000)
-    const hh2 = String(kstDate.getUTCHours()).padStart(2, '0')
-    const mm2 = String(kstDate.getUTCMinutes()).padStart(2, '0')
-    cursor = `${hh2}${mm2}00`
+      let added = 0
+      for (const bar of chunk) {
+        if (!accumulated.has(bar.datetime)) {
+          accumulated.set(bar.datetime, bar)
+          added += 1
+        }
+      }
+      if (added === 0) break
+
+      if (accumulated.size >= count) break
+
+      const oldest = chunk[0]
+      const oldestDate = new Date(oldest.datetime)
+      oldestDate.setMinutes(oldestDate.getMinutes() - 1)
+      const kstDate = new Date(oldestDate.getTime() + 9 * 3600_000)
+      const hh2 = String(kstDate.getUTCHours()).padStart(2, '0')
+      const mm2 = String(kstDate.getUTCMinutes()).padStart(2, '0')
+      cursor = `${hh2}${mm2}00`
+    }
   }
 
   // 시간 순(과거→최신) 정렬 후 마지막 count
@@ -717,6 +769,129 @@ async function fetchKRMinutesAtCursor(
   // N분봉 집계는 호출 측(getKRMinutePrices)에서 처리.
   void intervalMinutes
   return bars1m.slice(-count)
+}
+
+/**
+ * 일별 분봉 조회 (실전계좌 전용) — TR_ID FHKST03010230, 회당 120봉
+ *
+ * `FID_INPUT_DATE_1` 일자의 `FID_INPUT_HOUR_1` 시점 이전 분봉 최대 120개 반환.
+ * 모의투자 미지원.
+ */
+async function fetchKRMinutesPastDay(
+  credentialId: string,
+  credential: { appKey: string; appSecret: string; isPaperTrading: boolean },
+  ticker: string,
+  date: string,  // YYYYMMDD
+  hour: string,  // HHMMSS
+): Promise<KRMinuteBar[]> {
+  const token = await getAccessToken(credentialId, credential)
+  const baseUrl = getBaseUrl(credential.isPaperTrading)
+
+  const queryParams = new URLSearchParams({
+    FID_COND_MRKT_DIV_CODE: 'J',
+    FID_INPUT_ISCD: ticker,
+    FID_INPUT_HOUR_1: hour,
+    FID_INPUT_DATE_1: date,
+    FID_PW_DATA_INCU_YN: 'N',
+    FID_FAKE_TICK_INCU_YN: '',
+  })
+
+  const response = await fetch(
+    `${baseUrl}/uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice?${queryParams}`,
+    {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        authorization: `Bearer ${token}`,
+        appkey: credential.appKey,
+        appsecret: credential.appSecret,
+        tr_id: 'FHKST03010230',
+        custtype: 'P',
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`KIS 일별 분봉 조회 실패 (${response.status})`)
+  }
+
+  const json = await response.json()
+  if (json.rt_cd !== '0') {
+    // 휴장일/조회 데이터 없음 등은 빈 배열로 반환 (호출 측에서 cursor 점프)
+    if (json.msg_cd === 'EGW00121' || /조회.*없|데이터.*없/.test(json.msg1 ?? '')) {
+      return []
+    }
+    throw new Error(`KIS 일별 분봉 조회 실패: [${json.msg_cd}] ${json.msg1}`)
+  }
+
+  interface KISMinuteItem {
+    stck_bsop_date?: string
+    stck_cntg_hour?: string
+    stck_prpr?: string
+    stck_oprc?: string
+    stck_hgpr?: string
+    stck_lwpr?: string
+    cntg_vol?: string
+    acml_tr_pbmn?: string
+  }
+
+  const items: KISMinuteItem[] = json.output2 || []
+
+  // 최신 → 과거를 과거 → 최신 순으로 뒤집고 매핑
+  const bars1m: KRMinuteBar[] = items
+    .filter((it) => it.stck_cntg_hour && it.stck_prpr && it.stck_prpr !== '0')
+    .map((it) => {
+      const d = it.stck_bsop_date ?? date
+      const t = it.stck_cntg_hour ?? '000000'
+      const isoDate = d.length === 8
+        ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
+        : new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
+      const isoTime = `${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6) || '00'}`
+      const close = parseFloat(it.stck_prpr ?? '0')
+      const volume = parseInt(it.cntg_vol ?? '0', 10)
+      const value = it.acml_tr_pbmn ? parseFloat(it.acml_tr_pbmn) : close * volume
+      return {
+        datetime: `${isoDate}T${isoTime}+09:00`,
+        open: parseFloat(it.stck_oprc ?? it.stck_prpr ?? '0'),
+        high: parseFloat(it.stck_hgpr ?? it.stck_prpr ?? '0'),
+        low: parseFloat(it.stck_lwpr ?? it.stck_prpr ?? '0'),
+        close,
+        volume,
+        value,
+      }
+    })
+    .reverse()
+
+  return bars1m
+}
+
+/** YYYYMMDD KST 오늘 */
+function kstYyyymmdd(now: Date): string {
+  const k = new Date(now.getTime() + 9 * 3600_000)
+  return `${k.getUTCFullYear()}${String(k.getUTCMonth() + 1).padStart(2, '0')}${String(k.getUTCDate()).padStart(2, '0')}`
+}
+
+/** HHMMSS KST 현재 시각 (장 마감 후/주말이면 15:30:00) */
+function kstHhmmss(now: Date): string {
+  const k = new Date(now.getTime() + 9 * 3600_000)
+  const dow = k.getUTCDay() // 0=Sun, 6=Sat
+  if (dow === 0 || dow === 6) return '153000'
+  const hh = k.getUTCHours()
+  const mm = k.getUTCMinutes()
+  if (hh < 9) return '153000' // 장 시작 전 → 전 영업일 mark (호출 측에서 점프)
+  if (hh > 15 || (hh === 15 && mm > 30)) return '153000'
+  return `${String(hh).padStart(2, '0')}${String(mm).padStart(2, '0')}00`
+}
+
+/** YYYYMMDD → 직전 영업일 YYYYMMDD (주말 건너뛰기, 공휴일은 빈 응답으로 자동 추가 점프) */
+function previousBusinessDay(yyyymmdd: string): string {
+  const y = parseInt(yyyymmdd.slice(0, 4), 10)
+  const m = parseInt(yyyymmdd.slice(4, 6), 10)
+  const d = parseInt(yyyymmdd.slice(6, 8), 10)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  do {
+    date.setUTCDate(date.getUTCDate() - 1)
+  } while (date.getUTCDay() === 0 || date.getUTCDay() === 6)
+  return `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(date.getUTCDate()).padStart(2, '0')}`
 }
 
 // ============================================
