@@ -14,6 +14,8 @@ export default function TradingContent() {
   const [ticker, setTicker] = useState('')
   const [tickerName, setTickerName] = useState('')
   const [market, setMarket] = useState<Market>('KR')
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
   const [orderType, setOrderType] = useState<OrderType>('buy')
   const [orderMethod, setOrderMethod] = useState<OrderMethod>('limit')
   const [quantity, setQuantity] = useState('')
@@ -28,6 +30,30 @@ export default function TradingContent() {
   }, [])
 
   useEffect(() => { loadOrders() }, [loadOrders])
+
+  // 종목·시장 변경 시 현재가 자동 조회
+  useEffect(() => {
+    if (!ticker.trim()) { setCurrentPrice(null); return }
+    let cancelled = false
+    setQuoteLoading(true)
+    fetch(`/api/investment/quote?ticker=${encodeURIComponent(ticker.trim())}&market=${market}`)
+      .then(r => r.json())
+      .then(json => {
+        if (cancelled) return
+        const p = json?.data?.price
+        if (typeof p === 'number' && p > 0) setCurrentPrice(p)
+        else setCurrentPrice(null)
+      })
+      .catch(() => { if (!cancelled) setCurrentPrice(null) })
+      .finally(() => { if (!cancelled) setQuoteLoading(false) })
+    return () => { cancelled = true }
+  }, [ticker, market])
+
+  const applyCurrentPrice = () => {
+    if (currentPrice === null || currentPrice <= 0) return
+    setOrderMethod('limit')
+    setPrice(String(currentPrice))
+  }
 
   const submitOrder = async () => {
     if (!ticker.trim()) { alert('종목 코드를 입력해주세요'); return }
@@ -119,20 +145,37 @@ export default function TradingContent() {
                 clearOnSelect={false}
               />
               {ticker && (
-                <p className="mt-1.5 text-[11px] text-at-text-secondary">
-                  선택됨:
-                  <span className="ml-1 font-mono font-semibold text-at-text">{ticker}</span>
-                  {tickerName && tickerName !== ticker && (
-                    <span className="ml-1.5">{tickerName}</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { setTicker(''); setTickerName('') }}
-                    className="ml-2 text-at-text-weak hover:text-at-accent underline"
-                  >
-                    초기화
-                  </button>
-                </p>
+                <div className="mt-1.5 flex items-center justify-between gap-2 flex-wrap text-[11px]">
+                  <span className="text-at-text-secondary">
+                    <span className="font-mono font-semibold text-at-text">{ticker}</span>
+                    {tickerName && tickerName !== ticker && (
+                      <span className="ml-1.5">{tickerName}</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setTicker(''); setTickerName(''); setCurrentPrice(null) }}
+                      className="ml-2 text-at-text-weak hover:text-at-accent underline"
+                    >
+                      초기화
+                    </button>
+                  </span>
+                  <span className="font-mono">
+                    {quoteLoading ? (
+                      <span className="text-at-text-weak inline-flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" /> 시세 조회 중...
+                      </span>
+                    ) : currentPrice !== null ? (
+                      <span className="text-at-text">
+                        현재가{' '}
+                        <span className="font-semibold">
+                          {market === 'KR'
+                            ? `${Math.round(currentPrice).toLocaleString()}원`
+                            : `$${currentPrice.toFixed(2)}`}
+                        </span>
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
               )}
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -143,12 +186,61 @@ export default function TradingContent() {
               </div>
               {orderMethod === 'limit' && (
                 <div>
-                  <label className="block text-xs text-at-text-secondary mb-1">가격</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs text-at-text-secondary">가격</label>
+                    <button
+                      type="button"
+                      onClick={applyCurrentPrice}
+                      disabled={currentPrice === null || quoteLoading}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-at-accent/10 text-at-accent hover:bg-at-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="현재가를 가격 필드에 입력"
+                    >
+                      현재가 입력
+                    </button>
+                  </div>
                   <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" min="0"
                     className="w-full px-3 py-2 rounded-xl border border-at-border bg-white text-at-text text-sm font-mono focus:outline-none focus:border-at-accent" />
                 </div>
               )}
             </div>
+            {orderMethod === 'market' && currentPrice !== null && (
+              <div className="text-[11px] text-at-text-secondary px-3 py-2 rounded-lg bg-at-surface-alt">
+                시장가 주문은 즉시 체결가로 처리됩니다 (예상 체결가 약{' '}
+                <span className="font-mono font-semibold">
+                  {market === 'KR'
+                    ? `${Math.round(currentPrice).toLocaleString()}원`
+                    : `$${currentPrice.toFixed(2)}`}
+                </span>
+                ). 슬리피지 가능성 있음.
+              </div>
+            )}
+            {/* 빠른 주문: 현재가로 즉시 매수/매도 */}
+            {currentPrice !== null && (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrderType('buy')
+                    applyCurrentPrice()
+                  }}
+                  disabled={quoteLoading}
+                  className="py-2 rounded-xl text-xs font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                >
+                  현재가 매수 가격 적용
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrderType('sell')
+                    applyCurrentPrice()
+                  }}
+                  disabled={quoteLoading}
+                  className="py-2 rounded-xl text-xs font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                >
+                  현재가 매도 가격 적용
+                </button>
+              </div>
+            )}
             <button onClick={submitOrder} disabled={submitting}
               className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
                 orderType === 'buy' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
