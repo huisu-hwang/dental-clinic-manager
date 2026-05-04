@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { investmentDecrypt } from '@/lib/investmentCrypto'
+import { placeKROrder, placeUSOrder } from '@/lib/kisApiService'
 
 const KR_TICKER_REGEX = /^\d{6}$/
 const US_TICKER_REGEX = /^[A-Z]{1,5}[.]?[A-Z]?$/
@@ -87,15 +89,21 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 활성 credential 확인
+  // 활성 credential 확인 (시장에 맞는 KIS credential 선택)
+  const krBrokers = ['kis', 'kis_kr', 'KIS', 'KIS_KR']
+  const usBrokers = ['kis_us', 'KIS_US']
+  const brokerFilter = market === 'KR' ? krBrokers : [...krBrokers, ...usBrokers]
   const { data: credential } = await supabase
     .from('user_broker_credentials')
-    .select('id')
+    .select('id, app_key_encrypted, app_secret_encrypted, account_number_encrypted, is_paper_trading')
     .eq('user_id', userId)
     .eq('is_active', true)
-    .single()
+    .in('broker', brokerFilter)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-  // 주문 레코드 생성 (실제 KIS 주문은 워커에서 처리)
+  // 1) 주문 레코드 생성 — credential 없으면 즉시 failed로 종료
   const { data: order, error } = await supabase
     .from('trade_orders')
     .insert({
@@ -120,7 +128,101 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '주문 생성에 실패했습니다' }, { status: 500 })
   }
 
-  const response = { data: order }
+  // 2) credential이 있으면 즉시 KIS API로 주문 전송
+  let finalOrder = order
+  if (credential) {
+    try {
+      const cred = credential as {
+        id: string
+        app_key_encrypted: string
+        app_secret_encrypted: string
+        account_number_encrypted: string
+        is_paper_trading: boolean
+      }
+      const kisCredential = {
+        appKey: investmentDecrypt(cred.app_key_encrypted),
+        appSecret: investmentDecrypt(cred.app_secret_encrypted),
+        isPaperTrading: Boolean(cred.is_paper_trading),
+      }
+      const accountNumber = investmentDecrypt(cred.account_number_encrypted)
+      const kisPrice = orderMethod === 'limit' ? Number(orderPrice) : 0
+
+      const kisResult = market === 'KR'
+        ? await placeKROrder({
+            credentialId: cred.id,
+            credential: kisCredential,
+            accountNumber,
+            ticker: tickerStr,
+            orderType: orderType as 'buy' | 'sell',
+            quantity: qty,
+            price: kisPrice,
+          })
+        : await placeUSOrder({
+            credentialId: cred.id,
+            credential: kisCredential,
+            accountNumber,
+            ticker: tickerStr,
+            exchange: 'NASD',
+            orderType: orderType as 'buy' | 'sell',
+            quantity: qty,
+            price: kisPrice,
+          })
+
+      const kisOrderId = kisResult.output?.ODNO || kisResult.output?.KRX_FWDG_ORD_ORGNO || null
+      const { data: updated } = await supabase
+        .from('trade_orders')
+        .update({ status: 'submitted', kis_order_id: kisOrderId, error_message: null })
+        .eq('id', order.id)
+        .select()
+        .single()
+      if (updated) finalOrder = updated
+
+      await supabase.from('investment_audit_logs').insert({
+        user_id: userId,
+        action: 'trade_created',
+        resource_type: 'trade',
+        resource_id: order.id,
+        status: 'success',
+        metadata: {
+          ticker: tickerStr, market, orderType, orderMethod, quantity: qty,
+          price: kisPrice, kisOrderId, manual: true,
+        },
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'KIS 주문 호출 실패'
+      console.error('수동 주문 KIS 호출 실패:', err)
+
+      const { data: updated } = await supabase
+        .from('trade_orders')
+        .update({ status: 'failed', error_message: message })
+        .eq('id', order.id)
+        .select()
+        .single()
+      if (updated) finalOrder = updated
+
+      await supabase.from('investment_audit_logs').insert({
+        user_id: userId,
+        action: 'trade_failed',
+        resource_type: 'trade',
+        resource_id: order.id,
+        status: 'failure',
+        error_message: message,
+        metadata: { ticker: tickerStr, market, orderType, orderMethod, quantity: qty, manual: true },
+      })
+
+      const response = { data: finalOrder, error: message }
+      if (idempotencyKey && typeof idempotencyKey === 'string') {
+        await supabase.from('idempotency_keys').insert({
+          key: idempotencyKey,
+          user_id: userId,
+          response: response as unknown as object,
+        })
+      }
+      return NextResponse.json(response, { status: 502 })
+    }
+  }
+
+  const response = { data: finalOrder }
 
   // Idempotency Key 저장
   if (idempotencyKey && typeof idempotencyKey === 'string') {
