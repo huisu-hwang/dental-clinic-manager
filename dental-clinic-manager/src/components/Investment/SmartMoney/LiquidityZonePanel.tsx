@@ -5,7 +5,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowUp, ArrowDown, Info, X, Sparkles } from 'lucide-react'
+import { ArrowUp, ArrowDown, Info, X, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import type { LiquidityPool, LiquidityResult } from '@/types/smartMoney'
 
 const HELP = {
@@ -37,8 +37,41 @@ const POOL_TYPE_COLOR: Record<LiquidityPool['type'], string> = {
   'swing-low': 'bg-emerald-50 text-emerald-700 border-emerald-200',
 }
 
+interface PoolDef {
+  full: string
+  meaning: string
+}
+
+const POOL_DEFS: Record<LiquidityPool['type'], PoolDef> = {
+  'equal-highs': {
+    full: 'Equal Highs',
+    meaning: '같은 가격대에서 여러 번 막힌 고점 — 위쪽에 매도(매수자 손절) 주문이 밀집. 기관이 돌파시켜 사냥할 가능성',
+  },
+  'equal-lows': {
+    full: 'Equal Lows',
+    meaning: '같은 가격대에서 여러 번 받쳐진 저점 — 아래쪽에 매수(매도자 손절) 주문이 밀집. 기관이 깨뜨려 사냥할 가능성',
+  },
+  pdh: {
+    full: 'Previous Day High',
+    meaning: '전일 고가 — 데이트레이더의 손절매·역지정가가 자주 걸리는 가격대',
+  },
+  pdl: {
+    full: 'Previous Day Low',
+    meaning: '전일 저가 — 매수자 손절매가 밀집되는 가격대',
+  },
+  'swing-high': {
+    full: 'Swing High',
+    meaning: '명확한 단기 고점 — 매도세가 한 번 등장한 자리. 돌파 시 손절 주문이 트리거됨',
+  },
+  'swing-low': {
+    full: 'Swing Low',
+    meaning: '명확한 단기 저점 — 매수세가 한 번 등장한 자리. 이탈 시 손절 주문이 트리거됨',
+  },
+}
+
 export function LiquidityZonePanel({ liquidity, comment }: Props) {
   const [helpOpen, setHelpOpen] = useState(false)
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
   const noPools = liquidity.pools.length === 0
   const noSweeps = liquidity.recentSweeps.length === 0
 
@@ -96,24 +129,30 @@ export function LiquidityZonePanel({ liquidity, comment }: Props) {
         <div className="space-y-3">
           {sortedPools.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">활성 풀</p>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                활성 풀 <span className="font-normal normal-case text-slate-400">(×N = 닿은 횟수, 많을수록 유동성 강함)</span>
+              </p>
               <div className="space-y-1">
-                {sortedPools.map((p, i) => (
-                  <div
-                    key={`${p.type}-${p.level}-${i}`}
-                    className="flex items-center justify-between text-[11px] gap-2"
-                  >
-                    <span
-                      className={`flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded border font-bold ${POOL_TYPE_COLOR[p.type]} ${
-                        p.swept ? 'opacity-50 line-through' : ''
-                      }`}
+                {sortedPools.map((p, i) => {
+                  const def = POOL_DEFS[p.type]
+                  return (
+                    <div
+                      key={`${p.type}-${p.level}-${i}`}
+                      className="flex items-center justify-between text-[11px] gap-2"
+                      title={`${def.full} — ${def.meaning}${p.swept ? ' · 이미 사냥됨' : ''}`}
                     >
-                      {POOL_TYPE_LABEL[p.type]}
-                    </span>
-                    <span className="font-mono text-slate-700 flex-1 text-right">{p.level.toLocaleString()}</span>
-                    <span className="text-[9px] text-slate-500 font-mono w-10 text-right">×{p.hits}</span>
-                  </div>
-                ))}
+                      <span
+                        className={`flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded border font-bold ${POOL_TYPE_COLOR[p.type]} ${
+                          p.swept ? 'opacity-50 line-through' : ''
+                        }`}
+                      >
+                        {POOL_TYPE_LABEL[p.type]}
+                      </span>
+                      <span className="font-mono text-slate-700 flex-1 text-right">{p.level.toLocaleString()}</span>
+                      <span className="text-[9px] text-slate-500 font-mono w-10 text-right">×{p.hits}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -153,6 +192,41 @@ export function LiquidityZonePanel({ liquidity, comment }: Props) {
           )}
         </div>
       )}
+
+      {/* 용어 가이드 토글 */}
+      <div className="mt-3 pt-2 border-t border-slate-100">
+        <button
+          type="button"
+          onClick={() => setGlossaryOpen((o) => !o)}
+          className="w-full flex items-center justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wide hover:text-slate-700"
+        >
+          <span>용어 가이드</span>
+          {glossaryOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
+        {glossaryOpen && (
+          <div className="mt-2 space-y-1.5">
+            {(Object.keys(POOL_DEFS) as LiquidityPool['type'][]).map((k) => {
+              const def = POOL_DEFS[k]
+              return (
+                <div key={k} className="flex items-start gap-2 text-[10.5px] leading-relaxed">
+                  <span className={`flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded border font-bold ${POOL_TYPE_COLOR[k]}`}>
+                    {POOL_TYPE_LABEL[k]}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-slate-700 font-medium">{def.full}</span>
+                    <span className="text-slate-400 mx-1">·</span>
+                    <span className="text-slate-500">{def.meaning}</span>
+                  </div>
+                </div>
+              )
+            })}
+            <div className="pt-1.5 mt-1.5 border-t border-slate-100 space-y-1 text-[10.5px] leading-relaxed text-slate-500">
+              <p><span className="font-semibold text-slate-700">사냥(Sweep)</span> · 가격이 풀을 일시적으로 돌파해 손절 주문을 트리거하고 다시 반대 방향으로 움직이는 패턴. 강세 사냥(저점 사냥)은 매수 신호, 약세 사냥(고점 사냥)은 매도 신호로 해석.</p>
+              <p><span className="font-semibold text-slate-700">×N (Hits)</span> · 해당 가격대에 가격이 닿은 횟수. 많을수록 유동성이 강하게 모여 있음.</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {comment && (
         <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
