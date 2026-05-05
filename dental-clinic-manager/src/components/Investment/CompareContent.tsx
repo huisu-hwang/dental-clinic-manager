@@ -87,7 +87,7 @@ const METRIC_GLOSSARY: Record<string, { title: string; body: string; formula?: s
 const MAX_COMPARE = 50
 // 다중 종목 비교 상한 (종목 × 전략 = 백테스트 호출 수)
 const MAX_TICKERS = 10
-const MAX_PAIRS = 100
+const MAX_PAIRS = 200
 // 백테스트 동시 호출 수 (서버 부하 분산)
 const COMPARE_CHUNK = 8
 
