@@ -6,6 +6,7 @@ import HistoryFilters, { type HistoryFilterState } from './HistoryFilters'
 import HistoryTable from './HistoryTable'
 import HistoryCompareView from './HistoryCompareView'
 import HistoryDateGroups from './HistoryDateGroups'
+import HistoryHierarchy from './HistoryHierarchy'
 
 export interface BacktestRunRow {
   id: string
@@ -69,7 +70,7 @@ export default function HistoryTab() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showCompare, setShowCompare] = useState(false)
-  const [viewMode, setViewMode] = useState<'matrix' | 'flat'>('matrix')
+  const [viewMode, setViewMode] = useState<'hierarchy' | 'matrix' | 'flat'>('hierarchy')
 
   // 전략 옵션 1회 로드
   useEffect(() => {
@@ -150,26 +151,39 @@ export default function HistoryTab() {
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-xs text-at-text-secondary">총 {rows.length}건</p>
-            <div className="inline-flex items-center rounded-xl border border-at-border bg-white text-xs">
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <div className="inline-flex items-center rounded-xl border border-at-border bg-white text-xs overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setViewMode('hierarchy')}
+                className={`px-3 py-1.5 ${viewMode === 'hierarchy' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
+              >
+                날짜·세션
+              </button>
               <button
                 type="button"
                 onClick={() => setViewMode('matrix')}
-                className={`px-3 py-1.5 rounded-l-xl ${viewMode === 'matrix' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
+                className={`px-3 py-1.5 ${viewMode === 'matrix' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
               >
                 날짜별 결과표
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('flat')}
-                className={`px-3 py-1.5 rounded-r-xl ${viewMode === 'flat' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
+                className={`px-3 py-1.5 ${viewMode === 'flat' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
               >
                 평면 목록
               </button>
             </div>
           </div>
-          {viewMode === 'matrix' ? (
+          {viewMode === 'hierarchy' ? (
+            <HistoryHierarchy
+              rows={rows}
+              strategies={strategies}
+              selectedIds={selectedIds}
+              onToggleSelected={toggleSelected}
+            />
+          ) : viewMode === 'matrix' ? (
             <HistoryDateGroups
               rows={rows}
               strategies={strategies}
