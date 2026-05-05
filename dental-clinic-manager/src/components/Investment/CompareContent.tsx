@@ -656,10 +656,36 @@ function LiveCompareSection() {
 
         {/* 프리셋 그룹 */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <Sparkles className="w-4 h-4 text-purple-500" />
             <h3 className="text-sm font-semibold text-at-text">프리셋 전략</h3>
             <span className="text-xs text-at-text-weak">저장 없이 즉시 비교 · {presetItems.length}개</span>
+            <button
+              type="button"
+              onClick={() => {
+                const presetKeys = presetItems.map((it) => it.key)
+                const allPresetSelected = presetKeys.length > 0 && presetKeys.every((k) => selectedIds.has(k))
+                setSelectedIds((prev) => {
+                  const next = new Set(prev)
+                  if (allPresetSelected) {
+                    for (const k of presetKeys) next.delete(k)
+                    return next
+                  }
+                  for (const k of presetKeys) next.add(k)
+                  if (next.size > MAX_COMPARE) {
+                    alert(`전략이 ${next.size}개로 너무 많습니다. 최대 ${MAX_COMPARE}개까지만 동시 비교 가능합니다.`)
+                    return prev
+                  }
+                  return next
+                })
+              }}
+              disabled={presetItems.length === 0}
+              className="ml-auto text-xs text-purple-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {presetItems.length > 0 && presetItems.every((it) => selectedIds.has(it.key))
+                ? '프리셋 전체 해제'
+                : '프리셋 전체 선택'}
+            </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {presetItems.map(item => (
