@@ -317,9 +317,10 @@ export async function GET(request: NextRequest) {
   }
 
   // 3) 필터 + 최신순 (히스토리 탭)
+  // investment_strategies LEFT JOIN — 삭제된 전략의 백테스트도 strategy=null로 함께 반환
   let query = supabase
     .from('backtest_runs')
-    .select('*')
+    .select('*, investment_strategies(name, automation_level, is_active)')
     .eq('user_id', userId)
     .eq('status', 'completed')
 
@@ -335,7 +336,7 @@ export async function GET(request: NextRequest) {
   if (until) {
     query = query.lte('executed_at', until)
   }
-  const limit = Math.min(Number(limitRaw) || 50, 200)
+  const limit = Math.min(Number(limitRaw) || 50, 500)
   query = query.order('executed_at', { ascending: false }).limit(limit)
 
   const { data, error } = await query
