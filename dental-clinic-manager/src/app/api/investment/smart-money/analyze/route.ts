@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
   const userId = auth.user.id
 
   // 2. 입력 파싱
-  let body: { ticker?: unknown; market?: unknown; includeLLM?: unknown }
+  let body: { ticker?: unknown; market?: unknown; includeLLM?: unknown; includePreMarket?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
   const ticker = typeof body.ticker === 'string' ? body.ticker.trim().toUpperCase() : ''
   const market = body.market === 'KR' || body.market === 'US' ? (body.market as Market) : null
   const includeLLM = Boolean(body.includeLLM)
+  // US 종목에서 pre-market(ET 04:00~09:30) 봉도 분석에 포함 + 별도 byDay entry 추가
+  const includePreMarket = Boolean(body.includePreMarket) && market === 'US'
 
   if (!ticker) {
     return NextResponse.json({ error: 'ticker는 필수입니다.' }, { status: 400 })
@@ -297,11 +299,13 @@ export async function POST(request: NextRequest) {
     bars = dailyBars
   }
 
-  // 정규장 시간만 필터 — 프리/포스트마켓 봉은 거래량 분포·시·종가 식별에 노이즈
-  // (US: ET 09:30~16:00, KR: KST 09:00~15:30)
+  // 정규장(+옵션 pre-market) 시간만 필터 — post-market은 항상 제외
   // dailyBars로 fallback된 경우는 시간 정보가 없으므로 그대로 유지
   if (bars !== dailyBars && bars.length > 0) {
-    const filtered = bars.filter((b) => isRegularTradingHours(b.datetime, market))
+    const filterFn = (b: NormalizedBar) =>
+      isRegularTradingHours(b.datetime, market) ||
+      (includePreMarket && isPreMarketUS(b.datetime))
+    const filtered = bars.filter(filterFn)
     if (filtered.length >= 30) bars = filtered
   }
 
@@ -567,6 +571,78 @@ export async function POST(request: NextRequest) {
       lastDay.overallScore = scoreResult.overallScore
       lastDay.interpretation = scoreResult.interpretation
       lastDay.signalDetails = scoreResult.signalDetails
+    }
+
+    // ===== Pre-Market 별도 entry (US 옵션) =====
+    // 가장 최근 일자의 pre-market 봉만 분리해 분석 → byDay에 추가
+    if (includePreMarket && market === 'US') {
+      const latestDayKey = recentDayKeys[recentDayKeys.length - 1]
+      if (latestDayKey) {
+        const preBars = bars.filter(
+          (b) => dayKeyOf(b.datetime) === latestDayKey && isPreMarketUS(b.datetime),
+        )
+        if (preBars.length >= 10) {
+          const closePrice = preBars[preBars.length - 1].close
+          const dVwapBars: VWAPInputBar[] = preBars.map((b) => ({
+            high: b.high, low: b.low, close: b.close, volume: b.volume,
+          }))
+          const dVwap = calculateVWAP(dVwapBars, closePrice)
+
+          const dAlgoBars: AlgoBar[] = preBars.map((b) => ({
+            datetime: b.datetime, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+          }))
+          const dAlgoFootprint = analyzeAlgoFootprint(dAlgoBars, dAlgoBars)
+
+          const dWyckoffBars: WyckoffBar[] = preBars.map((b) => ({
+            open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+          }))
+          const dWyckoffIntraday = detectWyckoff(dWyckoffBars, { timeframe: 'minute' })
+
+          const dSessionBars: SessionBar[] = preBars.map((b) => ({ ...b }))
+          const dSession = analyzeSession(dSessionBars, market)
+
+          const dNewsBars: NewsBar[] = preBars.map((b) => ({ ...b }))
+          const dNewsContext = analyzeNewsContext({ bars: dNewsBars, signalDetails: [], newsEvents: [] })
+
+          const dScore = computeSmartMoneyScore({
+            vwap: dVwap,
+            investorFlow,
+            wyckoff,
+            algoFootprint: dAlgoFootprint,
+            wyckoffPhase,
+            liquidity,
+            marketStructure,
+            orderBlocksFvg,
+            traps,
+            vsa,
+            session: dSession,
+            newsContext: dNewsContext,
+          })
+
+          byDay.push({
+            ticker,
+            market,
+            asOfDate: `${latestDayKey} (Pre)`,
+            closePrice,
+            vwap: dVwap,
+            wyckoff,
+            wyckoffIntraday: dWyckoffIntraday,
+            algoFootprint: dAlgoFootprint,
+            wyckoffPhase,
+            liquidity,
+            marketStructure,
+            orderBlocksFvg,
+            traps,
+            vsa,
+            session: dSession,
+            newsContext: dNewsContext,
+            manipulationRiskScore: dScore.manipulationRiskScore,
+            overallScore: dScore.overallScore,
+            interpretation: dScore.interpretation,
+            signalDetails: dScore.signalDetails,
+          })
+        }
+      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : '분석 엔진 실패'
@@ -942,28 +1018,34 @@ function toKisDateString(d: Date): string {
  * 프리/포스트마켓 봉은 거래량 분포 분석에 노이즈가 되므로 분석 입력에서 제외용.
  */
 function isRegularTradingHours(dt: string, market: Market): boolean {
-  if (!dt) return false
+  const m = tzMinutesOf(dt, market)
+  if (m === null) return true
+  if (market === 'US') return m >= 9 * 60 + 30 && m < 16 * 60
+  return m >= 9 * 60 && m < 15 * 60 + 30
+}
+
+/** US pre-market: ET 04:00 ~ 09:30 (09:30 미포함) */
+function isPreMarketUS(dt: string): boolean {
+  const m = tzMinutesOf(dt, 'US')
+  if (m === null) return false
+  return m >= 4 * 60 && m < 9 * 60 + 30
+}
+
+function tzMinutesOf(dt: string, market: Market): number | null {
+  if (!dt) return null
   const hasTz = /Z$|[+-]\d{2}:?\d{2}$/.test(dt)
   const d = new Date(hasTz ? dt : dt + 'Z')
-  if (isNaN(d.getTime())) return true
+  if (isNaN(d.getTime())) return null
   const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
-  let hh = 0
-  let mm = 0
   try {
     const fmt = new Intl.DateTimeFormat('en-GB', {
       timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
     })
     const parts = fmt.formatToParts(d)
-    const hourPart = parts.find((p) => p.type === 'hour')?.value ?? '00'
-    const minutePart = parts.find((p) => p.type === 'minute')?.value ?? '00'
-    hh = parseInt(hourPart, 10)
-    mm = parseInt(minutePart, 10)
+    const hh = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '00', 10)
+    const mm = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '00', 10)
+    return hh * 60 + mm
   } catch {
-    return true
+    return null
   }
-  const minutes = hh * 60 + mm
-  if (market === 'US') {
-    return minutes >= 9 * 60 + 30 && minutes < 16 * 60
-  }
-  return minutes >= 9 * 60 && minutes < 15 * 60 + 30
 }
