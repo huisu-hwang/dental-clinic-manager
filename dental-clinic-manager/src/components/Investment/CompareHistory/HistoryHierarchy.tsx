@@ -29,6 +29,9 @@ interface Props {
 /**
  * backtest_runs row → CompareResultsView가 기대하는 BacktestResultItem 변환.
  * full_metrics(jsonb)는 BacktestMetrics 전체 스냅샷이라 그대로 사용.
+ *
+ * rowKey 형식은 라이브 비교(`<strategyKey>::<ticker>`)와 정확히 일치시켜야
+ * MatrixView의 lookup이 정상 동작 (그렇지 않으면 모든 셀이 "로딩 중"으로 표시됨).
  */
 function toResultItem(
   r: BacktestRunRow,
@@ -47,9 +50,10 @@ function toResultItem(
   }
   const trades = (r.trades as unknown as BacktestTrade[]) ?? []
   const equityCurve = (r.equity_curve as unknown as EquityCurvePoint[]) ?? []
+  const strategyKey = r.strategy_id ?? `preset:${r.preset_id ?? 'custom'}`
   return {
-    rowKey: r.id,
-    strategyId: r.strategy_id ?? `preset:${r.preset_id ?? 'custom'}`,
+    rowKey: `${strategyKey}::${r.ticker.toUpperCase()}`,
+    strategyId: strategyKey,
     strategyName,
     ticker: r.ticker,
     tickerName: r.ticker,
@@ -312,10 +316,12 @@ function SessionResultView({
     const seen = new Set<string>()
     const arr: { ticker: string; name: string }[] = []
     for (const r of session.rows) {
-      const k = `${r.market}:${r.ticker}`
+      // toResultItem rowKey와 동일하게 대문자로 정규화 — 매트릭스 lookup 일치 보장
+      const t = r.ticker.toUpperCase()
+      const k = `${r.market}:${t}`
       if (seen.has(k)) continue
       seen.add(k)
-      arr.push({ ticker: r.ticker, name: r.ticker })
+      arr.push({ ticker: t, name: t })
     }
     return arr
   }, [session])
