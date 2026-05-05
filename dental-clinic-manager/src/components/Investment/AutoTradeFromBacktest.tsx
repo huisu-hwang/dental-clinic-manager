@@ -70,18 +70,25 @@ export default function AutoTradeFromBacktest() {
 
   useEffect(() => { loadStrategies() }, [loadStrategies])
 
-  const loadBacktestsForTicker = useCallback(async (t: string, m: Market) => {
+  /**
+   * 백테스트 결과 로드.
+   * t/m이 비어있으면 사용자의 모든 백테스트 (limit=200) — 종목 미선택 모드.
+   */
+  const loadBacktests = useCallback(async (t?: string, m?: Market) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/investment/backtest?ticker=${encodeURIComponent(t)}&limit=200`)
+      const url = t
+        ? `/api/investment/backtest?ticker=${encodeURIComponent(t)}&limit=200`
+        : `/api/investment/backtest?limit=200`
+      const res = await fetch(url)
       const json = await res.json()
       if (!res.ok) {
         setError(json.error || '백테스트 결과 조회 실패')
         setRuns([])
       } else {
         const data = (json.data ?? []) as BacktestRun[]
-        setRuns(data.filter((r) => r.market === m))
+        setRuns(t && m ? data.filter((r) => r.market === m) : data)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : '네트워크 오류')
@@ -91,66 +98,88 @@ export default function AutoTradeFromBacktest() {
     }
   }, [])
 
-  // 선택된 (strategy_id, ticker, market)이 이미 watchlist에 있는지 확인
-  const loadWatchlistFor = useCallback(async (strategyIds: string[], t: string, m: Market) => {
-    if (strategyIds.length === 0) return
-    const promises = strategyIds.map(async (sid) => {
-      try {
-        const r = await fetch(`/api/investment/watchlist?strategyId=${sid}`)
-        const j = await r.json()
-        if (!r.ok || !Array.isArray(j.data)) return [sid, false] as const
-        const has = j.data.some((w: { ticker: string; market: string }) =>
-          w.ticker === t.toUpperCase() && w.market === m
-        )
-        return [sid, has] as const
-      } catch {
-        return [sid, false] as const
+  /**
+   * (strategy_id, ticker, market) 조합별로 watchlist 등록 여부 확인.
+   * Map key는 `${sid}::${market}::${ticker}` 형식.
+   */
+  const loadWatchlistForCombos = useCallback(
+    async (combos: Array<{ sid: string; ticker: string; market: Market }>) => {
+      if (combos.length === 0) return
+      const sids = Array.from(new Set(combos.map((c) => c.sid)))
+      // strategy_id별 watchlist를 한 번씩만 조회
+      const wlByStrategy = new Map<string, Array<{ ticker: string; market: string }>>()
+      await Promise.all(sids.map(async (sid) => {
+        try {
+          const r = await fetch(`/api/investment/watchlist?strategyId=${sid}`)
+          const j = await r.json()
+          if (!r.ok || !Array.isArray(j.data)) return
+          wlByStrategy.set(sid, j.data as Array<{ ticker: string; market: string }>)
+        } catch { /* ignore */ }
+      }))
+
+      const next = new Map<string, boolean>()
+      for (const c of combos) {
+        const items = wlByStrategy.get(c.sid) ?? []
+        const has = items.some((w) => w.ticker === c.ticker.toUpperCase() && w.market === c.market)
+        next.set(`${c.sid}::${c.market}::${c.ticker.toUpperCase()}`, has)
       }
-    })
-    const results = await Promise.all(promises)
-    const next = new Map<string, boolean>()
-    for (const [sid, has] of results) next.set(sid, has)
-    setWatchlistMap(next)
-  }, [])
+      setWatchlistMap(next)
+    },
+    []
+  )
 
-  // 종목 선택 변화 → 백테스트 + watchlist 재조회
+  // 종목 선택 변화 → 백테스트 재조회 (ticker 없으면 전체)
   useEffect(() => {
-    if (!ticker.trim()) {
-      setRuns([])
-      setWatchlistMap(new Map())
-      setAppliedIds(new Set())
-      return
+    setAppliedIds(new Set())
+    setWatchlistMap(new Map())
+    if (ticker.trim()) {
+      loadBacktests(ticker.trim().toUpperCase(), market)
+    } else {
+      loadBacktests()
     }
-    loadBacktestsForTicker(ticker.trim().toUpperCase(), market)
-  }, [ticker, market, loadBacktestsForTicker])
+  }, [ticker, market, loadBacktests])
 
-  useEffect(() => {
-    if (!ticker.trim() || runs.length === 0) return
-    const sids = Array.from(new Set(runs.map((r) => r.strategy_id)))
-    loadWatchlistFor(sids, ticker.trim().toUpperCase(), market)
-  }, [ticker, market, runs, loadWatchlistFor])
+  // 모드 분기: ticker 선택 = 한 종목의 모든 전략 / 미선택 = 종목별 best 전략 1개
+  const isPickedMode = Boolean(ticker.trim())
 
-  // strategy_id별로 가장 좋은(totalReturn 최대) 결과 1개씩 추출 + 정렬
   const ranked: RankedRow[] = useMemo(() => {
     const stratMap = new Map<string, InvestmentStrategy>()
     for (const s of strategies) stratMap.set(s.id, s)
 
-    const bestPerStrategy = new Map<string, BacktestRun>()
-    for (const r of runs) {
-      const cur = bestPerStrategy.get(r.strategy_id)
-      const tr = Number(r.total_return ?? -Infinity)
-      const curTr = cur ? Number(cur.total_return ?? -Infinity) : -Infinity
-      if (!cur || tr > curTr) bestPerStrategy.set(r.strategy_id, r)
+    let bestRuns: BacktestRun[] = []
+
+    if (isPickedMode) {
+      // strategy_id별 best totalReturn 1개
+      const bestPerStrategy = new Map<string, BacktestRun>()
+      for (const r of runs) {
+        const cur = bestPerStrategy.get(r.strategy_id)
+        const tr = Number(r.total_return ?? -Infinity)
+        const curTr = cur ? Number(cur.total_return ?? -Infinity) : -Infinity
+        if (!cur || tr > curTr) bestPerStrategy.set(r.strategy_id, r)
+      }
+      bestRuns = Array.from(bestPerStrategy.values())
+    } else {
+      // (ticker, market) 단위로 best totalReturn 1개 (그 종목의 최고 성과 전략)
+      const bestPerTicker = new Map<string, BacktestRun>()
+      for (const r of runs) {
+        const k = `${r.market}::${r.ticker}`
+        const cur = bestPerTicker.get(k)
+        const tr = Number(r.total_return ?? -Infinity)
+        const curTr = cur ? Number(cur.total_return ?? -Infinity) : -Infinity
+        if (!cur || tr > curTr) bestPerTicker.set(k, r)
+      }
+      bestRuns = Array.from(bestPerTicker.values())
     }
 
     const rows: RankedRow[] = []
-    for (const [sid, run] of bestPerStrategy) {
-      const strat = stratMap.get(sid)
+    for (const run of bestRuns) {
+      const strat = stratMap.get(run.strategy_id)
       if (!strat) continue // 삭제된 전략 제외
-      const inWatchlist = watchlistMap.get(sid) === true
+      const wlKey = `${run.strategy_id}::${run.market}::${run.ticker.toUpperCase()}`
+      const inWatchlist = watchlistMap.get(wlKey) === true
       const alreadyActive = strat.automation_level === 2 && inWatchlist
       rows.push({
-        strategyId: sid,
+        strategyId: run.strategy_id,
         strategyName: strat.name,
         totalReturn: Number(run.total_return ?? 0),
         winRate: Number(run.win_rate ?? 0),
@@ -165,11 +194,22 @@ export default function AutoTradeFromBacktest() {
       })
     }
     return rows.sort((a, b) => b.totalReturn - a.totalReturn)
-  }, [runs, strategies, watchlistMap])
+  }, [runs, strategies, watchlistMap, isPickedMode])
+
+  // ranked 변화 시 → watchlist 조합 조회
+  useEffect(() => {
+    if (ranked.length === 0) return
+    const combos = ranked.map((r) => ({ sid: r.strategyId, ticker: r.ticker, market: r.market }))
+    loadWatchlistForCombos(combos)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runs])
+
+  const rowKey = (r: RankedRow) => `${r.strategyId}::${r.market}::${r.ticker.toUpperCase()}`
 
   const applyAutoTrade = async (row: RankedRow) => {
-    if (row.alreadyActive || appliedIds.has(row.strategyId)) return
-    setApplyingId(row.strategyId)
+    const key = rowKey(row)
+    if (row.alreadyActive || appliedIds.has(key)) return
+    setApplyingId(key)
     setError(null)
     try {
       // 1) automation_level 2로 변경 (이미 2면 그대로)
@@ -185,14 +225,15 @@ export default function AutoTradeFromBacktest() {
       }
 
       // 2) watchlist에 종목 추가 (이미 있으면 무시)
-      if (!watchlistMap.get(row.strategyId)) {
+      const wlKey = `${row.strategyId}::${row.market}::${row.ticker.toUpperCase()}`
+      if (!watchlistMap.get(wlKey)) {
         const r = await fetch('/api/investment/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             strategyId: row.strategyId,
             ticker: row.ticker,
-            tickerName: tickerName || null,
+            tickerName: isPickedMode ? (tickerName || null) : null,
             market: row.market,
           }),
         })
@@ -202,10 +243,10 @@ export default function AutoTradeFromBacktest() {
         }
       }
 
-      setAppliedIds((prev) => new Set(prev).add(row.strategyId))
+      setAppliedIds((prev) => new Set(prev).add(key))
       // 갱신
       loadStrategies()
-      loadWatchlistFor([row.strategyId], row.ticker, row.market)
+      loadWatchlistForCombos([{ sid: row.strategyId, ticker: row.ticker, market: row.market }])
     } catch (e) {
       setError(e instanceof Error ? e.message : '자동매매 추가 실패')
     } finally {
@@ -226,7 +267,7 @@ export default function AutoTradeFromBacktest() {
       <div className="p-5 space-y-4">
         <div>
           <label className="block text-xs text-at-text-secondary mb-1.5">
-            종목 선택 <span className="text-at-text-weak">(선택 시 그 종목 백테스트 결과를 수익률순으로 표시)</span>
+            종목 선택 <span className="text-at-text-weak">(선택 안 하면 종목별 최고 성과 전략 자동 표시)</span>
           </label>
           <div className="flex gap-2">
             <select
@@ -272,33 +313,45 @@ export default function AutoTradeFromBacktest() {
           </div>
         )}
 
-        {!ticker.trim() ? (
-          <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
-            <Target className="w-10 h-10 mb-2 opacity-30" />
-            <p className="text-sm">종목을 먼저 선택해주세요</p>
-            <p className="text-xs mt-1">선택한 종목으로 백테스트했던 전략을 결과 좋은 순으로 보여드립니다</p>
-          </div>
-        ) : loading ? (
+        {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-at-text-weak" />
           </div>
         ) : ranked.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-at-text-weak">
-            <Activity className="w-10 h-10 mb-2 opacity-30" />
-            <p className="text-sm">이 종목으로 백테스트한 전략이 없습니다</p>
-            <p className="text-xs mt-1">전략 페이지에서 백테스트를 먼저 실행해주세요</p>
+            {isPickedMode ? <Activity className="w-10 h-10 mb-2 opacity-30" /> : <Target className="w-10 h-10 mb-2 opacity-30" />}
+            <p className="text-sm">
+              {isPickedMode
+                ? '이 종목으로 백테스트한 전략이 없습니다'
+                : '백테스트 이력이 없습니다'}
+            </p>
+            <p className="text-xs mt-1">
+              {isPickedMode
+                ? '전략 페이지에서 백테스트를 먼저 실행해주세요'
+                : '전략 페이지에서 백테스트를 실행하면 여기에 자동으로 표시됩니다'}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-xs text-at-text-secondary">
-              총 <span className="font-semibold text-at-text">{ranked.length}개</span> 전략 — 수익률 좋은 순
+              {isPickedMode ? (
+                <>
+                  총 <span className="font-semibold text-at-text">{ranked.length}개</span> 전략 — 수익률 좋은 순
+                </>
+              ) : (
+                <>
+                  종목별 최고 성과 전략{' '}
+                  <span className="font-semibold text-at-text">{ranked.length}개</span> — 수익률 좋은 순
+                </>
+              )}
             </p>
             {ranked.map((row, idx) => {
-              const isApplying = applyingId === row.strategyId
-              const isApplied = row.alreadyActive || appliedIds.has(row.strategyId)
+              const key = rowKey(row)
+              const isApplying = applyingId === key
+              const isApplied = row.alreadyActive || appliedIds.has(key)
               return (
                 <div
-                  key={row.strategyId}
+                  key={key}
                   className="rounded-xl border border-at-border p-3 hover:border-at-accent/40 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -307,7 +360,18 @@ export default function AutoTradeFromBacktest() {
                         <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
                           {idx + 1}
                         </span>
-                        <p className="font-semibold text-sm text-at-text truncate">{row.strategyName}</p>
+                        {!isPickedMode && (
+                          <>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${row.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                              {row.market}
+                            </span>
+                            <span className="font-mono text-xs font-semibold text-at-text">{row.ticker}</span>
+                            <span className="text-at-text-weak">·</span>
+                          </>
+                        )}
+                        <p className={`font-semibold text-sm text-at-text truncate ${!isPickedMode ? 'text-at-text-secondary text-xs' : ''}`}>
+                          {row.strategyName}
+                        </p>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-1 text-[11px] mt-2">
                         <Stat label="수익률" value={fmtPct(row.totalReturn)} colorClass={colorPnl(row.totalReturn)} icon={row.totalReturn >= 0 ? TrendingUp : TrendingDown} />
