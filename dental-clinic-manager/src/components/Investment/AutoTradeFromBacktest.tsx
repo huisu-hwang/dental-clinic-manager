@@ -259,7 +259,7 @@ export default function AutoTradeFromBacktest() {
         const preset = PRESET_STRATEGIES.find((p) => p.id === presetId)
         if (!preset) throw new Error('프리셋 정보를 찾을 수 없습니다')
 
-        const timeframe = preset.mode === 'daytrading' ? '5min' : 'daily'
+        const timeframe = preset.mode === 'daytrading' ? '5m' : '1d'
         const createRes = await fetch('/api/investment/strategies', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
