@@ -14,6 +14,7 @@ import {
   Activity, Target, Zap,
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
+import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import type { InvestmentStrategy, Market } from '@/types/investment'
 
 interface BacktestRun {
@@ -248,26 +249,60 @@ export default function AutoTradeFromBacktest() {
     setApplyingId(key)
     setError(null)
     try {
-      // 1) automation_level 2로 변경 (이미 2면 그대로)
-      const strat = strategies.find((s) => s.id === row.strategyId)
-      if (strat && strat.automation_level !== 2) {
-        const r = await fetch('/api/investment/strategies', {
-          method: 'PATCH',
+      // 프리셋 row(canAdd=false)면 먼저 사용자 strategy로 자동 등록
+      let effectiveStrategyId = row.strategyId
+      if (!row.canAdd) {
+        const presetId = row.strategyId.startsWith('preset:')
+          ? row.strategyId.slice('preset:'.length)
+          : null
+        if (!presetId) throw new Error('프리셋 정보를 찾을 수 없습니다')
+        const preset = PRESET_STRATEGIES.find((p) => p.id === presetId)
+        if (!preset) throw new Error('프리셋 정보를 찾을 수 없습니다')
+
+        const timeframe = preset.mode === 'daytrading' ? '5min' : 'daily'
+        const createRes = await fetch('/api/investment/strategies', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: row.strategyId, automationLevel: 2 }),
+          body: JSON.stringify({
+            name: `${preset.name} (자동 추가)`,
+            description: preset.description,
+            targetMarket: row.market,
+            timeframe,
+            indicators: preset.indicators,
+            buyConditions: preset.buyConditions,
+            sellConditions: preset.sellConditions,
+            riskSettings: preset.riskSettings,
+            automationLevel: 2,
+            mode: preset.mode ?? 'swing',
+          }),
         })
-        const j = await r.json()
-        if (!r.ok) throw new Error(j.error || '자동화 레벨 변경 실패')
+        const createJson = await createRes.json()
+        if (!createRes.ok || !createJson.data?.id) {
+          throw new Error(createJson.error || '프리셋 기반 전략 생성 실패')
+        }
+        effectiveStrategyId = createJson.data.id as string
+      } else {
+        // 1) 기존 사용자 전략이면 automation_level 2로 변경 (이미 2면 스킵)
+        const strat = strategies.find((s) => s.id === row.strategyId)
+        if (strat && strat.automation_level !== 2) {
+          const r = await fetch('/api/investment/strategies', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: row.strategyId, automationLevel: 2 }),
+          })
+          const j = await r.json()
+          if (!r.ok) throw new Error(j.error || '자동화 레벨 변경 실패')
+        }
       }
 
       // 2) watchlist에 종목 추가 (이미 있으면 무시)
-      const wlKey = `${row.strategyId}::${row.market}::${row.ticker.toUpperCase()}`
+      const wlKey = `${effectiveStrategyId}::${row.market}::${row.ticker.toUpperCase()}`
       if (!watchlistMap.get(wlKey)) {
         const r = await fetch('/api/investment/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            strategyId: row.strategyId,
+            strategyId: effectiveStrategyId,
             ticker: row.ticker,
             tickerName: isPickedMode ? (tickerName || null) : null,
             market: row.market,
@@ -282,7 +317,7 @@ export default function AutoTradeFromBacktest() {
       setAppliedIds((prev) => new Set(prev).add(key))
       // 갱신
       loadStrategies()
-      loadWatchlistForCombos([{ sid: row.strategyId, ticker: row.ticker, market: row.market }])
+      loadWatchlistForCombos([{ sid: effectiveStrategyId, ticker: row.ticker, market: row.market }])
     } catch (e) {
       setError(e instanceof Error ? e.message : '자동매매 추가 실패')
     } finally {
@@ -419,22 +454,18 @@ export default function AutoTradeFromBacktest() {
                     </div>
                     <button
                       onClick={() => applyAutoTrade(row)}
-                      disabled={isApplied || isApplying || !row.canAdd}
-                      title={!row.canAdd ? '삭제된 전략 — 자동매매로 추가할 수 없습니다' : undefined}
+                      disabled={isApplied || isApplying}
+                      title={!row.canAdd ? '프리셋 전략으로 새 전략을 자동 생성한 뒤 자동매매를 활성화합니다' : undefined}
                       className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors inline-flex items-center gap-1.5 ${
                         isApplied
                           ? 'bg-emerald-50 text-emerald-700 cursor-default'
-                          : !row.canAdd
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            : 'bg-at-accent text-white hover:bg-at-accent-hover disabled:opacity-50'
+                          : 'bg-at-accent text-white hover:bg-at-accent-hover disabled:opacity-50'
                       }`}
                     >
                       {isApplying ? (
                         <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 추가 중...</>
                       ) : isApplied ? (
                         <><CheckCircle2 className="w-3.5 h-3.5" /> 추가됨</>
-                      ) : !row.canAdd ? (
-                        <>전략 없음</>
                       ) : (
                         <><Zap className="w-3.5 h-3.5" /> 자동매매 추가</>
                       )}
