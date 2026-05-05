@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     try {
       const YahooFinance = (await import('yahoo-finance2')).default
       const yahooFinance = new YahooFinance()
-      const searchResult = await yahooFinance.search(query, { newsCount: 0, quotesCount: 25 })
+      const searchResult = await yahooFinance.search(query, { newsCount: 0, quotesCount: 50 })
 
       const yahooQuotes = (searchResult.quotes || [])
         .filter((q: Record<string, unknown>) => {
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           if (!['EQUITY', 'ETF'].includes(quoteType)) return false
           const exchange = (q.exchange as string || '').toUpperCase()
           const symbol = q.symbol as string || ''
-          return ['NMS', 'NYQ', 'NGM', 'ASE', 'PCX', 'BTS'].includes(exchange) ||
+          return ['NMS', 'NYQ', 'NGM', 'NCM', 'ASE', 'PCX', 'BTS', 'NYS'].includes(exchange) ||
                  ['KSC', 'KOE', 'KSE'].includes(exchange) ||
                  symbol.endsWith('.KS') || symbol.endsWith('.KQ')
         })
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
       const localTickerSet = new Set(localResults.map(r => `${r.market}:${r.ticker}`))
       const yahooFiltered = yahooQuotes.filter(q => !localTickerSet.has(`${q.market}:${q.ticker}`))
-      return NextResponse.json({ results: [...localResults, ...yahooFiltered].slice(0, 20) })
+      return NextResponse.json({ results: [...localResults, ...yahooFiltered].slice(0, 40) })
     } catch (err) {
       console.warn('[ticker-search] yahoo failed (ALL):', err instanceof Error ? err.message : err)
       return NextResponse.json({ results: localResults.slice(0, 20) })
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
 
     const searchResult = await yahooFinance.search(query, {
       newsCount: 0,
-      quotesCount: 15,
+      quotesCount: 50,
     })
 
     const quotes = (searchResult.quotes || [])
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
                  (q.symbol as string || '').endsWith('.KS') ||
                  (q.symbol as string || '').endsWith('.KQ')
         }
-        return ['NMS', 'NYQ', 'NGM', 'ASE', 'PCX', 'BTS'].includes(exchange)
+        return ['NMS', 'NYQ', 'NGM', 'NCM', 'ASE', 'PCX', 'BTS', 'NYS'].includes(exchange)
       })
       .map((q: Record<string, unknown>) => {
         let ticker = q.symbol as string || ''
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
           market,
         }
       })
-      .slice(0, 15)
+      .slice(0, 30)
 
     // 미국 시장: 로컬 결과를 상위에 두고 yahoo 결과 병합 (중복 제거)
     if (market === 'US') {
@@ -206,10 +206,10 @@ export async function GET(request: NextRequest) {
         market: 'US',
       }))
       const yahooFiltered = quotes.filter(q => !localTickers.has(q.ticker))
-      return NextResponse.json({ results: [...localResults, ...yahooFiltered].slice(0, 15) })
+      return NextResponse.json({ results: [...localResults, ...yahooFiltered].slice(0, 30) })
     }
 
-    return NextResponse.json({ results: quotes.slice(0, 10) })
+    return NextResponse.json({ results: quotes.slice(0, 30) })
   } catch (err) {
     // 한글 쿼리 등으로 yahoo-finance2 에러 → 조용히 빈 결과
     console.warn('[ticker-search] yahoo failed:', err instanceof Error ? err.message : err)
