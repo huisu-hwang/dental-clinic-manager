@@ -111,8 +111,13 @@ const INTERPRETATION_COLOR: Record<Interpretation, string> = {
   'strong-distribution': 'bg-rose-500 text-white',
 }
 
+/** KST 기준 'YYYY-MM-DD' — Vercel UTC 또는 사용자 로컬 timezone에 영향 받지 않음 */
 function todayKey() {
-  return new Date().toISOString().slice(0, 10)
+  const kst = new Date(Date.now() + 9 * 3600_000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(kst.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /** YYYY-MM-DD 또는 'YYYY-MM-DD (Pre)' → "MM/DD (요일)" — pre-market suffix는 분리 표기 */

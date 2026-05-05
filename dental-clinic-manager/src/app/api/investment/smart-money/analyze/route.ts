@@ -655,11 +655,19 @@ export async function POST(request: NextRequest) {
   void recent20DayHigh
   void recent20DayLow
 
+  // 메인 asOfDate를 byDay 마지막(가장 최근 거래일) dayKey와 일관 정렬:
+  // - 한국 종목 + KST 오늘 장 시작 전이면 분봉 자체가 어제까지만 → 분석은 어제(전 거래일) 데이터 기준
+  // - 그렇게 일치시켜야 사용자가 "메인 기준일"과 "가장 최근 byDay 탭"이 같은 날짜로 보임
+  const lastByDay = byDay.length > 0
+    ? byDay.filter((d) => !/ \(Pre\)$/.test(d.asOfDate)).slice(-1)[0]
+    : null
+  const alignedAsOfDate = lastByDay?.asOfDate ?? asOfDate
+
   const analysis: SmartMoneyAnalysis = {
     ticker,
     market,
     name,
-    asOfDate,
+    asOfDate: alignedAsOfDate,
     currentPrice,
     vwap,
     investorFlow,
