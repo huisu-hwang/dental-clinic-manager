@@ -358,6 +358,30 @@ export default function AutoTradeFromBacktest() {
         }
       }
 
+      // 3) 즉시 활성화 — is_active=true (감시 종목 추가 후 가능)
+      // 이미 활성화돼 있으면 backend가 그냥 idempotent 처리하므로 항상 호출
+      const targetStrat = strategies.find((s) => s.id === effectiveStrategyId)
+      if (!targetStrat?.is_active) {
+        try {
+          const actRes = await fetch('/api/investment/strategies', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: effectiveStrategyId, isActive: true }),
+          })
+          if (!actRes.ok) {
+            const aj = await actRes.json().catch(() => ({}))
+            // 계좌 미연결은 사용자에게 안내 — watchlist는 등록됐으니 이후 연결 후 활성화 가능
+            if (aj.code === 'NO_CREDENTIAL') {
+              setError('자동매매가 등록되었지만 활성화되지 못했습니다 — KIS 증권 계좌를 연결해주세요.')
+            } else {
+              console.warn('[AutoTrade] 활성화 실패:', aj.error)
+            }
+          }
+        } catch (err) {
+          console.warn('[AutoTrade] 활성화 호출 오류:', err)
+        }
+      }
+
       setAppliedIds((prev) => new Set(prev).add(key))
       // 갱신
       loadStrategies()
