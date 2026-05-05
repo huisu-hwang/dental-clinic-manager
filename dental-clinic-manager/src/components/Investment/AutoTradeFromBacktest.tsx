@@ -66,6 +66,12 @@ export default function AutoTradeFromBacktest() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [runs, setRuns] = useState<BacktestRun[]>([])
   const [watchlistMap, setWatchlistMap] = useState<Map<string, boolean>>(new Map())
+  /**
+   * automation_level=2 인 모든 strategy의 watchlist ticker 모음.
+   * key: `${market}:${tickerUpper}`. 프리셋 row가 자동 추가 후
+   * 어떤 활성 strategy와 같은 종목이면 "추가됨"으로 표시되도록 보조.
+   */
+  const [activeTickerSet, setActiveTickerSet] = useState<Set<string>>(new Set())
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +87,38 @@ export default function AutoTradeFromBacktest() {
   }, [])
 
   useEffect(() => { loadStrategies() }, [loadStrategies])
+
+  // 활성 strategy의 watchlist ticker 모음 — strategies 변경 시 재로드
+  useEffect(() => {
+    const activeStrategies = strategies.filter((s) => s.automation_level === 2)
+    if (activeStrategies.length === 0) {
+      setActiveTickerSet(new Set())
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const responses = await Promise.all(
+        activeStrategies.map(async (s) => {
+          try {
+            const r = await fetch(`/api/investment/watchlist?strategyId=${s.id}`)
+            const j = await r.json()
+            if (!r.ok || !Array.isArray(j.data)) return [] as Array<{ ticker: string; market: string }>
+            return j.data as Array<{ ticker: string; market: string }>
+          } catch { return [] }
+        })
+      )
+      if (cancelled) return
+      const next = new Set<string>()
+      for (const wl of responses) {
+        for (const w of wl) {
+          if (!w.ticker || !w.market) continue
+          next.add(`${w.market}:${w.ticker.toUpperCase()}`)
+        }
+      }
+      setActiveTickerSet(next)
+    })()
+    return () => { cancelled = true }
+  }, [strategies])
 
   /**
    * 백테스트 결과 로드.
@@ -210,7 +248,13 @@ export default function AutoTradeFromBacktest() {
       const groupId = run.strategy_id ?? `preset:${run.preset_id ?? 'custom'}`
       const wlKey = `${groupId}::${run.market}::${run.ticker.toUpperCase()}`
       const inWatchlist = watchlistMap.get(wlKey) === true
-      const alreadyActive = !isPreset && automationLevel === 2 && inWatchlist
+      const tickerKey = `${run.market}:${run.ticker.toUpperCase()}`
+      const tickerActiveElsewhere = activeTickerSet.has(tickerKey)
+      // 프리셋 row: 자동 추가 후 같은 종목이 어떤 active strategy의 watchlist에 있으면 "추가됨"
+      // 사용자 strategy row: 그 strategy가 active=2 + 자기 watchlist 포함 (기존)
+      const alreadyActive = isPreset
+        ? tickerActiveElsewhere
+        : automationLevel === 2 && inWatchlist
 
       rows.push({
         strategyId: groupId,
@@ -229,7 +273,7 @@ export default function AutoTradeFromBacktest() {
       })
     }
     return rows.sort((a, b) => b.totalReturn - a.totalReturn)
-  }, [runs, strategies, watchlistMap, isPickedMode])
+  }, [runs, strategies, watchlistMap, activeTickerSet, isPickedMode])
 
   // ranked 변화 시 → watchlist 조합 조회 (프리셋 group은 제외)
   useEffect(() => {
