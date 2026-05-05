@@ -13,6 +13,8 @@
 import { useState, useMemo } from 'react'
 import { Zap, Play, Loader2, Target, TrendingDown, TrendingUp, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
+import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
+import { useRecentTickers } from '@/hooks/useRecentTickers'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import type { Market, BacktestMetrics, BacktestTrade, EquityCurvePoint, PresetStrategy } from '@/types/investment'
 
@@ -89,9 +91,13 @@ export default function DayTradingContent() {
     }
   }
 
-  const handleTickerSelect = (t: string, name?: string) => {
+  const { add: rememberTicker } = useRecentTickers()
+
+  const handleTickerSelect = (t: string, name?: string, m?: Market) => {
     setTicker(t)
     setTickerName(name || t)
+    if (m && m !== market) setMarket(m)
+    rememberTicker(t, name || t, m ?? market)
   }
 
   return (
@@ -212,6 +218,12 @@ export default function DayTradingContent() {
                 {tickerName && tickerName !== ticker && <span className="ml-2">({tickerName})</span>}
               </p>
             )}
+            <div className="mt-2">
+              <RecentTickersButtons
+                market={market}
+                onSelect={(t, name, m) => handleTickerSelect(t, name, m)}
+              />
+            </div>
           </div>
 
           {/* 초기자본 */}

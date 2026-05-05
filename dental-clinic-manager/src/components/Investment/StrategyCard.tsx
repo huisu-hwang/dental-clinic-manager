@@ -7,7 +7,9 @@ import {
   X, CheckCircle2, AlertCircle, Target, Eye,
 } from 'lucide-react'
 import TickerSearch from './TickerSearch'
+import RecentTickersButtons from './RecentTickersButtons'
 import StrategyStatsBlock, { type StrategyBacktestStats } from './StrategyStatsBlock'
+import { useRecentTickers } from '@/hooks/useRecentTickers'
 import type { InvestmentStrategy, Market } from '@/types/investment'
 
 interface WatchlistItem {
@@ -35,6 +37,7 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
   const [watchlistLoading, setWatchlistLoading] = useState(false)
   const [addingMarket, setAddingMarket] = useState<Market>(strategy.target_market)
   const [toggling, setToggling] = useState(false)
+  const { add: rememberTicker } = useRecentTickers()
 
   const loadWatchlist = useCallback(async () => {
     setWatchlistLoading(true)
@@ -47,8 +50,9 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
 
   useEffect(() => { loadWatchlist() }, [loadWatchlist])
 
-  const addTicker = async (ticker: string, name?: string) => {
+  const addTicker = async (ticker: string, name?: string, marketOverride?: Market) => {
     if (!ticker.trim()) return
+    const useMarket = marketOverride ?? addingMarket
     const res = await fetch('/api/investment/watchlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,12 +60,14 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
         strategyId: strategy.id,
         ticker: ticker.trim(),
         tickerName: name,
-        market: addingMarket,
+        market: useMarket,
       }),
     })
     const json = await res.json()
-    if (res.ok) loadWatchlist()
-    else alert(json.error || '추가 실패')
+    if (res.ok) {
+      rememberTicker(ticker.trim(), name || ticker.trim(), useMarket)
+      loadWatchlist()
+    } else alert(json.error || '추가 실패')
   }
 
   const removeTicker = async (id: string) => {
@@ -247,6 +253,11 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
                 className="w-full sm:flex-1"
               />
             </div>
+            <RecentTickersButtons
+              market={addingMarket}
+              onSelect={(t, name, m) => addTicker(t, name, m)}
+              excludeKeys={new Set(watchlist.map((w) => `${w.market}:${w.ticker}`))}
+            />
 
             {/* 종목 목록 */}
             {watchlist.length === 0 ? (
