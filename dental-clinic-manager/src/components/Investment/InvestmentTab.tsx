@@ -13,6 +13,7 @@ import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
 import BacktestPanel from './BacktestPanel'
 import StrategyCard from './StrategyCard'
+import type { StrategyBacktestStats } from './StrategyStatsBlock'
 import DayTradingContent from './DayTradingContent'
 import CompareContent from './CompareContent'
 import ScreenerContent from './ScreenerContent'
@@ -46,6 +47,7 @@ export default function InvestmentTab() {
   const [balance, setBalance] = useState<{ totalEvaluation: number; totalPnl: number; holdingsCount: number } | null>(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
   const [balanceError, setBalanceError] = useState<string | null>(null)
+  const [statsByStrategy, setStatsByStrategy] = useState<Map<string, StrategyBacktestStats>>(new Map())
 
   const loadBalance = useCallback(async () => {
     setBalanceLoading(true)
@@ -85,6 +87,19 @@ export default function InvestmentTab() {
       const res = await fetch('/api/investment/strategies')
       const json = await res.json()
       if (json.data) setStrategies(json.data)
+
+      // 전략별 백테스트 통계 (병렬)
+      try {
+        const statsRes = await fetch('/api/investment/strategies/stats')
+        const statsJson = await statsRes.json()
+        if (statsRes.ok && Array.isArray(statsJson.data)) {
+          const map = new Map<string, StrategyBacktestStats>()
+          for (const s of statsJson.data as StrategyBacktestStats[]) {
+            map.set(s.strategyId, s)
+          }
+          setStatsByStrategy(map)
+        }
+      } catch { /* ignore */ }
 
       // 계좌 연결된 경우 잔고도 로드
       if (connected) {
@@ -201,6 +216,7 @@ export default function InvestmentTab() {
         {!inInlineView && subTab === 'strategy' && (
           <StrategySubTab
             strategies={strategies}
+            statsByStrategy={statsByStrategy}
             onRefresh={loadData}
             onBacktest={setBacktestStrategyId}
             hasCredential={!!hasCredential}
@@ -530,7 +546,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
   )
 }
 
-function StrategySubTab({ strategies, onRefresh, onBacktest, hasCredential, onCreateNew }: { strategies: InvestmentStrategy[]; onRefresh: () => void; onBacktest: (id: string) => void; hasCredential: boolean; onCreateNew: () => void }) {
+function StrategySubTab({ strategies, statsByStrategy, onRefresh, onBacktest, hasCredential, onCreateNew }: { strategies: InvestmentStrategy[]; statsByStrategy: Map<string, StrategyBacktestStats>; onRefresh: () => void; onBacktest: (id: string) => void; hasCredential: boolean; onCreateNew: () => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -563,6 +579,7 @@ function StrategySubTab({ strategies, onRefresh, onBacktest, hasCredential, onCr
               hasCredential={hasCredential}
               onRefresh={onRefresh}
               onBacktest={onBacktest}
+              stats={statsByStrategy.get(s.id) ?? null}
             />
           ))}
         </div>

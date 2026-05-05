@@ -14,6 +14,7 @@ import TickerSearch from '@/components/Investment/TickerSearch'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
 import DateRangePicker from '@/components/Investment/DateRangePicker'
+import StrategyStatsBlock, { type StrategyBacktestStats } from '@/components/Investment/StrategyStatsBlock'
 import type {
   InvestmentStrategy, Market, BacktestMetrics, EquityCurvePoint, BacktestTrade,
   PresetStrategy, IndicatorConfig, ConditionGroup, RiskSettings,
@@ -128,6 +129,7 @@ type ViewMode = 'matrix' | 'list'
 function LiveCompareSection() {
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loadingStrategies, setLoadingStrategies] = useState(true)
+  const [statsByStrategy, setStatsByStrategy] = useState<Map<string, StrategyBacktestStats>>(new Map())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [tickers, setTickers] = useState<SelectedTicker[]>([{ ticker: 'AAPL', name: 'Apple Inc.' }])
   const [market, setMarket] = useState<Market>('US')
@@ -181,7 +183,22 @@ function LiveCompareSection() {
     }
   }, [])
 
-  useEffect(() => { loadStrategies() }, [loadStrategies])
+  const loadStrategyStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/investment/strategies/stats')
+      const json = await res.json()
+      if (res.ok && Array.isArray(json.data)) {
+        const map = new Map<string, StrategyBacktestStats>()
+        for (const s of json.data as StrategyBacktestStats[]) map.set(s.strategyId, s)
+        setStatsByStrategy(map)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
+    loadStrategies()
+    loadStrategyStats()
+  }, [loadStrategies, loadStrategyStats])
 
   // 사용자 저장 전략 (시장 일치)
   const userItems = useMemo<SelectableItem[]>(
@@ -626,6 +643,7 @@ function LiveCompareSection() {
                   selectedIds={selectedIds}
                   onToggle={toggleStrategy}
                   onOpenDetail={setDetailPresetId}
+                  stats={item.strategyId ? statsByStrategy.get(item.strategyId) ?? null : null}
                 />
               ))}
             </div>
@@ -1232,11 +1250,12 @@ function formatNum(n: number): string {
   return n.toFixed(4)
 }
 
-function SelectableCard({ item, selectedIds, onToggle, onOpenDetail }: {
+function SelectableCard({ item, selectedIds, onToggle, onOpenDetail, stats }: {
   item: SelectableItem
   selectedIds: Set<string>
   onToggle: (key: string) => void
   onOpenDetail: (presetId: string) => void
+  stats?: StrategyBacktestStats | null
 }) {
   const isSelected = selectedIds.has(item.key)
   const orderIndex = isSelected ? Array.from(selectedIds).indexOf(item.key) : -1
@@ -1269,6 +1288,13 @@ function SelectableCard({ item, selectedIds, onToggle, onOpenDetail }: {
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">활성</span>
               )}
             </div>
+
+            {/* 백테스트 통계 (사용자 저장 전략만 — 프리셋은 backtest_runs에 저장 안 됨) */}
+            {item.source === 'user' && (
+              <div className="mt-2">
+                <StrategyStatsBlock stats={stats} compact />
+              </div>
+            )}
           </div>
           {isSelected && color && (
             <span className={`flex-shrink-0 w-6 h-6 rounded-full ${color.bg} text-white text-xs font-bold flex items-center justify-center`}>
