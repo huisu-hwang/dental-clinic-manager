@@ -102,7 +102,7 @@ const COLORS = [
   { bg: 'bg-cyan-500', border: 'border-cyan-500', text: 'text-cyan-600', dot: 'bg-cyan-500', light: 'bg-cyan-50', stroke: 'stroke-cyan-500' },
 ]
 
-interface BacktestResultItem {
+export interface BacktestResultItem {
   /** "<strategyKey>::<ticker>" 복합 키 */
   rowKey: string
   strategyId: string
@@ -116,7 +116,7 @@ interface BacktestResultItem {
   error?: string
 }
 
-type SortKey = 'totalReturn' | 'buyHold' | 'winRate' | 'totalTrades' | 'sharpe' | 'mdd' | 'profitFactor'
+export type SortKey = 'totalReturn' | 'buyHold' | 'winRate' | 'totalTrades' | 'sharpe' | 'mdd' | 'profitFactor'
 
 /** 선택된 종목 정보 (다중 종목 비교용) */
 interface SelectedTicker {
@@ -721,225 +721,17 @@ function LiveCompareSection() {
         )}
       </section>
 
-      {/* 결과: 메트릭 비교 표 */}
-      {results.length > 0 && (
-        <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h2 className="font-semibold text-at-text">
-              📊 비교 결과 <span className="text-at-text-secondary font-normal text-sm">({tickers.length}종목 × {selectedIds.size}전략)</span>
-            </h2>
-            <div className="flex items-center gap-3">
-              {/* 뷰 토글 — 다중 종목일 때만 의미 있음 */}
-              {tickers.length > 1 && (
-                <div className="inline-flex rounded-lg border border-at-border bg-at-surface-alt p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('matrix')}
-                    className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${viewMode === 'matrix' ? 'bg-white shadow-sm text-at-accent font-semibold' : 'text-at-text-secondary'}`}
-                  >
-                    <LayoutGrid className="w-3 h-3" />
-                    매트릭스
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${viewMode === 'list' ? 'bg-white shadow-sm text-at-accent font-semibold' : 'text-at-text-secondary'}`}
-                  >
-                    <ListIcon className="w-3 h-3" />
-                    리스트
-                  </button>
-                </div>
-              )}
-              <span className="text-xs text-at-text-secondary">
-                {sortLabel(sortKey)} {sortDir === 'desc' ? '내림차순' : '오름차순'}
-              </span>
-            </div>
-          </div>
-
-          {/* 매트릭스 뷰 — 다중 종목일 때만 활성화 */}
-          {tickers.length > 1 && viewMode === 'matrix' && (
-            <MatrixView
-              results={results}
-              tickers={tickers}
-              strategies={Array.from(selectedIds).map(key => {
-                const item = allItems.find(i => i.key === key)
-                return { key, name: item?.name || key }
-              })}
-              activeCellKey={activeCellKey}
-              onCellClick={setActiveCellKey}
-            />
-          )}
-
-          {(tickers.length === 1 || viewMode === 'list') && (
-          <div className="overflow-x-auto rounded-xl border border-at-border mb-4">
-            <table className="w-full text-xs">
-              <thead className="bg-at-surface-alt">
-                <tr>
-                  <th className="px-2 py-2 w-8"></th>
-                  <GlossaryHeader label="순위" termKey="rank" align="left" onOpen={setGlossaryKey} />
-                  {tickers.length > 1 && (
-                    <th className="px-3 py-2 text-left font-medium text-at-text-secondary">종목</th>
-                  )}
-                  <th className="px-3 py-2 text-left font-medium text-at-text-secondary">전략</th>
-                  <SortableHeader label="수익률" termKey="totalReturn" sortKey="totalReturn" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
-                  <SortableHeader label="B&H" termKey="buyHold" sortKey="buyHold" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
-                  <SortableHeader label="승률" termKey="winRate" sortKey="winRate" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
-                  <SortableHeader label="거래" termKey="totalTrades" sortKey="totalTrades" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
-                  <SortableHeader label="Sharpe" termKey="sharpe" sortKey="sharpe" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
-                  <SortableHeader label="MDD" termKey="mdd" sortKey="mdd" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
-                  <SortableHeader label="PF" termKey="profitFactor" sortKey="profitFactor" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedResults.map((r, i) => {
-                  const color = COLORS[i % COLORS.length]
-                  const colSpanWithTicker = tickers.length > 1 ? 8 : 7
-                  if (r.error) {
-                    return (
-                      <tr key={r.rowKey} className="border-t border-at-border bg-red-50/30">
-                        <td></td>
-                        <td className="px-3 py-2"><span className={`inline-block w-5 h-5 rounded-full ${color.dot}`} /></td>
-                        {tickers.length > 1 && (
-                          <td className="px-3 py-2 font-mono text-at-text">{r.ticker}</td>
-                        )}
-                        <td className="px-3 py-2 font-medium text-at-text">{r.strategyName}</td>
-                        <td colSpan={colSpanWithTicker} className="px-3 py-2 text-red-700 text-xs">⚠️ {r.error}</td>
-                      </tr>
-                    )
-                  }
-                  const totalRet = r.metrics.totalReturn
-                  const bhRet = r.buyHold?.totalReturn ?? 0
-                  const isExpanded = expandedIds.has(r.rowKey)
-                  const hasTrades = r.trades.length > 0
-                  const expandColSpan = tickers.length > 1 ? 11 : 10
-                  return (
-                    <Fragment key={r.rowKey}>
-                      <tr
-                        className={`border-t border-at-border hover:bg-at-surface-alt ${hasTrades ? 'cursor-pointer' : ''}`}
-                        onClick={() => {
-                          if (!hasTrades) return
-                          setExpandedIds(prev => {
-                            const next = new Set(prev)
-                            if (next.has(r.rowKey)) next.delete(r.rowKey)
-                            else next.add(r.rowKey)
-                            return next
-                          })
-                        }}
-                      >
-                        <td className="px-2 py-2 text-at-text-weak">
-                          {hasTrades && (isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />)}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full ${color.bg} text-white text-[10px] font-bold`}>
-                            {i + 1}
-                          </span>
-                        </td>
-                        {tickers.length > 1 && (
-                          <td className="px-3 py-2 font-mono font-semibold text-at-text">{r.ticker}</td>
-                        )}
-                        <td className="px-3 py-2 font-medium text-at-text">
-                          {i === 0 && <Trophy className="w-3 h-3 text-amber-500 inline mr-1" />}
-                          {r.strategyName}
-                        </td>
-                        <td className={`px-3 py-2 text-right font-mono font-semibold ${totalRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
-                          {totalRet > 0 ? '+' : ''}{totalRet.toFixed(2)}%
-                        </td>
-                        <td className={`px-3 py-2 text-right font-mono ${bhRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
-                          {bhRet > 0 ? '+' : ''}{bhRet.toFixed(2)}%
-                        </td>
-                        <td className="px-3 py-2 text-right font-mono">{r.metrics.winRate.toFixed(1)}%</td>
-                        <td className="px-3 py-2 text-right font-mono">{r.metrics.totalTrades}</td>
-                        <td className="px-3 py-2 text-right font-mono">{r.metrics.sharpeRatio.toFixed(2)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-blue-500">{r.metrics.maxDrawdown.toFixed(2)}%</td>
-                        <td className="px-3 py-2 text-right font-mono">{r.metrics.profitFactor.toFixed(2)}</td>
-                      </tr>
-                      {isExpanded && hasTrades && (
-                        <tr className={`border-t border-at-border ${color.light}`}>
-                          <td colSpan={expandColSpan} className="p-3">
-                            <TradesMiniTable trades={r.trades} />
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-          )}
-
-          {/* 통합 자산 곡선 */}
-          {chartData && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-at-text text-sm">자산 곡선 비교</h3>
-                <div className="flex flex-wrap gap-3 text-xs">
-                  {chartData.sampled.map((s) => {
-                    const isBH = s.strategyId === '__bh__'
-                    const color = isBH ? null : COLORS[results.findIndex(r => r.rowKey === s.strategyId) % COLORS.length]
-                    return (
-                      <span key={s.strategyId} className="flex items-center gap-1">
-                        <span className={`w-3 h-1.5 rounded inline-block ${isBH ? 'bg-amber-300' : color?.dot}`} />
-                        <span className="truncate max-w-[120px]">{s.name}</span>
-                      </span>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="relative h-48 rounded-xl border border-at-border bg-at-surface p-2">
-                <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-                  {chartData.sampled.map(s => {
-                    const isBH = s.strategyId === '__bh__'
-                    const colorIdx = isBH ? -1 : results.findIndex(r => r.rowKey === s.strategyId)
-                    const colorClass = isBH
-                      ? 'stroke-amber-300'
-                      : COLORS[colorIdx % COLORS.length].stroke
-                    const points = s.points.map((p, idx) => {
-                      const x = (idx / Math.max(1, s.points.length - 1)) * 100
-                      const y = 100 - ((p.value - chartData.min) / chartData.range) * 100
-                      return `${x},${y}`
-                    }).join(' ')
-                    return (
-                      <polyline
-                        key={s.strategyId}
-                        points={points}
-                        fill="none"
-                        strokeWidth="0.8"
-                        className={`${colorClass} ${isBH ? 'opacity-60' : ''}`}
-                        vectorEffect="non-scaling-stroke"
-                      />
-                    )
-                  })}
-                </svg>
-              </div>
-              <div className="flex justify-between mt-1 text-[10px] text-at-text-weak">
-                <span>{startDate}</span>
-                <span>{endDate}</span>
-              </div>
-            </div>
-          )}
-
-          {/* 요약 인사이트 */}
-          {sortedResults.length >= 2 && sortedResults[0] && !sortedResults[0].error && (
-            <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-sm">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="text-amber-900 text-xs">
-                  <p className="font-medium">
-                    {sortLabel(sortKey)} {sortDir === 'desc' ? '최상위' : '최하위'}:
-                    {tickers.length > 1 && <span className="font-mono ml-1">{sortedResults[0].ticker}</span>}
-                    <span className="ml-1">{sortedResults[0].strategyName}</span>
-                  </p>
-                  <p className="mt-0.5">
-                    총 수익률 <span className="font-mono font-semibold">{sortedResults[0].metrics.totalReturn > 0 ? '+' : ''}{sortedResults[0].metrics.totalReturn.toFixed(2)}%</span>,
-                    {' '}승률 {sortedResults[0].metrics.winRate.toFixed(1)}%, Sharpe {sortedResults[0].metrics.sharpeRatio.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
-      )}
+      {/* 결과 — CompareResultsView로 위임 (히스토리 세션 상세와 공통) */}
+      <CompareResultsView
+        results={results}
+        tickers={tickers}
+        strategies={Array.from(selectedIds).map((key) => {
+          const item = allItems.find((i) => i.key === key)
+          return { key, name: item?.name || key }
+        })}
+        startDate={startDate}
+        endDate={endDate}
+      />
     </div>
   )
 }
@@ -1752,6 +1544,296 @@ function emptyMetrics(): BacktestMetrics {
     winRate: 0, totalTrades: 0, profitFactor: 0,
     avgWin: 0, avgLoss: 0, maxConsecutiveWins: 0, maxConsecutiveLosses: 0, avgHoldingDays: 0,
   }
+}
+
+// ============================================
+// CompareResultsView — 라이브 비교 / 히스토리 세션 상세 공통 결과 표시
+// ============================================
+export function CompareResultsView({
+  results,
+  tickers,
+  strategies,
+  startDate,
+  endDate,
+}: {
+  results: BacktestResultItem[]
+  tickers: SelectedTicker[]
+  strategies: { key: string; name: string }[]
+  startDate: string
+  endDate: string
+}) {
+  const [viewMode, setViewMode] = useState<ViewMode>('matrix')
+  const [sortKey, setSortKey] = useState<SortKey>('totalReturn')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [activeCellKey, setActiveCellKey] = useState<string | null>(null)
+  const [glossaryKey, setGlossaryKey] = useState<string | null>(null)
+
+  // 결과 변경 시 expanded·active 리셋
+  useEffect(() => {
+    setExpandedIds(new Set())
+    setActiveCellKey(null)
+  }, [results])
+
+  const sortedResults = useMemo(() => {
+    const arr = [...results]
+    const dir = sortDir === 'asc' ? 1 : -1
+    arr.sort((a, b) => {
+      if (a.error && !b.error) return 1
+      if (!a.error && b.error) return -1
+      const av = getSortValue(a, sortKey)
+      const bv = getSortValue(b, sortKey)
+      if (av === bv) return 0
+      if (av === null) return 1
+      if (bv === null) return -1
+      return (av - bv) * dir
+    })
+    return arr
+  }, [results, sortKey, sortDir])
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+    else { setSortKey(key); setSortDir(key === 'mdd' ? 'asc' : 'desc') }
+  }
+
+  const chartData = useMemo(() => {
+    if (results.length === 0) return null
+    if (tickers.length !== 1) return null
+    const validResults = results.filter((r) => !r.error && r.equityCurve.length > 0)
+    if (validResults.length === 0) return null
+    const sampled = validResults.map((r) => ({
+      strategyId: r.rowKey,
+      name: r.strategyName,
+      points: sampleCurve(r.equityCurve, 80),
+    }))
+    const bhCurve = validResults[0]?.buyHold?.equityCurve
+    if (bhCurve && bhCurve.length > 0) {
+      sampled.push({ strategyId: '__bh__', name: '단순 보유 (B&H)', points: sampleCurve(bhCurve, 80) })
+    }
+    const allValues = sampled.flatMap((s) => s.points.map((p) => p.value))
+    const min = Math.min(...allValues)
+    const max = Math.max(...allValues)
+    const range = max - min || 1
+    return { sampled, min, max, range }
+  }, [results, tickers])
+
+  if (results.length === 0) return null
+
+  return (
+    <>
+      <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 className="font-semibold text-at-text">
+            📊 비교 결과 <span className="text-at-text-secondary font-normal text-sm">({tickers.length}종목 × {strategies.length}전략)</span>
+          </h2>
+          <div className="flex items-center gap-3">
+            {tickers.length > 1 && (
+              <div className="inline-flex rounded-lg border border-at-border bg-at-surface-alt p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('matrix')}
+                  className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${viewMode === 'matrix' ? 'bg-white shadow-sm text-at-accent font-semibold' : 'text-at-text-secondary'}`}
+                >
+                  <LayoutGrid className="w-3 h-3" />
+                  매트릭스
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`px-2 py-1 text-xs rounded inline-flex items-center gap-1 ${viewMode === 'list' ? 'bg-white shadow-sm text-at-accent font-semibold' : 'text-at-text-secondary'}`}
+                >
+                  <ListIcon className="w-3 h-3" />
+                  리스트
+                </button>
+              </div>
+            )}
+            <span className="text-xs text-at-text-secondary">
+              {sortLabel(sortKey)} {sortDir === 'desc' ? '내림차순' : '오름차순'}
+            </span>
+          </div>
+        </div>
+
+        {tickers.length > 1 && viewMode === 'matrix' && (
+          <MatrixView
+            results={results}
+            tickers={tickers}
+            strategies={strategies}
+            activeCellKey={activeCellKey}
+            onCellClick={setActiveCellKey}
+          />
+        )}
+
+        {(tickers.length === 1 || viewMode === 'list') && (
+          <div className="overflow-x-auto rounded-xl border border-at-border mb-4">
+            <table className="w-full text-xs">
+              <thead className="bg-at-surface-alt">
+                <tr>
+                  <th className="px-2 py-2 w-8"></th>
+                  <GlossaryHeader label="순위" termKey="rank" align="left" onOpen={setGlossaryKey} />
+                  {tickers.length > 1 && (
+                    <th className="px-3 py-2 text-left font-medium text-at-text-secondary">종목</th>
+                  )}
+                  <th className="px-3 py-2 text-left font-medium text-at-text-secondary">전략</th>
+                  <SortableHeader label="수익률" termKey="totalReturn" sortKey="totalReturn" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="B&H" termKey="buyHold" sortKey="buyHold" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="승률" termKey="winRate" sortKey="winRate" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="거래" termKey="totalTrades" sortKey="totalTrades" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="Sharpe" termKey="sharpe" sortKey="sharpe" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="MDD" termKey="mdd" sortKey="mdd" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                  <SortableHeader label="PF" termKey="profitFactor" sortKey="profitFactor" curKey={sortKey} dir={sortDir} onSort={handleSort} onGloss={setGlossaryKey} />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedResults.map((r, i) => {
+                  const color = COLORS[i % COLORS.length]
+                  const colSpanWithTicker = tickers.length > 1 ? 8 : 7
+                  if (r.error) {
+                    return (
+                      <tr key={r.rowKey} className="border-t border-at-border bg-red-50/30">
+                        <td></td>
+                        <td className="px-3 py-2"><span className={`inline-block w-5 h-5 rounded-full ${color.dot}`} /></td>
+                        {tickers.length > 1 && (
+                          <td className="px-3 py-2 font-mono text-at-text">{r.ticker}</td>
+                        )}
+                        <td className="px-3 py-2 font-medium text-at-text">{r.strategyName}</td>
+                        <td colSpan={colSpanWithTicker} className="px-3 py-2 text-red-700 text-xs">⚠️ {r.error}</td>
+                      </tr>
+                    )
+                  }
+                  const totalRet = r.metrics.totalReturn
+                  const bhRet = r.buyHold?.totalReturn ?? 0
+                  const isExpanded = expandedIds.has(r.rowKey)
+                  const hasTrades = r.trades.length > 0
+                  const expandColSpan = tickers.length > 1 ? 11 : 10
+                  return (
+                    <Fragment key={r.rowKey}>
+                      <tr
+                        className={`border-t border-at-border hover:bg-at-surface-alt ${hasTrades ? 'cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (!hasTrades) return
+                          setExpandedIds((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(r.rowKey)) next.delete(r.rowKey)
+                            else next.add(r.rowKey)
+                            return next
+                          })
+                        }}
+                      >
+                        <td className="px-2 py-2 text-at-text-weak">
+                          {hasTrades && (isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full ${color.bg} text-white text-[10px] font-bold`}>
+                            {i + 1}
+                          </span>
+                        </td>
+                        {tickers.length > 1 && (
+                          <td className="px-3 py-2 font-mono font-semibold text-at-text">{r.ticker}</td>
+                        )}
+                        <td className="px-3 py-2 font-medium text-at-text">
+                          {i === 0 && <Trophy className="w-3 h-3 text-amber-500 inline mr-1" />}
+                          {r.strategyName}
+                        </td>
+                        <td className={`px-3 py-2 text-right font-mono font-semibold ${totalRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                          {totalRet > 0 ? '+' : ''}{totalRet.toFixed(2)}%
+                        </td>
+                        <td className={`px-3 py-2 text-right font-mono ${bhRet > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                          {bhRet > 0 ? '+' : ''}{bhRet.toFixed(2)}%
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.winRate.toFixed(1)}%</td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.totalTrades}</td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.sharpeRatio.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-blue-500">{r.metrics.maxDrawdown.toFixed(2)}%</td>
+                        <td className="px-3 py-2 text-right font-mono">{r.metrics.profitFactor.toFixed(2)}</td>
+                      </tr>
+                      {isExpanded && hasTrades && (
+                        <tr className={`border-t border-at-border ${color.light}`}>
+                          <td colSpan={expandColSpan} className="p-3">
+                            <TradesMiniTable trades={r.trades} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {chartData && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-at-text text-sm">자산 곡선 비교</h3>
+              <div className="flex flex-wrap gap-3 text-xs">
+                {chartData.sampled.map((s) => {
+                  const isBH = s.strategyId === '__bh__'
+                  const color = isBH ? null : COLORS[results.findIndex((r) => r.rowKey === s.strategyId) % COLORS.length]
+                  return (
+                    <span key={s.strategyId} className="flex items-center gap-1">
+                      <span className={`w-3 h-1.5 rounded inline-block ${isBH ? 'bg-amber-300' : color?.dot}`} />
+                      <span className="truncate max-w-[120px]">{s.name}</span>
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="relative h-48 rounded-xl border border-at-border bg-at-surface p-2">
+              <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                {chartData.sampled.map((s) => {
+                  const isBH = s.strategyId === '__bh__'
+                  const colorIdx = isBH ? -1 : results.findIndex((r) => r.rowKey === s.strategyId)
+                  const colorClass = isBH ? 'stroke-amber-300' : COLORS[colorIdx % COLORS.length].stroke
+                  const points = s.points.map((p, idx) => {
+                    const x = (idx / Math.max(1, s.points.length - 1)) * 100
+                    const y = 100 - ((p.value - chartData.min) / chartData.range) * 100
+                    return `${x},${y}`
+                  }).join(' ')
+                  return (
+                    <polyline
+                      key={s.strategyId}
+                      points={points}
+                      fill="none"
+                      strokeWidth="0.8"
+                      className={`${colorClass} ${isBH ? 'opacity-60' : ''}`}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  )
+                })}
+              </svg>
+            </div>
+            <div className="flex justify-between mt-1 text-[10px] text-at-text-weak">
+              <span>{startDate}</span>
+              <span>{endDate}</span>
+            </div>
+          </div>
+        )}
+
+        {sortedResults.length >= 2 && sortedResults[0] && !sortedResults[0].error && (
+          <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-sm">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-amber-900 text-xs">
+                <p className="font-medium">
+                  {sortLabel(sortKey)} {sortDir === 'desc' ? '최상위' : '최하위'}:
+                  {tickers.length > 1 && <span className="font-mono ml-1">{sortedResults[0].ticker}</span>}
+                  <span className="ml-1">{sortedResults[0].strategyName}</span>
+                </p>
+                <p className="mt-0.5">
+                  총 수익률 <span className="font-mono font-semibold">{sortedResults[0].metrics.totalReturn > 0 ? '+' : ''}{sortedResults[0].metrics.totalReturn.toFixed(2)}%</span>,
+                  {' '}승률 {sortedResults[0].metrics.winRate.toFixed(1)}%, Sharpe {sortedResults[0].metrics.sharpeRatio.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {glossaryKey && METRIC_GLOSSARY[glossaryKey] && (
+        <GlossaryModal term={METRIC_GLOSSARY[glossaryKey]} onClose={() => setGlossaryKey(null)} />
+      )}
+    </>
+  )
 }
 
 type CompareTab = 'live' | 'history'
