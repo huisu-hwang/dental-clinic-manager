@@ -221,6 +221,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 저장된 전략 모드: backtest_runs에 결과 저장
+    const nowIso = new Date().toISOString()
     const { data: run, error } = await supabase
       .from('backtest_runs')
       .insert({
@@ -228,6 +229,7 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         ticker: ticker as string,
         market: market as string,
+        executed_at: nowIso,
         start_date: startDate as string,
         end_date: endDate as string,
         initial_capital: capital,
@@ -242,7 +244,7 @@ export async function POST(request: NextRequest) {
         equity_curve: result.equityCurve as unknown as object,
         trades: result.trades as unknown as object,
         full_metrics: result.metrics as unknown as object,
-        completed_at: new Date().toISOString(),
+        completed_at: nowIso,
       })
       .select()
       .single()
@@ -337,7 +339,8 @@ export async function GET(request: NextRequest) {
     query = query.lte('executed_at', until)
   }
   const limit = Math.min(Number(limitRaw) || 50, 500)
-  query = query.order('executed_at', { ascending: false }).limit(limit)
+  // executed_at desc, NULL은 뒤로 — 기존 NULL row는 백필됨
+  query = query.order('executed_at', { ascending: false, nullsFirst: false }).limit(limit)
 
   const { data, error } = await query
   if (error) {
