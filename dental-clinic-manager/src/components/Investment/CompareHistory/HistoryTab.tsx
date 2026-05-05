@@ -5,10 +5,13 @@ import { History as HistoryIcon } from 'lucide-react'
 import HistoryFilters, { type HistoryFilterState } from './HistoryFilters'
 import HistoryTable from './HistoryTable'
 import HistoryCompareView from './HistoryCompareView'
+import HistoryDateGroups from './HistoryDateGroups'
 
 export interface BacktestRunRow {
   id: string
   strategy_id: string | null
+  preset_id?: string | null
+  preset_name?: string | null
   ticker: string
   market: 'KR' | 'US'
   start_date: string
@@ -24,6 +27,8 @@ export interface BacktestRunRow {
   trades: Array<Record<string, unknown>> | null
   full_metrics: Record<string, unknown> | null
   executed_at: string
+  /** backend LEFT JOIN — 삭제된 전략은 null */
+  investment_strategies?: { name: string } | null
 }
 
 interface StrategyOption {
@@ -64,6 +69,7 @@ export default function HistoryTab() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showCompare, setShowCompare] = useState(false)
+  const [viewMode, setViewMode] = useState<'matrix' | 'flat'>('matrix')
 
   // 전략 옵션 1회 로드
   useEffect(() => {
@@ -143,12 +149,42 @@ export default function HistoryTab() {
           <p className="text-xs text-at-text-weak">[새로 비교] 탭에서 첫 백테스트를 실행해보세요.</p>
         </div>
       ) : (
-        <HistoryTable
-          rows={rows}
-          strategies={strategies}
-          selectedIds={selectedIds}
-          onToggleSelected={toggleSelected}
-        />
+        <>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs text-at-text-secondary">총 {rows.length}건</p>
+            <div className="inline-flex items-center rounded-xl border border-at-border bg-white text-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode('matrix')}
+                className={`px-3 py-1.5 rounded-l-xl ${viewMode === 'matrix' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
+              >
+                날짜별 결과표
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('flat')}
+                className={`px-3 py-1.5 rounded-r-xl ${viewMode === 'flat' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
+              >
+                평면 목록
+              </button>
+            </div>
+          </div>
+          {viewMode === 'matrix' ? (
+            <HistoryDateGroups
+              rows={rows}
+              strategies={strategies}
+              selectedIds={selectedIds}
+              onToggleSelected={toggleSelected}
+            />
+          ) : (
+            <HistoryTable
+              rows={rows}
+              strategies={strategies}
+              selectedIds={selectedIds}
+              onToggleSelected={toggleSelected}
+            />
+          )}
+        </>
       )}
 
       {selectedIds.size >= 2 && !showCompare && (
