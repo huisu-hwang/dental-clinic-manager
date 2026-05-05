@@ -148,7 +148,8 @@ export async function POST(request: NextRequest) {
   let recent20DayHigh = 0
   let recent20DayLow = 0
   let investorHistory: KRInvestorDay[] = []
-  const asOfDate = toDateString(new Date())
+  // KST 기준 — 서버 timezone(UTC) 영향 받지 않음
+  const asOfDate = toKstDateString(new Date())
 
   try {
     if (market === 'KR' && kisCredential) {
@@ -1003,6 +1004,15 @@ function toDateString(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Asia/Seoul timezone 기준 YYYY-MM-DD — Vercel(UTC)에서도 한국 사용자 "오늘"을 정확히 반영 */
+function toKstDateString(d: Date): string {
+  const kst = new Date(d.getTime() + 9 * 3600_000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(kst.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
 
