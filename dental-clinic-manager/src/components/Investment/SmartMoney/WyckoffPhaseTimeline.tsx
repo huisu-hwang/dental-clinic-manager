@@ -8,7 +8,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Info, X } from 'lucide-react'
+import { Info, X, ChevronDown, ChevronUp } from 'lucide-react'
 import type { WyckoffPhaseEvent, WyckoffPhaseResult } from '@/types/smartMoney'
 
 const HELP = {
@@ -21,6 +21,24 @@ interface Props {
 }
 
 const PHASES: Array<'A' | 'B' | 'C' | 'D' | 'E'> = ['A', 'B', 'C', 'D', 'E']
+
+/** 매집(Accumulation) 사이클의 단계별 의미 */
+const ACCUMULATION_PHASE_INFO: Record<'A' | 'B' | 'C' | 'D' | 'E', { short: string; meaning: string }> = {
+  A: { short: '하락 정지', meaning: '매도 클라이맥스 + 자동 반등 — 하락 추세가 멈추는 구간' },
+  B: { short: '매집 진행', meaning: '박스권 형성, 큰손이 매물을 흡수 — 시간을 두고 사 모음' },
+  C: { short: '마지막 흔들기', meaning: '저점 거짓 이탈(Spring)로 약손 털어냄 — 추세 전환 임박' },
+  D: { short: '상승 시작', meaning: '박스권 상단 돌파(SOS) — 매집 완료 후 첫 상승' },
+  E: { short: '본격 상승', meaning: '강한 상승 추세 — 마크업 단계, 큰손이 분배 시작 전까지' },
+}
+
+/** 분배(Distribution) 사이클의 단계별 의미 */
+const DISTRIBUTION_PHASE_INFO: Record<'A' | 'B' | 'C' | 'D' | 'E', { short: string; meaning: string }> = {
+  A: { short: '상승 정지', meaning: '매수 클라이맥스 + 자동 반락 — 상승 추세가 멈추는 구간' },
+  B: { short: '분배 진행', meaning: '박스권에서 큰손이 매물 분배 — 시간을 두고 팔아 치움' },
+  C: { short: '거짓 돌파', meaning: 'UTAD(고점 거짓 돌파)로 추격 매수 유인 — 추세 전환 임박' },
+  D: { short: '하락 시작', meaning: '박스권 하단 이탈(SOW) — 분배 완료 후 첫 하락' },
+  E: { short: '본격 하락', meaning: '강한 하락 추세 — 마크다운 단계' },
+}
 
 const EVENT_LABEL: Record<WyckoffPhaseEvent['type'], string> = {
   PS: '예비 지지',
@@ -40,8 +58,12 @@ const EVENT_LABEL: Record<WyckoffPhaseEvent['type'], string> = {
 
 export function WyckoffPhaseTimeline({ phase }: Props) {
   const [helpOpen, setHelpOpen] = useState(false)
+  const [glossaryOpen, setGlossaryOpen] = useState(false)
   const isAccumulation = phase.cycle === 'accumulation'
   const isDistribution = phase.cycle === 'distribution'
+
+  // 사이클별 페이즈 의미 매핑 (사이클 미정 시는 매집 기준 폴백)
+  const phaseInfo = isDistribution ? DISTRIBUTION_PHASE_INFO : ACCUMULATION_PHASE_INFO
   const activeColor = isAccumulation
     ? 'bg-emerald-500 text-white border-emerald-500'
     : isDistribution
@@ -108,28 +130,101 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
         </div>
       ) : (
         <>
-          {/* Stepper */}
-          <div className="flex items-center justify-between mb-3">
+          {/* Stepper — 활성 페이즈 강조(펄스 + 큰 사이즈) + 단계별 짧은 라벨 */}
+          <div className="flex items-start justify-between mb-3">
             {PHASES.map((p, idx) => {
               const isActive = idx === activePhaseIdx
               const isPast = activePhaseIdx >= 0 && idx < activePhaseIdx
               const dotClass = isActive || isPast ? activeColor : inactiveColor
+              const ringClass = isActive
+                ? isAccumulation
+                  ? 'ring-2 ring-emerald-300 ring-offset-2'
+                  : isDistribution
+                    ? 'ring-2 ring-rose-300 ring-offset-2'
+                    : 'ring-2 ring-slate-200 ring-offset-2'
+                : ''
+              const info = phaseInfo[p]
               return (
-                <div key={p} className="flex-1 flex items-center">
-                  <div
-                    className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-[11px] font-bold ${dotClass}`}
-                  >
-                    {p}
-                  </div>
-                  {idx < PHASES.length - 1 && (
+                <div key={p} className="flex-1 flex flex-col items-center">
+                  <div className="w-full flex items-center">
                     <div
-                      className={`flex-1 h-0.5 mx-1 ${isPast ? lineActiveColor : 'bg-slate-200'}`}
-                    />
-                  )}
+                      className={`flex-shrink-0 ${isActive ? 'w-9 h-9' : 'w-7 h-7'} rounded-full border-2 flex items-center justify-center font-bold transition-all ${dotClass} ${ringClass}`}
+                      title={`Phase ${p} · ${info.short} — ${info.meaning}`}
+                    >
+                      <span className={isActive ? 'text-sm' : 'text-[11px]'}>{p}</span>
+                    </div>
+                    {idx < PHASES.length - 1 && (
+                      <div
+                        className={`flex-1 h-0.5 mx-1 ${isPast ? lineActiveColor : 'bg-slate-200'}`}
+                      />
+                    )}
+                  </div>
+                  <span
+                    className={`mt-1 text-[9px] leading-tight text-center px-0.5 truncate max-w-full ${
+                      isActive
+                        ? isAccumulation
+                          ? 'text-emerald-700 font-semibold'
+                          : isDistribution
+                            ? 'text-rose-700 font-semibold'
+                            : 'text-slate-700 font-semibold'
+                        : 'text-slate-400'
+                    }`}
+                  >
+                    {info.short}
+                  </span>
                 </div>
               )
             })}
           </div>
+
+          {/* 현재 페이즈 의미 — 활성 단계가 있을 때만 큰 박스로 강조 */}
+          {phase.phase && (
+            <div
+              className={`rounded-lg p-2.5 mb-2 border ${
+                isAccumulation
+                  ? 'bg-emerald-50 border-emerald-200'
+                  : isDistribution
+                    ? 'bg-rose-50 border-rose-200'
+                    : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                    isAccumulation
+                      ? 'bg-emerald-500 text-white'
+                      : isDistribution
+                        ? 'bg-rose-500 text-white'
+                        : 'bg-slate-400 text-white'
+                  }`}
+                >
+                  Phase {phase.phase}
+                </span>
+                <span
+                  className={`text-xs font-semibold ${
+                    isAccumulation
+                      ? 'text-emerald-800'
+                      : isDistribution
+                        ? 'text-rose-800'
+                        : 'text-slate-700'
+                  }`}
+                >
+                  {phaseInfo[phase.phase].short}
+                </span>
+              </div>
+              <p
+                className={`text-[11px] leading-relaxed ${
+                  isAccumulation
+                    ? 'text-emerald-900'
+                    : isDistribution
+                      ? 'text-rose-900'
+                      : 'text-slate-700'
+                }`}
+              >
+                {phaseInfo[phase.phase].meaning}
+              </p>
+            </div>
+          )}
 
           {/* Events */}
           {recentEvents.length > 0 && (
@@ -148,6 +243,52 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
               </div>
             </div>
           )}
+
+          {/* 페이즈 가이드 토글 — 매집/분배 사이클 모든 페이즈 의미 */}
+          <div className="pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setGlossaryOpen((o) => !o)}
+              className="w-full flex items-center justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wide hover:text-slate-700"
+            >
+              <span>페이즈별 의미 가이드</span>
+              {glossaryOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            {glossaryOpen && (
+              <div className="mt-2 space-y-2">
+                <div>
+                  <p className="text-[10px] font-semibold text-emerald-700 mb-1">📈 매집(Accumulation)</p>
+                  <div className="space-y-0.5">
+                    {PHASES.map((p) => (
+                      <div key={`acc-${p}`} className="flex items-start gap-2 text-[10.5px] leading-relaxed">
+                        <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">{p}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-slate-700 font-medium">{ACCUMULATION_PHASE_INFO[p].short}</span>
+                          <span className="text-slate-400 mx-1">·</span>
+                          <span className="text-slate-500">{ACCUMULATION_PHASE_INFO[p].meaning}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="pt-1.5 border-t border-slate-100">
+                  <p className="text-[10px] font-semibold text-rose-700 mb-1">📉 분배(Distribution)</p>
+                  <div className="space-y-0.5">
+                    {PHASES.map((p) => (
+                      <div key={`dist-${p}`} className="flex items-start gap-2 text-[10.5px] leading-relaxed">
+                        <span className="text-[9px] px-1 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">{p}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-slate-700 font-medium">{DISTRIBUTION_PHASE_INFO[p].short}</span>
+                          <span className="text-slate-400 mx-1">·</span>
+                          <span className="text-slate-500">{DISTRIBUTION_PHASE_INFO[p].meaning}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {phase.description && (
             <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 pt-2">{phase.description}</p>
