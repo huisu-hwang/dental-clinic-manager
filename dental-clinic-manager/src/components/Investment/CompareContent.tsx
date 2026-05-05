@@ -314,7 +314,11 @@ function LiveCompareSection() {
             useFullCapital: true,
           }
           if (item?.source === 'user') body.strategyId = item.strategyId
-          else if (item?.source === 'preset') body.preset = item.preset
+          else if (item?.source === 'preset') {
+            body.preset = item.preset
+            body.presetId = item.key.replace(/^preset:/, '')
+            body.presetName = item.name
+          }
 
           try {
             const res = await fetch('/api/investment/backtest', {

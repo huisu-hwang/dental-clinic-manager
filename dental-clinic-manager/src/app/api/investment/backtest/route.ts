@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '잘못된 요청 형식입니다' }, { status: 400 })
   }
 
-  const { strategyId, preset, ticker, market, startDate, endDate, initialCapital, useFullCapital } = body
+  const { strategyId, preset, presetId, presetName, ticker, market, startDate, endDate, initialCapital, useFullCapital } = body
 
   if (!ticker || typeof ticker !== 'string') {
     return NextResponse.json({ error: '종목 코드가 필요합니다' }, { status: 400 })
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
   let buyConditions: ConditionGroup
   let sellConditions: ConditionGroup
   let riskSettings: RiskSettings
-  let saveResult = true  // strategyId 모드에선 결과 저장, preset 모드에선 미저장
+  // 모든 백테스트는 backtest_runs에 저장 (사용자 전략·프리셋 모두) — 프리셋은 strategy_id NULL + preset_id 채움
 
   const DEFAULT_RISK: RiskSettings = {
     maxDailyLossPercent: 2,
@@ -166,13 +166,12 @@ export async function POST(request: NextRequest) {
     buyConditions = p.buyConditions
     sellConditions = p.sellConditions
     riskSettings = { ...DEFAULT_RISK, ...(p.riskSettings || {}) }
-    saveResult = false
   } else {
     return NextResponse.json({ error: 'strategyId 또는 preset 중 하나가 필요합니다' }, { status: 400 })
   }
 
-  // 동시 백테스트 제한 (저장된 전략에만 적용)
-  if (saveResult) {
+  // 동시 백테스트 제한 (사용자별 전체)
+  {
     const { count } = await supabase
       .from('backtest_runs')
       .select('id', { count: 'exact', head: true })
@@ -215,17 +214,21 @@ export async function POST(request: NextRequest) {
 
     clearTimeout(timeout)
 
-    // preset 모드는 결과 저장 안 함 (즉석 비교용)
-    if (!saveResult) {
-      return NextResponse.json({ data: { ...result, saved: false } })
-    }
-
-    // 저장된 전략 모드: backtest_runs에 결과 저장
+    // 사용자 전략 + 프리셋 모두 backtest_runs에 저장 — 프리셋은 strategy_id NULL + preset_id 채움
     const nowIso = new Date().toISOString()
+    const isPresetMode = !strategyId
+    const finalPresetId = isPresetMode
+      ? (typeof presetId === 'string' && presetId ? presetId : 'custom')
+      : null
+    const finalPresetName = isPresetMode
+      ? (typeof presetName === 'string' && presetName ? presetName : '프리셋 백테스트')
+      : null
     const { data: run, error } = await supabase
       .from('backtest_runs')
       .insert({
-        strategy_id: strategyId,
+        strategy_id: isPresetMode ? null : (strategyId as string),
+        preset_id: finalPresetId,
+        preset_name: finalPresetName,
         user_id: userId,
         ticker: ticker as string,
         market: market as string,

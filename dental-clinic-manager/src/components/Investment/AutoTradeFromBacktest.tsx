@@ -18,7 +18,10 @@ import type { InvestmentStrategy, Market } from '@/types/investment'
 
 interface BacktestRun {
   id: string
-  strategy_id: string
+  /** 프리셋 백테스트면 NULL */
+  strategy_id: string | null
+  preset_id: string | null
+  preset_name: string | null
   ticker: string
   market: Market
   total_return: number | null
@@ -156,14 +159,19 @@ export default function AutoTradeFromBacktest() {
 
     let bestRuns: BacktestRun[] = []
 
+    /** run의 그룹 키 — 사용자 전략은 strategy_id, 프리셋은 preset:<id> */
+    const groupKeyOf = (r: BacktestRun) =>
+      r.strategy_id ?? `preset:${r.preset_id ?? 'custom'}`
+
     if (isPickedMode) {
-      // strategy_id별 best totalReturn 1개
+      // strategy(또는 preset)별 best totalReturn 1개
       const bestPerStrategy = new Map<string, BacktestRun>()
       for (const r of runs) {
-        const cur = bestPerStrategy.get(r.strategy_id)
+        const k = groupKeyOf(r)
+        const cur = bestPerStrategy.get(k)
         const tr = Number(r.total_return ?? -Infinity)
         const curTr = cur ? Number(cur.total_return ?? -Infinity) : -Infinity
-        if (!cur || tr > curTr) bestPerStrategy.set(r.strategy_id, r)
+        if (!cur || tr > curTr) bestPerStrategy.set(k, r)
       }
       bestRuns = Array.from(bestPerStrategy.values())
     } else {
@@ -181,19 +189,30 @@ export default function AutoTradeFromBacktest() {
 
     const rows: RankedRow[] = []
     for (const run of bestRuns) {
-      const strat = stratMap.get(run.strategy_id)
-      // 삭제됐거나 stratMap에 없는 경우 backend join 정보로 fallback
-      const joinedName = run.investment_strategies?.name
-      const joinedLevel = run.investment_strategies?.automation_level
-      const strategyName = strat?.name ?? joinedName ?? `전략 #${run.strategy_id.slice(0, 8)}`
-      const automationLevel = strat?.automation_level ?? joinedLevel ?? 1
-      const canAdd = Boolean(strat) // 자동매매 추가는 현재 active 사용자 전략만 가능
+      const isPreset = !run.strategy_id
+      const strat = run.strategy_id ? stratMap.get(run.strategy_id) : undefined
 
-      const wlKey = `${run.strategy_id}::${run.market}::${run.ticker.toUpperCase()}`
+      let strategyName: string
+      let canAdd: boolean
+      if (isPreset) {
+        strategyName = run.preset_name ?? `프리셋 #${run.preset_id ?? 'custom'}`
+        canAdd = false // 프리셋은 자동매매 추가 불가 (저장 전략 없음)
+      } else {
+        const joinedName = run.investment_strategies?.name
+        strategyName = strat?.name ?? joinedName ?? `전략 #${(run.strategy_id ?? '').slice(0, 8)}`
+        canAdd = Boolean(strat) // 자동매매 추가는 현재 사용자 보유 전략만
+      }
+
+      const automationLevel =
+        strat?.automation_level ?? run.investment_strategies?.automation_level ?? 1
+
+      const groupId = run.strategy_id ?? `preset:${run.preset_id ?? 'custom'}`
+      const wlKey = `${groupId}::${run.market}::${run.ticker.toUpperCase()}`
       const inWatchlist = watchlistMap.get(wlKey) === true
-      const alreadyActive = automationLevel === 2 && inWatchlist
+      const alreadyActive = !isPreset && automationLevel === 2 && inWatchlist
+
       rows.push({
-        strategyId: run.strategy_id,
+        strategyId: groupId,
         strategyName,
         totalReturn: Number(run.total_return ?? 0),
         winRate: Number(run.win_rate ?? 0),
@@ -211,11 +230,13 @@ export default function AutoTradeFromBacktest() {
     return rows.sort((a, b) => b.totalReturn - a.totalReturn)
   }, [runs, strategies, watchlistMap, isPickedMode])
 
-  // ranked 변화 시 → watchlist 조합 조회
+  // ranked 변화 시 → watchlist 조합 조회 (프리셋 group은 제외)
   useEffect(() => {
     if (ranked.length === 0) return
-    const combos = ranked.map((r) => ({ sid: r.strategyId, ticker: r.ticker, market: r.market }))
-    loadWatchlistForCombos(combos)
+    const combos = ranked
+      .filter((r) => r.canAdd) // 프리셋·삭제 전략은 watchlist 조회 의미 없음
+      .map((r) => ({ sid: r.strategyId, ticker: r.ticker, market: r.market }))
+    if (combos.length > 0) loadWatchlistForCombos(combos)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runs])
 
