@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, Send, ArrowUpCircle, ArrowDownCircle, Clock, Loader2 } from 'lucide-react'
+import { Send, ArrowUpCircle, ArrowDownCircle, Clock, Loader2 } from 'lucide-react'
 import type { TradeOrder, Market, OrderType, OrderMethod } from '@/types/investment'
 import TradingSettingsPanel from './TradingSettingsPanel'
 import TickerSearch from './TickerSearch'
+import AutoTradeFromBacktest from './AutoTradeFromBacktest'
 
 export default function TradingContent() {
   const [orders, setOrders] = useState<TradeOrder[]>([])
@@ -253,17 +254,7 @@ export default function TradingContent() {
 
         {/* 주문 내역 + 자동매매 현황 */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-at-border overflow-hidden">
-            <div className="px-5 py-4 border-b border-at-border">
-              <h3 className="font-semibold text-at-text">자동매매 현황</h3>
-            </div>
-            <div className="p-5">
-              <div className="flex flex-col items-center justify-center py-6 text-at-text-weak">
-                <Activity className="w-10 h-10 mb-2 opacity-30" />
-                <p className="text-sm">활성화된 자동매매가 없습니다</p>
-              </div>
-            </div>
-          </div>
+          <AutoTradeFromBacktest />
 
           <TradingSettingsPanel />
 
