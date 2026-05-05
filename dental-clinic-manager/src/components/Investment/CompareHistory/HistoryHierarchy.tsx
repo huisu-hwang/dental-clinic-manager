@@ -4,12 +4,14 @@
  * 백테스트 히스토리 3단계 drill-down 네비게이션:
  *  1) 날짜 리스트 — 최근→과거, 그 날의 세션 수·평균 수익률 표시
  *  2) 시간 리스트 — 같은 날짜 안에서 인접 분 cluster를 한 세션으로 묶어 시간순 표시
- *  3) 세션 결과 — 전략(행) × 종목(열) 매트릭스 + 셀 클릭 시 비교 selection
+ *  3) 세션 결과 — 라이브 비교 탭과 동일한 결과 화면 (CompareResultsView 재사용)
  */
 
 import { useMemo, useState } from 'react'
-import { ArrowLeft, ChevronRight, BarChart3, CheckSquare, Square } from 'lucide-react'
+import { ArrowLeft, ChevronRight } from 'lucide-react'
 import type { BacktestRunRow } from './HistoryTab'
+import { CompareResultsView, type BacktestResultItem } from '@/components/Investment/CompareContent'
+import type { BacktestMetrics, BacktestTrade, EquityCurvePoint } from '@/types/investment'
 
 interface StrategyOption {
   id: string
@@ -22,6 +24,39 @@ interface Props {
   strategies: StrategyOption[]
   selectedIds: Set<string>
   onToggleSelected: (id: string) => void
+}
+
+/**
+ * backtest_runs row → CompareResultsView가 기대하는 BacktestResultItem 변환.
+ * full_metrics(jsonb)는 BacktestMetrics 전체 스냅샷이라 그대로 사용.
+ */
+function toResultItem(
+  r: BacktestRunRow,
+  strategyName: string,
+): BacktestResultItem {
+  const metrics: BacktestMetrics = (r.full_metrics as unknown as BacktestMetrics) ?? {
+    totalReturn: r.total_return ?? 0,
+    annualizedReturn: 0,
+    maxDrawdown: r.max_drawdown ?? 0,
+    sharpeRatio: r.sharpe_ratio ?? 0,
+    winRate: r.win_rate ?? 0,
+    totalTrades: r.total_trades ?? 0,
+    profitFactor: 0,
+    avgWin: 0, avgLoss: 0,
+    maxConsecutiveWins: 0, maxConsecutiveLosses: 0, avgHoldingDays: 0,
+  }
+  const trades = (r.trades as unknown as BacktestTrade[]) ?? []
+  const equityCurve = (r.equity_curve as unknown as EquityCurvePoint[]) ?? []
+  return {
+    rowKey: r.id,
+    strategyId: r.strategy_id ?? `preset:${r.preset_id ?? 'custom'}`,
+    strategyName,
+    ticker: r.ticker,
+    tickerName: r.ticker,
+    metrics,
+    trades,
+    equityCurve,
+  }
 }
 
 interface SessionGroup {
@@ -143,8 +178,6 @@ export default function HistoryHierarchy({ rows, strategies, selectedIds, onTogg
         day={selectedDay}
         session={session}
         strategyById={strategyById}
-        selectedIds={selectedIds}
-        onToggleSelected={onToggleSelected}
         onBack={() => setSelectedSessionId(null)}
       />
     )
@@ -252,24 +285,14 @@ function SessionResultView({
   day,
   session,
   strategyById,
-  selectedIds,
-  onToggleSelected,
   onBack,
 }: {
   day: string
   session: SessionGroup
   strategyById: Map<string, StrategyOption>
-  selectedIds: Set<string>
-  onToggleSelected: (id: string) => void
   onBack: () => void
 }) {
-  const [sortKey, setSortKey] = useState<'total_return' | 'sharpe_ratio' | 'win_rate' | 'max_drawdown' | 'total_trades'>('total_return')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-
-  // 매트릭스 + 정렬된 평면 표 둘 다 렌더링
-  const rowKeyOf = (r: BacktestRunRow) =>
-    r.strategy_id ?? `preset:${r.preset_id ?? 'custom'}`
-  const rowLabelOf = (r: BacktestRunRow) => {
+  const rowLabelOf = (r: BacktestRunRow): string => {
     if (r.strategy_id) {
       return strategyById.get(r.strategy_id)?.name
         ?? r.investment_strategies?.name
@@ -277,51 +300,47 @@ function SessionResultView({
     }
     return r.preset_name ?? `프리셋 #${r.preset_id ?? 'custom'}`
   }
-  const colKeyOf = (r: BacktestRunRow) => `${r.market}:${r.ticker}`
 
-  const matrix = useMemo(() => {
-    const rowMap = new Map<string, { key: string; label: string; bestReturn: number; isPreset: boolean }>()
-    const colMap = new Map<string, { key: string; market: 'KR' | 'US'; ticker: string }>()
-    const cellMap = new Map<string, BacktestRunRow>()
+  // 라이브 비교 결과와 동일 구조로 변환
+  const results: BacktestResultItem[] = useMemo(
+    () => session.rows.map((r) => toResultItem(r, rowLabelOf(r))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session],
+  )
+
+  const tickers = useMemo(() => {
+    const seen = new Set<string>()
+    const arr: { ticker: string; name: string }[] = []
     for (const r of session.rows) {
-      const rk = rowKeyOf(r)
-      const rl = rowLabelOf(r)
-      const ck = colKeyOf(r)
-      const tr = Number(r.total_return ?? -Infinity)
-      const exists = rowMap.get(rk)
-      if (!exists || tr > exists.bestReturn) {
-        rowMap.set(rk, { key: rk, label: rl, bestReturn: tr, isPreset: !r.strategy_id })
-      }
-      if (!colMap.has(ck)) colMap.set(ck, { key: ck, market: r.market, ticker: r.ticker })
-      const cell = cellMap.get(`${rk}::${ck}`)
-      if (!cell || r.executed_at > cell.executed_at) cellMap.set(`${rk}::${ck}`, r)
+      const k = `${r.market}:${r.ticker}`
+      if (seen.has(k)) continue
+      seen.add(k)
+      arr.push({ ticker: r.ticker, name: r.ticker })
     }
-    return {
-      rowList: Array.from(rowMap.values()).sort((a, b) => b.bestReturn - a.bestReturn),
-      colList: Array.from(colMap.values()).sort((a, b) => a.ticker.localeCompare(b.ticker)),
-      cellMap,
+    return arr
+  }, [session])
+
+  const strategies = useMemo(() => {
+    const seen = new Set<string>()
+    const arr: { key: string; name: string }[] = []
+    for (const r of session.rows) {
+      const key = r.strategy_id ?? `preset:${r.preset_id ?? 'custom'}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      arr.push({ key, name: rowLabelOf(r) })
     }
+    return arr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
-  const sortedFlat = useMemo(() => {
-    const cp = [...session.rows]
-    cp.sort((a, b) => {
-      const av = (a[sortKey] ?? -Infinity) as number
-      const bv = (b[sortKey] ?? -Infinity) as number
-      if (av === bv) return 0
-      return sortDir === 'desc' ? bv - av : av - bv
-    })
-    return cp
-  }, [session.rows, sortKey, sortDir])
-
-  const toggleSort = (k: typeof sortKey) => {
-    if (sortKey === k) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
-    else { setSortKey(k); setSortDir('desc') }
-  }
-
-  const tickers = new Set(session.rows.map((r) => r.ticker))
-  const strats = new Set(session.rows.map((r) => rowKeyOf(r)))
+  const startDate = useMemo(() => {
+    const dates = session.rows.map((r) => r.start_date).filter(Boolean).sort()
+    return dates[0] ?? ''
+  }, [session])
+  const endDate = useMemo(() => {
+    const dates = session.rows.map((r) => r.end_date).filter(Boolean).sort()
+    return dates[dates.length - 1] ?? ''
+  }, [session])
 
   return (
     <div className="space-y-4">
@@ -335,148 +354,17 @@ function SessionResultView({
           {formatDayHeader(day)} {formatTime(session.startedAt)} 세션
         </h3>
         <p className="text-xs text-at-text-secondary mt-0.5">
-          {strats.size}전략 × {tickers.size}종목 = {session.rows.length}건 백테스트
+          {strategies.length}전략 × {tickers.length}종목 = {session.rows.length}건 백테스트
         </p>
       </div>
 
-      {/* 매트릭스 */}
-      <div className="bg-white rounded-2xl border border-at-border shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-at-border flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-at-accent" />
-          <h4 className="text-sm font-semibold text-at-text">결과 매트릭스</h4>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-at-surface-alt text-at-text-secondary">
-              <tr>
-                <th className="text-left px-3 py-2 font-medium sticky left-0 bg-at-surface-alt z-10">전략</th>
-                {matrix.colList.map((c) => (
-                  <th key={c.key} className="text-center px-3 py-2 font-medium whitespace-nowrap">
-                    <span className={`text-[9px] px-1 py-0.5 rounded mr-1 font-bold ${c.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                      {c.market}
-                    </span>
-                    <span className="font-mono">{c.ticker}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-at-border">
-              {matrix.rowList.map((row) => (
-                <tr key={row.key} className="hover:bg-at-surface-alt/40">
-                  <td className="px-3 py-2 sticky left-0 bg-white">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-medium text-at-text truncate max-w-[200px]" title={row.label}>{row.label}</p>
-                      {row.isPreset && (
-                        <span className="text-[9px] px-1 py-0.5 rounded bg-purple-50 text-purple-700 flex-shrink-0">프리셋</span>
-                      )}
-                    </div>
-                  </td>
-                  {matrix.colList.map((col) => {
-                    const cell = matrix.cellMap.get(`${row.key}::${col.key}`)
-                    if (!cell) return <td key={col.key} className="text-center px-3 py-2 text-at-text-weak">—</td>
-                    const isSelected = selectedIds.has(cell.id)
-                    return (
-                      <td
-                        key={col.key}
-                        onClick={() => onToggleSelected(cell.id)}
-                        className={`text-center px-3 py-2 cursor-pointer transition-colors ${isSelected ? 'bg-at-accent-light' : 'hover:bg-at-surface-alt'}`}
-                      >
-                        <div className="inline-flex items-center gap-1">
-                          {isSelected ? (
-                            <CheckSquare className="w-3 h-3 text-at-accent flex-shrink-0" />
-                          ) : (
-                            <Square className="w-3 h-3 text-at-text-weak flex-shrink-0" />
-                          )}
-                          <div>
-                            <div className={`font-mono font-semibold ${colorPnl(cell.total_return)}`}>{formatPct(cell.total_return)}</div>
-                            <div className="text-[10px] text-at-text-weak font-mono">Sh {formatNum(cell.sharpe_ratio)}</div>
-                          </div>
-                        </div>
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 정렬된 평면 결과 표 */}
-      <div className="bg-white rounded-2xl border border-at-border shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-at-border flex items-center justify-between gap-2 flex-wrap">
-          <h4 className="text-sm font-semibold text-at-text">상세 결과 ({sortedFlat.length}건)</h4>
-          <span className="text-[11px] text-at-text-secondary">
-            {sortKey === 'total_return' ? '수익률' : sortKey === 'sharpe_ratio' ? 'Sharpe' : sortKey === 'win_rate' ? '승률' : sortKey === 'max_drawdown' ? 'MDD' : '거래수'} 기준 {sortDir === 'desc' ? '내림차순' : '오름차순'}
-          </span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-at-surface-alt text-at-text-secondary">
-              <tr>
-                <th className="text-left px-3 py-2 font-medium">선택</th>
-                <th className="text-left px-3 py-2 font-medium">전략</th>
-                <th className="text-left px-3 py-2 font-medium">종목</th>
-                <SortHeader label="수익률" k="total_return" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <SortHeader label="Sharpe" k="sharpe_ratio" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <SortHeader label="MDD" k="max_drawdown" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <SortHeader label="승률" k="win_rate" current={sortKey} dir={sortDir} onClick={toggleSort} />
-                <SortHeader label="거래수" k="total_trades" current={sortKey} dir={sortDir} onClick={toggleSort} />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-at-border">
-              {sortedFlat.map((r) => {
-                const isSelected = selectedIds.has(r.id)
-                const stratLabel = rowLabelOf(r)
-                return (
-                  <tr
-                    key={r.id}
-                    className={`cursor-pointer ${isSelected ? 'bg-at-accent-light' : 'hover:bg-at-surface-alt/50'}`}
-                    onClick={() => onToggleSelected(r.id)}
-                  >
-                    <td className="px-3 py-2">
-                      {isSelected ? <CheckSquare className="w-3.5 h-3.5 text-at-accent" /> : <Square className="w-3.5 h-3.5 text-at-text-weak" />}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="font-medium text-at-text">{stratLabel}</span>
-                      {!r.strategy_id && <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-purple-50 text-purple-700">프리셋</span>}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={`text-[9px] px-1 py-0.5 rounded mr-1 font-bold ${r.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{r.market}</span>
-                      <span className="font-mono">{r.ticker}</span>
-                    </td>
-                    <td className={`text-right px-3 py-2 font-mono font-semibold ${bgPnl(r.total_return)} ${colorPnl(r.total_return)}`}>{formatPct(r.total_return)}</td>
-                    <td className="text-right px-3 py-2 font-mono">{formatNum(r.sharpe_ratio)}</td>
-                    <td className="text-right px-3 py-2 font-mono text-blue-600">{formatPct(r.max_drawdown != null ? -Math.abs(r.max_drawdown) : null)}</td>
-                    <td className="text-right px-3 py-2 font-mono">{r.win_rate != null ? `${(r.win_rate * 100).toFixed(0)}%` : '-'}</td>
-                    <td className="text-right px-3 py-2 font-mono">{r.total_trades ?? '-'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompareResultsView
+        results={results}
+        tickers={tickers}
+        strategies={strategies}
+        startDate={startDate}
+        endDate={endDate}
+      />
     </div>
-  )
-}
-
-function SortHeader({
-  label, k, current, dir, onClick,
-}: {
-  label: string
-  k: 'total_return' | 'sharpe_ratio' | 'win_rate' | 'max_drawdown' | 'total_trades'
-  current: string
-  dir: 'asc' | 'desc'
-  onClick: (k: 'total_return' | 'sharpe_ratio' | 'win_rate' | 'max_drawdown' | 'total_trades') => void
-}) {
-  const active = current === k
-  return (
-    <th
-      className={`text-right px-3 py-2 font-medium cursor-pointer select-none ${active ? 'text-at-accent' : ''}`}
-      onClick={() => onClick(k)}
-    >
-      {label}{active && (dir === 'desc' ? ' ▼' : ' ▲')}
-    </th>
   )
 }
