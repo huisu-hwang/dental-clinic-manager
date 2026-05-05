@@ -83,6 +83,10 @@ export interface AlgoFootprintResult {
   direction: 'accumulation' | 'distribution' | 'neutral'
   /** MOO/MOC 발생 시의 방향성 (시·종가 동시호가 봉이 양봉/음봉 어느 쪽인지) */
   auctionDirection: 'moo-buy' | 'moo-sell' | 'moc-buy' | 'moc-sell' | null
+  /** TWAP 알고가 매수/매도 어느 방향에 가까운지 (전반부 vs 후반부 평균 종가 비교) */
+  twapDirection: 'buy' | 'sell' | 'neutral'
+  /** VWAP 대비 종가 위치 — 위면 매수 우세, 아래면 매도 우세 */
+  vwapDirection: 'buy' | 'sell' | 'neutral'
 }
 
 export interface InvestorFlowResult {

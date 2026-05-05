@@ -279,12 +279,28 @@ export function SignalPanel({ analysis, cardComments }: Props) {
                 : b.label === 'MOO' ? 'moo'
                 : 'moc'
             const detailComment = cardComments?.algoDetails?.[detailKey]
+            // TWAP/VWAP은 매수/매도 방향성 배지 표시
+            const dir =
+              b.label === 'TWAP' ? algoFootprint.twapDirection
+                : b.label === 'VWAP' ? algoFootprint.vwapDirection
+                : null
+            const showDirBadge = !isZero && (b.label === 'TWAP' || b.label === 'VWAP')
+            const dirLabel = dir === 'buy' ? '기관 매수' : dir === 'sell' ? '기관 매도' : '중립'
+            const dirClass =
+              dir === 'buy' ? 'bg-red-50 text-red-700'
+                : dir === 'sell' ? 'bg-blue-50 text-blue-700'
+                : 'bg-slate-100 text-slate-500'
             return (
               <div key={b.label}>
-                <div className="flex items-center justify-between text-[11px] mb-0.5">
-                  <span className={`${isDominant ? 'font-bold text-blue-700' : 'text-slate-700'}`}>
+                <div className="flex items-center justify-between text-[11px] mb-0.5 gap-2">
+                  <span className={`flex items-center gap-1.5 ${isDominant ? 'font-bold text-blue-700' : 'text-slate-700'}`}>
                     {b.label}
-                    {isDominant && <span className="ml-1 text-[9px]">★</span>}
+                    {isDominant && <span className="text-[9px]">★</span>}
+                    {showDirBadge && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${dirClass}`} title="알고리즘이 매수성/매도성 어느 방향에 가까운지 추정">
+                        {dirLabel}
+                      </span>
+                    )}
                   </span>
                   <span className={`font-mono ${isZero ? 'text-slate-400' : 'text-slate-600'}`}>
                     {isZero ? '신호 없음' : b.score.toFixed(0)}

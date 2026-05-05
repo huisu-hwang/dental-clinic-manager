@@ -263,6 +263,45 @@ function detectAuctionFootprint(bars: AlgoBar[]): AuctionResult {
 // ============================================
 // 방향성 판정 (매집 / 분배 / 중립)
 // ============================================
+/**
+ * TWAP 방향 추정 — 전반부 vs 후반부 평균 종가 비교.
+ * TWAP 알고는 시간 균등 매매하므로 그 시간 동안의 가격 추세 자체가 매수/매도 의도를 반영.
+ */
+export function inferTwapDirection(bars: AlgoBar[]): 'buy' | 'sell' | 'neutral' {
+  if (bars.length < 30) return 'neutral'
+  const half = Math.floor(bars.length / 2)
+  const firstAvg = bars.slice(0, half).reduce((s, b) => s + b.close, 0) / half
+  const secondAvg = bars.slice(half).reduce((s, b) => s + b.close, 0) / (bars.length - half)
+  if (firstAvg <= 0) return 'neutral'
+  const change = (secondAvg - firstAvg) / firstAvg
+  if (change > 0.005) return 'buy'   // 0.5% 이상 상승 → 매수성 알고
+  if (change < -0.005) return 'sell' // 0.5% 이상 하락 → 매도성 알고
+  return 'neutral'
+}
+
+/**
+ * VWAP 방향 추정 — 거래량 가중 평균 가격(VWAP) 계산 후 종가 위치로 판단.
+ * 종가가 VWAP 위면 매수 우세, 아래면 매도 우세.
+ */
+export function inferVwapDirection(bars: AlgoBar[]): 'buy' | 'sell' | 'neutral' {
+  if (bars.length < 5) return 'neutral'
+  let pvSum = 0
+  let vSum = 0
+  for (const b of bars) {
+    const typical = (b.high + b.low + b.close) / 3
+    pvSum += typical * b.volume
+    vSum += b.volume
+  }
+  if (vSum === 0) return 'neutral'
+  const vwap = pvSum / vSum
+  const lastClose = bars[bars.length - 1].close
+  if (vwap <= 0) return 'neutral'
+  const diff = (lastClose - vwap) / vwap
+  if (diff > 0.003) return 'buy'   // VWAP 0.3% 이상 위 → 매수 우세
+  if (diff < -0.003) return 'sell' // VWAP 0.3% 이상 아래 → 매도 우세
+  return 'neutral'
+}
+
 function detectDirection(bars: AlgoBar[]): 'accumulation' | 'distribution' | 'neutral' {
   if (bars.length === 0) return 'neutral'
   let bullVol = 0
@@ -313,6 +352,8 @@ export function analyzeAlgoFootprint(
       dominantAlgo: null,
       direction: 'neutral',
       auctionDirection: null,
+      twapDirection: 'neutral',
+      vwapDirection: 'neutral',
     }
   }
 
@@ -348,5 +389,7 @@ export function analyzeAlgoFootprint(
     dominantAlgo,
     direction,
     auctionDirection,
+    twapDirection: inferTwapDirection(bars),
+    vwapDirection: inferVwapDirection(bars),
   }
 }
