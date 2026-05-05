@@ -29,6 +29,12 @@ interface BacktestRun {
   start_date: string
   end_date: string
   completed_at: string | null
+  /** backend LEFT JOIN — 삭제된 전략은 null */
+  investment_strategies?: {
+    name: string
+    automation_level: number
+    is_active: boolean
+  } | null
 }
 
 interface RankedRow {
@@ -44,6 +50,8 @@ interface RankedRow {
   alreadyActive: boolean // automation_level === 2 + 이미 watchlist에 있음
   applying: boolean
   appliedAt: string | null
+  /** 전략이 삭제됐거나 매핑이 없으면 자동매매 추가 불가 */
+  canAdd: boolean
 }
 
 export default function AutoTradeFromBacktest() {
@@ -79,8 +87,8 @@ export default function AutoTradeFromBacktest() {
     setError(null)
     try {
       const url = t
-        ? `/api/investment/backtest?ticker=${encodeURIComponent(t)}&limit=200`
-        : `/api/investment/backtest?limit=200`
+        ? `/api/investment/backtest?ticker=${encodeURIComponent(t)}&limit=500`
+        : `/api/investment/backtest?limit=500`
       const res = await fetch(url)
       const json = await res.json()
       if (!res.ok) {
@@ -174,13 +182,19 @@ export default function AutoTradeFromBacktest() {
     const rows: RankedRow[] = []
     for (const run of bestRuns) {
       const strat = stratMap.get(run.strategy_id)
-      if (!strat) continue // 삭제된 전략 제외
+      // 삭제됐거나 stratMap에 없는 경우 backend join 정보로 fallback
+      const joinedName = run.investment_strategies?.name
+      const joinedLevel = run.investment_strategies?.automation_level
+      const strategyName = strat?.name ?? joinedName ?? `전략 #${run.strategy_id.slice(0, 8)}`
+      const automationLevel = strat?.automation_level ?? joinedLevel ?? 1
+      const canAdd = Boolean(strat) // 자동매매 추가는 현재 active 사용자 전략만 가능
+
       const wlKey = `${run.strategy_id}::${run.market}::${run.ticker.toUpperCase()}`
       const inWatchlist = watchlistMap.get(wlKey) === true
-      const alreadyActive = strat.automation_level === 2 && inWatchlist
+      const alreadyActive = automationLevel === 2 && inWatchlist
       rows.push({
         strategyId: run.strategy_id,
-        strategyName: strat.name,
+        strategyName,
         totalReturn: Number(run.total_return ?? 0),
         winRate: Number(run.win_rate ?? 0),
         maxDrawdown: Number(run.max_drawdown ?? 0),
@@ -191,6 +205,7 @@ export default function AutoTradeFromBacktest() {
         alreadyActive,
         applying: false,
         appliedAt: null,
+        canAdd,
       })
     }
     return rows.sort((a, b) => b.totalReturn - a.totalReturn)
@@ -383,17 +398,22 @@ export default function AutoTradeFromBacktest() {
                     </div>
                     <button
                       onClick={() => applyAutoTrade(row)}
-                      disabled={isApplied || isApplying}
+                      disabled={isApplied || isApplying || !row.canAdd}
+                      title={!row.canAdd ? '삭제된 전략 — 자동매매로 추가할 수 없습니다' : undefined}
                       className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors inline-flex items-center gap-1.5 ${
                         isApplied
                           ? 'bg-emerald-50 text-emerald-700 cursor-default'
-                          : 'bg-at-accent text-white hover:bg-at-accent-hover disabled:opacity-50'
+                          : !row.canAdd
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            : 'bg-at-accent text-white hover:bg-at-accent-hover disabled:opacity-50'
                       }`}
                     >
                       {isApplying ? (
                         <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 추가 중...</>
                       ) : isApplied ? (
                         <><CheckCircle2 className="w-3.5 h-3.5" /> 추가됨</>
+                      ) : !row.canAdd ? (
+                        <>전략 없음</>
                       ) : (
                         <><Zap className="w-3.5 h-3.5" /> 자동매매 추가</>
                       )}
