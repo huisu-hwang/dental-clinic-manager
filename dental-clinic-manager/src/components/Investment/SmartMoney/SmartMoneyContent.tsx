@@ -113,19 +113,23 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10)
 }
 
-/** YYYY-MM-DD → "MM/DD (요일)" — timezone에 영향받지 않도록 UTC로 명시 파싱 */
+/** YYYY-MM-DD 또는 'YYYY-MM-DD (Pre)' → "MM/DD (요일)" — pre-market suffix는 분리 표기 */
 function formatDayLabel(date: string): string {
-  const [y, m, d] = date.split('-').map(Number)
+  const isPre = / \(Pre\)$/.test(date)
+  const dateOnly = date.replace(/ \(Pre\)$/, '')
+  const [y, m, d] = dateOnly.split('-').map(Number)
   if (!y || !m || !d) return date
   const dt = new Date(Date.UTC(y, m - 1, d))
   const day = dt.getUTCDay()
   const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][day]
-  return `${m}/${d} (${dayLabel})`
+  return `${m}/${d} (${dayLabel})${isPre ? ' Pre' : ''}`
 }
 
-/** "오늘" / "어제" / "그제" 라벨 — 가장 최근(마지막)이 오늘 */
-function formatDayRelative(_date: string, total: number, idx: number): string {
-  const offset = total - 1 - idx // 마지막=0(오늘), 그 앞=1(어제), ...
+/** "오늘" / "어제" / "Pre-Market" 라벨 — hasPre 시 정규장 인덱스 보정 */
+function formatDayRelative(date: string, total: number, idx: number, hasPre = false): string {
+  if (/ \(Pre\)$/.test(date)) return 'Pre-Market'
+  const regularTotal = hasPre ? total - 1 : total
+  const offset = regularTotal - 1 - idx
   if (offset === 0) return '오늘'
   if (offset === 1) return '전 거래일'
   if (offset === 2) return '그 전'
@@ -139,6 +143,7 @@ export function SmartMoneyContent() {
   const [error, setError] = useState<string | null>(null)
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [llmLoading, setLlmLoading] = useState(false)
+  const [includePreMarket, setIncludePreMarket] = useState(false)
 
   // 알림 모달
   const [alertModalOpen, setAlertModalOpen] = useState(false)
@@ -179,6 +184,7 @@ export function SmartMoneyContent() {
           ticker: selected.ticker,
           market: selected.market,
           includeLLM: true,
+          includePreMarket: includePreMarket && selected.market === 'US',
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -207,7 +213,7 @@ export function SmartMoneyContent() {
     } finally {
       setLoading(false)
     }
-  }, [selected])
+  }, [selected, includePreMarket])
 
   const fetchLlmComment = useCallback(async (base: SmartMoneyAnalysis) => {
     setLlmLoading(true)
@@ -331,6 +337,24 @@ export function SmartMoneyContent() {
             )}
           </button>
         </div>
+        {/* Pre-Market 옵션 — US 종목 선택 시만 활성 */}
+        {selected?.market === 'US' && (
+          <label className="mt-2 inline-flex items-center gap-2 text-[12px] text-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includePreMarket}
+              onChange={(e) => setIncludePreMarket(e.target.checked)}
+              disabled={loading}
+              className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>
+              <span className="font-semibold">Pre-Market 포함</span>
+              <span className="text-[11px] text-slate-500 ml-1">
+                (ET 04:00~09:30 봉 + 별도 분석 탭 추가)
+              </span>
+            </span>
+          </label>
+        )}
         {selected && !loading && !analysis && !error && (
           <p className="mt-2 text-[11px] text-slate-500">
             선택됨: <span className="font-mono font-semibold text-blue-600">{selected.ticker}</span>{' '}
@@ -386,7 +410,14 @@ export function SmartMoneyContent() {
                             : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
-                        <span className="block text-[10px] opacity-75">{formatDayRelative(day.asOfDate, analysis.byDay!.length, i)}</span>
+                        <span className="block text-[10px] opacity-75">
+                          {formatDayRelative(
+                            day.asOfDate,
+                            analysis.byDay!.length,
+                            i,
+                            analysis.byDay!.some((d) => / \(Pre\)$/.test(d.asOfDate)),
+                          )}
+                        </span>
                         <span>{formatDayLabel(day.asOfDate)}</span>
                       </button>
                     )
