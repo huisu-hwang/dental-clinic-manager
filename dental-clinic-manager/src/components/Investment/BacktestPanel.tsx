@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   Play, Loader2, TrendingUp, TrendingDown,
-  BarChart3, Award, Clock, Plus, X, Trophy, ArrowLeft,
+  BarChart3, Award, Clock, Plus, X, Trophy, ArrowLeft, History,
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import DateRangePicker from '@/components/Investment/DateRangePicker'
@@ -46,6 +46,7 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
 
   const [tickers, setTickers] = useState<TickerEntry[]>([])
   const [addingMarket, setAddingMarket] = useState<Market>('KR')
+  const [recentTickers, setRecentTickers] = useState<TickerEntry[]>([])
 
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -70,6 +71,24 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
     }
   }, [strategyId])
 
+  // 사용자가 직전에 백테스트했던 종목 목록 (빠른 추가용)
+  const loadRecentTickers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/investment/backtest/recent-tickers?limit=12')
+      const json = await res.json()
+      if (res.ok && Array.isArray(json.data)) {
+        const list: TickerEntry[] = json.data
+          .filter((t: { market: string }) => t.market === 'KR' || t.market === 'US')
+          .map((t: { ticker: string; market: Market; tickerName: string }) => ({
+            ticker: t.ticker,
+            name: t.tickerName || t.ticker,
+            market: t.market,
+          }))
+        setRecentTickers(list)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
   // 전략의 감시 종목을 자동으로 불러와서 초기 선택으로 설정
   const loadWatchlist = useCallback(async () => {
     try {
@@ -93,12 +112,13 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
   useEffect(() => {
     loadStrategy()
     loadWatchlist()
+    loadRecentTickers()
     const end = new Date()
     const start = new Date()
     start.setFullYear(start.getFullYear() - 1)
     setEndDate(end.toISOString().split('T')[0])
     setStartDate(start.toISOString().split('T')[0])
-  }, [loadStrategy, loadWatchlist])
+  }, [loadStrategy, loadWatchlist, loadRecentTickers])
 
   const addTicker = (ticker: string, name?: string, market?: Market) => {
     if (!ticker.trim()) return
@@ -235,25 +255,34 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
           </div>
         )}
 
-        <div className="flex flex-wrap gap-1.5">
-          <span className="text-xs text-at-text-weak mr-1">빠른 추가:</span>
-          {[
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-xs text-at-text-weak mr-1 inline-flex items-center gap-1">
+            {recentTickers.length > 0 && <History className="w-3 h-3" />}
+            {recentTickers.length > 0 ? '이전 백테스트 종목' : '빠른 추가'}:
+          </span>
+          {(recentTickers.length > 0 ? recentTickers : [
             { ticker: '005930', name: '삼성전자', market: 'KR' as Market },
             { ticker: '000660', name: 'SK하이닉스', market: 'KR' as Market },
             { ticker: '035420', name: 'NAVER', market: 'KR' as Market },
             { ticker: 'AAPL', name: 'Apple', market: 'US' as Market },
             { ticker: 'MSFT', name: 'Microsoft', market: 'US' as Market },
             { ticker: 'NVDA', name: 'NVIDIA', market: 'US' as Market },
-          ].map(q => (
-            <button
-              key={`${q.ticker}-${q.market}`}
-              onClick={() => { if (!tickers.some(t => t.ticker === q.ticker && t.market === q.market)) setTickers(prev => [...prev, q]) }}
-              disabled={tickers.some(t => t.ticker === q.ticker && t.market === q.market)}
-              className="px-2 py-0.5 rounded text-xs bg-at-bg text-at-text-secondary hover:bg-at-accent-light hover:text-at-accent transition-colors disabled:opacity-30"
-            >
-              <Plus className="w-3 h-3 inline mr-0.5" />{q.name}
-            </button>
-          ))}
+          ]).map(q => {
+            const already = tickers.some(t => t.ticker === q.ticker && t.market === q.market)
+            return (
+              <button
+                key={`${q.ticker}-${q.market}`}
+                onClick={() => { if (!already) setTickers(prev => [...prev, q]) }}
+                disabled={already}
+                title={`${q.name} (${q.ticker})`}
+                className="px-2 py-0.5 rounded text-xs bg-at-bg text-at-text-secondary hover:bg-at-accent-light hover:text-at-accent transition-colors disabled:opacity-30 inline-flex items-center gap-0.5"
+              >
+                <Plus className="w-3 h-3" />
+                <span className={`text-[9px] px-1 rounded font-bold ${q.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{q.market}</span>
+                <span>{q.name}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
