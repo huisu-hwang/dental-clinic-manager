@@ -7,6 +7,7 @@ import {
   X, CheckCircle2, AlertCircle, Target, Eye,
 } from 'lucide-react'
 import TickerSearch from './TickerSearch'
+import StrategyStatsBlock, { type StrategyBacktestStats } from './StrategyStatsBlock'
 import type { InvestmentStrategy, Market } from '@/types/investment'
 
 interface WatchlistItem {
@@ -22,11 +23,13 @@ interface Props {
   hasCredential: boolean
   onRefresh: () => void
   onBacktest: (id: string) => void
+  /** 전략별 백테스트 집계 통계 (없으면 통계 블록 비표시) */
+  stats?: StrategyBacktestStats | null
 }
 
 const MARKET_LABELS: Record<string, string> = { KR: '국내', US: '미국' }
 
-export default function StrategyCard({ strategy, hasCredential, onRefresh, onBacktest }: Props) {
+export default function StrategyCard({ strategy, hasCredential, onRefresh, onBacktest, stats }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
   const [watchlistLoading, setWatchlistLoading] = useState(false)
@@ -163,6 +166,13 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
           </button>
         </div>
       </div>
+
+      {/* 백테스트 통계 — stats가 전달된 경우만 표시 */}
+      {stats !== undefined && (
+        <div className="mt-3">
+          <StrategyStatsBlock stats={stats} />
+        </div>
+      )}
 
       {/* 활성화 체크리스트 (비활성 상태일 때만) */}
       {!strategy.is_active && (
