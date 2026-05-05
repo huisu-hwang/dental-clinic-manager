@@ -41,11 +41,16 @@ async function main() {
       if (!ticker || !name) continue
       // ETF 표시 가능한 필드 없음 → name으로 휴리스틱 (선택사항)
       const isETF = /\bETF\b/i.test(name) || / FUND$/i.test(name)
+      const mc = typeof r.marketCap === 'number' ? r.marketCap
+        : typeof r.marketCap === 'string' && r.marketCap ? parseFloat(r.marketCap) : 0
+      const sector = r.sector ?? null
       all.push({
         ticker: String(ticker).trim().toUpperCase(),
         name: String(name).trim(),
         exchange: src.exchange,
         isETF,
+        marketCap: Number.isFinite(mc) && mc > 0 ? mc : 0,
+        sector: typeof sector === 'string' && sector ? sector : null,
       })
     }
   }

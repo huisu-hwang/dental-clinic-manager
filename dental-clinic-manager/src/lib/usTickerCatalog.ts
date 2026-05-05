@@ -20,6 +20,9 @@ export interface USTickerEntry {
   name: string
   exchange: string
   isETF: boolean
+  /** 달러 기준 시가총액 (rreichel3 카탈로그 marketCap, 0이면 미상) */
+  marketCap?: number
+  sector?: string | null
 }
 
 const ALL: USTickerEntry[] = catalog as USTickerEntry[]
@@ -81,4 +84,18 @@ export function getUSCatalogEntry(ticker: string): USTickerEntry | undefined {
 
 export function getCatalogSize(): number {
   return ALL.length
+}
+
+/** 시가총액(>0) 보유 종목을 내림차순 정렬해 반환 (스크리너 universe 등 용도) */
+let _sorted: USTickerEntry[] | null = null
+function sortedByMarketCap(): USTickerEntry[] {
+  if (_sorted) return _sorted
+  _sorted = ALL.filter((e) => (e.marketCap ?? 0) > 0 && !e.isETF)
+    .sort((a, b) => (b.marketCap ?? 0) - (a.marketCap ?? 0))
+  return _sorted
+}
+
+/** 시총 상위 N개 — 스크리너 universe 입력용 */
+export function topByMarketCap(n: number): USTickerEntry[] {
+  return sortedByMarketCap().slice(0, Math.max(0, n))
 }
