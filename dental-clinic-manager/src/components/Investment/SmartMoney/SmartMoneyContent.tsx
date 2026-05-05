@@ -25,6 +25,8 @@ import {
   Link2,
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
+import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
+import { useRecentTickers } from '@/hooks/useRecentTickers'
 import { SignalPanel } from './SignalPanel'
 import { AlertSettingsModal } from './AlertSettingsModal'
 import { AlertList } from './AlertList'
@@ -158,6 +160,8 @@ export function SmartMoneyContent() {
 
   const cacheKey = (s: Selected) => `${s.market}:${s.ticker}:${todayKey()}`
 
+  const { add: rememberTicker } = useRecentTickers()
+
   const handleSelectTicker = useCallback((ticker: string, name?: string, market?: Market) => {
     if (!market) return
     const next: Selected = { ticker, market, name: name || ticker }
@@ -165,11 +169,12 @@ export function SmartMoneyContent() {
     setError(null)
     setErrorCode(null)
     setActiveDayIdx(null)
+    rememberTicker(ticker, name || ticker, market)
     // 캐시에 있으면 즉시 표시
     const cached = cacheRef.current.get(`${next.market}:${next.ticker}:${todayKey()}`)
     if (cached) setAnalysis(cached)
     else setAnalysis(null)
-  }, [])
+  }, [rememberTicker])
 
   const runAnalyze = useCallback(async () => {
     if (!selected) return
@@ -336,6 +341,12 @@ export function SmartMoneyContent() {
               </>
             )}
           </button>
+        </div>
+        <div className="mt-2">
+          <RecentTickersButtons
+            market="ALL"
+            onSelect={(t, name, m) => handleSelectTicker(t, name, m)}
+          />
         </div>
         {/* Pre-Market 옵션 — US 종목 선택 시만 활성 */}
         {selected?.market === 'US' && (

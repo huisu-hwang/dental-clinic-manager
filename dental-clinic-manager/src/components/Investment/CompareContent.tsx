@@ -15,6 +15,8 @@ import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/prese
 import PresetDetailView from '@/components/Investment/PresetDetailView'
 import DateRangePicker from '@/components/Investment/DateRangePicker'
 import StrategyStatsBlock, { type StrategyBacktestStats } from '@/components/Investment/StrategyStatsBlock'
+import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
+import { useRecentTickers } from '@/hooks/useRecentTickers'
 import type {
   InvestmentStrategy, Market, BacktestMetrics, EquityCurvePoint, BacktestTrade,
   PresetStrategy, IndicatorConfig, ConditionGroup, RiskSettings,
@@ -248,9 +250,12 @@ function LiveCompareSection() {
     })
   }
 
+  const { add: rememberTicker } = useRecentTickers()
+
   const handleTickerSelect = (t: string, name?: string, m?: Market) => {
     const symbol = t.trim().toUpperCase()
     if (!symbol) return
+    rememberTicker(symbol, name || symbol, m ?? market)
     // 다른 시장 종목 선택 시 시장 전환 (기존 종목/전략 초기화)
     if (m && m !== market) {
       const ok = window.confirm(`다른 시장(${m === 'KR' ? '국내' : '미국'})으로 전환합니다. 선택한 종목과 전략이 초기화됩니다.`)
@@ -506,6 +511,13 @@ function LiveCompareSection() {
               clearOnSelect={true}
               placeholder="종목 검색 후 선택하면 칩으로 추가됩니다"
             />
+            <div className="mt-2">
+              <RecentTickersButtons
+                market="ALL"
+                onSelect={(t, name, m) => handleTickerSelect(t, name, m)}
+                excludeKeys={new Set(tickers.map((tk) => `${market}:${tk.ticker}`))}
+              />
+            </div>
             {tickers.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {tickers.map(t => (
