@@ -8,7 +8,8 @@ import { log } from './logger';
 // - /tmp 스크린샷 호출 제거 (Windows 호환)
 // ============================================
 
-const HOMETAX_MAIN = 'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml';
+// scraping-bridge의 HOMETAX_MAIN과 동일하게 통일 — splash 우회되는 진짜 SPA URL
+const HOMETAX_MAIN = 'https://hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&menuCd=index3';
 
 export interface ScrapeResult {
   dataType: string;
@@ -51,46 +52,107 @@ function getMonthPeriod(year: number, month: number): { start: string; end: stri
   };
 }
 
-/** URL에 tmIdx 파라미터가 나타날 때까지 대기 (메뉴 전환 완료 신호) */
-async function waitForMenuOpen(page: Page, timeoutMs = 8000): Promise<boolean> {
+/**
+ * 메뉴 전환 신호 감지 (다중 시그널 OR)
+ * 1) URL의 tmIdx 파라미터 (legacy)
+ * 2) URL의 어떤 변경이라도
+ * 3) WebSquare 활성 노드/콘텐츠 변경
+ * splash 우회 SPA URL(`websquare.html?menuCd=index3`)에서는 (1)이 안 붙는 경우가 있어 (2)(3)으로 보강.
+ */
+async function waitForMenuOpen(page: Page, beforeUrl: string, timeoutMs = 12000): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (page.url().includes('tmIdx=')) return true;
-    await page.waitForTimeout(150);
+    const cur = page.url();
+    if (cur.includes('tmIdx=')) return true;
+    if (cur !== beforeUrl) return true;
+
+    const transitioned = await page
+      .evaluate(() => {
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        const win = globalThis as any;
+        const doc = win.document;
+        try {
+          // WebSquare 활성 페이지가 index가 아니면 OK
+          const node = win.$p?._currentNode || win.$p?.currentNode;
+          const cur = (node?.id || node?.uri || '').toString();
+          if (cur && !cur.includes('index_pp') && !cur.includes('index3')) return true;
+
+          // 콘텐츠 영역에 폼/그리드 요소 등장
+          const indicators = [
+            'input[id*="iptUserId"]', // 로그인박스 (index 신호)
+          ];
+          // index 신호가 사라졌는지 — 로그인박스는 로그인 후 사라짐
+          const stillIndex = indicators.some((s) => doc.querySelector(s));
+          if (!stillIndex) {
+            // 메뉴 진입 신호: 조회/검색/달력/그리드/select 등
+            const menuSignals = [
+              'select[id*="ear"]',
+              'select[id*="onth"]',
+              'input[id*="Date"]',
+              'input[id*="From"]',
+              'input[id*="To"]',
+              '.w2grid',
+              'table.tbl_blueWhite',
+            ];
+            for (const s of menuSignals) {
+              const el = doc.querySelector(s);
+              if (el && (el.offsetParent !== null || el.offsetWidth > 0)) return true;
+            }
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      })
+      .catch(() => false);
+    if (transitioned) return true;
+    await page.waitForTimeout(200);
   }
   return false;
 }
 
-/** 메뉴 네비게이션: $c.pp.fn_topMenuOpen 호출 */
+/** 메뉴 네비게이션: $c.pp.fn_topMenuOpen 호출 + 관대한 검증 */
 async function navigateToMenu(page: Page, menuId: string): Promise<void> {
-  const navResult = await page.evaluate((id: string) => {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const win = globalThis as any;
-    try {
-      if (win.$c?.pp?.fn_topMenuOpen) {
-        win.$c.pp.fn_topMenuOpen(win.$p, id);
-        return `success: ${id}`;
-      }
-      const el = win.document.getElementById(id);
-      if (el) {
-        el.click();
-        return `clicked: ${id}`;
-      }
-      return 'not_found';
-    } catch (e) {
-      return `error: ${(e as any).message}`;
-    }
-  }, menuId).catch(() => 'evaluate_error');
+  const beforeUrl = page.url();
+  log('info', `[Hometax] 메뉴 진입 시도: ${menuId} (현재 URL: ${beforeUrl.slice(0, 100)})`);
 
-  log('info', `[Hometax] 메뉴 네비게이션: ${navResult}`);
+  const navResult = await page
+    .evaluate((id: string) => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const win = globalThis as any;
+      try {
+        if (win.$c?.pp?.fn_topMenuOpen) {
+          win.$c.pp.fn_topMenuOpen(win.$p, id);
+          return `success: ${id}`;
+        }
+        const el = win.document.getElementById(id);
+        if (el) {
+          el.click();
+          return `clicked: ${id}`;
+        }
+        return 'not_found';
+      } catch (e) {
+        return `error: ${(e as any).message}`;
+      }
+    }, menuId)
+    .catch(() => 'evaluate_error');
 
-  // tmIdx URL 파라미터로 전환 완료 감지 (networkidle 대신 빠른 폴링)
-  const ok = await waitForMenuOpen(page, 8000);
-  if (!ok) {
-    throw new Error(`메뉴 이동 실패: ${menuId}`);
+  log('info', `[Hometax] 메뉴 호출 결과: ${navResult}`);
+
+  if (navResult === 'not_found') {
+    throw new Error(`메뉴 ID를 찾을 수 없음: ${menuId}`);
   }
-  // SPA 컴포넌트 마운트 여유
-  await page.waitForTimeout(800);
+
+  // 다중 시그널로 메뉴 전환 감지 — 실패해도 fatal 아님 (다음 폼 단계에서 진짜 실패가 드러남)
+  const ok = await waitForMenuOpen(page, beforeUrl, 15000);
+  if (ok) {
+    log('info', `[Hometax] 메뉴 전환 감지 (URL: ${page.url().slice(0, 100)})`);
+  } else {
+    log('warn', `[Hometax] 메뉴 전환 신호 미감지 — 후속 단계 진행 (URL: ${page.url().slice(0, 100)})`);
+  }
+
+  // SPA 컴포넌트 마운트 충분한 여유
+  await page.waitForTimeout(3000);
 }
 
 /** 년도 select/input 자동 설정 */
@@ -344,6 +406,7 @@ async function scrapeCashReceiptPurchase(
 /** 사업용신용카드 매입세액 공제 확인/변경 메뉴로 이동 (후보 ID + 키워드 매칭) */
 async function navigateToBusinessCardDeduction(page: Page): Promise<void> {
   for (const id of BUSINESS_CARD_DEDUCTION_CANDIDATES) {
+    const beforeUrl = page.url();
     const result = await page.evaluate((menuId: string) => {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const win = globalThis as any;
@@ -361,13 +424,14 @@ async function navigateToBusinessCardDeduction(page: Page): Promise<void> {
     }, id).catch(() => 'evaluate_error');
 
     log('info', `[Hometax] 매입세액 공제 메뉴 ID 시도: ${id} → ${result}`);
-    if (await waitForMenuOpen(page, 4000)) {
-      await page.waitForTimeout(600);
+    if (result !== 'not_found' && (await waitForMenuOpen(page, beforeUrl, 5000))) {
+      await page.waitForTimeout(1500);
       return;
     }
   }
 
   // 키워드 매칭 폴백
+  const beforeUrl = page.url();
   await page.evaluate((keywords: string[]) => {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const doc = (globalThis as any).document;
@@ -394,12 +458,14 @@ async function navigateToBusinessCardDeduction(page: Page): Promise<void> {
     }
   }, BUSINESS_CARD_DEDUCTION_KEYWORDS).catch(() => {});
 
-  // tmIdx URL 파라미터 출현으로 메뉴 전환 감지
-  const ok = await waitForMenuOpen(page, 8000);
-  if (!ok) {
-    throw new Error('사업용신용카드 매입세액 공제 확인/변경 메뉴 이동 실패');
+  // 다중 시그널 — 실패해도 warn만 (폼 단계에서 진짜 실패가 드러남)
+  const ok = await waitForMenuOpen(page, beforeUrl, 10000);
+  if (ok) {
+    log('info', '[Hometax] 사업용신용카드 메뉴 전환 감지');
+  } else {
+    log('warn', '[Hometax] 사업용신용카드 메뉴 전환 신호 미감지 — 후속 단계 진행');
   }
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(2500);
 }
 
 /** "월별" 조회기간 라디오/탭 클릭 */
