@@ -92,8 +92,24 @@ async function processJob(job: ScrapingJob): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { chromium } = require('playwright');
   const cfg = getConfig();
-  const browser = await chromium.launch({ headless: cfg.headless });
-  const context = await browser.newContext();
+  // 홈택스가 HeadlessChrome user-agent를 차단하므로 일반 Chrome user-agent로 위장.
+  // ERR_CONNECTION_RESET 차단 회피.
+  const browser = await chromium.launch({
+    headless: cfg.headless,
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
+  const context = await browser.newContext({
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    viewport: { width: 1366, height: 900 },
+    locale: 'ko-KR',
+    timezoneId: 'Asia/Seoul',
+  });
+  // navigator.webdriver 제거로 추가 봇 감지 우회
+  await context.addInitScript(() => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    Object.defineProperty(globalThis.navigator, 'webdriver', { get: () => undefined });
+  });
   const page = await context.newPage();
 
   const results: Record<string, { success: boolean; count: number; error?: string }> = {};
@@ -279,7 +295,21 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
   // 2) ID/PW 로그인 — 메인 페이지(`/ui/pp/index_pp.xml`)에 이미 임베드된 로그인 박스 활용
   // 헤더 "로그인" 버튼은 클릭하지 않음 — 메인에 이미 로그인 박스가 있고,
   // 헤더 클릭 시 다른 화면으로 navigate되어 ID 필드가 사라지는 문제 발생.
-  await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
+  // 홈택스가 가끔 첫 connection을 ERR_CONNECTION_RESET으로 차단하므로 retry 적용.
+  let gotoErr: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
+      gotoErr = null;
+      break;
+    } catch (err) {
+      gotoErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      log('warn', `[Scraping/login] page.goto 실패 (시도 ${attempt}/3): ${msg}`);
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
+  }
+  if (gotoErr) throw gotoErr;
   await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
   // 보안 팝업 닫기 (있으면)
