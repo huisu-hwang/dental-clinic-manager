@@ -1,4 +1,10 @@
+-- ============================================
 -- 투자 모듈 즐겨찾기 종목 (사용자별)
+-- - investment_favorites: 사용자가 즐겨찾기한 종목 ((user_id, ticker, market) UNIQUE)
+-- Migration: 20260506_investment_favorites.sql
+-- Created: 2026-05-06
+-- ============================================
+
 CREATE TABLE IF NOT EXISTS investment_favorites (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
