@@ -14,6 +14,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from 'react'
@@ -149,6 +150,44 @@ export function ScannerProvider({ children }: { children: React.ReactNode }) {
   const [job, setJob] = useState<ScannerJob | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const cancelledRef = useRef(false)
+  /** 이미 DB에 저장한 job id (중복 저장 방지) */
+  const savedJobIdsRef = useRef<Set<string>>(new Set())
+
+  // job 종료 시 자동으로 screener_runs에 저장
+  useEffect(() => {
+    if (!job) return
+    if (job.status !== 'completed' && job.status !== 'cancelled' && job.status !== 'error') return
+    if (savedJobIdsRef.current.has(job.id)) return
+    savedJobIdsRef.current.add(job.id)
+    const totalMatches = Object.values(job.matchesByStrategy).reduce(
+      (sum, arr) => sum + arr.length,
+      0,
+    )
+    fetch('/api/investment/screener-runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        started_at: new Date(job.startedAt).toISOString(),
+        finished_at: job.finishedAt ? new Date(job.finishedAt).toISOString() : null,
+        status: job.status,
+        as_of_date: job.asOfDate,
+        universe: job.universe,
+        universe_label: job.universeLabel,
+        realtime: job.realtime,
+        total_tickers: job.total,
+        total_matches: totalMatches,
+        strategy_keys: job.strategyKeys,
+        strategy_names: job.strategyNames,
+        matches_by_strategy: job.matchesByStrategy,
+        failed_by_strategy: job.failedByStrategy,
+        error_message: job.error ?? null,
+      }),
+    }).catch((err) => {
+      console.warn('[ScannerContext] screener_runs 저장 실패:', err)
+      // 실패 시 다시 시도할 수 있도록 set에서 제거
+      savedJobIdsRef.current.delete(job.id)
+    })
+  }, [job])
 
   const startScan = useCallback(async (input: StartScanInput) => {
     // 1. 이전 스캔이 진행 중이면 abort

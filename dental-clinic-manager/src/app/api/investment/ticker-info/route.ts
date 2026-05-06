@@ -90,6 +90,41 @@ export async function GET(req: NextRequest) {
     const stats = sum?.defaultKeyStatistics ?? {}
     const fin = sum?.financialData ?? {}
 
+    // KR 종목은 trailingPE/EPS/PBR/operatingIncome이 비어 오는 경우가 많음.
+    // quote() 응답에서 추가 필드 시도 (priceEpsCurrentYear, forwardPE 등 KR에서도 종종 채워짐).
+    const q: any = await yahoo.quote(symbol).catch(() => null)
+    const currentPrice = numOrNull((price as any)?.regularMarketPrice ?? q?.regularMarketPrice)
+
+    // PER fallback: trailing → forward → currentYear EPS 기준
+    const per = numOrNull(
+      (detail as any)?.trailingPE
+        ?? (stats as any)?.trailingPE
+        ?? q?.trailingPE
+        ?? (stats as any)?.forwardPE
+        ?? q?.forwardPE
+        ?? q?.priceEpsCurrentYear,
+    )
+
+    // EPS fallback: trailing → forward → 계산(price/per)
+    let eps = numOrNull(
+      (stats as any)?.trailingEps
+        ?? (fin as any)?.epsTrailingTwelveMonths
+        ?? q?.epsTrailingTwelveMonths
+        ?? q?.epsForward
+        ?? (stats as any)?.forwardEps,
+    )
+    if (eps == null && per != null && currentPrice != null && per > 0) {
+      eps = currentPrice / per
+    }
+
+    // operatingIncome fallback: 직접값 → revenue × operatingMargin 추정
+    const totalRevenue = numOrNull((fin as any)?.totalRevenue)
+    const operatingMargins = numOrNull((fin as any)?.operatingMargins)
+    let operatingIncome = numOrNull((fin as any)?.operatingIncome)
+    if (operatingIncome == null && totalRevenue != null && operatingMargins != null) {
+      operatingIncome = totalRevenue * operatingMargins
+    }
+
     const rank = market === 'US'
       ? getUSMarketCapRank(ticker)
       : getKRMarketCapRank(ticker)
@@ -132,15 +167,15 @@ export async function GET(req: NextRequest) {
       marketCap: numOrNull((price as any)?.marketCap ?? (detail as any)?.marketCap),
       marketCapRank: rank,
       fundamentals: {
-        per: numOrNull((detail as any)?.trailingPE ?? (stats as any)?.trailingPE),
-        pbr: numOrNull((stats as any)?.priceToBook),
+        per,
+        pbr: numOrNull((stats as any)?.priceToBook ?? q?.priceToBook),
         roe: numOrNull((fin as any)?.returnOnEquity),
-        eps: numOrNull((stats as any)?.trailingEps ?? (fin as any)?.epsTrailingTwelveMonths),
-        dividendYield: numOrNull((detail as any)?.dividendYield),
-        revenue: numOrNull((fin as any)?.totalRevenue),
-        operatingIncome: numOrNull((fin as any)?.operatingIncome),
+        eps,
+        dividendYield: numOrNull((detail as any)?.dividendYield ?? q?.trailingAnnualDividendYield),
+        revenue: totalRevenue,
+        operatingIncome,
         netIncome: numOrNull((fin as any)?.netIncomeToCommon ?? (stats as any)?.netIncomeToCommon),
-        operatingMargin: numOrNull((fin as any)?.operatingMargins),
+        operatingMargin: operatingMargins,
         profitMargin: numOrNull((fin as any)?.profitMargins),
         debtToEquity: numOrNull((fin as any)?.debtToEquity),
       },

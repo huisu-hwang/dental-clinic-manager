@@ -11,9 +11,10 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Search, Loader2, AlertCircle, Sparkles, User, X, CheckCircle2, ChevronDown, ChevronRight, Info, Zap } from 'lucide-react'
+import { Search, Loader2, AlertCircle, Sparkles, User, X, CheckCircle2, ChevronDown, ChevronRight, Info, Zap, History } from 'lucide-react'
 import TickerInfoModal from './TickerInfoModal'
 import FavoritesButtons from './FavoritesButtons'
+import ScreenerHistoryTab from './ScreenerHistoryTab'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
 import { getUniverse, type UniverseId } from '@/lib/screenerUniverses'
@@ -54,9 +55,12 @@ const UNIVERSE_OPTIONS: { id: UniverseId; label: string; eta: string; desc: stri
   { id: 'ALL', label: '전체 (KR + US)', eta: '~2.5분', desc: '국내 + 미국 약 328개' },
 ]
 
+type ViewMode = 'new' | 'history'
+
 export default function ScreenerContent() {
   const { job, startScan, cancelScan } = useScanner()
 
+  const [viewMode, setViewMode] = useState<ViewMode>('new')
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loadingStrategies, setLoadingStrategies] = useState(true)
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
@@ -196,6 +200,44 @@ export default function ScreenerContent() {
           여러 전략을 동시에 선택하면 전략별로 분리된 결과를 한 번에 확인할 수 있습니다.
         </p>
       </div>
+
+      {/* 탭 네비게이션 */}
+      <div className="flex items-center gap-1 border-b border-at-border">
+        <button
+          type="button"
+          onClick={() => setViewMode('new')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            viewMode === 'new'
+              ? 'border-purple-500 text-purple-700'
+              : 'border-transparent text-at-text-secondary hover:text-at-text'
+          }`}
+        >
+          <Search className="inline w-4 h-4 mr-1" />
+          새 스캔
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('history')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            viewMode === 'history'
+              ? 'border-purple-500 text-purple-700'
+              : 'border-transparent text-at-text-secondary hover:text-at-text'
+          }`}
+        >
+          <History className="inline w-4 h-4 mr-1" />
+          히스토리
+        </button>
+      </div>
+
+      {viewMode === 'history' && (
+        <ScreenerHistoryTab
+          onSelectTicker={(ticker, market, name) => {
+            setInfoTicker({ ticker, market, name })
+          }}
+        />
+      )}
+
+      {viewMode === 'new' && (<>
 
       {/* 즐겨찾기 종목 바로가기 */}
       <FavoritesButtons
@@ -537,6 +579,8 @@ export default function ScreenerContent() {
           </div>
         </section>
       )}
+
+      </>)}
 
       {/* 상세 모달 */}
       {detailPresetId && (

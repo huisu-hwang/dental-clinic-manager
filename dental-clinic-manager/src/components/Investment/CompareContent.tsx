@@ -91,7 +91,6 @@ const METRIC_GLOSSARY: Record<string, { title: string; body: string; formula?: s
 const MAX_COMPARE = 50
 // 다중 종목 비교 상한 (종목 × 전략 = 백테스트 호출 수)
 const MAX_TICKERS = 10
-const MAX_PAIRS = 200
 // 백테스트 동시 호출 수 (서버 부하 분산)
 const COMPARE_CHUNK = 8
 
@@ -283,11 +282,8 @@ function LiveCompareSection() {
   const runCompare = async () => {
     if (selectedIds.size === 0) return setError('비교할 전략을 1개 이상 선택해주세요')
     if (tickers.length === 0) return setError('비교할 종목을 1개 이상 선택해주세요')
-    const totalPairs = selectedIds.size * tickers.length
-    if (totalPairs > MAX_PAIRS) {
-      return setError(`종목 ${tickers.length} × 전략 ${selectedIds.size} = ${totalPairs}회는 너무 많습니다 (최대 ${MAX_PAIRS}회).`)
-    }
 
+    const totalPairs = selectedIds.size * tickers.length
     setRunning(true)
     setError(null)
     setResults([])
@@ -852,45 +848,65 @@ function MatrixView({
         </table>
       </div>
 
-      {/* 활성 셀 상세 */}
+      {/* 활성 셀 상세 — 모달 */}
       {activeResult && !activeResult.error && (
-        <div className="rounded-xl border border-at-accent/40 bg-blue-50/40 p-3">
-          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs px-2 py-0.5 rounded bg-white border border-at-border font-mono font-semibold">
-                {activeResult.ticker}
-              </span>
-              <span className="text-sm font-semibold text-at-text">{activeResult.strategyName}</span>
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-6 overflow-y-auto bg-black/50 backdrop-blur-sm"
+          onClick={() => onCellClick(null)}
+        >
+          <div
+            className="relative w-full max-w-5xl bg-at-surface rounded-2xl shadow-2xl border border-at-border my-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-at-border">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs px-2 py-0.5 rounded bg-at-surface-alt border border-at-border font-mono font-semibold">
+                  {activeResult.ticker}
+                </span>
+                <span className="text-sm font-semibold text-at-text truncate">{activeResult.strategyName}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onCellClick(null)}
+                className="text-at-text-weak hover:text-at-text"
+                title="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              onClick={() => onCellClick(null)}
-              className="text-xs text-at-text-secondary hover:text-at-text inline-flex items-center gap-0.5"
-              type="button"
-            >
-              <X className="w-3 h-3" />닫기
-            </button>
-          </div>
-          <div className="grid grid-cols-3 md:grid-cols-7 gap-2 text-[11px]">
-            <Metric label="수익률" value={`${activeResult.metrics.totalReturn > 0 ? '+' : ''}${activeResult.metrics.totalReturn.toFixed(2)}%`} />
-            <Metric label="B&H" value={`${(activeResult.buyHold?.totalReturn ?? 0) > 0 ? '+' : ''}${(activeResult.buyHold?.totalReturn ?? 0).toFixed(2)}%`} />
-            <Metric label="승률" value={`${activeResult.metrics.winRate.toFixed(1)}%`} />
-            <Metric label="거래" value={`${activeResult.metrics.totalTrades}`} />
-            <Metric label="Sharpe" value={`${activeResult.metrics.sharpeRatio.toFixed(2)}`} />
-            <Metric label="MDD" value={`${activeResult.metrics.maxDrawdown.toFixed(2)}%`} />
-            <Metric label="PF" value={`${activeResult.metrics.profitFactor.toFixed(2)}`} />
-          </div>
-          {activeResult.trades.length > 0 && (
-            <div className="mt-3">
-              <p className="text-[11px] font-semibold text-at-text-secondary mb-1">매매 내역</p>
-              <TradesMiniTable trades={activeResult.trades} />
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-3 md:grid-cols-7 gap-2 text-[11px]">
+                <Metric label="수익률" value={`${activeResult.metrics.totalReturn > 0 ? '+' : ''}${activeResult.metrics.totalReturn.toFixed(2)}%`} />
+                <Metric label="B&H" value={`${(activeResult.buyHold?.totalReturn ?? 0) > 0 ? '+' : ''}${(activeResult.buyHold?.totalReturn ?? 0).toFixed(2)}%`} />
+                <Metric label="승률" value={`${activeResult.metrics.winRate.toFixed(1)}%`} />
+                <Metric label="거래" value={`${activeResult.metrics.totalTrades}`} />
+                <Metric label="Sharpe" value={`${activeResult.metrics.sharpeRatio.toFixed(2)}`} />
+                <Metric label="MDD" value={`${activeResult.metrics.maxDrawdown.toFixed(2)}%`} />
+                <Metric label="PF" value={`${activeResult.metrics.profitFactor.toFixed(2)}`} />
+              </div>
+              {activeResult.trades.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-at-text-secondary mb-1">매매 내역</p>
+                  <TradesMiniTable trades={activeResult.trades} />
+                </div>
+              )}
             </div>
-          )}
+            <div className="px-5 py-3 border-t border-at-border flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => onCellClick(null)}
+                className="text-xs px-3 py-1.5 rounded bg-at-accent text-white hover:opacity-90"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* 범례 */}
       <div className="flex items-center justify-between text-[10px] text-at-text-weak">
-        <span>셀 클릭 → 상세 메트릭과 매매내역 펼침</span>
+        <span>셀 클릭 → 상세 메트릭·매매 내역 모달</span>
         <span className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1">
             <span className="w-3 h-3 rounded" style={{ background: 'rgba(59,130,246,0.35)' }} />
