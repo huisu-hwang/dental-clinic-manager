@@ -3,28 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Permission } from '@/types/permissions'
-import { DEFAULT_PERMISSIONS, PERMISSION_DESCRIPTIONS } from '@/types/permissions'
-
-// 신규 추가된 기능의 권한 prefix 목록
-// 커스텀 권한에 해당 prefix 권한이 하나도 없으면 역할 기본값에서 자동 보충
-const NEW_FEATURE_PREFIXES = [
-  'payroll_',
-  'task_checklist_',
-  'task_directive_',
-  'bulletin_',
-  'community_',
-  'recall_',
-  'ai_analysis_',
-  'financial_',
-  'marketing_',
-  'investment_',
-  'monthly_report_',
-  'referral_',
-] as const
-
-// 신규로 추가된 개별 권한(prefix 보충 대상이 아닌 단독 권한)
-// 기존 그룹에 추가된 권한이라 prefix 보충에서 누락되므로, 직급 기본값에서 직접 보충
-const NEW_INDIVIDUAL_PERMISSIONS: Permission[] = ['contract_view_all']
+import {
+  DEFAULT_PERMISSIONS,
+  PERMISSION_DESCRIPTIONS,
+  NEW_FEATURE_PREFIXES,
+  NEW_INDIVIDUAL_PERMISSIONS,
+} from '@/types/permissions'
 
 export function usePermissions() {
   const { user } = useAuth()

@@ -305,6 +305,27 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
   ]
 }
 
+// 신규 추가 기능 prefix 목록
+// 기존 직원의 저장된 커스텀 권한에 해당 prefix 권한이 하나도 없으면
+// 역할 기본 권한에서 자동 보충 (usePermissions / PermissionSelector 공용)
+export const NEW_FEATURE_PREFIXES = [
+  'payroll_',
+  'task_checklist_',
+  'task_directive_',
+  'bulletin_',
+  'community_',
+  'recall_',
+  'ai_analysis_',
+  'financial_',
+  'marketing_',
+  'investment_',
+  'monthly_report_',
+  'referral_',
+] as const
+
+// 기존 그룹에 추가된 단독 신규 권한 (prefix 보충 대상이 아니라 직접 보충)
+export const NEW_INDIVIDUAL_PERMISSIONS: Permission[] = ['contract_view_all']
+
 // 권한 그룹 정의 (UI 표시용)
 export const PERMISSION_GROUPS = {
   '일일 보고서': [

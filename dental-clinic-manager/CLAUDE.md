@@ -9,6 +9,14 @@
 - 동일한 오류가 반복되어도 접근 방식을 바꿔가며 성공할 때까지 재시도한다.
 - **"오류가 발생해서 멈췄습니다" 같은 보고 후 대기 상태로 빠지는 것은 절대 금지**. 해결하고 계속 진행할 것.
 - 최종 목표(기능 정상 작동 + 푸시 완료)에 도달할 때까지 스스로 판단하여 작업을 이어간다.
+### 구현 완료 시 정상 작동 할 때까지 테스트 수정 반복한다. 
+### 정상 작동하면 develop에 푸쉬해.
+### 적당한 에이전트 팀을 구성한 후 구현 시작해. 
+### 테스트 할 때는 항상 로그인 먼저 하고 테스트 진행해. 
+### 새로운 기능 만들때는 항상 디자인 시스템을 따라서 구현해.
+### 기능 추가하거나 오류 수정시 기존의 정상작동하는 기능에 영향을 주지 않도록 해.
+### 기능 정상 작동확인 되면 develop 브랜치에 푸쉬하고 pr 생성 후 main 에 병합해줘.
+
 
 ---
 
@@ -130,6 +138,20 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres  # Transaction Mo
 > **주의**: git push가 실패하면 반드시 원인을 파악하고 해결한 후 재시도하여 푸시를 완료해야 한다. 실패한 채로 두지 않는다.
 > **주의**: 작업 중 실패나 오류가 발생하면 멈추지 말고 원인을 파악하여 해결한 후 이어서 계속 작업한다. 사용자에게 되묻지 않고 자동으로 처리한다.
 > **주의**: 모든 작업 완료 후 반드시 `develop` 브랜치에 푸시한다. (`git push origin develop`)
+
+### 신규 기능/메뉴 추가 시 권한 등록 (필수)
+**메뉴나 기능을 추가할 때 권한 관리 UI에 자동으로 노출되도록 아래 절차를 반드시 따른다:**
+
+1. `src/types/permissions.ts`
+   - `Permission` union에 신규 권한 키 추가 (예: `'newfeature_view'`, `'newfeature_manage'`)
+   - `PERMISSION_GROUPS`에 그룹 항목 추가 (직원 권한 관리 모달에 노출되는 단위)
+   - `PERMISSION_DESCRIPTIONS`에 한글 설명 추가
+   - 역할별 `DEFAULT_PERMISSIONS`에 적절히 추가 (owner는 전부, 다른 직급은 정책에 맞게)
+   - 신규 prefix(`newfeature_`)를 `NEW_FEATURE_PREFIXES`에 추가 → 기존 직원에게도 자동 노출됨
+2. `src/config/menuConfig.ts`의 `MENU_CONFIG`에 신규 메뉴 추가 시 `permissions: ['newfeature_view']` 처럼 위에서 만든 권한을 사용
+3. 검증: `npm run check:permissions` (prebuild에 자동 결합되어 있음 — 누락 시 빌드 실패)
+
+> **이유**: PermissionSelector 모달은 `PERMISSION_GROUPS`를 동적으로 순회하여 렌더하므로, 위 절차만 지키면 자동으로 권한 관리 UI에 노출된다. `NEW_FEATURE_PREFIXES`에 등록된 prefix는 기존에 커스텀 권한을 저장한 직원에게도 다음 모달 오픈 시 자동 보충된다.
 
 ### 일반 기능 개발 (필수 워크플로우)
 **특정 기능 구현 프롬프트가 입력되면 반드시 아래 순서를 따른다:**

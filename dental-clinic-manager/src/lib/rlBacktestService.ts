@@ -17,6 +17,59 @@ function getServerConfig() {
   }
 }
 
+/**
+ * rl-inference-server의 raw 에러 응답을 사용자 친화적 한국어 메시지로 변환한다.
+ * - 빈번한 케이스(미래 기간/짧은 기간/yfinance 실패)를 명시적으로 잡고,
+ *   알 수 없는 케이스는 원본 detail을 함께 노출해서 디버깅 가능하게 둔다.
+ */
+function translateRLServerError(
+  status: number,
+  rawBody: string,
+  ctx: { startDate: string; endDate: string },
+): string {
+  let detail = rawBody
+  try {
+    const parsed = JSON.parse(rawBody) as { detail?: unknown }
+    if (typeof parsed.detail === 'string') detail = parsed.detail
+    else if (parsed.detail) detail = JSON.stringify(parsed.detail)
+  } catch {
+    // raw text는 그대로 사용
+  }
+
+  // 가장 자주 발생: 미래 기간 → yfinance 응답 0행 → dropna 후 0행
+  if (/insufficient OHLCV.*rows=0/i.test(detail)) {
+    return (
+      `선택한 기간(${ctx.startDate} ~ ${ctx.endDate})에 시장 데이터가 없습니다. ` +
+      `미래 날짜는 백테스트할 수 없습니다. 종료일을 오늘 이전으로 설정하고 ` +
+      `최소 7거래일 이상의 기간을 선택하세요.`
+    )
+  }
+  // 휴장일/주말만 포함된 짧은 기간
+  if (/no rebalance dates/i.test(detail)) {
+    return (
+      `선택한 기간(${ctx.startDate} ~ ${ctx.endDate})에 거래일이 부족합니다. ` +
+      `최소 1주(7일) 이상, 가급적 주중을 포함하는 기간을 선택하세요.`
+    )
+  }
+  // 데이터는 있는데 너무 적음
+  if (/insufficient OHLCV/i.test(detail)) {
+    return (
+      `백테스트에 필요한 시장 데이터가 부족합니다 (${ctx.startDate} ~ ${ctx.endDate}). ` +
+      `기간을 늘려 다시 시도하세요. (원본: ${detail.slice(0, 120)})`
+    )
+  }
+  // yfinance 자체 실패 (rate limit/네트워크 차단)
+  if (/yfinance|yahoo|HTTP Error|Connection|Timeout/i.test(detail)) {
+    return (
+      `Yahoo Finance에서 가격 데이터를 가져올 수 없습니다. ` +
+      `잠시 후 다시 시도하거나 다른 기간/종목으로 시도하세요. (원본: ${detail.slice(0, 150)})`
+    )
+  }
+
+  // 알 수 없는 케이스: 상세 내용 일부 노출
+  return `RL 백테스트 서버 오류 (${status}): ${detail.slice(0, 250)}`
+}
+
 interface RLBacktestResponse {
   total_return: number
   sharpe_ratio: number
@@ -103,7 +156,7 @@ export async function runRLBacktest(params: RLBacktestParams): Promise<RLBacktes
     }
     if (!resp.ok) {
       const text = await resp.text().catch(() => '')
-      throw new Error(`rl-inference-server /backtest_universe ${resp.status}: ${text.slice(0, 300)}`)
+      throw new Error(translateRLServerError(resp.status, text, { startDate, endDate }))
     }
     const json = (await resp.json()) as RLBacktestResponse
     return {

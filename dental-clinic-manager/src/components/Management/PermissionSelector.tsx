@@ -2,8 +2,40 @@
 
 import { useState, useEffect } from 'react'
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
-import { DEFAULT_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_DESCRIPTIONS } from '@/types/permissions'
+import {
+  DEFAULT_PERMISSIONS,
+  PERMISSION_GROUPS,
+  PERMISSION_DESCRIPTIONS,
+  NEW_FEATURE_PREFIXES,
+  NEW_INDIVIDUAL_PERMISSIONS,
+} from '@/types/permissions'
 import type { Permission } from '@/types/permissions'
+
+// 기존 직원의 저장된 권한에 신규 기능 권한이 빠져 있으면 역할 기본값에서 자동 보충
+// 새 기능이 추가된 후 권한 모달을 열어도 신규 그룹이 자연스럽게 사전 체크되도록 한다.
+function supplementWithNewFeatures(
+  saved: Permission[],
+  role: string,
+): Permission[] {
+  const merged = [...saved]
+  const roleDefaults = DEFAULT_PERMISSIONS[role] || []
+
+  for (const prefix of NEW_FEATURE_PREFIXES) {
+    const hasFeaturePerms = merged.some((p) => p.startsWith(prefix))
+    if (!hasFeaturePerms) {
+      const featureDefaults = roleDefaults.filter((p) => p.startsWith(prefix))
+      merged.push(...featureDefaults)
+    }
+  }
+
+  for (const perm of NEW_INDIVIDUAL_PERMISSIONS) {
+    if (!merged.includes(perm) && roleDefaults.includes(perm)) {
+      merged.push(perm)
+    }
+  }
+
+  return merged
+}
 
 interface PermissionSelectorProps {
   role: string
@@ -25,8 +57,9 @@ export default function PermissionSelector({
 
   useEffect(() => {
     if (initialPermissions && initialPermissions.length > 0) {
-      // 커스텀 권한이 저장되어 있으면 사용
-      setSelectedPermissions(new Set(initialPermissions))
+      // 커스텀 권한 + 신규 기능 권한 자동 보충 (저장 시점 이후 추가된 메뉴 포함)
+      const supplemented = supplementWithNewFeatures(initialPermissions, role)
+      setSelectedPermissions(new Set(supplemented))
       setUseDefaultPermissions(false)
     } else {
       // 권한이 없거나 빈 배열이면 역할 기반 기본 권한 설정
