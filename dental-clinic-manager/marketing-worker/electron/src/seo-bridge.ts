@@ -150,22 +150,64 @@ async function processKeywordAnalysis(job: SeoJob, page: any): Promise<void> {
   // 2. 네이버 블로그 검색
   const searchUrl = `https://search.naver.com/search.naver?ssc=tab.blog.all&query=${encodeURIComponent(keyword)}`;
   await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(2500);
 
-  // 3. 상위 5개 블로그 URL 수집
-  const postUrls: string[] = await page.evaluate(() => {
-    const links: string[] = [];
-    const items = document.querySelectorAll('.title_area a, .api_txt_lines.total_tit');
-    items.forEach((el: Element) => {
-      const href = (el as HTMLAnchorElement).href;
-      if (href && href.includes('blog.naver.com') && links.length < 5) {
-        links.push(href);
-      }
-    });
-    return links;
+  // 3. 상위 5개 블로그 URL 수집 — selector 후보 확장 (네이버 UI 변동 대응)
+  const collected: { urls: string[]; selectorHits: Record<string, number> } = await page.evaluate(() => {
+    const candidates = [
+      '.title_area a',
+      '.api_txt_lines.total_tit',
+      'a.title_link',
+      '.bx .title_area a',
+      '.lst_total a[href*="blog.naver.com"]',
+      'a[href*="blog.naver.com"]', // 폴백 (전역)
+    ];
+    const seen = new Set<string>();
+    const urls: string[] = [];
+    const selectorHits: Record<string, number> = {};
+    for (const sel of candidates) {
+      const items = document.querySelectorAll(sel);
+      let hit = 0;
+      items.forEach((el: Element) => {
+        const href = (el as HTMLAnchorElement).href;
+        if (href && href.includes('blog.naver.com') && !seen.has(href) && urls.length < 5) {
+          seen.add(href);
+          urls.push(href);
+          hit++;
+        }
+      });
+      if (hit > 0) selectorHits[sel] = hit;
+      if (urls.length >= 5) break;
+    }
+    return { urls, selectorHits };
   });
 
-  log('info', `[SEO] "${keyword}" 검색 결과: ${postUrls.length}개 블로그 발견`);
+  const postUrls = collected.urls;
+  log(
+    'info',
+    `[SEO] "${keyword}" 검색 결과: ${postUrls.length}개 블로그 발견 ` +
+      `(selector hits: ${JSON.stringify(collected.selectorHits)})`
+  );
+
+  // 0개 결과면 명시적 fail로 throw — 잡이 'completed'로 끝나면서 데이터 없는 모호한 상태 방지
+  if (postUrls.length === 0) {
+    // DOM 진단: 차단/검색결과없음 페이지 구분에 도움
+    const diag = await page
+      .evaluate(() => {
+        const doc = (globalThis as any).document;
+        const bodyText = (doc.body?.innerText || '').slice(0, 300);
+        const isCaptcha = !!doc.querySelector('#captcha, [class*="captcha"]');
+        const isBlocked = bodyText.includes('비정상') || bodyText.includes('차단');
+        return { bodyHead: bodyText.replace(/\s+/g, ' ').slice(0, 200), isCaptcha, isBlocked };
+      })
+      .catch(() => null);
+    log('warn', `[SEO] 0건 진단: ${JSON.stringify(diag)}`);
+    throw new Error(
+      diag?.isCaptcha || diag?.isBlocked
+        ? '네이버 봇 차단 또는 캡챠 발생 — 잠시 후 다시 시도해주세요'
+        : '네이버 블로그 검색 결과 0건'
+    );
+  }
 
   // 4. 각 글 분석
   const analyzedPosts = [];
@@ -177,13 +219,18 @@ async function processKeywordAnalysis(job: SeoJob, page: any): Promise<void> {
       // 개별 포스트 저장
       await client!.saveData({
         type: 'analyzed_post',
-        data: { ...postData, keyword },
+        data: { ...postData, keyword, job_id: job.id },
       });
 
       log('info', `[SEO] 포스트 ${i + 1}/${postUrls.length} 분석 완료`);
     } catch (err) {
       log('warn', `[SEO] 포스트 ${i + 1} 분석 실패: ${err instanceof Error ? err.message : err}`);
     }
+  }
+
+  // 분석 가능한 포스트가 0건이면 fail (URL은 모았지만 모두 스크래핑 실패한 케이스)
+  if (analyzedPosts.length === 0) {
+    throw new Error('수집된 모든 블로그 글 분석 실패');
   }
 
   // 5. 통계 요약 계산 + 상태 업데이트
