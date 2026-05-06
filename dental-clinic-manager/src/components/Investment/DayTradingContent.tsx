@@ -14,6 +14,7 @@ import { useState, useMemo } from 'react'
 import { Zap, Play, Loader2, Target, TrendingDown, TrendingUp, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
+import FavoritesButtons from '@/components/Investment/FavoritesButtons'
 import { useRecentTickers } from '@/hooks/useRecentTickers'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import type { Market, BacktestMetrics, BacktestTrade, EquityCurvePoint, PresetStrategy } from '@/types/investment'
@@ -219,6 +220,10 @@ export default function DayTradingContent() {
               </p>
             )}
             <div className="mt-2">
+              <FavoritesButtons
+                market={market}
+                onSelect={(t, name, m) => handleTickerSelect(t, name, m)}
+              />
               <RecentTickersButtons
                 market={market}
                 onSelect={(t, name, m) => handleTickerSelect(t, name, m)}
