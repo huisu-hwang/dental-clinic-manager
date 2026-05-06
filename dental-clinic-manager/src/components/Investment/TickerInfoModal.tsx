@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Star, X, BarChart3, ExternalLink, Loader2 } from 'lucide-react'
+import { Star, X, BarChart3, ExternalLink, Loader2, Sparkles, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useFavorites } from '@/hooks/useFavorites'
 import type { Market } from '@/types/investment'
@@ -144,6 +144,7 @@ export default function TickerInfoModal({ ticker, market, tickerName, onClose, o
               <PriceCard data={data} />
               <FundamentalGrid data={data} />
               <ChartBlock data={data} range={range} setRange={setRange} />
+              <AIAnalysisSection ticker={ticker} market={market} />
             </>
           )}
 
@@ -346,4 +347,128 @@ function fmtMarketCap(v: number | null, market: Market): string {
 }
 function fmtBigMoney(v: number | null, market: Market): string {
   return fmtMarketCap(v, market)
+}
+
+interface AnalysisData {
+  ticker: string
+  market: Market
+  name: string
+  description: string | null
+  sector: string | null
+  industry: string | null
+  earnings: { label: string; revenueAvg: number | null; earningsAvg: number | null; growth: number | null }[]
+  outlook: string
+  risks: string[]
+  asOf: string
+}
+
+function AIAnalysisSection({ ticker, market }: { ticker: string; market: Market }) {
+  const [open, setOpen] = useState(false)
+  const [data, setData] = useState<AnalysisData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = () => {
+    if (data || loading) return
+    setLoading(true)
+    setError(null)
+    fetch(`/api/investment/ticker-analysis?ticker=${encodeURIComponent(ticker)}&market=${market}`)
+      .then(async (r) => {
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}))
+          throw new Error(j?.error ?? `HTTP ${r.status}`)
+        }
+        return r.json() as Promise<AnalysisData>
+      })
+      .then(setData)
+      .catch((e) => setError(e instanceof Error ? e.message : '분석 실패'))
+      .finally(() => setLoading(false))
+  }
+
+  return (
+    <div className="border border-purple-200 rounded-xl bg-gradient-to-br from-purple-50/40 to-blue-50/40">
+      <button
+        type="button"
+        onClick={() => { setOpen(!open); if (!open) load() }}
+        className="w-full flex items-center justify-between gap-2 px-4 py-2.5 hover:bg-white/40 rounded-t-xl"
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-purple-600" />
+          <span className="font-semibold text-sm text-at-text">AI 회사 분석</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-bold">Claude</span>
+        </div>
+        {open ? <ChevronDown className="w-4 h-4 text-at-text-weak" /> : <ChevronRight className="w-4 h-4 text-at-text-weak" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3">
+          {loading && (
+            <div className="flex items-center gap-2 text-at-text-secondary text-xs">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              회사 분석 생성 중... (3-5초 소요)
+            </div>
+          )}
+          {error && !loading && (
+            <div className="text-rose-600 text-xs bg-rose-50 border border-rose-200 rounded px-3 py-2">
+              {error}
+            </div>
+          )}
+          {data && !loading && (
+            <>
+              <div>
+                <p className="text-[11px] font-semibold text-at-text-secondary mb-1">
+                  {data.sector || '미상'} · {data.industry || '미상'}
+                </p>
+                <p className="text-xs text-at-text leading-relaxed">{data.description || '—'}</p>
+              </div>
+
+              {data.earnings.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-at-text-secondary mb-1">📊 애널리스트 컨센서스</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {data.earnings.map((e, i) => (
+                      <div key={i} className="bg-white border border-at-border rounded px-2 py-1.5">
+                        <p className="text-[10px] text-at-text-weak">{e.label}</p>
+                        <p className="text-xs font-mono text-at-text">
+                          매출 {fmtBigMoney(e.revenueAvg, market)}
+                        </p>
+                        <p className="text-[10px] font-mono text-at-text-secondary">
+                          {e.growth != null ? `성장률 ${(e.growth * 100).toFixed(1)}%` : '—'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <p className="text-[11px] font-semibold text-at-text-secondary mb-1">🔮 향후 전망</p>
+                <p className="text-xs text-at-text leading-relaxed whitespace-pre-line">{data.outlook}</p>
+              </div>
+
+              {data.risks.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-at-text-secondary mb-1 inline-flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                    위험 요소
+                  </p>
+                  <ul className="space-y-1">
+                    {data.risks.map((r, i) => (
+                      <li key={i} className="text-xs text-at-text bg-white border border-amber-200/60 rounded px-2 py-1.5">
+                        {r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-[10px] text-at-text-weak">
+                * 정량 데이터: yahoo-finance · 서술 분석: Claude · 투자 권유 아님
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
