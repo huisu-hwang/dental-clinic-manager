@@ -92,6 +92,15 @@ async function resolvePreviewState(
     if (data) {
       return { status: 'completed', progress: 100, step: '분석 완료', data };
     }
+    // completed지만 분석 가능한 데이터가 없는 경우 (검색 결과 0건 또는 네이버 selector 깨짐)
+    // → fall-through로 "no active job" 보내지 말고 친절한 메시지 반환
+    return {
+      status: 'failed',
+      progress: 0,
+      step: '검색 결과 없음',
+      error:
+        '네이버 블로그에서 해당 키워드의 분석 가능한 글을 찾지 못했습니다. 키워드를 바꿔서 다시 시도해주세요.',
+    };
   }
 
   // 2) 24h 내 가장 최근 잡 확인
@@ -174,11 +183,27 @@ async function resolvePreviewState(
     return { status: 'pending', progress: 10, step: '워커에 분석 요청을 등록했습니다...', jobId: newJob.id };
   }
 
-  // 4) autoRequeue=false (GET) — 잡 자체가 없는 상태
+  // 4) autoRequeue=false (GET) — 잡 자체가 없거나 모두 종료된 상태
   if (latestJob && latestJob.status === 'failed') {
     return { status: 'failed', progress: 0, step: '분석에 실패했습니다.', error: latestJob.error_message || '워커 오류', jobId: latestJob.id };
   }
-  return { status: 'failed', progress: 0, step: '분석 잡이 없습니다.', error: 'no active job' };
+  // latestJob이 completed인데 buildResultFromAnalysis가 null이라 (1) 분기에서 data 없는 케이스로
+  // 떨어진 경우는 (1)에서 이미 "검색 결과 없음"으로 처리됨. 여기 도달했다면 정말 잡이 없는 상태.
+  if (latestJob && latestJob.status === 'completed') {
+    return {
+      status: 'failed',
+      progress: 0,
+      step: '검색 결과 없음',
+      error: '이전 분석에서 결과를 찾지 못했습니다. 다른 키워드로 다시 시도해주세요.',
+      jobId: latestJob.id,
+    };
+  }
+  return {
+    status: 'failed',
+    progress: 0,
+    step: '분석 잡이 없습니다.',
+    error: '분석 요청을 다시 실행해주세요.',
+  };
 }
 
 export async function POST(request: NextRequest) {
