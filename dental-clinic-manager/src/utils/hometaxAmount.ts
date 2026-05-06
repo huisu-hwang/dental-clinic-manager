@@ -68,15 +68,17 @@ export function extractMonthAmount(
 ): number {
   if (!Array.isArray(records) || records.length === 0) return 0;
 
-  const hasYearMonthField = records.some(record =>
-    YEAR_MONTH_FIELDS.some(key => {
+  // 연월 필드(거래년월 등) 또는 월 텍스트 필드(월/기간 등) 중 하나라도 있으면
+  // per-month 데이터로 간주하여 해당 월만 필터링.
+  const hasPeriodField = records.some(record =>
+    [...YEAR_MONTH_FIELDS, ...MONTH_ONLY_FIELDS].some(key => {
       const val = record[key];
       return val !== undefined && val !== null && val !== '';
     })
   );
 
   let rowsToSum: Record<string, unknown>[];
-  if (hasYearMonthField) {
+  if (hasPeriodField) {
     const monthRows = findMonthRows(records, year, targetMonth);
     if (monthRows.length === 0) return 0;
     rowsToSum = monthRows;
