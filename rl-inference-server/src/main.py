@@ -82,7 +82,16 @@ def backtest_universe(req: BacktestUniverseRequest):
     closes_dict = {t: df[t]["Close"] for t in req.universe if t in df.columns.get_level_values(0)}
     if not closes_dict:
         raise HTTPException(status_code=502, detail="yfinance returned no data for universe")
-    closes = pd.DataFrame(closes_dict).dropna(axis=0, how="any")
+    closes = pd.DataFrame(closes_dict)
+    # 상장폐지/티커 변경 등으로 전체 NaN인 컬럼은 모델 입력 차원 유지 위해 1.0으로 padding.
+    # (가격 변동 0 → 모델이 해당 종목을 거래하지 않는 효과)
+    delisted_tickers = [c for c in closes.columns if closes[c].isna().all()]
+    if delisted_tickers:
+        closes[delisted_tickers] = 1.0
+    # 부분 NaN(중간 결측)은 forward-fill 후 backward-fill로 채움.
+    closes = closes.ffill().bfill()
+    # 최후 수단: 시작 시점부터 NaN인 행만 잘라냄
+    closes = closes.dropna(axis=0, how="any")
     if len(closes) <= req.state_window + 5:
         raise HTTPException(
             status_code=400,

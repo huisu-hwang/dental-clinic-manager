@@ -136,7 +136,7 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
   // 2) Wyckoff Phase (20) — 다단계
   // ============================================
   let wyckoffPhaseComponent = 0
-  if (wyckoffPhase && wyckoffPhase.cycle && wyckoffPhase.phase) {
+  if (wyckoffPhase && wyckoffPhase.cycle && wyckoffPhase.phase && wyckoffPhase.events.length > 0) {
     const cycleSign = wyckoffPhase.cycle === 'accumulation' ? 1 : -1
     // Phase C/D/E일수록 강하게 가중 (E=1.0, D=0.85, C=0.7, B=0.5, A=0.35)
     const phaseWeight =

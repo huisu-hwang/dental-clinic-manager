@@ -70,12 +70,29 @@ function translateRLServerError(
   return `RL 백테스트 서버 오류 (${status}): ${detail.slice(0, 250)}`
 }
 
+interface RLTradeRecord {
+  entry_date: string
+  exit_date: string
+  ticker: string
+  direction: 'buy' | 'sell'
+  entry_price: number
+  exit_price: number
+  quantity: number
+  pnl: number
+  pnl_percent: number
+  holding_days: number
+}
+
 interface RLBacktestResponse {
   total_return: number
   sharpe_ratio: number
   max_drawdown: number
   n_rebalances: number
   equity_curve: Array<{ date: string; equity: number }>
+  buy_hold_return?: number
+  buy_hold_curve?: Array<{ date: string; equity: number }>
+  win_rate?: number
+  trades?: RLTradeRecord[]
   metadata: Record<string, unknown>
 }
 
@@ -92,6 +109,10 @@ export interface RLBacktestResult {
   max_drawdown: number
   n_rebalances: number
   equity_curve: Array<{ date: string; equity: number }>
+  buy_hold_return: number
+  buy_hold_curve: Array<{ date: string; equity: number }>
+  win_rate: number
+  trades: RLTradeRecord[]
   rl_metadata: Record<string, unknown>
 }
 
@@ -165,6 +186,10 @@ export async function runRLBacktest(params: RLBacktestParams): Promise<RLBacktes
       max_drawdown: json.max_drawdown,
       n_rebalances: json.n_rebalances,
       equity_curve: json.equity_curve,
+      buy_hold_return: json.buy_hold_return ?? 0,
+      buy_hold_curve: json.buy_hold_curve ?? [],
+      win_rate: json.win_rate ?? 0,
+      trades: json.trades ?? [],
       rl_metadata: json.metadata,
     }
   } finally {

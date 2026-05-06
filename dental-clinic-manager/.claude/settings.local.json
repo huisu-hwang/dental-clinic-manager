@@ -92,7 +92,11 @@
       "Bash(git branch:*)",
       "Bash(npm run typecheck:*)",
       "Bash(npm run lint:*)",
-      "mcp__suggestion-inbox__update_suggestion_task"
+      "mcp__suggestion-inbox__update_suggestion_task",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_navigate",
+      "Bash(kill %bztc7z4m3)"
     ],
     "deny": [],
     "ask": [],

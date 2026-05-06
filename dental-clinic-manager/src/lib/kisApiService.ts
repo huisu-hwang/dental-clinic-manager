@@ -57,8 +57,32 @@ interface KISCredential {
   isPaperTrading: boolean
 }
 
+export class KISMinuteDataError extends Error {
+  readonly code: string
+  readonly date: string
+  readonly hour: string
+
+  constructor(message: string, options: { code?: string; date: string; hour: string }) {
+    super(message)
+    this.name = 'KISMinuteDataError'
+    this.code = options.code ?? 'UNKNOWN'
+    this.date = options.date
+    this.hour = options.hour
+  }
+}
+
 function getBaseUrl(isPaperTrading: boolean): string {
   return isPaperTrading ? KIS_DOMAINS.paper : KIS_DOMAINS.live
+}
+
+function isKRMinuteCursorExhaustedResponse(json: { msg_cd?: string; msg1?: string }): boolean {
+  const message = `${json.msg_cd ?? ''} ${json.msg1 ?? ''}`.toLowerCase()
+  return (
+    message.includes('조회된 데이터가 없습니다') ||
+    message.includes('해당하는 자료가 없습니다') ||
+    message.includes('데이터가 없습니다') ||
+    message.includes('no data')
+  )
 }
 
 /**
@@ -829,10 +853,15 @@ async function fetchKRMinutesPastDay(
       invalidateToken(credentialId)
       return fetchKRMinutesPastDay(credentialId, credential, ticker, date, hour, attempt + 1)
     }
-    // rt_cd != '0'은 모두 "데이터 없음"으로 간주하고 호출 측이 cursor 점프하도록
-    // (휴장일/공휴일/장 시작 전 미래 시각 등 다양한 코드 — KIS msg_cd가 표준화되어 있지 않음)
-    console.warn('[KIS FHKST03010230] empty response', { msg_cd: json.msg_cd, msg1: json.msg1, date, hour })
-    return []
+    if (isKRMinuteCursorExhaustedResponse(json)) {
+      console.warn('[KIS FHKST03010230] cursor exhausted', { msg_cd: json.msg_cd, msg1: json.msg1, date, hour })
+      return []
+    }
+    console.warn('[KIS FHKST03010230] business error', { msg_cd: json.msg_cd, msg1: json.msg1, date, hour })
+    throw new KISMinuteDataError(
+      `KIS 일별 분봉 조회 실패: [${json.msg_cd ?? 'UNKNOWN'}] ${json.msg1 ?? '알 수 없는 오류'}`,
+      { code: json.msg_cd, date, hour },
+    )
   }
 
   interface KISMinuteItem {

@@ -27,6 +27,7 @@ import {
   getKRMinutePrices,
   getKRInvestorTrend,
   getKRDailyPrices,
+  KISMinuteDataError,
   type KRMinuteBar,
   type KRInvestorDay,
 } from '@/lib/kisApiService'
@@ -148,6 +149,7 @@ export async function POST(request: NextRequest) {
   let recent20DayHigh = 0
   let recent20DayLow = 0
   let investorHistory: KRInvestorDay[] = []
+  let intradayUnavailableReason: string | null = null
   // KST 기준 — 서버 timezone(UTC) 영향 받지 않음
   const asOfDate = toKstDateString(new Date())
 
@@ -170,21 +172,36 @@ export async function POST(request: NextRequest) {
 
       // 분봉 (1분봉 1200개 ≈ 정규장 3거래일치 — KIS 페이지네이션 40 req로 ~3초 소요)
       // KIS rate limit + Vercel function timeout(60s) 안에서 안정적으로 받을 수 있는 양
-      const krBars: KRMinuteBar[] = await getKRMinutePrices({
-        credentialId: kisCredential.credentialId,
-        credential: krCredential,
-        ticker,
-        intervalMinutes: 1,
-        count: 1200,
-      })
-      bars = krBars.map((b) => ({
-        datetime: b.datetime,
-        open: b.open,
-        high: b.high,
-        low: b.low,
-        close: b.close,
-        volume: b.volume,
-      }))
+      try {
+        const krBars: KRMinuteBar[] = await getKRMinutePrices({
+          credentialId: kisCredential.credentialId,
+          credential: krCredential,
+          ticker,
+          intervalMinutes: 1,
+          count: 1200,
+        })
+        bars = krBars.map((b) => ({
+          datetime: b.datetime,
+          open: b.open,
+          high: b.high,
+          low: b.low,
+          close: b.close,
+          volume: b.volume,
+        }))
+      } catch (err) {
+        if (err instanceof KISMinuteDataError) {
+          intradayUnavailableReason = err.message
+          bars = []
+          console.warn('[smart-money/analyze] KR 분봉 비즈니스 오류로 intraday 분석 비활성화:', {
+            ticker,
+            code: err.code,
+            date: err.date,
+            hour: err.hour,
+          })
+        } else {
+          throw err
+        }
+      }
 
       // 일봉 (60일치 — 와이코프 페이즈/유동성 풀 컨텍스트)
       const today = new Date()
@@ -295,20 +312,11 @@ export async function POST(request: NextRequest) {
       { status: 422 }
     )
   }
-  // 분봉이 비어있고 일봉만 있을 때(장 마감/주말/휴일) — 일봉을 분봉 자리에도 활용
-  if (bars.length === 0 && dailyBars.length > 0) {
-    bars = dailyBars
-  }
-
-  // 정규장(+옵션 pre-market) 시간만 필터 — post-market은 항상 제외
-  // dailyBars로 fallback된 경우는 시간 정보가 없으므로 그대로 유지
-  if (bars !== dailyBars && bars.length > 0) {
-    const filterFn = (b: NormalizedBar) =>
-      isRegularTradingHours(b.datetime, market) ||
-      (includePreMarket && isPreMarketUS(b.datetime))
-    const filtered = bars.filter(filterFn)
-    if (filtered.length >= 30) bars = filtered
-  }
+  const regularBars = bars.filter((b) => isRegularTradingHours(b.datetime, market))
+  const preMarketBars =
+    includePreMarket && market === 'US'
+      ? bars.filter((b) => isPreMarketUS(b.datetime))
+      : []
 
   // 5. 엔진 호출
   let vwap, wyckoff, wyckoffIntraday, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
@@ -330,9 +338,9 @@ export async function POST(request: NextRequest) {
     // [60일 일봉] wyckoffPhase / marketStructure / liquidity / OB-FVG / traps
     //   - 다일 구조 패턴. 일봉이 본질적으로 옳고 안정적.
     // ================================================================
-    const intradayLast1Day = extractLastNTradingDays(bars, 1)
-    const intradayLast2Days = extractLastNTradingDays(bars, 2)
-    const multiDayBars: NormalizedBar[] = dailyBars.length >= 30 ? dailyBars : bars
+    const intradayLast1Day = extractLastNTradingDays(regularBars, 1)
+    const intradayLast2Days = extractLastNTradingDays(regularBars, 2)
+    const multiDayBars: NormalizedBar[] = dailyBars.length >= 30 ? dailyBars : regularBars
 
     // 진행 중인 거래일이 짧으면(장 시작 직후) 알고리즘/VWAP 패턴 인식이 부족함
     // → 300봉(1분봉 ≈ 5시간) 미만이면 2거래일치로 fallback (어제 풀 거래일 + 오늘 진행분)
@@ -344,12 +352,14 @@ export async function POST(request: NextRequest) {
     console.log('[smart-money/analyze] 데이터 윈도우:', {
       ticker,
       market,
-      total_intraday: bars.length,
+      total_intraday: regularBars.length,
+      total_pre_market: preMarketBars.length,
       intraday_1day: intradayLast1Day.length,
       intraday_2days: intradayLast2Days.length,
       intraday_for_algo: intradayForAlgo.length,
       daily: dailyBars.length,
       multiDay: multiDayBars.length,
+      intraday_unavailable_reason: intradayUnavailableReason,
     })
 
     // ===== Intraday 엔진 (1~2일치 적응) =====
@@ -474,10 +484,10 @@ export async function POST(request: NextRequest) {
         return dt.slice(0, 10)
       }
     }
-    const dayKeys = Array.from(new Set(bars.map((b) => dayKeyOf(b.datetime)).filter(Boolean))).sort()
+    const dayKeys = Array.from(new Set(regularBars.map((b) => dayKeyOf(b.datetime)).filter(Boolean))).sort()
     // 일자별 봉 수 (timezone normalized)
     const dayBarCounts = new Map<string, number>()
-    for (const b of bars) {
+    for (const b of regularBars) {
       const k = dayKeyOf(b.datetime)
       if (!k) continue
       dayBarCounts.set(k, (dayBarCounts.get(k) ?? 0) + 1)
@@ -491,7 +501,7 @@ export async function POST(request: NextRequest) {
     )
     const recentDayKeys = fullDays.slice(-3)
     for (const dayKey of recentDayKeys) {
-      const dayBars = bars.filter((b) => dayKeyOf(b.datetime) === dayKey)
+      const dayBars = regularBars.filter((b) => dayKeyOf(b.datetime) === dayKey)
       if (dayBars.length < 5) continue
       const closePrice = dayBars[dayBars.length - 1].close
 
@@ -577,9 +587,10 @@ export async function POST(request: NextRequest) {
     // ===== Pre-Market 별도 entry (US 옵션) =====
     // 가장 최근 일자의 pre-market 봉만 분리해 분석 → byDay에 추가
     if (includePreMarket && market === 'US') {
-      const latestDayKey = recentDayKeys[recentDayKeys.length - 1]
+      const preDayKeys = Array.from(new Set(preMarketBars.map((b) => dayKeyOf(b.datetime)).filter(Boolean))).sort()
+      const latestDayKey = preDayKeys[preDayKeys.length - 1]
       if (latestDayKey) {
-        const preBars = bars.filter(
+        const preBars = preMarketBars.filter(
           (b) => dayKeyOf(b.datetime) === latestDayKey && isPreMarketUS(b.datetime),
         )
         if (preBars.length >= 10) {
