@@ -9,7 +9,10 @@ import { scrapeHometaxData, returnToMain } from './hometax-scrapers';
 // scraping-jobs를 폴링하여 홈택스 스크래핑 후 대시보드 API로 전송
 // ============================================
 
-const HOMETAX_MAIN = 'https://www.hometax.go.kr/websquare/websquare.wq?w2xPath=/ui/pp/index_pp.xml';
+// 홈택스 진입점: 종합소득세 시즌에는 루트가 splash 페이지(agitx_index.html?isCdn=Y)로 redirect됨.
+// 진짜 SPA URL(`websquare.html?w2xPath=...&menuCd=index3`)로 직접 진입하면 splash 우회 가능.
+// splash로 빠지면 "홈택스 바로가기" 박스(TH4BOX)를 클릭해서 진짜 SPA로 이동.
+const HOMETAX_MAIN = 'https://hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&menuCd=index3';
 
 export type ScrapingStatus = 'idle' | 'polling' | 'scraping' | 'error';
 
@@ -312,6 +315,38 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
   if (gotoErr) throw gotoErr;
   await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
+  // 종합소득세 시즌 splash 페이지(agitx_index.html) 자동 우회.
+  // "홈택스 바로가기" 박스(TH4BOX)를 클릭하면 진짜 SPA로 이동.
+  if (page.url().includes('agitx_index.html')) {
+    log('info', '[Scraping/login] splash 페이지 감지 — 홈택스 바로가기 클릭');
+    const bypassed = await page.evaluate(() => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const doc = (globalThis as any).document;
+      const candidates = ['TH4BOX', 'RD3BOX'];
+      for (const id of candidates) {
+        const box = doc.getElementById(id);
+        if (!box) continue;
+        const a = box.querySelector('a');
+        if (a) { a.click(); return id; }
+      }
+      // 폴백: "홈택스 바로가기" 텍스트로 검색
+      const all = doc.querySelectorAll('a');
+      for (const el of Array.from(all) as any[]) {
+        if ((el.textContent || '').includes('홈택스')) { el.click(); return 'text-fallback'; }
+      }
+      return null;
+    }).catch(() => null);
+    if (bypassed) {
+      log('info', `[Scraping/login] splash 우회 클릭: ${bypassed}`);
+      await page.waitForLoadState('load', { timeout: 30000 }).catch(() => {});
+      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    } else {
+      log('warn', '[Scraping/login] splash 우회 실패 — 진짜 SPA URL로 직접 이동 재시도');
+      await page.goto('https://hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&menuCd=index3', { waitUntil: 'load', timeout: 30000 }).catch(() => {});
+      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    }
+  }
+
   // 보안 팝업 닫기 (있으면)
   for (const sel of ['.popup_close', '.btn_close', 'button:has-text("닫기")', 'a:has-text("닫기")']) {
     try {
@@ -325,12 +360,43 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
   }
 
   // SPA 동적 로딩 안정화 — 로그인 박스(공동/간편/아이디)가 보일 때까지 대기.
-  // CDN wrapper 페이지가 먼저 로드된 뒤 진짜 SPA가 비동기로 채워지므로 추가 대기 필요.
-  await page
-    .locator('a:has-text("아이디 로그인"), [id*="loginboxFrame_anchor24"]')
+  // 홈택스는 첫 응답으로 CDN wrapper(agitx_index.html?isCdn=Y)를 보내고
+  // 그 안의 JS가 비동기로 진짜 SPA를 fetch하는 2단계 로딩 구조.
+  // 핵심 element가 안 보이면 reload로 SPA 강제 갱신.
+  const idLoginSelector = '[id*="loginboxFrame_anchor24"], a:has-text("아이디 로그인")';
+  let loginBoxReady = await page
+    .locator(idLoginSelector)
     .first()
-    .waitFor({ state: 'visible', timeout: 15000 })
-    .catch(() => {});
+    .waitFor({ state: 'visible', timeout: 30000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!loginBoxReady) {
+    log('warn', '[Scraping/login] CDN wrapper 감지 가능성 — 강제 reload 후 재대기');
+    await page.reload({ waitUntil: 'load', timeout: 30000 }).catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    loginBoxReady = await page
+      .locator(idLoginSelector)
+      .first()
+      .waitFor({ state: 'visible', timeout: 30000 })
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  if (!loginBoxReady) {
+    // 그래도 안 보이면 진단 후 진행 (TreeWalker 폴백 시도)
+    const diag = await page.evaluate(() => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const doc = (globalThis as any).document;
+      return {
+        url: location.href,
+        title: doc.title,
+        htmlLen: doc.body?.innerHTML?.length || 0,
+        anchorCount: doc.querySelectorAll('a').length,
+      };
+    }).catch(() => null);
+    log('error', `[Scraping/login] 로그인 박스 미발견 — 진단: ${JSON.stringify(diag)}`);
+  }
 
   // "아이디 로그인" 탭 클릭 — 정확한 ID 우선 + TreeWalker 폴백
   const idTabClicked = await safeClick(
