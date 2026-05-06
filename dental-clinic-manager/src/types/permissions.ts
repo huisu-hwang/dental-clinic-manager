@@ -158,6 +158,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
+    // 유료 기능(리콜/AI/경영현황/월간보고서/소개환자/마케팅/투자)은 기본 제외 — 대표원장만 보유
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
     'logs_view', 'inventory_view', 'inventory_manage',
@@ -188,22 +189,11 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 병원 게시판 (조회/관리)
     'bulletin_view', 'bulletin_manage',
     // 커뮤니티 (조회/작성)
-    'community_view', 'community_post',
-    // 리콜 관리 (조회/관리)
-    'recall_view', 'recall_manage',
-    // AI 데이터 분석 (조회)
-    'ai_analysis_view',
-    // 경영 현황 (조회)
-    'financial_view',
-    // 마케팅 자동화 (조회)
-    'marketing_view',
-    // 월간 성과 보고서 (조회)
-    'monthly_report_view',
-    // 소개환자 관리 (모든 권한)
-    'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust'
+    'community_view', 'community_post'
   ],
   manager: [
     // 실장은 프로토콜 조회와 히스토리, 1차 승인만 가능
+    // 유료 기능(리콜/AI/경영현황/월간보고서/소개환자/마케팅/투자)은 기본 제외 — 대표원장만 보유
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
     'logs_view', 'inventory_view', 'inventory_manage',
@@ -231,18 +221,11 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 병원 게시판 (조회/관리)
     'bulletin_view', 'bulletin_manage',
     // 커뮤니티 (조회/작성)
-    'community_view', 'community_post',
-    // 리콜 관리 (조회/관리)
-    'recall_view', 'recall_manage',
-    // 경영 현황 (조회)
-    'financial_view',
-    // 월간 성과 보고서 (조회)
-    'monthly_report_view',
-    // 소개환자 관리 (모든 권한)
-    'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust'
+    'community_view', 'community_post'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
+    // 유료 기능(리콜/AI/경영현황/월간보고서/소개환자/마케팅/투자)은 기본 제외 — 대표원장만 보유
     'daily_report_view', 'daily_report_create', 'daily_report_edit',
     'stats_weekly_view', 'stats_monthly_view',
     'logs_view', 'inventory_view', 'guide_view',
@@ -268,12 +251,11 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 병원 게시판 (조회)
     'bulletin_view',
     // 커뮤니티 (조회/작성)
-    'community_view', 'community_post',
-    // 리콜 관리 (조회)
-    'recall_view'
+    'community_view', 'community_post'
   ],
   staff: [
     // 일반 직원은 프로토콜 조회, 본인 출퇴근, 본인 연차만 가능
+    // 유료 기능(리콜/AI/경영현황/월간보고서/소개환자/마케팅/투자)은 기본 제외 — 대표원장만 보유
     'daily_report_view', 'daily_report_create',
     'stats_weekly_view',
     'inventory_view', 'guide_view',
@@ -299,9 +281,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 병원 게시판 (조회)
     'bulletin_view',
     // 커뮤니티 (조회/작성)
-    'community_view', 'community_post',
-    // 리콜 관리 (조회)
-    'recall_view'
+    'community_view', 'community_post'
   ]
 }
 
