@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
+import FavoritesButtons from '@/components/Investment/FavoritesButtons'
 import { useRecentTickers } from '@/hooks/useRecentTickers'
 import { SignalPanel } from './SignalPanel'
 import { AlertSettingsModal } from './AlertSettingsModal'
@@ -348,6 +349,10 @@ export function SmartMoneyContent() {
           </button>
         </div>
         <div className="mt-2">
+          <FavoritesButtons
+            market="ALL"
+            onSelect={(t, name, m) => handleSelectTicker(t, name, m)}
+          />
           <RecentTickersButtons
             market="ALL"
             onSelect={(t, name, m) => handleSelectTicker(t, name, m)}
