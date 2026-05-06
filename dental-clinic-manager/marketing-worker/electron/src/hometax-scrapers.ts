@@ -25,8 +25,22 @@ export type DataType =
 /** 메뉴 ID 매핑 (홈택스 fn_topMenuOpen 호출용) */
 const MENU_ID_MAP: Record<DataType, string> = {
   cash_receipt_purchase: 'menuAtag_4605010100',
-  business_card_purchase: 'menuAtag_4608020300',
+  business_card_purchase: 'menuAtag_4608020200',
 };
+
+// 사업용신용카드 매입세액 공제 확인/변경 메뉴 후보 (홈택스 환경 변동 대응)
+const BUSINESS_CARD_DEDUCTION_CANDIDATES = [
+  'menuAtag_4608020200',
+  'menuAtag_4608020100',
+  'menuAtag_4608010100',
+  'menuAtag_4608010200',
+];
+
+const BUSINESS_CARD_DEDUCTION_KEYWORDS = [
+  '매입세액 공제 확인/변경',
+  '매입세액공제 확인/변경',
+  '매입세액 공제',
+];
 
 /** YYYYMMDD 형식 월별 기간 */
 function getMonthPeriod(year: number, month: number): { start: string; end: string } {
@@ -316,22 +330,225 @@ async function scrapeCashReceiptPurchase(
   };
 }
 
-/** 사업용 신용카드 매입 누계 — 년도 조회 */
+/** 사업용신용카드 매입세액 공제 확인/변경 메뉴로 이동 (후보 ID + 키워드 매칭) */
+async function navigateToBusinessCardDeduction(page: Page): Promise<void> {
+  for (const id of BUSINESS_CARD_DEDUCTION_CANDIDATES) {
+    const result = await page.evaluate((menuId: string) => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const win = globalThis as any;
+      try {
+        if (win.$c?.pp?.fn_topMenuOpen) {
+          win.$c.pp.fn_topMenuOpen(win.$p, menuId);
+          return 'success';
+        }
+        const el = win.document.getElementById(menuId);
+        if (el) { el.click(); return 'clicked'; }
+        return 'not_found';
+      } catch (e) {
+        return `error: ${(e as any).message}`;
+      }
+    }, id).catch(() => 'evaluate_error');
+
+    log('info', `[Hometax] 매입세액 공제 메뉴 ID 시도: ${id} → ${result}`);
+    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+
+    if (page.url().includes('tmIdx=')) return;
+  }
+
+  // 키워드 매칭 폴백
+  await page.evaluate((keywords: string[]) => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const doc = (globalThis as any).document;
+    const win = globalThis as any;
+    const items = Array.from(
+      doc.querySelectorAll('a[id*="menuAtag"], a[id*="combineMenuAtag"]') as any[],
+    );
+    for (const el of items) {
+      const text = (el.textContent?.trim() || '').replace(/\s+/g, ' ');
+      for (const kw of keywords) {
+        if (text.includes(kw)) {
+          try {
+            if (win.$c?.pp?.fn_topMenuOpen) {
+              win.$c.pp.fn_topMenuOpen(win.$p, el.id);
+            } else {
+              el.click();
+            }
+            return;
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+  }, BUSINESS_CARD_DEDUCTION_KEYWORDS).catch(() => {});
+
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(3000);
+
+  if (!page.url().includes('tmIdx=')) {
+    throw new Error('사업용신용카드 매입세액 공제 확인/변경 메뉴 이동 실패');
+  }
+}
+
+/** "월별" 조회기간 라디오/탭 클릭 */
+async function selectMonthlyPeriod(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const doc = (globalThis as any).document;
+    const win = globalThis as any;
+
+    const radios = doc.querySelectorAll('input[type="radio"]');
+    for (const r of Array.from(radios) as any[]) {
+      const labelEl = doc.querySelector(`label[for="${r.id}"]`);
+      const labelText = labelEl?.textContent?.trim() || '';
+      const valueText = (r.value || '').toString();
+      if (labelText.includes('월별') || valueText === 'M' || valueText.includes('월')) {
+        r.checked = true;
+        r.click();
+        r.dispatchEvent(new win.Event('change', { bubbles: true }));
+        return;
+      }
+    }
+
+    const candidates = doc.querySelectorAll('a, button, span, div, label, li');
+    for (const el of Array.from(candidates) as any[]) {
+      const text = el.textContent?.trim() || '';
+      if (text === '월별' && (el.offsetParent !== null || el.offsetWidth > 0)) {
+        el.click();
+        return;
+      }
+    }
+  }).catch(() => {});
+
+  await page.waitForTimeout(1500);
+}
+
+/** 연/월 select 또는 input 설정 */
+async function setYearMonth(page: Page, year: number, month: number): Promise<void> {
+  const ym = `${year}${String(month).padStart(2, '0')}`;
+  await page.evaluate(
+    (params: { y: number; m: number; ym: string }) => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const doc = (globalThis as any).document;
+      const win = globalThis as any;
+      const yStr = String(params.y);
+      const mStr = String(params.m).padStart(2, '0');
+
+      const setSelectValue = (el: any, candidates: string[]): boolean => {
+        const opts = el.querySelectorAll('option');
+        for (const opt of Array.from(opts) as any[]) {
+          const v = (opt.value || '').toString();
+          const t = (opt.textContent || '').toString().trim();
+          if (candidates.includes(v) || candidates.includes(t)) {
+            el.value = opt.value;
+            el.dispatchEvent(new win.Event('change', { bubbles: true }));
+            return true;
+          }
+        }
+        return false;
+      };
+
+      const allSelects = Array.from(doc.querySelectorAll('select') as any[]).filter(
+        (el: any) => el.offsetParent !== null || el.offsetWidth > 0,
+      );
+
+      // 1) yyyymm 단일 select 시도
+      for (const sel of allSelects) {
+        if (
+          setSelectValue(sel, [params.ym, `${yStr}${mStr}`, `${yStr}-${mStr}`, `${yStr}년 ${params.m}월`])
+        ) return;
+      }
+
+      // 2) 연도 + 월 분리 select
+      let yearSet = false;
+      let monthSet = false;
+      for (const sel of allSelects) {
+        const idLower = (sel.id || '').toLowerCase();
+        const nameLower = (sel.name || '').toLowerCase();
+        const isYear =
+          idLower.includes('year') || idLower.includes('yyyy') || nameLower.includes('year');
+        const isMonth =
+          idLower.includes('month') || idLower.includes('mm') || nameLower.includes('month');
+        if (isYear && !yearSet && setSelectValue(sel, [yStr, `${yStr}년`])) yearSet = true;
+        if (
+          isMonth &&
+          !monthSet &&
+          setSelectValue(sel, [mStr, String(params.m), `${params.m}월`, `${mStr}월`])
+        )
+          monthSet = true;
+      }
+
+      // 휴리스틱 폴백
+      if (!yearSet || !monthSet) {
+        for (const sel of allSelects) {
+          const opts = Array.from(sel.querySelectorAll('option') as any[]);
+          const hasYearOption = opts.some((o: any) =>
+            /^20\d{2}(년)?$/.test((o.textContent || '').trim()),
+          );
+          const hasMonthOption = opts.some((o: any) =>
+            /^(0?[1-9]|1[0-2])(월)?$/.test((o.textContent || '').trim()),
+          );
+          if (!yearSet && hasYearOption && setSelectValue(sel, [yStr, `${yStr}년`])) yearSet = true;
+          else if (
+            !monthSet &&
+            hasMonthOption &&
+            setSelectValue(sel, [mStr, String(params.m), `${params.m}월`, `${mStr}월`])
+          )
+            monthSet = true;
+        }
+      }
+    },
+    { y: year, m: month, ym },
+  ).catch(() => {});
+
+  await page.waitForTimeout(1000);
+}
+
+/** 사업용신용카드 매입세액 공제 확인/변경 — 월별 조회 → 총 사용금액 */
 async function scrapeBusinessCardPurchase(
   page: Page,
   year: number,
   month: number
 ): Promise<ScrapeResult> {
-  log('info', `[Hometax] 사업용 신용카드 매입 스크래핑 시작 (${year}-${month})`);
+  log('info', `[Hometax] 사업용 신용카드 매입세액 공제 확인/변경 — 월별 (${year}-${month})`);
 
-  await navigateToMenu(page, MENU_ID_MAP.business_card_purchase);
+  await navigateToBusinessCardDeduction(page);
   await page.waitForTimeout(3000);
 
-  await setYear(page, year);
+  await selectMonthlyPeriod(page);
+  await setYearMonth(page, year, month);
   await clickSearch(page);
 
   const records = await parseDataTable(page);
-  log('info', `[Hometax] 사업용 신용카드 매입 ${records.length}건 수집`);
+
+  // 총 사용금액 추출
+  const totalUsageAmount = await page.evaluate(() => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const doc = (globalThis as any).document;
+    const parseAmt = (s: string): number => {
+      const cleaned = String(s).replace(/[,원\s]/g, '');
+      const n = parseInt(cleaned, 10);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const bodyText = doc.body?.innerText || '';
+    const m = bodyText.match(/총\s*사용\s*금액[^\d]*([\d,]+)/);
+    if (m) return parseAmt(m[1]);
+    return null as number | null;
+  }).catch(() => null);
+
+  if (totalUsageAmount !== null && totalUsageAmount > 0) {
+    records.unshift({
+      '구분': '총 사용금액',
+      '총 사용금액': totalUsageAmount.toLocaleString(),
+      '거래년월': `${year}-${String(month).padStart(2, '0')}`,
+    });
+  }
+
+  log(
+    'info',
+    `[Hometax] 사업용 신용카드 매입세액 공제 ${records.length}건 (총 사용금액=${totalUsageAmount ?? 'N/A'})`,
+  );
 
   return {
     dataType: 'business_card_purchase',

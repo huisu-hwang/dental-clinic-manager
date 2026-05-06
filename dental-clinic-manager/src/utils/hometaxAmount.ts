@@ -8,9 +8,11 @@ const MONTH_ONLY_FIELDS = ['월', '기간', '거래월', '월별', '조회월'];
 
 const AMOUNT_KEYS = [
   // 실제 DB에서 확인된 금액 필드 (우선순위 순)
+  '총 사용금액',   // business_card_purchase (매입세액 공제 확인/변경 — 월별)
+  '총사용금액',
   '총금액',        // cash_receipt_sales
   '매출액계',      // credit_card_sales
-  '합계(①+②)',  // business_card_purchase
+  '합계(①+②)',  // business_card_purchase (legacy 누계 조회)
   // 범용 폴백
   '합계(③+④)', '합계', '매입금액',
   '거래금액', '매출금액',
