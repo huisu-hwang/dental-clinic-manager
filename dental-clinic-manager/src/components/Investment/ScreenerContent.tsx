@@ -17,11 +17,24 @@ import FavoritesButtons from './FavoritesButtons'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
 import { getUniverse, type UniverseId } from '@/lib/screenerUniverses'
+import { topByMarketCap as topUSByMarketCap } from '@/lib/usTickerCatalog'
+import { getKRMarketCapRank } from '@/lib/krTickerCatalog'
 import { useScanner, type StrategyPayload } from '@/contexts/ScannerContext'
 import type { InvestmentStrategy, ConditionGroup, IndicatorConfig } from '@/types/investment'
 
 const DAYTRADING_PRESET_IDS = new Set(['day-vwap-bounce', 'day-orb-breakout', 'day-closing-pressure'])
 const MAX_STRATEGIES = 10
+
+// 시총 순위 조회 — US는 lazy 인덱스 빌드, KR은 모듈 캐시 사용
+let _usRankIndex: Map<string, number> | null = null
+function getMarketCapRank(ticker: string, market: 'KR' | 'US'): number | null {
+  if (market === 'KR') return getKRMarketCapRank(ticker)
+  if (!_usRankIndex) {
+    const list = topUSByMarketCap(10000)
+    _usRankIndex = new Map(list.map((e, i) => [e.ticker, i + 1]))
+  }
+  return _usRankIndex.get((ticker ?? '').toUpperCase()) ?? null
+}
 
 interface SelectableItem {
   key: string  // 'user:<id>' or 'preset:<id>'
@@ -408,7 +421,15 @@ export default function ScreenerContent() {
 
           <div className="space-y-4">
             {job.strategyKeys.map(strategyKey => {
-              const matches = job.matchesByStrategy[strategyKey] || []
+              const rawMatches = job.matchesByStrategy[strategyKey] || []
+              // 시총 순위 오름차순 정렬 (rank null은 뒤로)
+              const matches = rawMatches
+                .map((m) => ({ ...m, _rank: getMarketCapRank(m.ticker, m.market) }))
+                .sort((a, b) => {
+                  const ra = a._rank ?? Number.POSITIVE_INFINITY
+                  const rb = b._rank ?? Number.POSITIVE_INFINITY
+                  return ra - rb
+                })
               const failed = job.failedByStrategy[strategyKey] || []
               const strategyName = job.strategyNames[strategyKey] || strategyKey
               const isCollapsed = collapsedStrategies.has(strategyKey)
@@ -444,6 +465,7 @@ export default function ScreenerContent() {
                           <table className="w-full text-xs">
                             <thead className="bg-at-surface-alt/40 border-t border-at-border/60">
                               <tr>
+                                <th className="px-3 py-2 text-left font-medium text-at-text-secondary w-16">시총 순위</th>
                                 <th className="px-3 py-2 text-left font-medium text-at-text-secondary">시장</th>
                                 <th className="px-3 py-2 text-left font-medium text-at-text-secondary">종목</th>
                                 <th className="px-3 py-2 text-left font-medium text-at-text-secondary">이름</th>
@@ -460,6 +482,9 @@ export default function ScreenerContent() {
                                     className="border-t border-at-border hover:bg-at-surface-alt cursor-pointer"
                                     onClick={() => setInfoTicker({ ticker: m.ticker, market: m.market, name: m.name })}
                                   >
+                                    <td className="px-3 py-2 font-mono text-at-text-secondary">
+                                      {m._rank == null ? '—' : `#${m._rank}`}
+                                    </td>
                                     <td className="px-3 py-2">
                                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
                                         m.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
