@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth/requireAuth'
 
 interface Row {
   ticker: string
@@ -22,10 +23,12 @@ function isMarket(v: unknown): v is 'KR' | 'US' {
 }
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error || !auth.user) {
+    return NextResponse.json({ error: auth.error ?? '인증 필요' }, { status: auth.status || 401 })
+  }
 
+  const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('investment_favorites')
@@ -33,7 +36,10 @@ export async function GET() {
     .order('sort_order', { ascending: false })
     .order('created_at', { ascending: false })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[favorites] GET error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const items = ((data ?? []) as Row[]).map((r) => ({
     ticker: r.ticker,
@@ -45,9 +51,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error || !auth.user) {
+    return NextResponse.json({ error: auth.error ?? '인증 필요' }, { status: auth.status || 401 })
+  }
 
   let body: { ticker?: string; market?: string; ticker_name?: string | null }
   try {
@@ -61,17 +68,21 @@ export async function POST(req: NextRequest) {
   if (!ticker) return NextResponse.json({ error: 'ticker 누락' }, { status: 400 })
   if (!isMarket(market)) return NextResponse.json({ error: 'market 잘못됨' }, { status: 400 })
 
+  const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('investment_favorites')
     .upsert(
-      { user_id: user.id, ticker, market, ticker_name: body.ticker_name ?? null },
+      { user_id: auth.user.id, ticker, market, ticker_name: body.ticker_name ?? null },
       { onConflict: 'user_id,ticker,market', ignoreDuplicates: false },
     )
     .select('ticker, market, ticker_name, created_at')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[favorites] POST error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({
     ok: true,
@@ -85,9 +96,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error || !auth.user) {
+    return NextResponse.json({ error: auth.error ?? '인증 필요' }, { status: auth.status || 401 })
+  }
 
   const { searchParams } = new URL(req.url)
   const ticker = (searchParams.get('ticker') ?? '').trim().toUpperCase()
@@ -95,14 +107,18 @@ export async function DELETE(req: NextRequest) {
   if (!ticker) return NextResponse.json({ error: 'ticker 누락' }, { status: 400 })
   if (!isMarket(market)) return NextResponse.json({ error: 'market 잘못됨' }, { status: 400 })
 
+  const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from('investment_favorites')
     .delete()
-    .eq('user_id', user.id)
+    .eq('user_id', auth.user.id)
     .eq('ticker', ticker)
     .eq('market', market)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[favorites] DELETE error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ ok: true })
 }
