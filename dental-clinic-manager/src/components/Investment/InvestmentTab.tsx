@@ -88,14 +88,14 @@ export default function InvestmentTab() {
       const json = await res.json()
       if (json.data) setStrategies(json.data)
 
-      // 전략별 백테스트 통계 (병렬)
+      // 전략별 백테스트 통계 (병렬) — key는 'user:<id>' 또는 'preset:<id>'
       try {
         const statsRes = await fetch('/api/investment/strategies/stats')
         const statsJson = await statsRes.json()
         if (statsRes.ok && Array.isArray(statsJson.data)) {
           const map = new Map<string, StrategyBacktestStats>()
           for (const s of statsJson.data as StrategyBacktestStats[]) {
-            map.set(s.strategyId, s)
+            map.set(s.key, s)
           }
           setStatsByStrategy(map)
         }
@@ -572,16 +572,19 @@ function StrategySubTab({ strategies, statsByStrategy, onRefresh, onBacktest, ha
         </div>
       ) : (
         <div className="space-y-3">
-          {strategies.map(s => (
-            <StrategyCard
-              key={s.id}
-              strategy={s}
-              hasCredential={hasCredential}
-              onRefresh={onRefresh}
-              onBacktest={onBacktest}
-              stats={statsByStrategy.get(s.id) ?? null}
-            />
-          ))}
+          {strategies.map(s => {
+            const statKey = s.source_preset_id ? `preset:${s.source_preset_id}` : `user:${s.id}`
+            return (
+              <StrategyCard
+                key={s.id}
+                strategy={s}
+                hasCredential={hasCredential}
+                onRefresh={onRefresh}
+                onBacktest={onBacktest}
+                stats={statsByStrategy.get(statKey) ?? null}
+              />
+            )
+          })}
         </div>
       )}
     </div>

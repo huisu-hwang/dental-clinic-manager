@@ -144,6 +144,9 @@ export async function POST(request: NextRequest) {
       automation_level: automationLevel as number,
       strategy_type: strategyType,
       rl_model_id: (body.rl_model_id as string | undefined) ?? null,
+      source_preset_id: typeof body.sourcePresetId === 'string' && body.sourcePresetId.trim()
+        ? body.sourcePresetId.trim()
+        : null,
       is_active: false, // 신규 전략은 비활성
     })
     .select()

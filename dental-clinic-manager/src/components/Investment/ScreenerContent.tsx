@@ -15,6 +15,7 @@ import { Search, Loader2, AlertCircle, Sparkles, User, X, CheckCircle2, ChevronD
 import TickerInfoModal from './TickerInfoModal'
 import FavoritesButtons from './FavoritesButtons'
 import ScreenerHistoryTab from './ScreenerHistoryTab'
+import StrategyStatsBlock, { type StrategyBacktestStats } from './StrategyStatsBlock'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
 import { getUniverse, type UniverseId } from '@/lib/screenerUniverses'
@@ -38,6 +39,8 @@ function getMarketCapRank(ticker: string, market: 'KR' | 'US'): number | null {
 
 interface SelectableItem {
   key: string  // 'user:<id>' or 'preset:<id>'
+  /** 통계 조회 키 — source_preset_id 있는 사용자 전략은 preset:로 묶임 */
+  statsKey: string
   source: 'user' | 'preset'
   name: string
   description?: string
@@ -70,6 +73,7 @@ export default function ScreenerContent() {
   const [detailPresetId, setDetailPresetId] = useState<string | null>(null)
   const [infoTicker, setInfoTicker] = useState<{ ticker: string; market: 'KR' | 'US'; name: string } | null>(null)
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set())
+  const [statsByKey, setStatsByKey] = useState<Map<string, StrategyBacktestStats>>(new Map())
 
   const loadStrategies = useCallback(async () => {
     try {
@@ -86,10 +90,23 @@ export default function ScreenerContent() {
     }
   }, [])
 
-  useEffect(() => { loadStrategies() }, [loadStrategies])
+  const loadStrategyStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/investment/strategies/stats')
+      const json = await res.json()
+      if (res.ok && Array.isArray(json.data)) {
+        const map = new Map<string, StrategyBacktestStats>()
+        for (const s of json.data as StrategyBacktestStats[]) map.set(s.key, s)
+        setStatsByKey(map)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { loadStrategies(); loadStrategyStats() }, [loadStrategies, loadStrategyStats])
 
   const userItems: SelectableItem[] = strategies.map(s => ({
     key: `user:${s.id}`,
+    statsKey: s.source_preset_id ? `preset:${s.source_preset_id}` : `user:${s.id}`,
     source: 'user',
     name: s.name,
     description: s.description || undefined,
@@ -101,6 +118,7 @@ export default function ScreenerContent() {
     .filter(p => !DAYTRADING_PRESET_IDS.has(p.id))
     .map(p => ({
       key: `preset:${p.id}`,
+      statsKey: `preset:${p.id}`,
       source: 'preset',
       name: p.name,
       description: p.description,
@@ -266,6 +284,7 @@ export default function ScreenerContent() {
                   selected={selectedKeys.has(item.key)}
                   onToggle={() => toggleStrategy(item.key)}
                   onOpenDetail={setDetailPresetId}
+                  stats={statsByKey.get(item.statsKey) ?? null}
                 />
               ))}
             </div>
@@ -289,6 +308,7 @@ export default function ScreenerContent() {
                   selected={selectedKeys.has(item.key)}
                   onToggle={() => toggleStrategy(item.key)}
                   onOpenDetail={setDetailPresetId}
+                  stats={statsByKey.get(item.statsKey) ?? null}
                 />
               ))}
             </div>
@@ -652,11 +672,12 @@ export default function ScreenerContent() {
   )
 }
 
-function StrategyCard({ item, selected, onToggle, onOpenDetail }: {
+function StrategyCard({ item, selected, onToggle, onOpenDetail, stats }: {
   item: SelectableItem
   selected: boolean
   onToggle: () => void
   onOpenDetail: (id: string) => void
+  stats?: StrategyBacktestStats | null
 }) {
   const presetId = item.source === 'preset' ? item.key.replace(/^preset:/, '') : null
   return (
@@ -677,6 +698,9 @@ function StrategyCard({ item, selected, onToggle, onOpenDetail }: {
           {item.source === 'preset' && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">프리셋</span>
           )}
+        </div>
+        <div className="mt-1.5">
+          <StrategyStatsBlock stats={stats} compact />
         </div>
       </button>
       {selected && (

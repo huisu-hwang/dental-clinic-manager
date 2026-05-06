@@ -36,6 +36,7 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
   const [indicators, setIndicators] = useState<IndicatorConfig[]>([])
   const [buyConditions, setBuyConditions] = useState<ConditionGroup>(EMPTY_GROUP)
   const [sellConditions, setSellConditions] = useState<ConditionGroup>(EMPTY_GROUP)
+  const [sourcePresetId, setSourcePresetId] = useState<string | null>(null)
 
   const handleCancel = () => {
     if (onCancel) {
@@ -51,6 +52,7 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
     setIndicators(preset.indicators)
     setBuyConditions(preset.buyConditions)
     setSellConditions(preset.sellConditions)
+    setSourcePresetId(preset.id)
     setStep('indicators')
   }
 
@@ -73,6 +75,7 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
           buyConditions,
           sellConditions,
           automationLevel,
+          sourcePresetId,
         }),
       })
       const json = await res.json()

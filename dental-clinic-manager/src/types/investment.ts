@@ -200,6 +200,8 @@ export interface InvestmentStrategy {
   is_active: boolean
   created_at: string
   updated_at: string
+  /** 프리셋에서 생성된 경우 원본 프리셋 ID (통계 집계 시 같은 그룹으로 합산) */
+  source_preset_id?: string | null
 }
 
 export interface StrategyInput {
