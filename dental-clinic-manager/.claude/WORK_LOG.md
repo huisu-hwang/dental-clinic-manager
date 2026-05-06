@@ -10,6 +10,34 @@
 
 ---
 
+## 2026-05-06 [기능 개발] 종목 상세 모달 + 즐겨찾기 시스템
+
+**키워드:** #investment #favorites #ticker-info #screener #yahoo-finance2 #broadcast-channel
+
+### 📋 작업 내용
+- 신규 테이블 `investment_favorites` (user_id, ticker, market UNIQUE) + RLS
+- `/api/investment/ticker-info` — yahoo-finance2 quoteSummary + chart로 펀더멘털(PER/PBR/ROE/영업이익률 등) + 시총 순위 + 가격 차트 통합 (30분 캐시)
+- `/api/investment/favorites` GET/POST/DELETE — requireAuth 패턴
+- `useFavorites` 훅 — 낙관적 업데이트 + BroadcastChannel cross-tab 동기화
+- `TickerInfoModal` 컴포넌트 — 가격 카드 + 12셀 펀더멘털 그리드 + 1M/3M/1Y 차트 토글 + 즐겨찾기 버튼
+- `FavoritesButtons` 컴포넌트 — RecentTickersButtons와 동일 외형, 별표 prefix
+- KR 시총 스냅샷: `scripts/fetch-kr-marketcap.mjs` + `src/data/kr-tickers-marketcap.json` + `src/lib/krTickerCatalog.ts`
+- 4개 페이지에 즐겨찾기 행 통합: SmartMoneyContent, CompareContent, DayTradingContent, StrategyCard
+- ScreenerContent: 결과 행 클릭 = TickerInfoModal 오픈으로 통일 (인라인 펼침 제거), 매치 정보는 모달 extra에 표시
+
+### ✅ 검증
+- `npm run build` 통과 (모든 task 종료 후 최종 빌드 clean)
+- yahoo-finance2 v3 dynamic-import 패턴 준수 (코드베이스 기존 관례)
+- AAPL/005930 ticker-info API 응답 정상 (marketCapRank 포함)
+- Spec compliance + code quality review 모든 task 통과
+
+### 💡 배운 점
+- yahoo-finance2 v3는 default export가 클래스, `new YahooFinance()`로 인스턴스화 필요
+- recharts v3 Tooltip `labelFormatter`의 1번째 인자는 `ReactNode` 타입이라 `string` 캐스팅 필요
+- Supabase 타입 자동 생성 파일에 새 테이블이 없으면 `(supabase as any).from()` 캐스팅이 임시 해결책
+
+---
+
 ## 2026-03-23 [버그 수정] 스크래핑 워커 인증정보 읽기 실패 (stale 프로세스)
 
 **키워드:** #스크래핑워커 #tsx모듈캐싱 #stale프로세스 #워커재시작
