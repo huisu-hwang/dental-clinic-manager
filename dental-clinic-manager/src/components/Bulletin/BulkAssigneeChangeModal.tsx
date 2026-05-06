@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { X, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ensureConnection } from '@/lib/supabase/connectionCheck'
@@ -50,51 +50,109 @@ export default function BulkAssigneeChangeModal({
   const [newAssigneeId, setNewAssigneeId] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingStaff, setLoadingStaff] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchStaff = async () => {
-      setLoadingStaff(true)
+      if (!cancelled) {
+        setLoadingStaff(true)
+        setErrorMessage('')
+      }
+
       try {
         const supabase = await ensureConnection()
-        if (!supabase) return
+        if (!supabase) {
+          if (!cancelled) {
+            setStaff([])
+            setErrorMessage('직원 목록을 불러오지 못했습니다.')
+          }
+          return
+        }
         const clinicId =
           sessionStorage.getItem('dental_clinic_id') || localStorage.getItem('dental_clinic_id')
-        if (!clinicId) return
-        const { data } = await (supabase as any)
+        if (!clinicId) {
+          if (!cancelled) {
+            setStaff([])
+            setErrorMessage('직원 목록을 불러오지 못했습니다.')
+          }
+          return
+        }
+        const { data, error } = await (supabase as any)
           .from('users')
           .select('id, name, role')
           .eq('clinic_id', clinicId)
           .eq('status', 'active')
           .order('name')
-        setStaff(data || [])
+
+        if (error) {
+          console.error('[BulkAssigneeChangeModal] fetchStaff error:', error)
+          if (!cancelled) {
+            setStaff([])
+            setErrorMessage('직원 목록을 불러오지 못했습니다.')
+          }
+          return
+        }
+
+        if (!cancelled) {
+          setStaff(data || [])
+        }
       } catch (err) {
         console.error('[BulkAssigneeChangeModal] fetchStaff error:', err)
+        if (!cancelled) {
+          setStaff([])
+          setErrorMessage('직원 목록을 불러오지 못했습니다.')
+        }
       } finally {
-        setLoadingStaff(false)
+        if (!cancelled) {
+          setLoadingStaff(false)
+        }
       }
     }
+
     fetchStaff()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (loading) return
+
     if (!newAssigneeId) {
       await appAlert('변경할 담당자를 선택해주세요.')
       return
     }
-    setLoading(true)
-    const { success, updatedCount, error } = await onConfirm(newAssigneeId)
-    setLoading(false)
-    if (!success) {
-      await appAlert(error || '담당자 변경에 실패했습니다.')
-      return
+
+    try {
+      setLoading(true)
+      const { success, updatedCount, error } = await onConfirm(newAssigneeId)
+
+      if (!success) {
+        await appAlert(error || '담당자 변경에 실패했습니다.')
+        return
+      }
+
+      onSuccess(updatedCount)
+    } catch (err) {
+      await appAlert(err instanceof Error ? err.message : '담당자 변경에 실패했습니다.')
+    } finally {
+      setLoading(false)
     }
-    onSuccess(updatedCount)
+  }
+
+  const handleClose = () => {
+    if (loading) return
+    onClose()
   }
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="bg-white rounded-2xl border border-at-border w-full max-w-md shadow-xl"
@@ -107,7 +165,7 @@ export default function BulkAssigneeChangeModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-lg hover:bg-at-surface-hover text-at-text-weak transition-colors"
             aria-label="닫기"
           >
@@ -115,43 +173,48 @@ export default function BulkAssigneeChangeModal({
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <p className="text-sm text-at-text-secondary">
-            선택된 <span className="font-semibold text-at-accent">{selectedCount}건</span>의
-            {' '}{itemLabel} 담당자를 한꺼번에 변경합니다.
-          </p>
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 space-y-4">
+            <p className="text-sm text-at-text-secondary">
+              선택된 <span className="font-semibold text-at-accent">{selectedCount}건</span>의
+              {' '}{itemLabel} 담당자를 한꺼번에 변경합니다.
+            </p>
 
-          <div>
-            <label className="block text-sm font-medium text-at-text mb-1.5">
-              새 담당자 <span className="text-at-error">*</span>
-            </label>
-            {loadingStaff ? (
-              <div className="text-sm text-at-text-weak">직원 목록을 불러오는 중...</div>
-            ) : (
-              <select
-                value={newAssigneeId}
-                onChange={(e) => setNewAssigneeId(e.target.value)}
-                className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors bg-white"
-              >
-                <option value="">담당자를 선택하세요</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({roleLabel(s.role)})
-                  </option>
-                ))}
-              </select>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-at-text mb-1.5">
+                새 담당자 <span className="text-at-error">*</span>
+              </label>
+              {errorMessage && (
+                <div className="mb-2 text-sm text-at-error">{errorMessage}</div>
+              )}
+              {loadingStaff ? (
+                <div className="text-sm text-at-text-weak">직원 목록을 불러오는 중...</div>
+              ) : (
+                <select
+                  value={newAssigneeId}
+                  onChange={(e) => setNewAssigneeId(e.target.value)}
+                  className="w-full px-3 py-2 border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors bg-white"
+                >
+                  <option value="">담당자를 선택하세요</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({roleLabel(s.role)})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-at-border">
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-            취소
-          </Button>
-          <Button type="button" onClick={handleSubmit} disabled={loading || loadingStaff}>
-            {loading ? '변경 중...' : `${selectedCount}건 담당자 변경`}
-          </Button>
-        </div>
+          <div className="flex justify-end gap-2 px-6 py-4 border-t border-at-border">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+              취소
+            </Button>
+            <Button type="submit" disabled={loading || loadingStaff}>
+              {loading ? '변경 중...' : `${selectedCount}건 담당자 변경`}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   )
