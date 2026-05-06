@@ -24,7 +24,6 @@ import { useScanner, type StrategyPayload } from '@/contexts/ScannerContext'
 import type { InvestmentStrategy, ConditionGroup, IndicatorConfig } from '@/types/investment'
 
 const DAYTRADING_PRESET_IDS = new Set(['day-vwap-bounce', 'day-orb-breakout', 'day-closing-pressure'])
-const MAX_STRATEGIES = 10
 
 // 시총 순위 조회 — US는 lazy 인덱스 빌드, KR은 모듈 캐시 사용
 let _usRankIndex: Map<string, number> | null = null
@@ -116,10 +115,8 @@ export default function ScreenerContent() {
       const next = new Set(prev)
       if (next.has(key)) {
         next.delete(key)
-      } else if (next.size < MAX_STRATEGIES) {
-        next.add(key)
       } else {
-        alert(`한 번에 최대 ${MAX_STRATEGIES}개 전략까지 동시 스캔 가능합니다.`)
+        next.add(key)
       }
       return next
     })
@@ -251,7 +248,7 @@ export default function ScreenerContent() {
       <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <h2 className="font-semibold text-at-text">📋 1. 전략 선택 (다중 가능)</h2>
-          <span className="text-xs text-at-text-secondary">{selectedKeys.size} / {MAX_STRATEGIES}개 선택됨</span>
+          <span className="text-xs text-at-text-secondary">{selectedKeys.size}개 선택됨</span>
         </div>
 
         {!loadingStrategies && userItems.length > 0 && (
