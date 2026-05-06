@@ -10,8 +10,10 @@
  * 사용자가 다른 메뉴로 이동해도 진행률이 floating 위젯으로 표시됨.
  */
 
-import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Search, Loader2, AlertCircle, Sparkles, User, X, CheckCircle2, ChevronDown, ChevronRight, Info, Zap } from 'lucide-react'
+import TickerInfoModal from './TickerInfoModal'
+import FavoritesButtons from './FavoritesButtons'
 import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 import PresetDetailView from '@/components/Investment/PresetDetailView'
 import { getUniverse, type UniverseId } from '@/lib/screenerUniverses'
@@ -50,7 +52,7 @@ export default function ScreenerContent() {
   const [realtime, setRealtime] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [detailPresetId, setDetailPresetId] = useState<string | null>(null)
-  const [expandedTickers, setExpandedTickers] = useState<Set<string>>(new Set())
+  const [infoTicker, setInfoTicker] = useState<{ ticker: string; market: 'KR' | 'US'; name: string } | null>(null)
   const [collapsedStrategies, setCollapsedStrategies] = useState<Set<string>>(new Set())
 
   const loadStrategies = useCallback(async () => {
@@ -133,7 +135,6 @@ export default function ScreenerContent() {
     }))
 
     setCollapsedStrategies(new Set())
-    setExpandedTickers(new Set())
 
     try {
       await startScan({
@@ -148,15 +149,6 @@ export default function ScreenerContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '스캔 실행 실패')
     }
-  }
-
-  const toggleExpand = (key: string) => {
-    setExpandedTickers(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
   }
 
   const toggleStrategyCollapse = (key: string) => {
@@ -191,6 +183,14 @@ export default function ScreenerContent() {
           여러 전략을 동시에 선택하면 전략별로 분리된 결과를 한 번에 확인할 수 있습니다.
         </p>
       </div>
+
+      {/* 즐겨찾기 종목 바로가기 */}
+      <FavoritesButtons
+        market="ALL"
+        onSelect={(ticker, name, market) => {
+          setInfoTicker({ ticker, market, name })
+        }}
+      />
 
       {/* 1. 전략 선택 */}
       <section className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
@@ -444,7 +444,6 @@ export default function ScreenerContent() {
                           <table className="w-full text-xs">
                             <thead className="bg-at-surface-alt/40 border-t border-at-border/60">
                               <tr>
-                                <th className="px-2 py-2 w-8"></th>
                                 <th className="px-3 py-2 text-left font-medium text-at-text-secondary">시장</th>
                                 <th className="px-3 py-2 text-left font-medium text-at-text-secondary">종목</th>
                                 <th className="px-3 py-2 text-left font-medium text-at-text-secondary">이름</th>
@@ -455,64 +454,30 @@ export default function ScreenerContent() {
                             <tbody>
                               {matches.map(m => {
                                 const rowKey = `${strategyKey}|${m.market}:${m.ticker}`
-                                const expanded = expandedTickers.has(rowKey)
                                 return (
-                                  <Fragment key={rowKey}>
-                                    <tr
-                                      className="border-t border-at-border hover:bg-at-surface-alt cursor-pointer"
-                                      onClick={() => toggleExpand(rowKey)}
-                                    >
-                                      <td className="px-2 py-2 text-at-text-weak">
-                                        {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                                      </td>
-                                      <td className="px-3 py-2">
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                                          m.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                                        }`}>
-                                          {m.market === 'KR' ? '국내' : '미국'}
-                                        </span>
-                                      </td>
-                                      <td className="px-3 py-2 font-mono font-semibold text-at-accent">{m.ticker}</td>
-                                      <td className="px-3 py-2 text-at-text">{m.name}</td>
-                                      <td className="px-3 py-2 text-right font-mono">
-                                        {m.market === 'KR' ? `${Math.round(m.price).toLocaleString()}원` : `$${m.price.toFixed(2)}`}
-                                      </td>
-                                      <td className="px-3 py-2 text-at-text-secondary text-[11px]">
-                                        {m.matchedConditions.length === 0 ? '—' :
-                                          m.matchedConditions.length === 1 ? m.matchedConditions[0] :
-                                          `${m.matchedConditions[0]} 외 ${m.matchedConditions.length - 1}건`}
-                                      </td>
-                                    </tr>
-                                    {expanded && (
-                                      <tr className="border-t border-at-border bg-blue-50/30">
-                                        <td colSpan={6} className="p-3">
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <div className="bg-white rounded-lg border border-at-border p-3">
-                                              <p className="text-xs font-semibold text-at-text mb-1.5">충족 조건</p>
-                                              <ul className="space-y-1">
-                                                {m.matchedConditions.map((c, i) => (
-                                                  <li key={i} className="text-[11px] font-mono bg-at-surface-alt rounded px-2 py-1">{c}</li>
-                                                ))}
-                                              </ul>
-                                            </div>
-                                            <div className="bg-white rounded-lg border border-at-border p-3">
-                                              <p className="text-xs font-semibold text-at-text mb-1.5">지표값</p>
-                                              <div className="flex flex-wrap gap-1">
-                                                {Object.entries(m.indicators).map(([id, val]) => (
-                                                  <span key={id} className="text-[10px] font-mono bg-at-surface-alt rounded px-2 py-1">
-                                                    <span className="text-at-text-secondary">{id}:</span>{' '}
-                                                    {typeof val === 'number'
-                                                      ? val.toFixed(Math.abs(val) >= 100 ? 1 : 2)
-                                                      : Object.entries(val).map(([k, v]) => `${k}=${v.toFixed(2)}`).join(', ')}
-                                                  </span>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    )}
-                                  </Fragment>
+                                  <tr
+                                    key={rowKey}
+                                    className="border-t border-at-border hover:bg-at-surface-alt cursor-pointer"
+                                    onClick={() => setInfoTicker({ ticker: m.ticker, market: m.market, name: m.name })}
+                                  >
+                                    <td className="px-3 py-2">
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                                        m.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                                      }`}>
+                                        {m.market === 'KR' ? '국내' : '미국'}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 font-mono font-semibold text-at-accent">{m.ticker}</td>
+                                    <td className="px-3 py-2 text-at-text">{m.name}</td>
+                                    <td className="px-3 py-2 text-right font-mono">
+                                      {m.market === 'KR' ? `${Math.round(m.price).toLocaleString()}원` : `$${m.price.toFixed(2)}`}
+                                    </td>
+                                    <td className="px-3 py-2 text-at-text-secondary text-[11px]">
+                                      {m.matchedConditions.length === 0 ? '—' :
+                                        m.matchedConditions.length === 1 ? m.matchedConditions[0] :
+                                        `${m.matchedConditions[0]} 외 ${m.matchedConditions.length - 1}건`}
+                                    </td>
+                                  </tr>
                                 )
                               })}
                             </tbody>
@@ -543,7 +508,7 @@ export default function ScreenerContent() {
 
           <div className="mt-3 flex items-center gap-2 text-[11px] text-at-text-weak">
             <Info className="w-3 h-3" />
-            <span>각 종목 행 클릭 시 충족 조건과 지표값 상세 펼침. 전략 헤더 클릭으로 섹션 접기/펼치기.</span>
+            <span>각 종목 행 클릭 시 펀더멘털·차트·충족 조건 상세 모달 오픈. 전략 헤더 클릭으로 섹션 접기/펼치기.</span>
           </div>
         </section>
       )}
@@ -571,6 +536,52 @@ export default function ScreenerContent() {
           </div>
         </div>
       )}
+
+      {/* 종목 상세 모달 */}
+      {infoTicker && (() => {
+        const matchData = job
+          ? Object.entries(job.matchesByStrategy).flatMap(([strategyKey, ms]) =>
+              ms
+                .filter((m) => m.ticker === infoTicker.ticker && m.market === infoTicker.market)
+                .map((m) => ({ ...m, _strategyKey: strategyKey, _strategyName: job.strategyNames[strategyKey] || strategyKey })),
+            )
+          : []
+        const match = matchData[0]
+        return (
+          <TickerInfoModal
+            ticker={infoTicker.ticker}
+            market={infoTicker.market}
+            tickerName={infoTicker.name}
+            onClose={() => setInfoTicker(null)}
+            extra={match ? (
+              <div className="bg-blue-50/30 border border-blue-200/60 rounded-lg p-3 space-y-2">
+                <p className="text-xs font-semibold text-at-text">스크리너 매치 ({match._strategyName})</p>
+                <div>
+                  <p className="text-[11px] text-at-text-weak mb-1">충족 조건</p>
+                  <ul className="space-y-0.5">
+                    {match.matchedConditions.map((c: string, i: number) => (
+                      <li key={i} className="text-[11px] font-mono bg-white rounded px-2 py-1">{c}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-[11px] text-at-text-weak mb-1">지표값</p>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(match.indicators).map(([id, val]) => (
+                      <span key={id} className="text-[10px] font-mono bg-white border border-at-border rounded px-2 py-1">
+                        <span className="text-at-text-secondary">{id}:</span>{' '}
+                        {typeof val === 'number'
+                          ? val.toFixed(Math.abs(val) >= 100 ? 1 : 2)
+                          : Object.entries(val as Record<string, number>).map(([k, v]) => `${k}=${(v as number).toFixed(2)}`).join(', ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          />
+        )
+      })()}
     </div>
   )
 }

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import TickerSearch from './TickerSearch'
 import RecentTickersButtons from './RecentTickersButtons'
+import FavoritesButtons from './FavoritesButtons'
 import StrategyStatsBlock, { type StrategyBacktestStats } from './StrategyStatsBlock'
 import { useRecentTickers } from '@/hooks/useRecentTickers'
 import type { InvestmentStrategy, Market } from '@/types/investment'
@@ -253,6 +254,11 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
                 className="w-full sm:flex-1"
               />
             </div>
+            <FavoritesButtons
+              market={addingMarket}
+              onSelect={(t, name, m) => addTicker(t, name, m)}
+              excludeKeys={new Set(watchlist.map((w) => `${w.market}:${w.ticker}`))}
+            />
             <RecentTickersButtons
               market={addingMarket}
               onSelect={(t, name, m) => addTicker(t, name, m)}
