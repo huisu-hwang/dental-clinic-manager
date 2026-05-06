@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import { AlertCircle, ChevronDown, ChevronRight, Info, Zap } from 'lucide-react'
+import { AlertCircle, ChevronDown, ChevronRight, Info, Zap, Sparkles, Trophy, Loader2 } from 'lucide-react'
 import { topByMarketCap as topUSByMarketCap } from '@/lib/usTickerCatalog'
 import { getKRMarketCapRank } from '@/lib/krTickerCatalog'
 import type { Market } from '@/types/investment'
@@ -143,6 +143,14 @@ export default function ScreenerResultsView({
 
               {!isCollapsed && (
                 <>
+                  {matches.length >= 3 && (
+                    <RecommendBlock
+                      strategyKey={strategyKey}
+                      strategyName={strategyName}
+                      matches={matches.map(({ _rank, ...rest }) => rest)}
+                      onSelectTicker={onSelectTicker}
+                    />
+                  )}
                   {matches.length === 0 ? (
                     <div className="p-6 text-center">
                       <AlertCircle className="w-6 h-6 mx-auto text-at-text-weak mb-1.5 opacity-60" />
@@ -226,5 +234,130 @@ export default function ScreenerResultsView({
         </div>
       )}
     </section>
+  )
+}
+
+interface RecommendBlockProps {
+  strategyKey: string
+  strategyName: string
+  matches: ScreenerMatch[]
+  onSelectTicker?: (ticker: string, market: Market, name: string) => void
+}
+
+interface RecommendResponse {
+  strategyKey: string
+  strategyName: string
+  criteria: string
+  rankings: Array<{
+    ticker: string
+    market: Market
+    name: string
+    score: number
+    reasoning: string
+  }>
+}
+
+function RecommendBlock({ strategyKey, strategyName, matches, onSelectTicker }: RecommendBlockProps) {
+  const [open, setOpen] = useState(false)
+  const [data, setData] = useState<RecommendResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = async () => {
+    if (data || loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/investment/screener-recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategyKey, strategyName, matches }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j?.error ?? `HTTP ${res.status}`)
+      }
+      const json: RecommendResponse = await res.json()
+      setData(json)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '추천 생성 실패')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="border-t border-at-border bg-gradient-to-br from-amber-50/40 to-purple-50/40 px-4 py-3">
+      <button
+        type="button"
+        onClick={() => { setOpen(!open); if (!open) load() }}
+        className="w-full flex items-center justify-between gap-2 hover:opacity-80"
+      >
+        <div className="flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-amber-600" />
+          <span className="font-semibold text-sm text-at-text">AI 추천 상위 3</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-bold">Claude</span>
+        </div>
+        {open ? <ChevronDown className="w-4 h-4 text-at-text-weak" /> : <ChevronRight className="w-4 h-4 text-at-text-weak" />}
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-2">
+          {loading && (
+            <div className="flex items-center gap-2 text-at-text-secondary text-xs">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              상위 3개 분석 중... (5-8초)
+            </div>
+          )}
+          {error && !loading && (
+            <div className="text-rose-600 text-xs bg-rose-50 border border-rose-200 rounded px-3 py-2">{error}</div>
+          )}
+          {data && !loading && (
+            <>
+              <div className="bg-white border border-at-border rounded px-3 py-2">
+                <p className="text-[11px] font-semibold text-at-text-secondary mb-1 inline-flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-purple-600" />
+                  평가 기준
+                </p>
+                <p className="text-xs text-at-text leading-relaxed">{data.criteria}</p>
+              </div>
+              <div className="space-y-2">
+                {data.rankings.map((r, i) => (
+                  <div
+                    key={r.ticker}
+                    className={`bg-white border rounded p-3 ${onSelectTicker ? 'cursor-pointer hover:bg-at-surface-alt' : ''} ${
+                      i === 0 ? 'border-amber-300' : i === 1 ? 'border-zinc-300' : 'border-orange-200'
+                    }`}
+                    onClick={() => onSelectTicker?.(r.ticker, r.market, r.name)}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-base font-bold ${i === 0 ? 'text-amber-600' : i === 1 ? 'text-zinc-500' : 'text-orange-500'}`}>
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                        </span>
+                        <span className="font-mono font-bold text-at-accent">{r.ticker}</span>
+                        <span className="text-xs text-at-text">{r.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                          r.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {r.market === 'KR' ? '국내' : '미국'}
+                        </span>
+                      </div>
+                      <span className="text-xs font-mono font-semibold text-purple-600">
+                        {r.score.toFixed(1)}/10
+                      </span>
+                    </div>
+                    <p className="text-xs text-at-text-secondary leading-relaxed">{r.reasoning}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-at-text-weak">
+                * AI 분석 기반 — 투자 권유 아님. 본인 판단으로 의사결정 하세요.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
