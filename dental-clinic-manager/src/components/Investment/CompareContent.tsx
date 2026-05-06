@@ -16,6 +16,7 @@ import PresetDetailView from '@/components/Investment/PresetDetailView'
 import DateRangePicker from '@/components/Investment/DateRangePicker'
 import StrategyStatsBlock, { type StrategyBacktestStats } from '@/components/Investment/StrategyStatsBlock'
 import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
+import FavoritesButtons from '@/components/Investment/FavoritesButtons'
 import { useRecentTickers } from '@/hooks/useRecentTickers'
 import type {
   InvestmentStrategy, Market, BacktestMetrics, EquityCurvePoint, BacktestTrade,
@@ -512,6 +513,11 @@ function LiveCompareSection() {
               placeholder="종목 검색 후 선택하면 칩으로 추가됩니다"
             />
             <div className="mt-2">
+              <FavoritesButtons
+                market="ALL"
+                onSelect={(t, name, m) => handleTickerSelect(t, name, m)}
+                excludeKeys={new Set(tickers.map((tk) => `${market}:${tk.ticker}`))}
+              />
               <RecentTickersButtons
                 market="ALL"
                 onSelect={(t, name, m) => handleTickerSelect(t, name, m)}
