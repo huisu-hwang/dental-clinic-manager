@@ -217,6 +217,22 @@ function PriceCard({ data }: { data: ApiResponse }) {
   )
 }
 
+// 지표 의미 — 호버 툴팁
+const INDICATOR_HINTS: Record<string, string> = {
+  PER: '주가수익비율 (Price-to-Earnings) — 주가가 EPS의 몇 배인지. 낮을수록 저평가, 업종별 평균과 비교.',
+  PBR: '주가순자산비율 (Price-to-Book) — 주가가 순자산의 몇 배인지. 1 미만이면 청산가치보다 싼 상태.',
+  ROE: '자기자본이익률 (Return on Equity) — 주주 자본 대비 1년간 번 순이익 비율. 15% 이상이면 우수.',
+  영업이익률: '영업이익 ÷ 매출 — 본업 수익성. 산업 평균 대비로 비교.',
+  순이익률: '순이익 ÷ 매출 — 모든 비용·세금 차감 후 최종 마진.',
+  EPS: '주당순이익 (Earnings Per Share) — 1주당 순이익. 추세 상승 = 이익 성장.',
+  배당수익률: '주당 배당금 ÷ 주가 — 배당 투자 수익률. 한국 평균 ~2%.',
+  부채비율: '부채 ÷ 자기자본 (Debt-to-Equity, %로 표기되기도). 200% 이상이면 부채 위험.',
+  매출: '연간 매출액 (Revenue) — 회사 외형 규모.',
+  영업이익: '매출에서 매출원가·판관비를 뺀 본업 이익. 매출 × 영업이익률로 추정될 수 있음.',
+  순이익: '모든 비용·이자·세금 차감 후 남은 최종 이익.',
+  기준일: '데이터 기준 시각 (yahoo 응답 시각).',
+}
+
 function FundamentalGrid({ data }: { data: ApiResponse }) {
   const f = data.fundamentals
   return (
@@ -290,9 +306,16 @@ function Row({ k, v }: { k: string; v: string }) {
   )
 }
 function Cell({ k, v }: { k: string; v: string }) {
+  const hint = INDICATOR_HINTS[k]
   return (
-    <div className="bg-white border border-at-border rounded px-2 py-1.5">
-      <p className="text-[10px] text-at-text-weak">{k}</p>
+    <div
+      className={`bg-white border border-at-border rounded px-2 py-1.5 ${hint ? 'cursor-help' : ''}`}
+      title={hint}
+    >
+      <p className="text-[10px] text-at-text-weak inline-flex items-center gap-1">
+        {k}
+        {hint && <span className="text-at-text-weak/60 text-[9px]">ⓘ</span>}
+      </p>
       <p className="text-sm font-semibold font-mono text-at-text">{v}</p>
     </div>
   )
