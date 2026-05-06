@@ -105,40 +105,94 @@ export async function POST(request: NextRequest) {
           endDate: endDate as string,
           initialCapital: capital,
         })
+        // RL 응답을 일반 백테스트와 동일 shape (metrics/equityCurve/trades/buyHold) 으로 정규화 — 비교/분석 UI 호환
+        // RL 서버는 비율(0.25=25%)로 반환하므로 DB·UI 규약(퍼센트)으로 환산
+        const totalReturnPct = rl.total_return * 100
+        const maxDrawdownPct = rl.max_drawdown * 100
+        const startMs = new Date(startDate as string).getTime()
+        const endMs = new Date(endDate as string).getTime()
+        const years = Math.max(1 / 365, (endMs - startMs) / (1000 * 60 * 60 * 24 * 365))
+        const annualizedReturnPct = (Math.pow(1 + rl.total_return, 1 / years) - 1) * 100
+        const winRatePct = rl.win_rate * 100
+        // 거래별 손익 합계로 profit factor 계산
+        const grossProfit = rl.trades.reduce((s, t) => s + (t.pnl > 0 ? t.pnl : 0), 0)
+        const grossLoss = rl.trades.reduce((s, t) => s + (t.pnl < 0 ? -t.pnl : 0), 0)
+        const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? 999 : 0)
+        const normalizedMetrics = {
+          totalReturn: totalReturnPct,
+          annualizedReturn: annualizedReturnPct,
+          maxDrawdown: maxDrawdownPct,
+          sharpeRatio: rl.sharpe_ratio,
+          winRate: winRatePct,
+          totalTrades: rl.trades.length,  // 실제 종목별 진입/청산 개수
+          profitFactor,
+        }
+        const normalizedEquityCurve = rl.equity_curve.map((p) => ({
+          date: p.date,
+          equity: p.equity,
+        }))
+        // 일반 백테스트의 BacktestTrade shape으로 정규화
+        const normalizedTrades = rl.trades.map((t) => ({
+          entryDate: t.entry_date,
+          exitDate: t.exit_date,
+          ticker: t.ticker,
+          direction: t.direction,
+          entryPrice: t.entry_price,
+          exitPrice: t.exit_price,
+          quantity: t.quantity,
+          pnl: t.pnl,
+          pnlPercent: t.pnl_percent,
+          holdingDays: t.holding_days,
+        }))
+        // Buy & Hold 비교 (일반 백테스트의 buyHold shape에 맞춤)
+        const normalizedBuyHold = {
+          totalReturn: rl.buy_hold_return * 100,
+          equityCurve: rl.buy_hold_curve.map((p) => ({ date: p.date, equity: p.equity })),
+        }
         const { data: run, error: insertError } = await supabase
           .from('backtest_runs')
           .insert({
             strategy_id: strategyId,
             user_id: userId,
-            ticker: 'PORTFOLIO',  // RL portfolio는 단일 종목 아님
+            ticker: 'PORTFOLIO',
             market: market as string,
             start_date: startDate as string,
             end_date: endDate as string,
             initial_capital: capital,
             status: 'completed',
-            total_return: rl.total_return,
-            annualized_return: 0,  // 별도 계산 X
-            max_drawdown: rl.max_drawdown,
+            total_return: totalReturnPct,
+            annualized_return: annualizedReturnPct,
+            max_drawdown: maxDrawdownPct,
             sharpe_ratio: rl.sharpe_ratio,
             win_rate: 0,
-            total_trades: rl.n_rebalances,  // rebalance 횟수를 trade로 표기
+            total_trades: rl.n_rebalances,
             profit_factor: 0,
-            equity_curve: rl.equity_curve as unknown as object,
-            trades: [] as unknown as object,  // RL portfolio엔 개별 trade 개념 없음
+            equity_curve: normalizedEquityCurve as unknown as object,
+            trades: normalizedTrades as unknown as object,
             full_metrics: {
+              ...normalizedMetrics,
               kind: 'rl_portfolio',
               n_rebalances: rl.n_rebalances,
               rl_metadata: rl.rl_metadata,
+              buy_hold_return: normalizedBuyHold.totalReturn,
+              buy_hold_curve: normalizedBuyHold.equityCurve,
             } as unknown as object,
             completed_at: new Date().toISOString(),
           })
           .select()
           .single()
+        const responsePayload = {
+          metrics: normalizedMetrics,
+          equityCurve: normalizedEquityCurve,
+          trades: normalizedTrades,
+          buyHold: normalizedBuyHold,
+          rl_metadata: rl.rl_metadata,
+        }
         if (insertError) {
           console.error('RL 백테스트 결과 저장 실패:', insertError)
-          return NextResponse.json({ data: { ...rl, saved: false } })
+          return NextResponse.json({ data: { ...responsePayload, saved: false } })
         }
-        return NextResponse.json({ data: { ...run, ...rl } })
+        return NextResponse.json({ data: { ...run, ...responsePayload } })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'RL 백테스트 실행 실패'
         console.error('RL 백테스트 오류:', msg)

@@ -64,12 +64,33 @@ class EquityPoint(BaseModel):
     equity: float
 
 
+class TradeRecord(BaseModel):
+    """리밸런싱 기간별 종목 보유 내역. entry→exit 쌍으로 표현."""
+    entry_date: str
+    exit_date: str
+    ticker: str
+    direction: Literal["buy", "sell"] = "buy"
+    entry_price: float
+    exit_price: float
+    quantity: float
+    pnl: float
+    pnl_percent: float
+    holding_days: int
+
+
 class BacktestResponse(BaseModel):
     total_return: float
     sharpe_ratio: float
     max_drawdown: float
     n_rebalances: int
     equity_curve: list[EquityPoint]
+    # Buy & Hold 비교 (universe 동일가중 매입 후 보유)
+    buy_hold_return: float = 0.0
+    buy_hold_curve: list[EquityPoint] = []
+    # 거래일 중 양수 수익 비율 (0.0 ~ 1.0)
+    win_rate: float = 0.0
+    # 리밸런싱별 종목 보유 내역
+    trades: list[TradeRecord] = []
     metadata: dict
 
 

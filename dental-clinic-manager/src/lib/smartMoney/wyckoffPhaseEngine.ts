@@ -469,9 +469,8 @@ export function detectWyckoffPhase(
     cycle = 'distribution'
     events = distEvents
   } else if (accEvents.length === 0 && distEvents.length === 0) {
-    // ★ Fallback: 클라이맥스 이벤트가 전혀 없는 추세 종목용 (TSLA 등)
-    //   30일 추세 강도로 cycle + phase 추정 — climax 미관측이므로
-    //   description에 "추세 기반 추정"임을 명시한다.
+    // 이벤트가 전혀 없으면 Wyckoff phase/cycle은 확정하지 않는다.
+    // 다만 30일 추세 강도는 별도 heuristic으로만 노출한다.
     const len = sourceBars.length
     const startPrice = sourceBars[Math.max(0, len - 30)].close
     const endPrice = sourceBars[len - 1].close
@@ -485,23 +484,20 @@ export function detectWyckoffPhase(
       }
     }
     if (cycle) {
-      // 추세 강도(절대값)로 phase A~E 추정 — climax 없는 추세 종목에서도
-      // 사용자가 stepper에서 현재 위치를 시각적으로 파악할 수 있도록.
-      const absTrend = Math.abs(trendPct)
-      let trendPhase: WyckoffPhaseResult['phase'] = null
-      if (absTrend >= 0.30) trendPhase = 'E'      // 30%+ 추세 → 본격 마크업/마크다운
-      else if (absTrend >= 0.20) trendPhase = 'D' // 20~30% → 추세 진행 후반
-      else if (absTrend >= 0.12) trendPhase = 'C' // 12~20% → 추세 가속
-      else if (absTrend >= 0.06) trendPhase = 'B' // 6~12% → 추세 정착
-      else trendPhase = 'A'                       // 3~6% → 추세 시작
       const trendDirection = cycle === 'accumulation' ? '하락' : '상승'
-      const trendDesc = `${trendDirection} 추세 ${(trendPct * 100).toFixed(1)}% — Phase ${trendPhase} 추정 (climax 미관측, 추세 기반)`
+      const trendDesc = `${trendDirection} 추세 ${(trendPct * 100).toFixed(1)}% — Wyckoff 이벤트 미검출, 추세 heuristic만 존재`
       return {
-        cycle,
-        phase: trendPhase,
+        cycle: null,
+        phase: null,
         events: [],
-        confidence: 25,
+        confidence: 0,
         description: trendDesc,
+        trendHeuristic: {
+          cycle,
+          lookbackDays: 30,
+          returnPct: trendPct,
+          description: trendDesc,
+        },
       }
     }
     return { cycle: null, phase: null, events: [], confidence: 0, description: '이벤트 없음 — 횡보' }

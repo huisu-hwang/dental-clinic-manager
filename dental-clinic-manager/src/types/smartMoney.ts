@@ -130,6 +130,12 @@ export interface WyckoffPhaseResult {
   events: WyckoffPhaseEvent[]
   confidence: number
   description: string
+  trendHeuristic?: {
+    cycle: NonNullable<WyckoffCycle>
+    lookbackDays: number
+    returnPct: number
+    description: string
+  } | null
 }
 
 export interface LiquidityPool {
