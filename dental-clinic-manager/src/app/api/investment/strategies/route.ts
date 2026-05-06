@@ -128,16 +128,6 @@ export async function POST(request: NextRequest) {
       ? (riskSettings as object)
       : NOOP_RISK_SETTINGS
 
-  // 전략 개수 제한 (사용자당 최대 10개)
-  const { count } = await supabase
-    .from('investment_strategies')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-
-  if ((count ?? 0) >= 10) {
-    return NextResponse.json({ error: '전략은 최대 10개까지 생성 가능합니다' }, { status: 400 })
-  }
-
   // DB 저장
   const { data, error } = await supabase
     .from('investment_strategies')
