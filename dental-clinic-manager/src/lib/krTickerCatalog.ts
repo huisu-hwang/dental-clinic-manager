@@ -17,6 +17,13 @@ export interface KRMarketCapEntry {
 
 const ALL: KRMarketCapEntry[] = catalog as KRMarketCapEntry[]
 
+/** ticker → entry 직접 조회 (eager) — usTickerCatalog의 BY_TICKER와 동일 패턴 */
+const BY_TICKER: Map<string, KRMarketCapEntry> = (() => {
+  const m = new Map<string, KRMarketCapEntry>()
+  for (const e of ALL) m.set(e.ticker, e)
+  return m
+})()
+
 /** marketCap > 0 인 종목만 시총 내림차순 정렬한 인덱스 */
 let _ranked: KRMarketCapEntry[] | null = null
 function rankedList(): KRMarketCapEntry[] {
@@ -44,7 +51,9 @@ export function getKRMarketCapRank(ticker: string): number | null {
 
 /** 시총 (없으면 null) */
 export function getKRMarketCap(ticker: string): number | null {
-  const e = ALL.find((x) => x.ticker === ticker)
+  const t = (ticker ?? '').trim()
+  if (!t) return null
+  const e = BY_TICKER.get(t)
   if (!e || e.marketCap <= 0) return null
   return e.marketCap
 }
