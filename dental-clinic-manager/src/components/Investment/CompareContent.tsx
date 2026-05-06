@@ -89,8 +89,6 @@ const METRIC_GLOSSARY: Record<string, { title: string; body: string; formula?: s
 
 // 비교 전략 수 상한 (안전 마진. 사용자/프리셋 합계가 이를 넘으면 한 번에 N개씩 분할 호출 권장)
 const MAX_COMPARE = 50
-// 다중 종목 비교 상한 (종목 × 전략 = 백테스트 호출 수)
-const MAX_TICKERS = 10
 // 백테스트 동시 호출 수 (서버 부하 분산)
 const COMPARE_CHUNK = 8
 
@@ -267,10 +265,6 @@ function LiveCompareSection() {
     }
     setTickers(prev => {
       if (prev.some(p => p.ticker === symbol)) return prev
-      if (prev.length >= MAX_TICKERS) {
-        alert(`종목은 최대 ${MAX_TICKERS}개까지 선택할 수 있습니다.`)
-        return prev
-      }
       return [...prev, { ticker: symbol, name: name || symbol }]
     })
   }
@@ -500,7 +494,7 @@ function LiveCompareSection() {
           {/* 종목 (다중 선택, 동일 시장 내) */}
           <div className="md:col-span-2">
             <label className="block text-xs font-medium text-at-text-secondary mb-1.5">
-              종목 <span className="text-at-text-weak font-normal">(검색해서 추가, 최대 {MAX_TICKERS}개 · 현재 {tickers.length}개)</span>
+              종목 <span className="text-at-text-weak font-normal">(검색해서 추가 · 현재 {tickers.length}개)</span>
             </label>
             <TickerSearch
               market="ALL"
