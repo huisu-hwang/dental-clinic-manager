@@ -276,9 +276,11 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
     }
   }
 
-  // 2) ID/PW 로그인 — modern hometax UI 대응
+  // 2) ID/PW 로그인 — 메인 페이지(`/ui/pp/index_pp.xml`)에 이미 임베드된 로그인 박스 활용
+  // 헤더 "로그인" 버튼은 클릭하지 않음 — 메인에 이미 로그인 박스가 있고,
+  // 헤더 클릭 시 다른 화면으로 navigate되어 ID 필드가 사라지는 문제 발생.
   await page.goto(HOMETAX_MAIN, { waitUntil: 'load', timeout: 30000 });
-  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
   // 보안 팝업 닫기 (있으면)
   for (const sel of ['.popup_close', '.btn_close', 'button:has-text("닫기")', 'a:has-text("닫기")']) {
@@ -292,72 +294,81 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
     }
   }
 
-  // 헤더 "로그인" 링크 → 로그인 페이지로 이동
-  const loginClicked = await safeClick(
+  // SPA 동적 로딩 안정화 — 로그인 박스(공동/간편/아이디)가 보일 때까지 대기.
+  // CDN wrapper 페이지가 먼저 로드된 뒤 진짜 SPA가 비동기로 채워지므로 추가 대기 필요.
+  await page
+    .locator('a:has-text("아이디 로그인"), [id*="loginboxFrame_anchor24"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 15000 })
+    .catch(() => {});
+
+  // "아이디 로그인" 탭 클릭 — 정확한 ID 우선 + TreeWalker 폴백
+  const idTabClicked = await safeClick(
     page,
     [
-      'a.hd_log',
-      'a[href*="login"]',
-      '#login_btn',
-      '.login_btn',
-      'button:has-text("로그인")',
-      'a:has-text("로그인")',
+      '#mf_txppWframe_loginboxFrame_anchor24',
+      'a[id*="loginboxFrame_anchor24"]',
+      'a.w2group.ico12.txt',
+      'a:has-text("아이디 로그인")',
+      'text=아이디 로그인',
     ],
-    '헤더 로그인 버튼',
+    '아이디 로그인 탭',
     8000,
   );
 
-  if (loginClicked) {
-    await page.waitForLoadState('load', { timeout: 12000 }).catch(() => {});
-    await page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => {});
-  }
-
-  // "아이디 로그인" 탭 — JS TreeWalker로 직접 텍스트 매칭 (selector 변동 강건성)
-  await page.evaluate(() => {
-    const win = globalThis as any;
-    const doc = win.document;
-    const walker = doc.createTreeWalker(doc.body, win.NodeFilter.SHOW_ELEMENT);
-    let node: any = walker.currentNode;
-    while (node) {
-      const el = node as any;
-      const directText = Array.from(el.childNodes as any[])
-        .filter((n: any) => n.nodeType === win.Node.TEXT_NODE)
-        .map((n: any) => (n.textContent?.trim() || '') as string)
-        .join('');
-      if (directText === '아이디 로그인') {
-        el.click();
-        return;
+  if (!idTabClicked) {
+    // TreeWalker 폴백 — 직접 텍스트 매칭
+    await page.evaluate(() => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const win = globalThis as any;
+      const doc = win.document;
+      const walker = doc.createTreeWalker(doc.body, win.NodeFilter.SHOW_ELEMENT);
+      let node: any = walker.currentNode;
+      while (node) {
+        const el = node as any;
+        const directText = Array.from(el.childNodes as any[])
+          .filter((n: any) => n.nodeType === win.Node.TEXT_NODE)
+          .map((n: any) => (n.textContent?.trim() || '') as string)
+          .join('');
+        if (directText === '아이디 로그인') {
+          el.click();
+          return;
+        }
+        node = walker.nextNode();
       }
-      node = walker.nextNode();
-    }
-  }).catch(() => {});
+    }).catch(() => {});
+  }
 
   // ID 입력 필드 visible 대기 → 탭 전환 성공의 핵심 지표
   const idVisible = await page
-    .locator('input[id*="iptUserId"], input[id*="userId"]')
+    .locator('input[id*="iptUserId"], input[name="iptUserId"]')
     .first()
-    .waitFor({ state: 'visible', timeout: 8000 })
+    .waitFor({ state: 'visible', timeout: 10000 })
     .then(() => true)
     .catch(() => false);
 
   if (!idVisible) {
-    await safeClick(
-      page,
-      ['text=아이디 로그인', 'a:has-text("아이디 로그인")', '[class*="tab"]:has-text("아이디")'],
-      '아이디 로그인 탭 재시도',
-      4000,
-    );
-    await page.waitForTimeout(1500);
+    log('warn', '[Scraping/login] ID 필드 미발견 — DOM 진단 정보 수집');
+    const diag = await page.evaluate(() => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const doc = (globalThis as any).document;
+      const inputs = Array.from(doc.querySelectorAll('input') as any[])
+        .filter((el: any) => el.offsetParent !== null)
+        .slice(0, 10)
+        .map((el: any) => ({ id: el.id, name: el.name, type: el.type, ph: el.placeholder }));
+      return { url: location.href, inputCount: inputs.length, sample: inputs };
+    }).catch(() => null);
+    log('error', `[Scraping/login] DOM 상태: ${JSON.stringify(diag)}`);
   }
 
-  // ID 입력
+  // ID 입력 — 실제 hometax DOM 기준: input[name="iptUserId"] / [id*="iptUserId"]
   const idTyped = await safeType(
     page,
     [
-      'input[id="iptUserId"]',
+      'input[name="iptUserId"]',
       'input[id*="iptUserId"]',
-      'input[name*="userId"]',
-      'input[id*="id"]:not([type="password"]):not([type="hidden"])',
+      'input[id="mf_txppWframe_loginboxFrame_iptUserId"]',
+      'input[placeholder*="아이디"]',
     ],
     credentials.hometax_user_id,
     '아이디',
@@ -368,9 +379,9 @@ async function loginToHometax(page: any, credentials: HometaxCredentials): Promi
   const pwTyped = await safeType(
     page,
     [
-      'input[id="iptUserPw"]',
+      'input[name="iptUserPw"]',
       'input[id*="iptUserPw"]',
-      'input[name*="userPw"]',
+      'input[id="mf_txppWframe_loginboxFrame_iptUserPw"]',
       'input[type="password"]',
     ],
     credentials.password,
