@@ -10,7 +10,7 @@ import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import YahooFinance from 'yahoo-finance2'
 
-const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
+const yahooFinance = new YahooFinance()
 
 const DICT_PATH = resolve(process.cwd(), 'src/lib/krTickerDict.ts')
 const OUT_PATH = resolve(process.cwd(), 'src/data/kr-tickers-marketcap.json')
