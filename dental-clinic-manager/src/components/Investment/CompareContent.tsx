@@ -781,6 +781,15 @@ function MatrixView({
 
   const activeResult = activeCellKey ? lookup.get(activeCellKey) : null
 
+  // 종목별 B&H 수익률 — 같은 종목의 결과들 중 첫 유효값 사용
+  const bhByTicker = new Map<string, number | null>()
+  tickers.forEach((t) => {
+    const found = strategies
+      .map((s) => lookup.get(`${s.key}::${t.ticker}`))
+      .find((r) => r && !r.error && r.buyHold && typeof r.buyHold.totalReturn === 'number')
+    bhByTicker.set(t.ticker, found?.buyHold?.totalReturn ?? null)
+  })
+
   return (
     <div className="space-y-3 mb-4">
       <div className="overflow-x-auto rounded-xl border border-at-border">
@@ -796,6 +805,16 @@ function MatrixView({
                   {t.name && t.name !== t.ticker && (
                     <div className="text-[10px] text-at-text-weak font-normal truncate max-w-[110px] mx-auto">{t.name}</div>
                   )}
+                  {(() => {
+                    const bh = bhByTicker.get(t.ticker)
+                    if (bh == null) return <div className="text-[10px] text-at-text-weak font-normal mt-0.5">B&amp;H —</div>
+                    const cls = bh >= 0 ? 'text-rose-600' : 'text-blue-600'
+                    return (
+                      <div className={`text-[10px] font-mono font-normal mt-0.5 ${cls}`}>
+                        B&amp;H {bh > 0 ? '+' : ''}{bh.toFixed(1)}%
+                      </div>
+                    )
+                  })()}
                 </th>
               ))}
             </tr>
