@@ -51,6 +51,16 @@ function getMonthPeriod(year: number, month: number): { start: string; end: stri
   };
 }
 
+/** URL에 tmIdx 파라미터가 나타날 때까지 대기 (메뉴 전환 완료 신호) */
+async function waitForMenuOpen(page: Page, timeoutMs = 8000): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (page.url().includes('tmIdx=')) return true;
+    await page.waitForTimeout(150);
+  }
+  return false;
+}
+
 /** 메뉴 네비게이션: $c.pp.fn_topMenuOpen 호출 */
 async function navigateToMenu(page: Page, menuId: string): Promise<void> {
   const navResult = await page.evaluate((id: string) => {
@@ -73,12 +83,14 @@ async function navigateToMenu(page: Page, menuId: string): Promise<void> {
   }, menuId).catch(() => 'evaluate_error');
 
   log('info', `[Hometax] 메뉴 네비게이션: ${navResult}`);
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-  await page.waitForTimeout(5000);
 
-  if (!page.url().includes('tmIdx=')) {
+  // tmIdx URL 파라미터로 전환 완료 감지 (networkidle 대신 빠른 폴링)
+  const ok = await waitForMenuOpen(page, 8000);
+  if (!ok) {
     throw new Error(`메뉴 이동 실패: ${menuId}`);
   }
+  // SPA 컴포넌트 마운트 여유
+  await page.waitForTimeout(800);
 }
 
 /** 년도 select/input 자동 설정 */
@@ -161,7 +173,7 @@ async function clickPeriodTab(page: Page): Promise<void> {
     }
   }).catch(() => {});
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(600);
 }
 
 /** 시작일/종료일 입력 (YYYYMMDD) */
@@ -222,13 +234,14 @@ async function clickSearch(page: Page): Promise<void> {
     throw new Error('조회 버튼을 찾을 수 없습니다');
   }
 
-  await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
-  await page.waitForTimeout(5000);
+  // 로딩 인디케이터가 있다면 사라질 때까지 대기 (selector-based, 빠름)
   await page
     .locator('.loading, .spinner, .w2loading')
     .first()
-    .waitFor({ state: 'hidden', timeout: 15000 })
+    .waitFor({ state: 'hidden', timeout: 12000 })
     .catch(() => {});
+  // 결과 테이블 렌더링 여유 (networkidle 대신 짧은 고정 시간)
+  await page.waitForTimeout(800);
 }
 
 /** 데이터 테이블 파싱 (HTML table + WebSquare grid 폴백) */
@@ -308,8 +321,6 @@ async function scrapeCashReceiptPurchase(
   log('info', `[Hometax] 현금영수증 매입 스크래핑 시작 (${year}-${month})`);
 
   await navigateToMenu(page, MENU_ID_MAP.cash_receipt_purchase);
-  await page.waitForTimeout(3000);
-
   await clickPeriodTab(page);
 
   const period = getMonthPeriod(year, month);
@@ -350,10 +361,10 @@ async function navigateToBusinessCardDeduction(page: Page): Promise<void> {
     }, id).catch(() => 'evaluate_error');
 
     log('info', `[Hometax] 매입세액 공제 메뉴 ID 시도: ${id} → ${result}`);
-    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    await page.waitForTimeout(2500);
-
-    if (page.url().includes('tmIdx=')) return;
+    if (await waitForMenuOpen(page, 4000)) {
+      await page.waitForTimeout(600);
+      return;
+    }
   }
 
   // 키워드 매칭 폴백
@@ -383,12 +394,12 @@ async function navigateToBusinessCardDeduction(page: Page): Promise<void> {
     }
   }, BUSINESS_CARD_DEDUCTION_KEYWORDS).catch(() => {});
 
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-  await page.waitForTimeout(3000);
-
-  if (!page.url().includes('tmIdx=')) {
+  // tmIdx URL 파라미터 출현으로 메뉴 전환 감지
+  const ok = await waitForMenuOpen(page, 8000);
+  if (!ok) {
     throw new Error('사업용신용카드 매입세액 공제 확인/변경 메뉴 이동 실패');
   }
+  await page.waitForTimeout(800);
 }
 
 /** "월별" 조회기간 라디오/탭 클릭 */
@@ -588,6 +599,10 @@ export async function returnToMain(page: Page): Promise<void> {
   await page
     .goto(HOMETAX_MAIN, { waitUntil: 'domcontentloaded', timeout: 30000 })
     .catch(() => {});
-  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-  await page.waitForTimeout(1000);
+  // 헤더에 로그아웃 링크가 보이면 메인 페이지 로딩 완료로 간주 (selector-based 빠른 wait)
+  await page
+    .locator('text=로그아웃')
+    .first()
+    .waitFor({ state: 'visible', timeout: 5000 })
+    .catch(() => {});
 }
