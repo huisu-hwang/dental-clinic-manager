@@ -135,6 +135,14 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
   const runAllBacktests = async () => {
     if (tickers.length === 0) { setError('종목을 추가해주세요'); return }
     if (!startDate || !endDate) { setError('기간을 설정해주세요'); return }
+    // 사전 검증: 미래 날짜/역순/너무 짧은 기간을 RL 서버 호출 전에 차단해
+    // "insufficient OHLCV" 같은 모호한 서버 에러를 방지한다
+    const today = new Date().toISOString().slice(0, 10)
+    if (startDate > endDate) { setError('시작일이 종료일보다 늦을 수 없습니다'); return }
+    if (endDate > today) { setError('종료일은 오늘 이전이어야 합니다 (미래 기간은 백테스트 불가)'); return }
+    const dayMs = 24 * 60 * 60 * 1000
+    const spanDays = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / dayMs)
+    if (spanDays < 7) { setError('백테스트 기간은 최소 7일 이상이어야 합니다 (현재: ' + spanDays + '일)'); return }
 
     setError(null)
     setResults([])
