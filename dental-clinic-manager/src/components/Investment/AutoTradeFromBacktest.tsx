@@ -318,6 +318,7 @@ export default function AutoTradeFromBacktest() {
             riskSettings: preset.riskSettings,
             automationLevel: 2,
             mode: preset.mode ?? 'swing',
+            sourcePresetId: preset.id,
           }),
         })
         const createJson = await createRes.json()

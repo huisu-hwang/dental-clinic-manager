@@ -8,7 +8,12 @@
 import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react'
 
 export interface StrategyBacktestStats {
-  strategyId: string
+  /** 집계 키: 'user:<uuid>' 또는 'preset:<id>' */
+  key: string
+  strategyId?: string
+  presetId?: string
+  /** 프리셋 키에 합쳐진 사용자 저장 전략 ID 목록 */
+  linkedStrategyIds?: string[]
   runs: number
   tickerCount: number
   avgReturn: number
@@ -50,6 +55,12 @@ export default function StrategyStatsBlock({ stats, compact = false }: Props) {
         </span>
         <span className={`px-1.5 py-0.5 rounded font-mono font-semibold ${stats.avgReturn >= 0 ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
           평균 {fmtPct(stats.avgReturn)}
+        </span>
+        <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-mono">
+          승률 {stats.avgWinRate.toFixed(0)}%
+        </span>
+        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono">
+          MDD {fmtPct(-Math.abs(stats.avgMDD))}
         </span>
         {stats.bestReturn !== stats.avgReturn && (
           <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono">

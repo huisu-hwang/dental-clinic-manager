@@ -27,6 +27,8 @@ import type {
 /** 비교 가능한 단일 항목 (사용자 저장 전략 또는 프리셋) */
 interface SelectableItem {
   key: string  // 'user:<uuid>' 또는 'preset:<id>'
+  /** 통계 조회용 키 ('user:<uuid>' 또는 'preset:<id>'). source_preset_id가 있는 사용자 전략은 preset:로 묶임. */
+  statsKey: string
   source: 'user' | 'preset'
   name: string
   description?: string
@@ -189,7 +191,7 @@ function LiveCompareSection() {
       const json = await res.json()
       if (res.ok && Array.isArray(json.data)) {
         const map = new Map<string, StrategyBacktestStats>()
-        for (const s of json.data as StrategyBacktestStats[]) map.set(s.strategyId, s)
+        for (const s of json.data as StrategyBacktestStats[]) map.set(s.key, s)
         setStatsByStrategy(map)
       }
     } catch { /* ignore */ }
@@ -206,6 +208,7 @@ function LiveCompareSection() {
       .filter(s => s.target_market === market)
       .map(s => ({
         key: `user:${s.id}`,
+        statsKey: s.source_preset_id ? `preset:${s.source_preset_id}` : `user:${s.id}`,
         source: 'user' as const,
         name: s.name,
         description: s.description || undefined,
@@ -222,6 +225,7 @@ function LiveCompareSection() {
       .filter(p => !DAYTRADING_PRESET_IDS.has(p.id))
       .map((p: PresetStrategy) => ({
         key: `preset:${p.id}`,
+        statsKey: `preset:${p.id}`,
         source: 'preset' as const,
         name: p.name,
         description: p.description,
@@ -655,7 +659,7 @@ function LiveCompareSection() {
                   selectedIds={selectedIds}
                   onToggle={toggleStrategy}
                   onOpenDetail={setDetailPresetId}
-                  stats={item.strategyId ? statsByStrategy.get(item.strategyId) ?? null : null}
+                  stats={statsByStrategy.get(item.statsKey) ?? null}
                 />
               ))}
             </div>
@@ -703,6 +707,7 @@ function LiveCompareSection() {
                 selectedIds={selectedIds}
                 onToggle={toggleStrategy}
                 onOpenDetail={setDetailPresetId}
+                stats={statsByStrategy.get(item.statsKey) ?? null}
               />
             ))}
           </div>
@@ -1158,12 +1163,10 @@ function SelectableCard({ item, selectedIds, onToggle, onOpenDetail, stats }: {
               )}
             </div>
 
-            {/* 백테스트 통계 (사용자 저장 전략만 — 프리셋은 backtest_runs에 저장 안 됨) */}
-            {item.source === 'user' && (
-              <div className="mt-2">
-                <StrategyStatsBlock stats={stats} compact />
-              </div>
-            )}
+            {/* 백테스트 통계 — 사용자 전략 + 프리셋 모두 표시 */}
+            <div className="mt-2">
+              <StrategyStatsBlock stats={stats} compact />
+            </div>
           </div>
           {isSelected && color && (
             <span className={`flex-shrink-0 w-6 h-6 rounded-full ${color.bg} text-white text-xs font-bold flex items-center justify-center`}>
