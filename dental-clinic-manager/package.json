@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/stamp-sw-version.js && node scripts/bundle-marketing-worker.js",
+    "prebuild": "node scripts/stamp-sw-version.js && node scripts/bundle-marketing-worker.js && node scripts/validate-permissions.mjs",
     "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "next start",
     "lint": "eslint",
     "check:menu": "node scripts/validate-menu-routes.mjs",
+    "check:permissions": "node scripts/validate-permissions.mjs",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"
   },
