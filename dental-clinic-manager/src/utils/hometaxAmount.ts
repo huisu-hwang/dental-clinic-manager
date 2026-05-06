@@ -8,9 +8,11 @@ const MONTH_ONLY_FIELDS = ['월', '기간', '거래월', '월별', '조회월'];
 
 const AMOUNT_KEYS = [
   // 실제 DB에서 확인된 금액 필드 (우선순위 순)
+  '총 사용금액',   // business_card_purchase (매입세액 공제 확인/변경 — 월별)
+  '총사용금액',
   '총금액',        // cash_receipt_sales
   '매출액계',      // credit_card_sales
-  '합계(①+②)',  // business_card_purchase
+  '합계(①+②)',  // business_card_purchase (legacy 누계 조회)
   // 범용 폴백
   '합계(③+④)', '합계', '매입금액',
   '거래금액', '매출금액',
@@ -66,15 +68,17 @@ export function extractMonthAmount(
 ): number {
   if (!Array.isArray(records) || records.length === 0) return 0;
 
-  const hasYearMonthField = records.some(record =>
-    YEAR_MONTH_FIELDS.some(key => {
+  // 연월 필드(거래년월 등) 또는 월 텍스트 필드(월/기간 등) 중 하나라도 있으면
+  // per-month 데이터로 간주하여 해당 월만 필터링.
+  const hasPeriodField = records.some(record =>
+    [...YEAR_MONTH_FIELDS, ...MONTH_ONLY_FIELDS].some(key => {
       const val = record[key];
       return val !== undefined && val !== null && val !== '';
     })
   );
 
   let rowsToSum: Record<string, unknown>[];
-  if (hasYearMonthField) {
+  if (hasPeriodField) {
     const monthRows = findMonthRows(records, year, targetMonth);
     if (monthRows.length === 0) return 0;
     rowsToSum = monthRows;
