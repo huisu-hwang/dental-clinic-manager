@@ -664,6 +664,27 @@ export async function getKRMinutePrices(params: MinutePriceParams): Promise<KRMi
     }
   }
 
+  if (!credential.isPaperTrading && isKRRegularSessionNow()) {
+    const todayKey = kstIsoDate(new Date())
+    const hasTodayBars = Array.from(accumulated.values()).some((bar) => bar.datetime.startsWith(todayKey))
+    if (!hasTodayBars) {
+      try {
+        const todayChunk = await fetchKRMinutesPastDay(
+          credentialId,
+          credential,
+          ticker,
+          kstYyyymmdd(new Date()),
+          kstHhmmss(new Date()),
+        )
+        for (const bar of todayChunk) {
+          accumulated.set(bar.datetime, bar)
+        }
+      } catch (err) {
+        console.warn('[KIS] 장중 오늘 분봉 보강 실패:', err instanceof Error ? err.message : err)
+      }
+    }
+  }
+
   // 시간 순(과거→최신) 정렬 후 마지막 count
   const sorted = Array.from(accumulated.values()).sort((a, b) => a.datetime.localeCompare(b.datetime))
   const sliced = sorted.slice(-count)
@@ -911,6 +932,19 @@ function kstYyyymmdd(now: Date): string {
   return `${k.getUTCFullYear()}${String(k.getUTCMonth() + 1).padStart(2, '0')}${String(k.getUTCDate()).padStart(2, '0')}`
 }
 
+function kstIsoDate(now: Date): string {
+  const k = new Date(now.getTime() + 9 * 3600_000)
+  return `${k.getUTCFullYear()}-${String(k.getUTCMonth() + 1).padStart(2, '0')}-${String(k.getUTCDate()).padStart(2, '0')}`
+}
+
+function isKRRegularSessionNow(now: Date = new Date()): boolean {
+  const k = new Date(now.getTime() + 9 * 3600_000)
+  const dow = k.getUTCDay()
+  if (dow === 0 || dow === 6) return false
+  const minutes = k.getUTCHours() * 60 + k.getUTCMinutes()
+  return minutes >= 9 * 60 && minutes < 15 * 60 + 30
+}
+
 /** HHMMSS KST 현재 시각 (장 마감 후/주말이면 15:30:00) */
 function kstHhmmss(now: Date): string {
   const k = new Date(now.getTime() + 9 * 3600_000)
@@ -1130,4 +1164,83 @@ export async function getKRRealtimeQuote(params: RealtimeQuoteParams): Promise<K
     volume,
     timestamp: new Date().toISOString(),
   }
+}
+
+// ============================================
+// 호가 (10단계 매수/매도) — 군중심리 분석용
+// ============================================
+
+export interface KRAskingPrice {
+  bids: Array<{ price: number; qty: number }>
+  asks: Array<{ price: number; qty: number }>
+  totalBidQty: number
+  totalAskQty: number
+}
+
+interface AskingPriceParams {
+  credentialId: string
+  credential: KISCredential
+  ticker: string
+}
+
+/**
+ * KIS 호가 (10단계 매수/매도)
+ *
+ * KIS endpoint: /uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn
+ * TR_ID: FHKST01010200
+ *
+ * output1에 askp1~10 / bidp1~10 + askp_rsqn1~10 / bidp_rsqn1~10 포함
+ */
+export async function getKRAskingPrice(params: AskingPriceParams): Promise<KRAskingPrice> {
+  const { credentialId, credential, ticker } = params
+  const token = await getAccessToken(credentialId, credential)
+  const baseUrl = getBaseUrl(credential.isPaperTrading)
+
+  const queryParams = new URLSearchParams({
+    FID_COND_MRKT_DIV_CODE: 'J',
+    FID_INPUT_ISCD: ticker,
+  })
+
+  const response = await fetch(
+    `${baseUrl}/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn?${queryParams}`,
+    {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        authorization: `Bearer ${token}`,
+        appkey: credential.appKey,
+        appsecret: credential.appSecret,
+        tr_id: 'FHKST01010200',
+        custtype: 'P',
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`KIS 호가 조회 실패 (${response.status})`)
+  }
+
+  const json = (await response.json()) as {
+    rt_cd?: string
+    msg_cd?: string
+    msg1?: string
+    output1?: Record<string, string>
+  }
+  if (json.rt_cd !== '0') {
+    throw new Error(`KIS 호가 조회 실패: [${json.msg_cd}] ${json.msg1}`)
+  }
+
+  const o = json.output1 ?? {}
+  const bids: Array<{ price: number; qty: number }> = []
+  const asks: Array<{ price: number; qty: number }> = []
+  for (let i = 1; i <= 10; i++) {
+    const bp = Number(o[`bidp${i}`] ?? 0)
+    const bq = Number(o[`bidp_rsqn${i}`] ?? 0)
+    const ap = Number(o[`askp${i}`] ?? 0)
+    const aq = Number(o[`askp_rsqn${i}`] ?? 0)
+    if (bp > 0) bids.push({ price: bp, qty: bq })
+    if (ap > 0) asks.push({ price: ap, qty: aq })
+  }
+  const totalBidQty = bids.reduce((s, x) => s + x.qty, 0)
+  const totalAskQty = asks.reduce((s, x) => s + x.qty, 0)
+  return { bids, asks, totalBidQty, totalAskQty }
 }
