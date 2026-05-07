@@ -19,6 +19,7 @@ import {
   GitCompare,
   Search,
   Brain,
+  Users,
 } from 'lucide-react'
 import type { InvestmentTab } from '@/types/investment'
 import Footer from '@/components/Layout/Footer'
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'screener', label: '종목 스크리너', icon: Search, href: '/investment/screener' },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain, href: '/investment/smart-money' },
   { id: 'trading', label: '자동매매', icon: TrendingUp, href: '/investment/trading' },
+  { id: 'psychology', label: '└ 심리 분석', icon: Users, href: '/investment/psychology' },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase, href: '/investment/portfolio' },
 ]
 
