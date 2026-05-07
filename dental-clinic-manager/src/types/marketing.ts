@@ -400,6 +400,16 @@ export interface SEOValidationResult {
 
 // ─── SEO 텍스트 마이닝 결과 ───
 
+export interface SeoReferencedPost {
+  rank: number;
+  title: string;
+  postUrl: string;
+  blogName: string | null;
+  bodyLength: number;
+  imageCount: number;
+  headingCount: number;
+}
+
 export interface SeoKeywordMiningResult {
   competitorKeywords: { keyword: string; frequency: number; postCount: number; perPostFrequency?: number[] }[];
   recommendedKeywords: string[];
@@ -408,6 +418,8 @@ export interface SeoKeywordMiningResult {
   avgHeadingCount: number;
   avgKeywordCount: number;
   commonTags: string[];
+  /** 분석에 참고한 네이버 상위 노출 글 (rank 오름차순) */
+  referencedPosts?: SeoReferencedPost[];
   titlePatterns: string[];
 }
 
