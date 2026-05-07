@@ -52,23 +52,27 @@ interface RenderArgs {
   assets: BrandAssets;
   copy?: string;
   photo?: BrandPhoto;
+  /** true면 캐시 조회/저장을 건너뛰고 무조건 새로 합성 (라이브 미리보기 전용) */
+  bypassCache?: boolean;
 }
 
-export async function renderBrandImage({ type, assets, copy, photo }: RenderArgs): Promise<string> {
+export async function renderBrandImage({ type, assets, copy, photo, bypassCache }: RenderArgs): Promise<string> {
   const admin = getSupabaseAdmin();
   if (!admin) throw new Error('Supabase admin client unavailable');
 
   const cacheKey = computeCacheKey(type, assets, { copy, photoId: photo?.id });
 
   // 1. 캐시 조회 (테이블이 generated types에 아직 없어 any 캐스트)
-  const { data: cached } = await (admin as any)
-    .from('clinic_brand_image_renders')
-    .select('image_url')
-    .eq('clinic_id', assets.clinic_id)
-    .eq('image_type', type)
-    .eq('cache_key', cacheKey)
-    .maybeSingle();
-  if (cached?.image_url) return cached.image_url as string;
+  if (!bypassCache) {
+    const { data: cached } = await (admin as any)
+      .from('clinic_brand_image_renders')
+      .select('image_url')
+      .eq('clinic_id', assets.clinic_id)
+      .eq('image_type', type)
+      .eq('cache_key', cacheKey)
+      .maybeSingle();
+    if (cached?.image_url) return cached.image_url as string;
+  }
 
   // 2. 합성
   const fonts = (cachedFonts ??= await loadFonts());
@@ -95,23 +99,27 @@ export async function renderBrandImage({ type, assets, copy, photo }: RenderArgs
     throw new Error(`Unsupported brand image type: ${type}`);
   }
 
-  // 3. Storage 업로드
-  const objectPath = `clinics/${assets.clinic_id}/renders/${type}/${cacheKey}.png`;
+  // 3. Storage 업로드 — draft 모드는 별도 폴더에 저장 (캐시 INSERT 없음, upsert로 덮어씀)
+  const objectFolder = bypassCache ? 'drafts' : 'renders';
+  const objectPath = `clinics/${assets.clinic_id}/${objectFolder}/${type}/${cacheKey}.png`;
   const { error: uploadErr } = await admin.storage
     .from(BUCKET)
     .upload(objectPath, pngBuffer, { contentType: 'image/png', upsert: true });
   if (uploadErr) throw uploadErr;
 
   const { data: pub } = admin.storage.from(BUCKET).getPublicUrl(objectPath);
-  const publicUrl = pub.publicUrl;
+  // draft URL은 브라우저 캐시 무력화 (같은 path로 덮어쓰는 경우 갱신을 보장)
+  const publicUrl = bypassCache ? `${pub.publicUrl}?t=${Date.now()}` : pub.publicUrl;
 
-  // 4. 캐시 INSERT (동시성: ON CONFLICT 무시)
-  await (admin as any)
-    .from('clinic_brand_image_renders')
-    .upsert(
-      { clinic_id: assets.clinic_id, image_type: type, cache_key: cacheKey, image_url: publicUrl },
-      { onConflict: 'clinic_id,image_type,cache_key' },
-    );
+  // 4. 캐시 INSERT (저장 자산일 때만)
+  if (!bypassCache) {
+    await (admin as any)
+      .from('clinic_brand_image_renders')
+      .upsert(
+        { clinic_id: assets.clinic_id, image_type: type, cache_key: cacheKey, image_url: publicUrl },
+        { onConflict: 'clinic_id,image_type,cache_key' },
+      );
+  }
 
   return publicUrl;
 }

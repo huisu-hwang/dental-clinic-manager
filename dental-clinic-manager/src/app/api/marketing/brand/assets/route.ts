@@ -45,6 +45,9 @@ export async function PUT(request: NextRequest) {
     ? body.medical_law_preset
     : 'yellow_black';
 
+  const rawWidth = Number(body.title_border_width);
+  const titleBorderWidth = Number.isFinite(rawWidth) ? Math.min(60, Math.max(0, Math.round(rawWidth))) : 16;
+
   const payload: Partial<BrandAssets> = {
     name_ko: body.name_ko ?? null,
     name_en: body.name_en ?? null,
@@ -55,6 +58,7 @@ export async function PUT(request: NextRequest) {
     medical_law_preset: preset,
     medical_law_top_text: body.medical_law_top_text || '본 포스팅은 의료법 제56조 및 동법 시행령을 준수하여 {clinic_name}에서 정보제공을 위해 직접 작성하였습니다.',
     medical_law_bottom_text: body.medical_law_bottom_text || '모든 시술 및 수술은 부작용이 발생할 수 있으니 의료진과 충분한 상담 후 치료받으시기 바랍니다.',
+    title_border_width: titleBorderWidth,
   };
 
   const admin = getSupabaseAdmin();
