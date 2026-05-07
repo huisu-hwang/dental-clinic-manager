@@ -282,8 +282,11 @@ export function SmartMoneyContent() {
     const idx = activeDayIdx ?? byDay.length - 1
     const day = byDay[Math.max(0, Math.min(byDay.length - 1, idx))]
     if (!day) return analysis
-    // byDay 마지막 일자(가장 최근)는 메인 분석과 동일 — 효율을 위해 메인을 그대로 사용
-    if (idx === byDay.length - 1) return analysis
+    // byDay 마지막 일자(가장 최근 정규장)는 메인 분석과 동일 — 효율을 위해 메인을 그대로 사용.
+    // 단, (Pre) 항목은 별도 데이터를 가지므로 메인 analysis를 반환하면 안 됨.
+    const isPreDay = / \(Pre\)$/.test(day.asOfDate ?? "")
+    const latestRegularDay = [...byDay].reverse().find((d) => !/ \(Pre\)$/.test(d.asOfDate ?? ""))
+    if (!isPreDay && latestRegularDay && day.asOfDate === latestRegularDay.asOfDate) return analysis
     return {
       ...analysis,
       asOfDate: day.asOfDate,
@@ -306,7 +309,7 @@ export function SmartMoneyContent() {
       signalDetails: day.signalDetails,
       naturalLanguageComment: day.naturalLanguageComment,
       // byDay 항목은 카드별 코멘트를 갖지 않음(가장 최근 일자만 메인에 보유)
-      perCardComments: idx === byDay.length - 1 ? analysis.perCardComments : undefined,
+      perCardComments: (!isPreDay && latestRegularDay && day.asOfDate === latestRegularDay.asOfDate) ? analysis.perCardComments : undefined,
     }
   }, [analysis, activeDayIdx])
 
