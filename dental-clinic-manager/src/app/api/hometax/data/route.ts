@@ -1,58 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { findMonthRows } from '@/utils/hometaxAmount';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function getServiceClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
-}
-
-/**
- * raw_data 배열에서 특정 연월에 해당하는 레코드만 필터링
- *
- * 실제 DB 데이터 구조:
- * - cash_receipt_sales: 거래년월 = "2026-01" 형식
- * - business_card_purchase: 거래년월 = "2026-01" 형식
- * - credit_card_sales: 승인년월 = "2026-01" 형식
- * - 요약 행: "상반기 합계" 등은 제외됨
- */
-function findMonthRows(
-  records: Record<string, unknown>[],
-  year: number,
-  targetMonth: number,
-): Record<string, unknown>[] {
-  // YYYY-MM 형식 (예: "2026-04")
-  const yearMonthStr = `${year}-${String(targetMonth).padStart(2, '0')}`;
-
-  // YYYY-MM 형식을 담는 필드명 목록
-  const yearMonthFields = ['거래년월', '승인년월', '발행년월', '귀속년월', '거래일자'];
-
-  // "N월" 형식 폴백
-  const monthPatterns = [
-    `${targetMonth}월`,
-    `${String(targetMonth).padStart(2, '0')}월`,
-  ];
-  const monthOnlyFields = ['월', '기간', '거래월', '월별', '조회월'];
-
-  return records.filter(record => {
-    // YYYY-MM 형식 필드 확인
-    for (const key of yearMonthFields) {
-      const val = record[key];
-      if (val !== undefined && val !== null && val !== '') {
-        if (String(val).trim() === yearMonthStr) return true;
-      }
-    }
-    // "N월" 형식 필드 확인 (폴백)
-    for (const key of monthOnlyFields) {
-      const val = record[key];
-      if (val !== undefined && val !== null && val !== '') {
-        const strVal = String(val).replace(/\s/g, '');
-        if (monthPatterns.some(p => strVal === p)) return true;
-      }
-    }
-    return false;
-  });
 }
 
 // GET: 수집 데이터 조회 (타입/기간 필터)
