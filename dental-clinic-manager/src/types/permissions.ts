@@ -93,6 +93,8 @@ export type Permission =
   // 마케팅 자동화 권한
   | 'marketing_view'          // 마케팅 자동화 조회
   | 'marketing_manage'        // 마케팅 자동화 발행/관리
+  | 'marketing_brand_view'    // 마케팅 브랜드 이미지 조회
+  | 'marketing_brand_manage'  // 마케팅 브랜드 이미지 자산 관리
   // 주식 자동매매 권한
   | 'investment_view'         // 주식 자동매매 조회
   | 'investment_manage'       // 주식 자동매매 전략/주문 관리
@@ -149,6 +151,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'financial_view', 'financial_manage',
     // 마케팅 자동화 (모든 권한)
     'marketing_view', 'marketing_manage',
+    'marketing_brand_view', 'marketing_brand_manage',
     // 주식 자동매매 (모든 권한)
     'investment_view', 'investment_manage',
     // 월간 성과 보고서 (모든 권한)
@@ -298,6 +301,7 @@ export const NEW_FEATURE_PREFIXES = [
   'ai_analysis_',
   'financial_',
   'marketing_',
+  'marketing_brand_',
   'investment_',
   'monthly_report_',
   'referral_',
@@ -424,7 +428,9 @@ export const PERMISSION_GROUPS = {
   ],
   '마케팅 자동화': [
     { key: 'marketing_view', label: '마케팅 자동화 조회' },
-    { key: 'marketing_manage', label: '마케팅 발행/관리' }
+    { key: 'marketing_manage', label: '마케팅 발행/관리' },
+    { key: 'marketing_brand_view', label: '브랜드 이미지 설정 조회' },
+    { key: 'marketing_brand_manage', label: '브랜드 이미지 자산 관리' }
   ],
   '주식 자동매매': [
     { key: 'investment_view', label: '주식 자동매매 조회' },
@@ -540,6 +546,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // 마케팅 자동화 권한 설명
   'marketing_view': '마케팅 자동화 콘텐츠와 발행 현황을 조회할 수 있습니다.',
   'marketing_manage': '마케팅 자동화 콘텐츠를 생성/수정/발행할 수 있습니다.',
+  'marketing_brand_view': '클리닉의 브랜드 이미지 설정 페이지를 조회할 수 있습니다.',
+  'marketing_brand_manage': '로고/컬러/사진 등 브랜드 자산을 등록·수정·삭제할 수 있습니다.',
   // 주식 자동매매 권한 설명
   'investment_view': '주식 자동매매 현황과 포트폴리오를 조회할 수 있습니다.',
   'investment_manage': '자동매매 전략을 설정하거나 주문을 관리할 수 있습니다.',
