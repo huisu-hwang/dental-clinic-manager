@@ -14,6 +14,7 @@ import {
   AdjustmentsHorizontalIcon,
   PaintBrushIcon,
   MegaphoneIcon,
+  RectangleStackIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -38,6 +39,8 @@ import ClinicalPhotoEditor from '@/components/marketing/clinical/ClinicalPhotoEd
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 import { useSeoPreview } from '@/hooks/useSeoPreview'
 import { useFormDraft } from '@/hooks/useFormDraft'
+import { BrandImageSection } from '@/components/marketing/brand/BrandImageSection'
+import type { BrandImageOptions } from '@/types/brand'
 
 const DRAFT_KEY = 'marketing-newpost-tab-draft-v1'
 
@@ -97,6 +100,11 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
   const [clinicalData, setClinicalData] = useState<ClinicalFormData | null>(null)
+  const [brandImageOptions, setBrandImageOptions] = useState<BrandImageOptions>({
+    medicalLaw: { enabled: true, positions: ['top'] },
+    title:      { enabled: true, positions: ['middle'], copy: '' },
+    photo:      { enabled: true, positions: ['bottom'], mode: 'random' },
+  })
 
   // ── 생성 / 저장 상태 (컨텍스트에서 가져옴) ──
   const isGenerating = aiGen.isGenerating
@@ -300,6 +308,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis, platforms,
         imageStyle, imageVisualStyle, imageCount, targetWordCount,
         referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
+        brandImageOptions,
       })
     }
   }
@@ -813,9 +822,25 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         </section>
       )}
 
-      {/* ── 4. 배포 플랫폼 ── */}
+      {/* ── 4. 브랜드 이미지 (임상글이 아닐 때만) ── */}
+      {postType !== 'clinical' && (
+        <section>
+          <SectionHeader number={4} title="브랜드 이미지" icon={RectangleStackIcon} iconColor="text-violet-600" iconBg="bg-violet-50" />
+          <fieldset disabled={isGenerating} className={`transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+            <BrandImageSection
+              clinicNameForCopy=""
+              keyword={keyword}
+              value={brandImageOptions}
+              onChange={setBrandImageOptions}
+              disabled={isGenerating}
+            />
+          </fieldset>
+        </section>
+      )}
+
+      {/* ── 5. 배포 플랫폼 ── */}
       <section>
-        <SectionHeader number={4} title="배포 플랫폼" icon={MegaphoneIcon} iconColor="text-purple-600" iconBg="bg-purple-50" />
+        <SectionHeader number={5} title="배포 플랫폼" icon={MegaphoneIcon} iconColor="text-purple-600" iconBg="bg-purple-50" />
         <fieldset disabled={isGenerating} className={`transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (
@@ -887,7 +912,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         </button>
       )}
 
-      {/* ── 5. 생성 결과 ── */}
+      {/* ── 6. 생성 결과 ── */}
       {generatedResult && (
         <section className="space-y-5">
           {/* 결과 헤더 */}
@@ -897,7 +922,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                 <DocumentCheckIcon className="w-4 h-4" />
               </div>
               <h3 className="text-base font-semibold text-at-text">
-                <span className="text-at-accent mr-1">5.</span>
+                <span className="text-at-accent mr-1">6.</span>
                 생성 결과
               </h3>
               {savedItemId && !hasUnsavedChanges && (

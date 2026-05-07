@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react'
 import type { GeneratedContent, PlatformContent, PlatformOptions, ClinicalPhotoInput } from '@/types/marketing'
+import type { BrandImageOptions } from '@/types/brand'
 
 export type GeneratedResultType = GeneratedContent & {
   generatedImages?: { fileName: string; prompt: string; path?: string }[]
@@ -24,6 +25,8 @@ interface GenerationOptions {
   /** 사용자가 정한 목표 본문 길이(자). 미지정 시 서버에서 기본값 사용. */
   targetWordCount?: number
   referenceImageBase64?: string
+  /** 브랜드 이미지(의료법/타이틀/사진) 삽입 옵션 */
+  brandImageOptions?: BrandImageOptions
   clinical?: {
     procedureType: string
     procedureDetail?: string
@@ -113,6 +116,7 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
               ? { referenceImageBase64: options.referenceImageBase64 }
               : {}),
             ...(options.clinical ? { clinical: options.clinical } : {}),
+            ...(options.brandImageOptions ? { brandImageOptions: options.brandImageOptions } : {}),
           }),
           signal: abortController.signal,
         })
