@@ -121,6 +121,19 @@ function todayKey() {
   return `${y}-${m}-${d}`
 }
 
+/** 시장 timezone 기준 'YYYY-MM-DD' — '오늘' 라벨 기준일 */
+function marketTodayKey(market: Market): string {
+  const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
+  try {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    })
+    return fmt.format(new Date())
+  } catch {
+    return todayKey()
+  }
+}
+
 /** YYYY-MM-DD 또는 'YYYY-MM-DD (Pre)' → "MM/DD (요일)" — pre-market suffix는 분리 표기 */
 function formatDayLabel(date: string): string {
   const isPre = / \(Pre\)$/.test(date)
@@ -133,15 +146,26 @@ function formatDayLabel(date: string): string {
   return `${m}/${d} (${dayLabel})${isPre ? ' Pre' : ''}`
 }
 
-/** "오늘" / "어제" / "Pre-Market" 라벨 — hasPre 시 정규장 인덱스 보정 */
-function formatDayRelative(date: string, total: number, idx: number, hasPre = false): string {
+/** YYYY-MM-DD 날짜 차이 (a - b, 일 단위) */
+function dayDiff(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number)
+  const [by, bm, bd] = b.split('-').map(Number)
+  if (!ay || !am || !ad || !by || !bm || !bd) return 0
+  const ta = Date.UTC(ay, am - 1, ad)
+  const tb = Date.UTC(by, bm - 1, bd)
+  return Math.round((ta - tb) / 86400_000)
+}
+
+/** "오늘" / "어제" / "Pre-Market" 라벨 — 시장 timezone의 실제 오늘 기준으로 비교 */
+function formatDayRelative(date: string, market: Market): string {
   if (/ \(Pre\)$/.test(date)) return 'Pre-Market'
-  const regularTotal = hasPre ? total - 1 : total
-  const offset = regularTotal - 1 - idx
-  if (offset === 0) return '오늘'
-  if (offset === 1) return '전 거래일'
-  if (offset === 2) return '그 전'
-  return `${offset}일 전`
+  const today = marketTodayKey(market)
+  const diff = dayDiff(today, date)
+  if (diff === 0) return '오늘'
+  if (diff === 1) return '전 거래일'
+  if (diff === 2) return '2일 전'
+  if (diff > 0) return `${diff}일 전`
+  return ''
 }
 
 export function SmartMoneyContent() {
@@ -432,12 +456,7 @@ export function SmartMoneyContent() {
                         }`}
                       >
                         <span className="block text-[10px] opacity-75">
-                          {formatDayRelative(
-                            day.asOfDate,
-                            analysis.byDay!.length,
-                            i,
-                            analysis.byDay!.some((d) => / \(Pre\)$/.test(d.asOfDate)),
-                          )}
+                          {formatDayRelative(day.asOfDate, analysis.market)}
                         </span>
                         <span>{formatDayLabel(day.asOfDate)}</span>
                       </button>
@@ -468,7 +487,7 @@ export function SmartMoneyContent() {
                       : `$${viewAnalysis.currentPrice.toFixed(2)}`}
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    기준일 {viewAnalysis.asOfDate} · 생성 {new Date(analysis.generatedAt).toLocaleTimeString('ko-KR')}
+                    기준 거래일 {viewAnalysis.asOfDate} · 생성 {new Date(analysis.generatedAt).toLocaleTimeString('ko-KR')}
                   </p>
                 </div>
 
