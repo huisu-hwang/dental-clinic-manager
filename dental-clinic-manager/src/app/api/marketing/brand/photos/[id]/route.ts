@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { loadUserContext, hasPermission } from '@/lib/marketing/brand/server-permissions';
 
 const BUCKET = 'marketing-brand';
-
-async function getProfile(userId: string) {
-  const admin = getSupabaseAdmin();
-  if (!admin) return null;
-  const { data } = await admin.from('users').select('clinic_id, permissions').eq('id', userId).maybeSingle();
-  return data;
-}
 
 interface Ctx { params: Promise<{ id: string }> }
 
@@ -19,11 +13,11 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 });
 
-  const profile = await getProfile(user.id);
-  const perms = (profile?.permissions ?? []) as string[];
-  if (!profile?.clinic_id || !perms.includes('marketing_brand_manage')) {
+  const ctx = await loadUserContext(user.id);
+  if (!hasPermission(ctx, 'marketing_brand_manage')) {
     return NextResponse.json({ error: '권한 없음' }, { status: 403 });
   }
+  if (!ctx?.clinicId) return NextResponse.json({ error: '소속 클리닉 없음' }, { status: 403 });
 
   const body = await request.json();
   const updates: Record<string, unknown> = {};
@@ -38,7 +32,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     .from('clinic_brand_photos')
     .update(updates)
     .eq('id', id)
-    .eq('clinic_id', profile.clinic_id)
+    .eq('clinic_id', ctx.clinicId)
     .select('*')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -51,11 +45,11 @@ export async function DELETE(_request: NextRequest, { params }: Ctx) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 });
 
-  const profile = await getProfile(user.id);
-  const perms = (profile?.permissions ?? []) as string[];
-  if (!profile?.clinic_id || !perms.includes('marketing_brand_manage')) {
+  const ctx = await loadUserContext(user.id);
+  if (!hasPermission(ctx, 'marketing_brand_manage')) {
     return NextResponse.json({ error: '권한 없음' }, { status: 403 });
   }
+  if (!ctx?.clinicId) return NextResponse.json({ error: '소속 클리닉 없음' }, { status: 403 });
 
   const admin = getSupabaseAdmin();
   if (!admin) return NextResponse.json({ error: 'admin 미가용' }, { status: 500 });
@@ -64,10 +58,10 @@ export async function DELETE(_request: NextRequest, { params }: Ctx) {
     .from('clinic_brand_photos')
     .select('photo_url')
     .eq('id', id)
-    .eq('clinic_id', profile.clinic_id)
+    .eq('clinic_id', ctx.clinicId)
     .maybeSingle();
 
-  await (admin as any).from('clinic_brand_photos').delete().eq('id', id).eq('clinic_id', profile.clinic_id);
+  await (admin as any).from('clinic_brand_photos').delete().eq('id', id).eq('clinic_id', ctx.clinicId);
 
   if (photo?.photo_url) {
     const prefix = `/storage/v1/object/public/${BUCKET}/`;

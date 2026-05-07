@@ -17,14 +17,17 @@ let cachedFonts: Awaited<ReturnType<typeof loadFonts>> | null = null;
 
 async function loadFonts() {
   const root = process.cwd();
-  const [pretendard, inter] = await Promise.all([
-    readFile(path.join(root, 'public/fonts/PretendardVariable.ttf')),
+  const [pretendardRegular, pretendardBold, pretendardBlack, inter] = await Promise.all([
+    readFile(path.join(root, 'public/fonts/Pretendard-Regular.ttf')),
+    readFile(path.join(root, 'public/fonts/Pretendard-Bold.ttf')),
+    readFile(path.join(root, 'public/fonts/Pretendard-Black.ttf')),
     readFile(path.join(root, 'public/fonts/Inter-Regular.ttf')),
   ]);
+  // satori는 가변 폰트(variable fonts) 메트릭 파싱이 실패하므로 weight별 static TTF를 사용한다.
   return [
-    { name: 'Pretendard', data: pretendard, weight: 400 as const, style: 'normal' as const },
-    { name: 'Pretendard', data: pretendard, weight: 700 as const, style: 'normal' as const },
-    { name: 'Pretendard', data: pretendard, weight: 900 as const, style: 'normal' as const },
+    { name: 'Pretendard', data: pretendardRegular, weight: 400 as const, style: 'normal' as const },
+    { name: 'Pretendard', data: pretendardBold, weight: 700 as const, style: 'normal' as const },
+    { name: 'Pretendard', data: pretendardBlack, weight: 900 as const, style: 'normal' as const },
     { name: 'Inter', data: inter, weight: 400 as const, style: 'normal' as const },
   ];
 }

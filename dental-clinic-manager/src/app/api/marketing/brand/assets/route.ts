@@ -1,36 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { loadUserContext, hasPermission } from '@/lib/marketing/brand/server-permissions';
 import type { BrandAssets, MedicalLawPresetKey } from '@/types/brand';
 
 const VALID_PRESETS: MedicalLawPresetKey[] = ['yellow_black', 'mint_navy', 'sand_green', 'pink_charcoal', 'white_blue'];
-
-async function getClinicId(userId: string) {
-  const admin = getSupabaseAdmin();
-  if (!admin) return null;
-  const { data } = await admin.from('users').select('clinic_id').eq('id', userId).maybeSingle();
-  return data?.clinic_id ?? null;
-}
-
-async function checkManagePermission(userId: string): Promise<boolean> {
-  const admin = getSupabaseAdmin();
-  if (!admin) return false;
-  const { data } = await admin
-    .from('users')
-    .select('permissions')
-    .eq('id', userId)
-    .maybeSingle();
-  const perms = (data?.permissions ?? []) as string[];
-  return perms.includes('marketing_brand_manage');
-}
 
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 });
 
-  const clinicId = await getClinicId(user.id);
-  if (!clinicId) return NextResponse.json({ error: '소속 클리닉 없음' }, { status: 403 });
+  const ctx = await loadUserContext(user.id);
+  if (!hasPermission(ctx, 'marketing_brand_view')) {
+    return NextResponse.json({ error: '권한 없음' }, { status: 403 });
+  }
+  if (!ctx?.clinicId) return NextResponse.json({ error: '소속 클리닉 없음' }, { status: 403 });
 
   const admin = getSupabaseAdmin();
   if (!admin) return NextResponse.json({ error: 'admin 미가용' }, { status: 500 });
@@ -38,7 +23,7 @@ export async function GET() {
   const { data } = await (admin as any)
     .from('clinic_brand_assets')
     .select('*')
-    .eq('clinic_id', clinicId)
+    .eq('clinic_id', ctx.clinicId)
     .maybeSingle();
 
   return NextResponse.json({ assets: data ?? null });
@@ -49,11 +34,11 @@ export async function PUT(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 });
 
-  const canManage = await checkManagePermission(user.id);
-  if (!canManage) return NextResponse.json({ error: '권한 없음' }, { status: 403 });
-
-  const clinicId = await getClinicId(user.id);
-  if (!clinicId) return NextResponse.json({ error: '소속 클리닉 없음' }, { status: 403 });
+  const ctx = await loadUserContext(user.id);
+  if (!hasPermission(ctx, 'marketing_brand_manage')) {
+    return NextResponse.json({ error: '권한 없음' }, { status: 403 });
+  }
+  if (!ctx?.clinicId) return NextResponse.json({ error: '소속 클리닉 없음' }, { status: 403 });
 
   const body = await request.json();
   const preset: MedicalLawPresetKey = VALID_PRESETS.includes(body.medical_law_preset)
@@ -75,10 +60,9 @@ export async function PUT(request: NextRequest) {
   const admin = getSupabaseAdmin();
   if (!admin) return NextResponse.json({ error: 'admin 미가용' }, { status: 500 });
 
-  // UPSERT
   const { data, error } = await (admin as any)
     .from('clinic_brand_assets')
-    .upsert({ clinic_id: clinicId, ...payload }, { onConflict: 'clinic_id' })
+    .upsert({ clinic_id: ctx.clinicId, ...payload }, { onConflict: 'clinic_id' })
     .select('*')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
