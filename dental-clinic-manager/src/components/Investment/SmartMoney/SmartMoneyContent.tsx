@@ -168,6 +168,11 @@ function formatDayRelative(date: string, market: Market): string {
   return ''
 }
 
+function findDefaultDayIndex(byDay: NonNullable<SmartMoneyAnalysis['byDay']>, asOfDate: string): number {
+  const matchedIdx = byDay.findIndex((day) => day.asOfDate === asOfDate)
+  return matchedIdx >= 0 ? matchedIdx : Math.max(0, byDay.length - 1)
+}
+
 export function SmartMoneyContent() {
   const [selected, setSelected] = useState<Selected | null>(null)
   const [analysis, setAnalysis] = useState<SmartMoneyAnalysis | null>(null)
@@ -279,14 +284,11 @@ export function SmartMoneyContent() {
     if (!analysis) return null
     const byDay = analysis.byDay ?? []
     if (byDay.length === 0) return analysis
-    const idx = activeDayIdx ?? byDay.length - 1
+    const defaultIdx = findDefaultDayIndex(byDay, analysis.asOfDate)
+    const idx = activeDayIdx ?? defaultIdx
     const day = byDay[Math.max(0, Math.min(byDay.length - 1, idx))]
     if (!day) return analysis
-    // byDay 마지막 일자(가장 최근 정규장)는 메인 분석과 동일 — 효율을 위해 메인을 그대로 사용.
-    // 단, (Pre) 항목은 별도 데이터를 가지므로 메인 analysis를 반환하면 안 됨.
-    const isPreDay = / \(Pre\)$/.test(day.asOfDate ?? "")
-    const latestRegularDay = [...byDay].reverse().find((d) => !/ \(Pre\)$/.test(d.asOfDate ?? ""))
-    if (!isPreDay && latestRegularDay && day.asOfDate === latestRegularDay.asOfDate) return analysis
+    if (day.asOfDate === analysis.asOfDate) return analysis
     return {
       ...analysis,
       asOfDate: day.asOfDate,
@@ -308,8 +310,8 @@ export function SmartMoneyContent() {
       interpretation: day.interpretation,
       signalDetails: day.signalDetails,
       naturalLanguageComment: day.naturalLanguageComment,
-      // byDay 항목은 카드별 코멘트를 갖지 않음(가장 최근 일자만 메인에 보유)
-      perCardComments: (!isPreDay && latestRegularDay && day.asOfDate === latestRegularDay.asOfDate) ? analysis.perCardComments : undefined,
+      // byDay 항목은 카드별 코멘트를 갖지 않음(메인 분석 일자만 보유)
+      perCardComments: day.asOfDate === analysis.asOfDate ? analysis.perCardComments : undefined,
     }
   }, [analysis, activeDayIdx])
 
@@ -444,7 +446,8 @@ export function SmartMoneyContent() {
               <section className="bg-white rounded-2xl border border-slate-200 p-2 shadow-sm">
                 <div role="tablist" className="flex gap-1">
                   {analysis.byDay.map((day, i) => {
-                    const isActive = (activeDayIdx ?? analysis.byDay!.length - 1) === i
+                    const defaultIdx = findDefaultDayIndex(analysis.byDay!, analysis.asOfDate)
+                    const isActive = (activeDayIdx ?? defaultIdx) === i
                     return (
                       <button
                         key={day.asOfDate}

@@ -150,8 +150,7 @@ export async function POST(request: NextRequest) {
   let recent20DayLow = 0
   let investorHistory: KRInvestorDay[] = []
   let intradayUnavailableReason: string | null = null
-  // KST 기준 — 서버 timezone(UTC) 영향 받지 않음
-  const asOfDate = toKstDateString(new Date())
+  const asOfDate = marketDateString(new Date(), market)
 
   try {
     if (market === 'KR' && kisCredential) {
@@ -672,7 +671,32 @@ export async function POST(request: NextRequest) {
   const lastByDay = byDay.length > 0
     ? byDay.filter((d) => !/ \(Pre\)$/.test(d.asOfDate)).slice(-1)[0]
     : null
-  const alignedAsOfDate = lastByDay?.asOfDate ?? asOfDate
+  const preferredByDay = findPreferredAnalysisDay(byDay, market, includePreMarket)
+
+  if (preferredByDay) {
+    currentPrice = preferredByDay.closePrice
+    vwap = preferredByDay.vwap
+    wyckoff = preferredByDay.wyckoff
+    wyckoffIntraday = preferredByDay.wyckoffIntraday
+    algoFootprint = preferredByDay.algoFootprint
+    wyckoffPhase = preferredByDay.wyckoffPhase
+    liquidity = preferredByDay.liquidity
+    marketStructure = preferredByDay.marketStructure
+    orderBlocksFvg = preferredByDay.orderBlocksFvg
+    traps = preferredByDay.traps
+    vsa = preferredByDay.vsa
+    session = preferredByDay.session
+    newsContext = preferredByDay.newsContext
+    scoreResult = {
+      ...scoreResult,
+      manipulationRiskScore: preferredByDay.manipulationRiskScore,
+      overallScore: preferredByDay.overallScore,
+      interpretation: preferredByDay.interpretation,
+      signalDetails: preferredByDay.signalDetails,
+    }
+  }
+
+  const alignedAsOfDate = preferredByDay?.asOfDate ?? lastByDay?.asOfDate ?? asOfDate
 
   const analysis: SmartMoneyAnalysis = {
     ticker,
@@ -704,11 +728,11 @@ export async function POST(request: NextRequest) {
   // 6. LLM 코멘트 (옵션) — byDay 모든 일자별로 그날 데이터 기준 코멘트 병렬 생성
   if (includeLLM) {
     if (byDay.length > 0) {
-      const tasks = byDay.map(async (day, idx) => {
-        const isLast = idx === byDay.length - 1
-        // 가장 최근 일자(byDay 마지막)는 메인 analysis와 동일 → analysis 그대로 사용
-        // 그 외 과거 일자는 DailyAnalysis → SmartMoneyAnalysis 호환 객체로 변환
-        const target: SmartMoneyAnalysis = isLast
+      const tasks = byDay.map(async (day) => {
+        const isMainDay = day.asOfDate === analysis.asOfDate
+        // 메인 분석과 같은 일자는 analysis 그대로 사용
+        // 그 외 일자는 DailyAnalysis → SmartMoneyAnalysis 호환 객체로 변환
+        const target: SmartMoneyAnalysis = isMainDay
           ? analysis
           : {
               ticker: day.ticker,
@@ -738,7 +762,7 @@ export async function POST(request: NextRequest) {
         try {
           const result = await generateLLMComment(target)
           day.naturalLanguageComment = result.comment
-          if (isLast) {
+          if (isMainDay) {
             analysis.naturalLanguageComment = result.comment
             analysis.perCardComments = result.perCard
           }
@@ -1026,6 +1050,21 @@ function toDateString(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+function marketDateString(d: Date, market: Market): string {
+  const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
+  try {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    return fmt.format(d)
+  } catch {
+    return market === 'KR' ? toKstDateString(d) : toDateString(d)
+  }
+}
+
 /** Asia/Seoul timezone 기준 YYYY-MM-DD — Vercel(UTC)에서도 한국 사용자 "오늘"을 정확히 반영 */
 function toKstDateString(d: Date): string {
   const kst = new Date(d.getTime() + 9 * 3600_000)
@@ -1077,4 +1116,38 @@ function tzMinutesOf(dt: string, market: Market): number | null {
   } catch {
     return null
   }
+}
+
+function findPreferredAnalysisDay(
+  byDay: DailyAnalysis[],
+  market: Market,
+  includePreMarket: boolean,
+  now: Date = new Date(),
+): DailyAnalysis | null {
+  if (!byDay || byDay.length === 0) return null
+
+  const regularDays = byDay.filter((day) => !/ \(Pre\)$/.test(day.asOfDate))
+  const latestRegular = regularDays.length > 0 ? regularDays[regularDays.length - 1] : null
+  if (!latestRegular) return null
+
+  const today = marketDateString(now, market)
+  const currentMinutes = tzMinutesOf(now.toISOString(), market)
+  const todayRegular = [...regularDays].reverse().find((day) => day.asOfDate === today) ?? null
+
+  if (market === 'KR') {
+    if (currentMinutes !== null && currentMinutes >= 9 * 60 && todayRegular) return todayRegular
+    return latestRegular
+  }
+
+  const todayPre = includePreMarket
+    ? [...byDay].reverse().find((day) => day.asOfDate === `${today} (Pre)`) ?? null
+    : null
+
+  if (currentMinutes !== null && currentMinutes >= 4 * 60 && currentMinutes < 9 * 60 + 30 && todayPre) {
+    return todayPre
+  }
+  if (currentMinutes !== null && currentMinutes >= 4 * 60 && todayRegular) {
+    return todayRegular
+  }
+  return latestRegular
 }
