@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { extractKeywordsFromPosts } from '@/lib/marketing/seo-text-miner';
-import type { SeoKeywordMiningResult } from '@/types/marketing';
+import type { SeoKeywordMiningResult, SeoReferencedPost } from '@/types/marketing';
 
 // 글 작성 전 SEO 분석 미리보기
 // - POST: 즉시 응답 (캐시 결과 또는 큐 상태). stale 잡(5분+ running)은 자동 fail 처리 후 재큐잉
@@ -56,14 +56,38 @@ function estimateRunningProgress(startedAt: string | null): { progress: number; 
 /** 캐시된 완료 분석을 SeoKeywordMiningResult로 변환 (없으면 on-the-fly 계산) */
 async function buildResultFromAnalysis(admin: ReturnType<typeof getSupabaseAdmin>, analysis: AnalysisRow, keyword: string): Promise<SeoKeywordMiningResult | null> {
   if (!admin) return null;
-  if (analysis.summary?.textMining) return analysis.summary.textMining;
-  const { data: posts } = await admin
+
+  // 참고 글 목록은 캐시에 저장되어 있지 않은 기존 분석도 보강할 수 있도록 별도로 항상 조회한다.
+  const { data: postRows } = await admin
     .from('seo_analyzed_posts')
-    .select('body_text, title, tags, body_length, image_count, heading_count, keyword_count')
+    .select('body_text, title, tags, body_length, image_count, heading_count, keyword_count, rank, post_url, blog_name')
     .eq('analysis_id', analysis.id)
     .order('rank', { ascending: true });
-  if (!posts || posts.length === 0) return null;
-  return extractKeywordsFromPosts(posts, keyword);
+
+  // postUrl 기준 중복 제거 (워커가 같은 글을 두 번 저장하는 경우가 있음 — rank별 1행만 유지)
+  const seenUrls = new Set<string>();
+  const referencedPosts: SeoReferencedPost[] = [];
+  for (const p of postRows ?? []) {
+    const postUrl = typeof p.post_url === 'string' ? p.post_url : '';
+    if (postUrl && seenUrls.has(postUrl)) continue;
+    if (postUrl) seenUrls.add(postUrl);
+    referencedPosts.push({
+      rank: typeof p.rank === 'number' ? p.rank : 0,
+      title: typeof p.title === 'string' ? p.title : '',
+      postUrl,
+      blogName: typeof p.blog_name === 'string' ? p.blog_name : null,
+      bodyLength: typeof p.body_length === 'number' ? p.body_length : 0,
+      imageCount: typeof p.image_count === 'number' ? p.image_count : 0,
+      headingCount: typeof p.heading_count === 'number' ? p.heading_count : 0,
+    });
+  }
+
+  if (analysis.summary?.textMining) {
+    return { ...analysis.summary.textMining, referencedPosts };
+  }
+  if (!postRows || postRows.length === 0) return null;
+  const mined = extractKeywordsFromPosts(postRows, keyword);
+  return { ...mined, referencedPosts };
 }
 
 /** 키워드의 현재 상태 조사 — POST/GET 공용 핵심 로직 */

@@ -482,6 +482,39 @@ export default function NewMarketingPostPage() {
                   </div>
                 )}
 
+                {seoResult.referencedPosts && seoResult.referencedPosts.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-medium text-at-text-secondary mb-1.5">
+                      분석에 참고한 글 ({seoResult.referencedPosts.length}개)
+                    </p>
+                    <ul className="space-y-1">
+                      {seoResult.referencedPosts.map((p) => (
+                        <li key={`${p.rank}-${p.postUrl}`} className="text-[11px] leading-relaxed">
+                          <span className="inline-block w-6 text-at-text-weak font-medium">{p.rank}위</span>
+                          <span className="text-at-text-weak">
+                            글자수 {p.bodyLength.toLocaleString()}자 · 이미지 {p.imageCount}장 · 소제목 {p.headingCount}개 —{' '}
+                          </span>
+                          {p.postUrl ? (
+                            <a
+                              href={p.postUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-700 hover:underline break-all"
+                            >
+                              {p.title || p.postUrl}
+                            </a>
+                          ) : (
+                            <span className="text-at-text">{p.title}</span>
+                          )}
+                          {p.blogName && (
+                            <span className="text-at-text-weak"> ({p.blogName})</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
