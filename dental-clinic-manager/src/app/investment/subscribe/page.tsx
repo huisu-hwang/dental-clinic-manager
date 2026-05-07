@@ -24,16 +24,20 @@ export default function InvestmentSubscribePage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/')
   }, [user, authLoading, router])
 
   useEffect(() => {
-    fetch('/api/investment/subscription/status').then(r => r.json()).then(d => {
-      if (d.subscription?.status === 'active') router.replace('/investment')
-      setPlan(d.plan)
-    })
+    fetch('/api/investment/subscription/status')
+      .then(r => r.json())
+      .then(d => {
+        if (d.subscription?.status === 'active') router.replace('/investment')
+        setPlan(d.plan)
+      })
+      .catch(e => setStatusError(e instanceof Error ? e.message : '구독 정보 조회 실패'))
   }, [router])
 
   const onSubscribe = async () => {
@@ -43,39 +47,37 @@ export default function InvestmentSubscribePage() {
       const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID
       const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY
       if (!storeId || !channelKey) {
-        setError('결제 설정이 누락되었습니다. 운영자에게 문의하세요.')
+        setError('결제 모듈 설정이 누락되었습니다. 운영자에게 문의해주세요.')
         return
       }
 
-      const res = await PortOne.requestIssueBillingKey({
-        storeId,
-        channelKey,
-        billingKeyMethod: 'CARD',
-        issueId: `issue-${user?.id}-${Date.now()}`,
-        issueName: '자동매매 구독',
-      })
-      // 모바일 리다이렉션 케이스: undefined 반환
-      if (!res) return
-      if (res.code !== undefined) {
-        setError(res.message ?? '결제 수단 등록 실패')
-        return
-      }
-      if (!res.billingKey) {
-        setError('결제 수단 등록 실패')
+      let res: { billingKey?: string; cardNumber?: string; cardName?: string; code?: string; message?: string } | undefined
+      try {
+        res = await PortOne.requestIssueBillingKey({
+          storeId,
+          channelKey,
+          billingKeyMethod: 'CARD',
+          issueId: `issue-${user?.id}-${Date.now()}`,
+          issueName: '자동매매 구독',
+        }) as typeof res
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '결제 모듈 호출 실패')
         return
       }
 
-      const cardNumber = (res as { cardNumber?: string }).cardNumber ?? ''
-      const cardName = (res as { cardName?: string }).cardName ?? ''
-      const last4 = cardNumber.slice(-4)
+      if (!res) return  // 모바일 리다이렉트 케이스
+      if (res.code !== undefined) { setError(res.message ?? '결제 수단 등록 실패'); return }
+      if (!res.billingKey) { setError('결제 수단 등록에 실패했습니다.'); return }
+
+      // CardRegistrationModal 패턴 정렬: PortOne은 카드 정보를 반환하지 않으므로 빈 문자열 전송
       const reg = await fetch('/api/investment/subscription/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           billingKey: res.billingKey,
           planId: plan.id,
-          cardName,
-          cardNumberLast4: last4,
+          cardName: '',
+          cardNumberLast4: '',
         }),
       })
       const regJson = await reg.json()
@@ -85,7 +87,9 @@ export default function InvestmentSubscribePage() {
     } finally { setSubmitting(false) }
   }
 
-  if (authLoading || !plan) return <div className="p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+  if (authLoading) return <div className="p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+  if (statusError) return <div className="p-8 text-red-600">{statusError}</div>
+  if (!plan) return <div className="p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
 
   return (
     <div className="max-w-xl mx-auto p-8 space-y-6">
