@@ -379,7 +379,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     label: '주식 자동 매매',
     icon: 'TrendingUp',
     route: '/dashboard?tab=investment',
-    permissions: ['investment_view'],
+    permissions: [],   // 모든 사용자에게 노출. 진입 시 개인 구독 게이팅으로 전환.
     categoryId: 'investment',
     order: 16.5,
     visible: true,
