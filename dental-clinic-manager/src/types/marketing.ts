@@ -2,6 +2,8 @@
 // 마케팅 자동화 시스템 타입 정의
 // ============================================
 
+import type { BrandImageOptions } from './brand';
+
 // ─── 기본 열거형 ───
 
 export type PostType = 'informational' | 'promotional' | 'notice' | 'clinical';
@@ -244,6 +246,8 @@ export interface ContentGenerateOptions {
   };
   clinical?: ClinicalInput;
   notice?: NoticeInput;
+  /** 브랜드 이미지 마커 자동 삽입 옵션. 미지정 시 마커 삽입 안 함. */
+  brandImageOptions?: BrandImageOptions;
 }
 
 export interface ClinicalInput {

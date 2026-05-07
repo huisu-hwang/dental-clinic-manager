@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
 import { extractKeywordsFromPosts } from '@/lib/marketing/seo-text-miner';
 import { generateBlogImage, generatePlatformImage } from '@/lib/marketing/image-generator';
+import { resolveBrandMarkers } from '@/lib/marketing/brand/marker-resolver';
 import { transformToInstagram } from '@/lib/marketing/platform-adapters/instagram';
 import { transformToFacebook } from '@/lib/marketing/platform-adapters/facebook';
 import { transformToThreads } from '@/lib/marketing/platform-adapters/threads';
@@ -229,6 +230,14 @@ export async function POST(request: NextRequest) {
         const result = await generateContent(options, userData.clinic_id, undefined, generationSessionId, seoKeywordData, clinicalPhotos.length > 0 ? clinicalPhotos : undefined);
 
         if (keepalive) { clearInterval(keepalive); keepalive = null; }
+
+        // 브랜드 이미지 마커를 합성된 이미지 URL로 치환
+        // ([BRAND_IMAGE:...] 만 처리. AI 이미지용 [IMAGE: ...] 마커는 영향 없음)
+        try {
+          result.body = await resolveBrandMarkers(result.body, { clinicId: userData.clinic_id });
+        } catch (brandErr) {
+          console.error('[API] 브랜드 마커 리졸브 실패:', brandErr);
+        }
 
         sendEvent(controller, {
           progress: 55,

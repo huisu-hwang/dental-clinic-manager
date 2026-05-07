@@ -18,6 +18,7 @@ import {
   AdjustmentsHorizontalIcon,
   MegaphoneIcon,
   PaintBrushIcon,
+  RectangleStackIcon,
 } from '@heroicons/react/24/outline'
 import {
   TONE_LABELS,
@@ -31,6 +32,8 @@ import {
   type ImageStyleOption,
   type ImageVisualStyle,
 } from '@/types/marketing'
+import type { BrandImageOptions } from '@/types/brand'
+import { BrandImageSection } from '@/components/marketing/brand/BrandImageSection'
 import dynamic from 'next/dynamic'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 import { requireWorker } from '@/hooks/useWorkerGuard'
@@ -89,6 +92,11 @@ export default function NewMarketingPostPage() {
   const [imageCount, setImageCount] = useState(3)
   const [targetWordCount, setTargetWordCount] = useState<number>(1500)
   const [useSeoAnalysis, setUseSeoAnalysis] = useState(false)
+  const [brandImageOptions, setBrandImageOptions] = useState<BrandImageOptions>({
+    medicalLaw: { enabled: true, positions: ['top'] },
+    title:      { enabled: true, positions: ['middle'], copy: '' },
+    photo:      { enabled: true, positions: ['bottom'], mode: 'random' },
+  })
   const seoPreview = useSeoPreview()
   const seoResult = seoPreview.result
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
@@ -224,6 +232,7 @@ export default function NewMarketingPostPage() {
       topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis, platforms,
       imageStyle, imageVisualStyle, imageCount, targetWordCount,
       referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
+      brandImageOptions: postType !== 'clinical' ? brandImageOptions : undefined,
     })
   }
 
@@ -659,9 +668,25 @@ export default function NewMarketingPostPage() {
         </fieldset>
       </section>
 
-      {/* ── 4. 배포 플랫폼 ── */}
+      {/* ── 4. 브랜드 이미지 (임상글이 아닐 때만) ── */}
+      {postType !== 'clinical' && (
+        <section>
+          <SectionHeader number={4} title="브랜드 이미지" icon={RectangleStackIcon} iconColor="text-violet-600" iconBg="bg-violet-50" />
+          <fieldset disabled={isFormDisabled} className={`transition-opacity ${isFormDisabled ? 'opacity-50' : ''}`}>
+            <BrandImageSection
+              clinicNameForCopy=""
+              keyword={keyword}
+              value={brandImageOptions}
+              onChange={setBrandImageOptions}
+              disabled={isFormDisabled}
+            />
+          </fieldset>
+        </section>
+      )}
+
+      {/* ── 5. 배포 플랫폼 ── */}
       <section>
-        <SectionHeader number={4} title="배포 플랫폼" icon={MegaphoneIcon} iconColor="text-purple-600" iconBg="bg-purple-50" />
+        <SectionHeader number={5} title="배포 플랫폼" icon={MegaphoneIcon} iconColor="text-purple-600" iconBg="bg-purple-50" />
         <fieldset disabled={isFormDisabled} className={`transition-opacity ${isFormDisabled ? 'opacity-50' : ''}`}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(['naverBlog', 'instagram', 'facebook', 'threads'] as const).map((key) => (

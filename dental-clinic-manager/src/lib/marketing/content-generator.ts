@@ -14,6 +14,61 @@ import {
   SeoKeywordMiningResult,
   ClinicalPhotoInput,
 } from '@/types/marketing';
+import type { BrandImageOptions } from '@/types/brand';
+
+// ─── 브랜드 이미지 마커 삽입 ───
+// options.brandImageOptions에 따라 [BRAND_IMAGE:...] 마커를 본문 위치(top/middle/bottom)에 삽입
+function insertBrandMarkers(body: string, opts?: BrandImageOptions): string {
+  if (!opts) return body;
+
+  type Spot = 'top' | 'middle' | 'bottom';
+  const buckets: Record<Spot, string[]> = { top: [], middle: [], bottom: [] };
+
+  if (opts.medicalLaw.enabled) {
+    for (const pos of opts.medicalLaw.positions) buckets[pos].push('[BRAND_IMAGE:medical_law]');
+  }
+  if (opts.title.enabled) {
+    const copy = opts.title.copy.replace(/\]/g, '');
+    for (const pos of opts.title.positions) buckets[pos].push(`[BRAND_IMAGE:title|copy=${copy}]`);
+  }
+  if (opts.photo.enabled) {
+    const tail = opts.photo.mode === 'manual' && opts.photo.photoId
+      ? `id=${opts.photo.photoId}`
+      : `mode=${opts.photo.mode}`;
+    for (const pos of opts.photo.positions) buckets[pos].push(`[BRAND_IMAGE:photo|${tail}]`);
+  }
+
+  // 우선순위 정렬: medical_law → title → photo
+  const order = (m: string) => m.includes('medical_law') ? 0 : m.includes(':title') ? 1 : 2;
+  for (const k of ['top', 'middle', 'bottom'] as const) {
+    buckets[k].sort((a, b) => order(a) - order(b));
+  }
+
+  // 위치 결정: top=글 맨 위, middle=헤딩 갯수의 중앙값 위치, bottom=글 끝
+  const lines = body.split('\n');
+  const headingIdx: number[] = [];
+  lines.forEach((l, i) => { if (/^##\s/.test(l)) headingIdx.push(i); });
+  const middleHeadingLine = headingIdx.length > 0 ? headingIdx[Math.floor(headingIdx.length / 2)] : Math.floor(lines.length / 2);
+
+  const top = buckets.top.join('\n\n');
+  const middle = buckets.middle.join('\n\n');
+  const bottom = buckets.bottom.join('\n\n');
+
+  let result = '';
+  if (top) result += top + '\n\n';
+  if (middle) {
+    const before = lines.slice(0, middleHeadingLine).join('\n');
+    const after = lines.slice(middleHeadingLine).join('\n');
+    result += before + (before.endsWith('\n') ? '' : '\n') + '\n' + middle + '\n\n' + after;
+  } else {
+    result += body;
+  }
+  if (bottom) {
+    if (!result.endsWith('\n')) result += '\n';
+    result += '\n' + bottom;
+  }
+  return result;
+}
 
 // ============================================
 // AI 글 생성 엔진
@@ -263,9 +318,11 @@ export async function generateContent(
 
     const retryText = retryResponse.content[0].type === 'text' ? retryResponse.content[0].text : '';
     const retryParsed = parseGeneratedContent(retryText, options.keyword);
+    retryParsed.body = insertBrandMarkers(retryParsed.body, options.brandImageOptions);
     return retryParsed;
   }
 
+  parsed.body = insertBrandMarkers(parsed.body, options.brandImageOptions);
   return parsed;
 }
 

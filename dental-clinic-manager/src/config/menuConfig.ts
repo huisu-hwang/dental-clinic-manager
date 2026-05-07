@@ -371,6 +371,17 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     visible: true,
     premiumFeature: true,  // 프리미엄 기능
   },
+  {
+    id: 'marketing-brand',
+    label: '브랜드 이미지',
+    icon: 'Palette',
+    route: '/dashboard/marketing/brand',
+    permissions: ['marketing_brand_view'],
+    categoryId: 'operations',
+    order: 16.1,
+    visible: true,
+    premiumFeature: true,  // 프리미엄 기능 (마케팅 자동화 plan 포함)
+  },
 
   // === 투자 카테고리 ===
   {
