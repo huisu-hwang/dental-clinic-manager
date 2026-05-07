@@ -10,7 +10,11 @@ import { BrandPhotoUploader } from '@/components/marketing/brand/BrandPhotoUploa
 import { BrandPreview } from '@/components/marketing/brand/BrandPreview';
 import type { DraftBrandAssets } from '@/types/brand';
 
-interface Props { canManage: boolean }
+interface Props {
+  canManage: boolean;
+  /** true면 페이지 헤더와 외곽 padding을 생략 (서브탭/모달 안에서 사용) */
+  embedded?: boolean;
+}
 
 function toDraftAssets(state: BrandFormState): DraftBrandAssets {
   return {
@@ -27,7 +31,7 @@ function toDraftAssets(state: BrandFormState): DraftBrandAssets {
   };
 }
 
-export function BrandSettingsClient({ canManage }: Props) {
+export function BrandSettingsClient({ canManage, embedded = false }: Props) {
   const { assets, photos, loading, saveAssets, uploadPhoto, deletePhoto, updatePhoto } = useBrandAssets();
   const [formState, setFormState] = useState<BrandFormState>(() => fromAssets(null));
   const [saving, setSaving] = useState(false);
@@ -78,11 +82,16 @@ export function BrandSettingsClient({ canManage }: Props) {
   const draftAssets = canManage ? toDraftAssets(formState) : undefined;
 
   return (
-    <div className="p-6 space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-at-text">브랜드 이미지 설정</h1>
-        <p className="text-sm text-at-text-secondary mt-1">블로그 글에 자동으로 삽입될 의료법 안내·텍스트 카드·사진 오버레이의 디자인 자산을 설정합니다.</p>
-      </header>
+    <div className={embedded ? 'space-y-6' : 'p-6 space-y-6'}>
+      {!embedded && (
+        <header>
+          <h1 className="text-2xl font-bold text-at-text">브랜드 이미지 설정</h1>
+          <p className="text-sm text-at-text-secondary mt-1">블로그 글에 자동으로 삽입될 의료법 안내·텍스트 카드·사진 오버레이의 디자인 자산을 설정합니다.</p>
+        </header>
+      )}
+      {embedded && (
+        <p className="text-sm text-at-text-secondary">블로그 글에 자동으로 삽입될 의료법 안내·텍스트 카드·사진 오버레이의 디자인 자산을 설정합니다.</p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

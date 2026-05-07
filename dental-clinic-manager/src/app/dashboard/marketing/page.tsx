@@ -26,6 +26,8 @@ import PremiumGate from '@/components/Premium/PremiumGate'
 import NewPostForm from '@/components/marketing/NewPostForm'
 import ScheduleModal from '@/components/marketing/ScheduleModal'
 import WorkerStatusBanner from '@/components/marketing/WorkerStatusBanner'
+import { BrandSettingsClient } from '@/app/dashboard/marketing/brand/BrandSettingsClient'
+import { usePermissions } from '@/hooks/usePermissions'
 import dynamic from 'next/dynamic'
 
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
@@ -841,7 +843,53 @@ interface PlatformSetting {
 }
 
 // ─── 설정 ───
+// ─── 설정 (서브탭: 플랫폼 연동 / 브랜드 이미지) ───
+type SettingsSubTab = 'platforms' | 'brand'
+
 function SettingsContent() {
+  const [subTab, setSubTab] = useState<SettingsSubTab>('platforms')
+  const { hasPermission } = usePermissions()
+  const canViewBrand = hasPermission('marketing_brand_view')
+  const canManageBrand = hasPermission('marketing_brand_manage')
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 border-b border-at-border pb-3">
+        <button
+          type="button"
+          onClick={() => setSubTab('platforms')}
+          className={`py-1.5 px-3 inline-flex items-center rounded-lg text-sm font-medium transition-all ${
+            subTab === 'platforms'
+              ? 'bg-at-accent-light text-at-accent'
+              : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+          }`}
+        >
+          플랫폼 연동
+        </button>
+        {canViewBrand && (
+          <button
+            type="button"
+            onClick={() => setSubTab('brand')}
+            className={`py-1.5 px-3 inline-flex items-center rounded-lg text-sm font-medium transition-all ${
+              subTab === 'brand'
+                ? 'bg-at-accent-light text-at-accent'
+                : 'text-at-text-weak hover:text-at-text-secondary hover:bg-at-surface-alt'
+            }`}
+          >
+            브랜드 이미지
+          </button>
+        )}
+      </div>
+
+      {subTab === 'platforms' && <PlatformSettings />}
+      {subTab === 'brand' && canViewBrand && (
+        <BrandSettingsClient canManage={canManageBrand} embedded />
+      )}
+    </div>
+  )
+}
+
+function PlatformSettings() {
   const [settings, setSettings] = useState<PlatformSetting[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingPlatform, setEditingPlatform] = useState<PlatformId | null>(null)
