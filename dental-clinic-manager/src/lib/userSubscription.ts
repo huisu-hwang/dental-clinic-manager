@@ -20,7 +20,7 @@ export async function checkInvestmentSubscription(userId: string): Promise<GateR
   const admin = getSupabaseAdmin()
   if (!admin) return { ok: false, reason: 'NO_SUBSCRIPTION' }
 
-  const { data } = await admin
+  const { data, error } = await admin
     .from('user_subscriptions')
     .select(`*, plan:user_subscription_plans!inner(*)`)
     .eq('user_id', userId)
@@ -29,6 +29,10 @@ export async function checkInvestmentSubscription(userId: string): Promise<GateR
     .limit(1)
     .maybeSingle()
 
+  if (error) {
+    console.error('[userSubscription] DB error in checkInvestmentSubscription:', { userId, error: error.message })
+    return { ok: false, reason: 'NO_SUBSCRIPTION' }
+  }
   if (!data) return { ok: false, reason: 'NO_SUBSCRIPTION' }
 
   const sub = data as unknown as UserSubscription & { plan: UserSubscriptionPlan }
