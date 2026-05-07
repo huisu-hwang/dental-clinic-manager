@@ -470,7 +470,7 @@ async function navigateToBusinessCardDeduction(page: Page): Promise<void> {
 
 /** "월별" 조회기간 라디오/탭 클릭 */
 async function selectMonthlyPeriod(page: Page): Promise<void> {
-  await page.evaluate(() => {
+  const result = await page.evaluate(() => {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const doc = (globalThis as any).document;
     const win = globalThis as any;
@@ -484,7 +484,7 @@ async function selectMonthlyPeriod(page: Page): Promise<void> {
         r.checked = true;
         r.click();
         r.dispatchEvent(new win.Event('change', { bubbles: true }));
-        return;
+        return `radio: ${r.id || valueText} (label=${labelText})`;
       }
     }
 
@@ -493,10 +493,16 @@ async function selectMonthlyPeriod(page: Page): Promise<void> {
       const text = el.textContent?.trim() || '';
       if (text === '월별' && (el.offsetParent !== null || el.offsetWidth > 0)) {
         el.click();
-        return;
+        return `element: ${el.tagName.toLowerCase()}`;
       }
     }
-  }).catch(() => {});
+    return 'not_found';
+  }).catch((e) => `error: ${(e as Error).message}`);
+
+  log('info', `[Hometax] 월별 라디오/탭 선택: ${result}`);
+  if (result === 'not_found') {
+    log('warn', '[Hometax] "월별" 라디오/탭을 찾지 못했습니다 — 기본 조회 모드로 진행 (결과 비어 있을 수 있음)');
+  }
 
   await page.waitForTimeout(1500);
 }
@@ -504,7 +510,7 @@ async function selectMonthlyPeriod(page: Page): Promise<void> {
 /** 연/월 select 또는 input 설정 */
 async function setYearMonth(page: Page, year: number, month: number): Promise<void> {
   const ym = `${year}${String(month).padStart(2, '0')}`;
-  await page.evaluate(
+  const result = await page.evaluate(
     (params: { y: number; m: number; ym: string }) => {
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const doc = (globalThis as any).document;
@@ -530,16 +536,28 @@ async function setYearMonth(page: Page, year: number, month: number): Promise<vo
         (el: any) => el.offsetParent !== null || el.offsetWidth > 0,
       );
 
-      // 1) yyyymm 단일 select 시도
+      // 1) yyyymm 단일 select 시도 (홈택스: id="mf_txppWframe_selectYearMonth", 옵션 텍스트="2026년 01월")
+      const singleCandidates = [
+        params.ym,                          // '202601'
+        `${yStr}-${mStr}`,                  // '2026-01'
+        `${yStr}.${mStr}`,                  // '2026.01'
+        `${yStr}/${mStr}`,                  // '2026/01'
+        `${yStr}년 ${mStr}월`,              // '2026년 01월' (홈택스 표준)
+        `${yStr}년 ${params.m}월`,          // '2026년 1월' (zero-pad 없는 fallback)
+        `${yStr}년${mStr}월`,               // '2026년01월' (공백 없음)
+        `${yStr}년${params.m}월`,           // '2026년1월'
+      ];
       for (const sel of allSelects) {
-        if (
-          setSelectValue(sel, [params.ym, `${yStr}${mStr}`, `${yStr}-${mStr}`, `${yStr}년 ${params.m}월`])
-        ) return;
+        if (setSelectValue(sel, singleCandidates)) {
+          return { mode: 'single', selectId: sel.id || sel.name || 'unknown' };
+        }
       }
 
       // 2) 연도 + 월 분리 select
       let yearSet = false;
       let monthSet = false;
+      let yearSelectId = '';
+      let monthSelectId = '';
       for (const sel of allSelects) {
         const idLower = (sel.id || '').toLowerCase();
         const nameLower = (sel.name || '').toLowerCase();
@@ -547,13 +565,18 @@ async function setYearMonth(page: Page, year: number, month: number): Promise<vo
           idLower.includes('year') || idLower.includes('yyyy') || nameLower.includes('year');
         const isMonth =
           idLower.includes('month') || idLower.includes('mm') || nameLower.includes('month');
-        if (isYear && !yearSet && setSelectValue(sel, [yStr, `${yStr}년`])) yearSet = true;
+        if (isYear && !yearSet && setSelectValue(sel, [yStr, `${yStr}년`])) {
+          yearSet = true;
+          yearSelectId = sel.id || sel.name;
+        }
         if (
           isMonth &&
           !monthSet &&
           setSelectValue(sel, [mStr, String(params.m), `${params.m}월`, `${mStr}월`])
-        )
+        ) {
           monthSet = true;
+          monthSelectId = sel.id || sel.name;
+        }
       }
 
       // 휴리스틱 폴백
@@ -566,18 +589,50 @@ async function setYearMonth(page: Page, year: number, month: number): Promise<vo
           const hasMonthOption = opts.some((o: any) =>
             /^(0?[1-9]|1[0-2])(월)?$/.test((o.textContent || '').trim()),
           );
-          if (!yearSet && hasYearOption && setSelectValue(sel, [yStr, `${yStr}년`])) yearSet = true;
-          else if (
+          if (!yearSet && hasYearOption && setSelectValue(sel, [yStr, `${yStr}년`])) {
+            yearSet = true;
+            yearSelectId = sel.id || sel.name || 'heuristic';
+          } else if (
             !monthSet &&
             hasMonthOption &&
             setSelectValue(sel, [mStr, String(params.m), `${params.m}월`, `${mStr}월`])
-          )
+          ) {
             monthSet = true;
+            monthSelectId = sel.id || sel.name || 'heuristic';
+          }
         }
       }
+
+      // 진단: 매칭 실패 시 모든 select의 정보를 dump
+      const selectInfo = allSelects.map((sel: any) => {
+        const opts = Array.from(sel.querySelectorAll('option') as any[]).slice(0, 8);
+        return {
+          id: sel.id || '',
+          name: sel.name || '',
+          value: sel.value || '',
+          optCount: sel.querySelectorAll('option').length,
+          firstOpts: opts.map((o: any) => `${o.value}|${(o.textContent || '').trim()}`),
+        };
+      });
+
+      return {
+        mode: 'split',
+        yearSet,
+        monthSet,
+        yearSelectId,
+        monthSelectId,
+        totalSelects: allSelects.length,
+        selectInfo: (!yearSet || !monthSet) ? selectInfo : undefined,
+      };
     },
     { y: year, m: month, ym },
-  ).catch(() => {});
+  ).catch((e) => ({ mode: 'error', error: (e as Error).message }));
+
+  log('info', `[Hometax] 연/월 설정 (${year}-${month}): ${JSON.stringify(result)}`);
+  const r = result as { mode: string; yearSet?: boolean; monthSet?: boolean };
+  if (r.mode === 'split' && (!r.yearSet || !r.monthSet)) {
+    log('warn', `[Hometax] 연/월 select 설정 부분 실패 — yearSet=${r.yearSet}, monthSet=${r.monthSet} (결과 비어 있을 수 있음)`);
+  }
 
   await page.waitForTimeout(1000);
 }
@@ -599,8 +654,10 @@ async function scrapeBusinessCardPurchase(
 
   const records = await parseDataTable(page);
 
-  // 총 사용금액 추출
-  const totalUsageAmount = await page.evaluate(() => {
+  // 월별 조회 페이지: 공제대상 + 불공제대상 두 테이블의 "합계" 셀을 합산해 총 사용금액 산출
+  // 페이지 구조: 테이블 헤더=["공제대상"/"불공제대상", "건수", "공급가액", "세액", "비과세", "합계"]
+  //              첫 행 셀=[건수값, 공급가액값, 세액값, 비과세값, 합계값] (5개 — 첫 헤더는 행 라벨)
+  const amountDiag = await page.evaluate(() => {
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const doc = (globalThis as any).document;
     const parseAmt = (s: string): number => {
@@ -608,24 +665,104 @@ async function scrapeBusinessCardPurchase(
       const n = parseInt(cleaned, 10);
       return Number.isFinite(n) ? n : 0;
     };
-    const bodyText = doc.body?.innerText || '';
-    const m = bodyText.match(/총\s*사용\s*금액[^\d]*([\d,]+)/);
-    if (m) return parseAmt(m[1]);
-    return null as number | null;
-  }).catch(() => null);
+
+    let deductibleAmount = 0;
+    let nonDeductibleAmount = 0;
+    let deductibleCount = 0;
+    let nonDeductibleCount = 0;
+    const tableDump: Array<{ category: string; headers: string[]; firstRow: string[] }> = [];
+
+    const tables = Array.from(doc.querySelectorAll('table') as any[]).filter(
+      (t: any) => t.offsetParent !== null || t.offsetWidth > 0,
+    );
+
+    for (const table of tables) {
+      const headers: string[] = [];
+      table.querySelectorAll('thead th, thead td').forEach((c: any) => {
+        headers.push((c.textContent || '').trim().replace(/\s+/g, ' '));
+      });
+      const firstHeader = headers[0] || '';
+      const category =
+        firstHeader === '공제대상' ? 'deductible' :
+        firstHeader === '불공제대상' ? 'non_deductible' : '';
+      if (!category) continue;
+
+      const firstRow = table.querySelector('tbody tr');
+      if (!firstRow) continue;
+      const cells = Array.from(firstRow.querySelectorAll('td') as any[]).map((c: any) =>
+        (c.textContent || '').trim().replace(/\s+/g, ' '),
+      );
+      if (cells.length === 0) continue;
+      tableDump.push({ category, headers, firstRow: cells });
+
+      // 셀 매핑 (헤더 6개, 데이터 셀 5개 — 첫 헤더 "공제대상"/"불공제대상"은 행 라벨)
+      // 셀 순서: [건수, 공급가액, 세액, 비과세, 합계]
+      const count = parseAmt(cells[0]);
+      const totalCell = parseAmt(cells[cells.length - 1]); // 합계는 마지막 셀
+      if (category === 'deductible') {
+        deductibleAmount = totalCell;
+        deductibleCount = count;
+      } else {
+        nonDeductibleAmount = totalCell;
+        nonDeductibleCount = count;
+      }
+    }
+
+    const totalUsageAmount = deductibleAmount + nonDeductibleAmount;
+    return {
+      totalUsageAmount: totalUsageAmount > 0 ? totalUsageAmount : null,
+      deductibleAmount,
+      deductibleCount,
+      nonDeductibleAmount,
+      nonDeductibleCount,
+      tableDump,
+    };
+  }).catch((e) => ({ error: (e as Error).message }));
+
+  const totalUsageAmount = (amountDiag as any).totalUsageAmount ?? null;
+  const deductibleAmount = (amountDiag as any).deductibleAmount ?? 0;
+  const nonDeductibleAmount = (amountDiag as any).nonDeductibleAmount ?? 0;
 
   if (totalUsageAmount !== null && totalUsageAmount > 0) {
+    // extractMonthAmount이 우선 매칭하는 메타데이터 row를 records 앞에 추가
     records.unshift({
       '구분': '총 사용금액',
       '총 사용금액': totalUsageAmount.toLocaleString(),
+      '공제대상': deductibleAmount.toLocaleString(),
+      '불공제대상': nonDeductibleAmount.toLocaleString(),
       '거래년월': `${year}-${String(month).padStart(2, '0')}`,
     });
   }
 
   log(
     'info',
-    `[Hometax] 사업용 신용카드 매입세액 공제 ${records.length}건 (총 사용금액=${totalUsageAmount ?? 'N/A'})`,
+    `[Hometax] 사업용 신용카드 매입세액 공제 ${records.length}건 ` +
+    `(총 사용금액=${totalUsageAmount ?? 'N/A'}, 공제=${deductibleAmount}, 불공제=${nonDeductibleAmount})`,
   );
+  log(
+    'info',
+    `[Hometax] 테이블 dump: ${JSON.stringify((amountDiag as any).tableDump || [])}`,
+  );
+
+  // 0건 + 총사용금액도 없으면 페이지 진단 정보 수집
+  if (records.length === 0 && (totalUsageAmount === null || totalUsageAmount === 0)) {
+    const diag = await page.evaluate(() => {
+      /* eslint-disable @typescript-eslint/no-explicit-any */
+      const doc = (globalThis as any).document;
+      const url = (globalThis as any).location.href;
+      const visibleTables = Array.from(doc.querySelectorAll('table') as any[]).filter(
+        (t: any) => t.offsetParent !== null || t.offsetWidth > 0,
+      ).length;
+      const hasNoDataMsg = (doc.body?.innerText || '').match(/조회.*결과.*없|데이터.*없|자료.*없/);
+      return {
+        url: url.substring(0, 120),
+        visibleTables,
+        bodyTextSnippet: (doc.body?.innerText || '').substring(0, 300),
+        noDataMessage: hasNoDataMsg ? hasNoDataMsg[0] : null,
+      };
+    }).catch(() => ({ error: 'evaluate_failed' }));
+    log('warn', `[Hometax] 사업용 카드 매입세액 0건 — 페이지 진단: ${JSON.stringify(diag)}`);
+  }
 
   return {
     dataType: 'business_card_purchase',

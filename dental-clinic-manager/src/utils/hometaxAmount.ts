@@ -21,6 +21,63 @@ const AMOUNT_KEYS = [
 ];
 
 /**
+ * 거래년월 값을 'YYYY-MM' 표준형으로 정규화.
+ * 홈택스/CODEF 응답이 '2026-1' (zero-pad 없음), '202601', '20260131',
+ * '2026.01', '2026년 1월' 등 다양한 포맷으로 들어오므로 단일 표기로 통일한다.
+ * 1월처럼 자릿수가 1자리인 달이 누락되던 버그의 근본 해결책.
+ */
+export function normalizeYearMonth(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const str = String(value).trim();
+  if (!str) return null;
+
+  const compact = str.replace(/\s+/g, '');
+
+  const exact = compact.match(/^(\d{4})[-./년]?(\d{1,2})(?:월)?(?:[-./]\d{1,2}일?)?$/);
+  if (exact) {
+    const monthNum = parseInt(exact[2], 10);
+    if (monthNum >= 1 && monthNum <= 12) {
+      return `${exact[1]}-${String(monthNum).padStart(2, '0')}`;
+    }
+  }
+
+  const embedded = compact.match(/(\d{4})[-./년](\d{1,2})(?:월)?/);
+  if (embedded) {
+    const monthNum = parseInt(embedded[2], 10);
+    if (monthNum >= 1 && monthNum <= 12) {
+      return `${embedded[1]}-${String(monthNum).padStart(2, '0')}`;
+    }
+  }
+
+  const digits = compact.replace(/\D/g, '');
+  if (digits.length >= 6) {
+    const monthNum = parseInt(digits.slice(4, 6), 10);
+    if (monthNum >= 1 && monthNum <= 12) {
+      return `${digits.slice(0, 4)}-${String(monthNum).padStart(2, '0')}`;
+    }
+  }
+
+  return null;
+}
+
+function extractMonthOnly(value: unknown): number | null {
+  if (value === undefined || value === null) return null;
+  const str = String(value).trim().replace(/\s+/g, '');
+  if (!str) return null;
+
+  const pure = str.match(/^(\d{1,2})월?$/);
+  if (pure) {
+    const num = parseInt(pure[1], 10);
+    if (num >= 1 && num <= 12) return num;
+  }
+
+  const ym = normalizeYearMonth(value);
+  if (ym) return parseInt(ym.slice(5, 7), 10);
+
+  return null;
+}
+
+/**
  * raw_data 배열에서 특정 연월에 해당하는 레코드만 필터링.
  * 홈택스 누계 조회는 분기/반기 전체 데이터를 반환하므로 해당 월 행만 추출.
  */
@@ -30,24 +87,18 @@ export function findMonthRows(
   targetMonth: number,
 ): Record<string, unknown>[] {
   const yearMonthStr = `${year}-${String(targetMonth).padStart(2, '0')}`;
-  const monthPatterns = [
-    `${targetMonth}월`,
-    `${String(targetMonth).padStart(2, '0')}월`,
-  ];
 
   return records.filter(record => {
     for (const key of YEAR_MONTH_FIELDS) {
       const val = record[key];
-      if (val !== undefined && val !== null && val !== '') {
-        if (String(val).trim() === yearMonthStr) return true;
-      }
+      if (val === undefined || val === null || val === '') continue;
+      if (normalizeYearMonth(val) === yearMonthStr) return true;
     }
     for (const key of MONTH_ONLY_FIELDS) {
       const val = record[key];
-      if (val !== undefined && val !== null && val !== '') {
-        const strVal = String(val).replace(/\s/g, '');
-        if (monthPatterns.some(p => strVal === p)) return true;
-      }
+      if (val === undefined || val === null || val === '') continue;
+      if (normalizeYearMonth(val) === yearMonthStr) return true;
+      if (extractMonthOnly(val) === targetMonth) return true;
     }
     return false;
   });

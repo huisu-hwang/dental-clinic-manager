@@ -47,6 +47,7 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
   const router = useRouter()
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [gateChecked, setGateChecked] = useState(false)
 
   // 미인증 사용자 리다이렉트
   useEffect(() => {
@@ -54,6 +55,23 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
       router.replace('/')
     }
   }, [user, loading, router])
+
+  // 개인 구독 게이팅: 활성 구독이 없으면 /investment/subscribe 로 리다이렉트
+  useEffect(() => {
+    if (!user) return
+    if (pathname === '/investment/subscribe' || pathname === '/investment/connect') {
+      setGateChecked(true)
+      return
+    }
+    fetch('/api/investment/subscription/status')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.subscription || d.subscription.status !== 'active') {
+          router.replace('/investment/subscribe')
+        } else setGateChecked(true)
+      })
+      .catch(() => setGateChecked(true))
+  }, [user, pathname, router])
 
   // 모바일 메뉴 닫기 (라우트 변경 시)
   useEffect(() => {
@@ -82,6 +100,14 @@ export default function InvestmentLayout({ children }: { children: React.ReactNo
   }
 
   if (!user) return null
+
+  if (!gateChecked && pathname !== '/investment/subscribe' && pathname !== '/investment/connect' && user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-at-surface">
+        <Loader2 className="w-8 h-8 animate-spin text-at-accent" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-at-surface-alt">

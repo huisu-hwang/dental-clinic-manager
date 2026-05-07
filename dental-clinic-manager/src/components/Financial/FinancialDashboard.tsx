@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   FinancialSummary,
@@ -72,40 +72,55 @@ export default function FinancialDashboard() {
     return params.get('tab') === 'settings' ? 'settings' : 'status'
   })
 
-  // 데이터 로드
-  const loadData = async () => {
+  // 활성 AbortController — 월 변경 또는 onSyncComplete 등 어디서든 새 fetch 시작 시
+  // 이전 fetch를 취소해 stale closure로 인한 race condition을 차단한다.
+  const activeAbortRef = useRef<AbortController | null>(null)
+
+  // 데이터 로드 (race condition 방지)
+  // useCallback으로 selectedYear/Month 의존성을 명시 → onSyncComplete 등 외부 콜백이
+  // 호출해도 stale closure 없이 현재 선택된 월의 데이터를 가져온다.
+  const loadData = useCallback(async () => {
     if (!clinicId) return
+    // 이전 진행 중인 요청 취소
+    activeAbortRef.current?.abort()
+    const controller = new AbortController()
+    activeAbortRef.current = controller
+    const { signal } = controller
 
     try {
-      // 재무 요약 로드
       const summaryRes = await fetch(
-        `/api/financial/summary?clinicId=${clinicId}&year=${selectedYear}&month=${selectedMonth}`
+        `/api/financial/summary?clinicId=${clinicId}&year=${selectedYear}&month=${selectedMonth}`,
+        { signal }
       )
       const summaryData = await summaryRes.json()
+      if (signal.aborted) return
       if (summaryData.success) {
         setSummary(summaryData.data)
         setSyncPending(!!summaryData.sync_pending)
       }
 
-      // 지출 내역 로드
       const expenseRes = await fetch(
-        `/api/financial/expense?clinicId=${clinicId}&year=${selectedYear}&month=${selectedMonth}`
+        `/api/financial/expense?clinicId=${clinicId}&year=${selectedYear}&month=${selectedMonth}`,
+        { signal }
       )
       const expenseData = await expenseRes.json()
+      if (signal.aborted) return
       if (expenseData.success) {
         setExpenses(expenseData.data || [])
       }
     } catch (error) {
+      if ((error as { name?: string })?.name === 'AbortError') return
       console.error('Error loading financial data:', error)
     } finally {
-      setLoading(false)
+      if (!signal.aborted) setLoading(false)
     }
-  }
+  }, [clinicId, selectedYear, selectedMonth])
 
   useEffect(() => {
     setSyncRetryCount(0)
     loadData()
-  }, [clinicId, selectedYear, selectedMonth])
+    return () => activeAbortRef.current?.abort()
+  }, [loadData])
 
   // sync_pending일 때 자동 재조회
   // 워커 동기화 주기가 최대 5분이므로, 처음 30초는 5초 간격 → 이후 15초 간격으로 최대 5분까지 폴링
@@ -116,10 +131,10 @@ export default function FinancialDashboard() {
     const interval = syncRetryCount < 6 ? 5000 : 15000
     const timer = setTimeout(() => {
       setSyncRetryCount(prev => prev + 1)
-      loadData()
+      loadData()  // useCallback + AbortController로 race 차단
     }, interval)
     return () => clearTimeout(timer)
-  }, [syncPending, syncRetryCount])
+  }, [syncPending, syncRetryCount, loadData])
 
   // 과거 데이터 전체 불러오기
   const handleBackfillRequest = async () => {
