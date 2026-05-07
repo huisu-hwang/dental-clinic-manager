@@ -76,9 +76,22 @@ export default function FinancialDashboard() {
   // 이전 fetch를 취소해 stale closure로 인한 race condition을 차단한다.
   const activeAbortRef = useRef<AbortController | null>(null)
 
+  // loadData를 ref로 안정화 → onSyncComplete 같은 외부 콜백이 항상 최신 loadData를
+  // 보게 함. (HometaxSyncContext의 onSyncComplete ref가 prop 변경 시 cleanup-set
+  // 사이클을 돌면서 발생하는 timing race를 원천 차단)
+  const loadDataRef = useRef<(() => Promise<void>) | null>(null)
+
+  // 현재 선택된 year/month를 ref로 보관 — fetch 응답 도착 시 closure에 capture된
+  // 값이 아닌 "지금" 사용자가 보고 있는 month와 비교해야 stale 응답을 정확히
+  // 차단할 수 있다. (closure capture는 각 fetch가 자기 요청 month와 매칭되므로
+  // 항상 통과 → 빠른 navigate 시 늦게 도착한 응답이 winner가 되는 race 발생)
+  const selectedRef = useRef({ year: selectedYear, month: selectedMonth })
+  useEffect(() => {
+    selectedRef.current = { year: selectedYear, month: selectedMonth }
+  }, [selectedYear, selectedMonth])
+
   // 데이터 로드 (race condition 방지)
-  // useCallback으로 selectedYear/Month 의존성을 명시 → onSyncComplete 등 외부 콜백이
-  // 호출해도 stale closure 없이 현재 선택된 월의 데이터를 가져온다.
+  // useCallback으로 selectedYear/Month 의존성을 명시 → 컴포넌트 내부 호출은 stale closure 없이.
   const loadData = useCallback(async () => {
     if (!clinicId) return
     // 이전 진행 중인 요청 취소
@@ -87,26 +100,42 @@ export default function FinancialDashboard() {
     activeAbortRef.current = controller
     const { signal } = controller
 
+    // 캡처: 이 fetch가 시작될 때의 month/year — 응답 도착 시 현재 selected와 비교해
+    // 다르면 stale 응답으로 간주하고 무시. AbortController + 응답 month 가드 이중 방어.
+    const requestedYear = selectedYear
+    const requestedMonth = selectedMonth
+
     try {
       const summaryRes = await fetch(
-        `/api/financial/summary?clinicId=${clinicId}&year=${selectedYear}&month=${selectedMonth}`,
+        `/api/financial/summary?clinicId=${clinicId}&year=${requestedYear}&month=${requestedMonth}`,
         { signal }
       )
       const summaryData = await summaryRes.json()
       if (signal.aborted) return
-      if (summaryData.success) {
+      // 응답에 들어있는 month/year가 "현재" 사용자가 보고 있는 month와 다르면
+      // stale 응답 → 무시. ref를 통해 closure capture 값이 아닌 최신 값과 비교.
+      const current = selectedRef.current
+      if (
+        summaryData.success &&
+        summaryData.data?.year === current.year &&
+        summaryData.data?.month === current.month
+      ) {
         setSummary(summaryData.data)
         setSyncPending(!!summaryData.sync_pending)
       }
 
       const expenseRes = await fetch(
-        `/api/financial/expense?clinicId=${clinicId}&year=${selectedYear}&month=${selectedMonth}`,
+        `/api/financial/expense?clinicId=${clinicId}&year=${requestedYear}&month=${requestedMonth}`,
         { signal }
       )
       const expenseData = await expenseRes.json()
       if (signal.aborted) return
       if (expenseData.success) {
-        setExpenses(expenseData.data || [])
+        // 요청 시점의 month가 여전히 현재 사용자가 보고 있는 month인지 ref로 확인
+        const cur = selectedRef.current
+        if (requestedYear === cur.year && requestedMonth === cur.month) {
+          setExpenses(expenseData.data || [])
+        }
       }
     } catch (error) {
       if ((error as { name?: string })?.name === 'AbortError') return
@@ -118,9 +147,18 @@ export default function FinancialDashboard() {
 
   useEffect(() => {
     setSyncRetryCount(0)
+    loadDataRef.current = loadData
     loadData()
     return () => activeAbortRef.current?.abort()
   }, [loadData])
+
+  // 외부(HometaxSyncContext의 polling)에서 호출하는 안정 콜백.
+  // 의존성을 빈 배열로 두어 prop reference가 영원히 동일 → child의 ref 갱신
+  // useEffect가 단 한 번만 실행되어 cleanup-set timing race 자체가 사라진다.
+  // 호출 시점에 loadDataRef를 통해 항상 "지금 선택된 월"의 loadData를 호출.
+  const stableOnSyncComplete = useCallback(() => {
+    loadDataRef.current?.()
+  }, [])
 
   // sync_pending일 때 자동 재조회
   // 워커 동기화 주기가 최대 5분이므로, 처음 30초는 5초 간격 → 이후 15초 간격으로 최대 5분까지 폴링
@@ -396,7 +434,7 @@ export default function FinancialDashboard() {
                     clinicId={clinicId}
                     year={selectedYear}
                     month={selectedMonth}
-                    onSyncComplete={loadData}
+                    onSyncComplete={stableOnSyncComplete}
                   />
                 </div>
               </div>
