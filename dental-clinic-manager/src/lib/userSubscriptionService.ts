@@ -19,36 +19,49 @@ const FEATURE_INVESTMENT = 'investment'
 export async function getInvestmentPlan(): Promise<UserSubscriptionPlan | null> {
   const admin = getSupabaseAdmin()
   if (!admin) return null
-  const { data } = await admin
+  const { data, error } = await admin
     .from('user_subscription_plans')
     .select('*')
     .eq('feature_id', FEATURE_INVESTMENT)
     .single()
+  if (error) {
+    console.error('[userSubscription.getInvestmentPlan] DB error:', error.message)
+    return null
+  }
   return (data as UserSubscriptionPlan | null) ?? null
 }
 
 export async function getUserSubscription(userId: string): Promise<UserSubscription | null> {
   const admin = getSupabaseAdmin()
   if (!admin) return null
-  const { data } = await admin
+  const { data, error } = await admin
     .from('user_subscriptions')
     .select(`*, plan:user_subscription_plans(*)`)
     .eq('user_id', userId)
+    .in('status', ['active', 'past_due', 'suspended'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+  if (error) {
+    console.error('[userSubscription.getUserSubscription] DB error:', { userId, error: error.message })
+    return null
+  }
   return (data as UserSubscription | null) ?? null
 }
 
 export async function getUserPayments(userId: string, limit = 12): Promise<UserSubscriptionPayment[]> {
   const admin = getSupabaseAdmin()
   if (!admin) return []
-  const { data } = await admin
+  const { data, error } = await admin
     .from('user_subscription_payments')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit)
+  if (error) {
+    console.error('[userSubscription.getUserPayments] DB error:', { userId, error: error.message })
+    return []
+  }
   return (data as UserSubscriptionPayment[] | null) ?? []
 }
 
@@ -74,6 +87,18 @@ export async function registerUserSubscription(params: {
     .single()
   const plan = planData as UserSubscriptionPlan | null
   if (!plan) return { success: false, error: '플랜을 찾을 수 없습니다' }
+
+  // Re-registration guard: 이미 활성 구독이 있으면 중복 결제 방지
+  const { data: existingActive } = await admin
+    .from('user_subscriptions')
+    .select('id, status')
+    .eq('user_id', params.userId)
+    .eq('plan_id', params.planId)
+    .in('status', ['active', 'past_due'])
+    .maybeSingle()
+  if (existingActive) {
+    return { success: false, error: '이미 활성 구독이 있습니다. 결제 수단 변경은 별도 흐름을 사용하세요.' }
+  }
 
   const now = new Date()
   const nextBilling = getNextBillingDate(now)
@@ -110,32 +135,44 @@ export async function registerUserSubscription(params: {
       updated_at: now.toISOString(),
     }
 
-    const { data: existing } = await admin
+    const { data: existing, error: existingErr } = await admin
       .from('user_subscriptions')
       .select('id')
       .eq('user_id', params.userId)
       .eq('plan_id', params.planId)
       .maybeSingle()
+    if (existingErr) {
+      console.error('[userSubscription.register] existing lookup failed:', existingErr.message)
+      return { success: false, error: '구독 정보 조회 실패' }
+    }
 
     let subscriptionId: string | null = null
     if (existing) {
-      const { data: updated } = await admin
+      const { data: updated, error: updErr } = await admin
         .from('user_subscriptions')
         .update(subscriptionData)
         .eq('id', (existing as { id: string }).id)
         .select('id')
         .single()
+      if (updErr || !updated) {
+        console.error('[userSubscription.register] update failed:', updErr?.message)
+        return { success: false, error: '구독 정보 갱신 실패' }
+      }
       subscriptionId = (updated as { id: string }).id
     } else {
-      const { data: inserted } = await admin
+      const { data: inserted, error: insErr } = await admin
         .from('user_subscriptions')
         .insert(subscriptionData)
         .select('id')
         .single()
+      if (insErr || !inserted) {
+        console.error('[userSubscription.register] insert failed:', insErr?.message)
+        return { success: false, error: '구독 생성 실패' }
+      }
       subscriptionId = (inserted as { id: string }).id
     }
 
-    await admin.from('user_subscription_payments').insert({
+    const { error: payErr } = await admin.from('user_subscription_payments').insert({
       user_id: params.userId,
       subscription_id: subscriptionId,
       portone_payment_id: paymentResult.paymentId,
@@ -150,6 +187,11 @@ export async function registerUserSubscription(params: {
       billing_period_start: now.toISOString().slice(0, 10),
       billing_period_end: nextBilling.toISOString().slice(0, 10),
     })
+    if (payErr) {
+      console.error('[userSubscription.register] payment insert failed:', payErr.message)
+      // 결제는 성공했지만 기록 실패 — webhook에서 보강 가능 (UNIQUE portone_payment_id)
+      return { success: false, error: '결제 기록 저장 실패. 잠시 후 다시 확인해주세요.' }
+    }
 
     await scheduleNextPayment({
       clinicId: params.userId,
@@ -189,11 +231,11 @@ export async function cancelUserSubscription(params: {
     const now = new Date().toISOString()
     if (params.immediate) {
       await admin.from('user_subscriptions')
-        .update({ status: 'cancelled', cancelled_at: now, updated_at: now })
+        .update({ status: 'cancelled', cancelled_at: now, billing_key: null, updated_at: now })
         .eq('id', sub.id)
     } else {
       await admin.from('user_subscriptions')
-        .update({ cancel_at_period_end: true, cancelled_at: now, updated_at: now })
+        .update({ cancel_at_period_end: true, updated_at: now })
         .eq('id', sub.id)
     }
     return { success: true }
