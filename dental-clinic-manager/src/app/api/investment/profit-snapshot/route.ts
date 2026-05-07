@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const year = kst.getUTCFullYear()
   const month = kst.getUTCMonth() + 1
   let charged = 0
-  let failed = 0
+  let failedCount = 0
 
   for (const row of subs as unknown as Array<{
     id: string
@@ -44,6 +44,22 @@ export async function POST(req: Request) {
     billing_key: string
     plan: { id: string; monthly_base_price: number; revenue_share_pct: number; display_name: string }
   }>) {
+    const periodStart = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10)
+    const periodEnd = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
+
+    // CRITICAL: 동일 (subscription_id, billing_period_start)에 이미 paid 행이 있으면 skip — 중복 청구 방지
+    const { data: existingPayment } = await admin
+      .from('user_subscription_payments')
+      .select('id, status')
+      .eq('subscription_id', row.id)
+      .eq('billing_period_start', periodStart)
+      .in('status', ['paid', 'pending'])
+      .maybeSingle()
+    if (existingPayment) {
+      // 이미 처리됨 — skip
+      continue
+    }
+
     const { realized } = await calculateMonthlyProfitForUser(row.user_id, year, month)
     const base = row.plan.monthly_base_price
     const share = Math.max(0, Math.floor(realized * (row.plan.revenue_share_pct / 100)))
@@ -56,7 +72,7 @@ export async function POST(req: Request) {
 
     try {
       const result = await chargeBillingKey({
-        clinicId: row.user_id, // paymentId prefix용
+        clinicId: row.user_id,
         billingKey: row.billing_key,
         amount: total,
         orderName: `${row.plan.display_name} ${year}-${String(month).padStart(2, '0')}`,
@@ -66,8 +82,9 @@ export async function POST(req: Request) {
       })
 
       const paid = result.status === 'PAID'
-      const periodStart = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10)
-      const periodEnd = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
+      const failed = result.status === 'FAILED'
+      // 그 외 상태 (READY, VIRTUAL_ACCOUNT_ISSUED 등): webhook으로 reconcile, 여기선 mid-flight 상태 기록만
+      const isMidFlight = !paid && !failed
 
       const { error: payErr } = await admin.from('user_subscription_payments').insert({
         user_id: row.user_id,
@@ -78,10 +95,10 @@ export async function POST(req: Request) {
         base_amount: base,
         revenue_share_amount: share,
         realized_profit_basis: Math.max(0, Math.floor(realized)),
-        status: paid ? 'paid' : 'failed',
+        status: paid ? 'paid' : (failed ? 'failed' : 'pending'),
         paid_at: paid ? (result.paidAt ?? now.toISOString()) : null,
-        failed_at: paid ? null : now.toISOString(),
-        fail_reason: paid ? null : (result.failReason ?? '결제 실패'),
+        failed_at: failed ? now.toISOString() : null,
+        fail_reason: failed ? (result.failReason ?? '결제 실패') : null,
         order_name: `${row.plan.display_name} ${year}-${String(month).padStart(2, '0')}`,
         billing_period_start: periodStart,
         billing_period_end: periodEnd,
@@ -90,7 +107,8 @@ export async function POST(req: Request) {
         console.error('[profit-snapshot] payment insert failed:', { userId: row.user_id, error: payErr.message })
       }
 
-      if (paid) {
+      if (paid && !payErr) {
+        // 결제 성공 + DB 기록 성공 시에만 다음 주기 갱신
         const nextEnd = getNextBillingDate(now)
         await admin
           .from('user_subscriptions')
@@ -104,7 +122,7 @@ export async function POST(req: Request) {
           })
           .eq('id', row.id)
         charged++
-      } else {
+      } else if (failed) {
         await admin
           .from('user_subscriptions')
           .update({
@@ -114,13 +132,18 @@ export async function POST(req: Request) {
             updated_at: now.toISOString(),
           })
           .eq('id', row.id)
-        failed++
+        failedCount++
+      } else if (isMidFlight) {
+        console.warn('[profit-snapshot] payment in transient state:', { userId: row.user_id, status: result.status })
+      } else if (paid && payErr) {
+        // CRITICAL: 결제는 성공했지만 DB 기록 실패. 운영 알림 필요.
+        console.error('[profit-snapshot] CRITICAL: charged without record:', { userId: row.user_id, paymentId: result.paymentId })
       }
     } catch (e) {
       console.error('[profit-snapshot] charge failed:', row.user_id, e)
-      failed++
+      failedCount++
     }
   }
 
-  return NextResponse.json({ charged, failed, total: subs.length })
+  return NextResponse.json({ charged, failed: failedCount, total: subs.length })
 }
