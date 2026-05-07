@@ -81,6 +81,15 @@ export default function FinancialDashboard() {
   // 사이클을 돌면서 발생하는 timing race를 원천 차단)
   const loadDataRef = useRef<(() => Promise<void>) | null>(null)
 
+  // 현재 선택된 year/month를 ref로 보관 — fetch 응답 도착 시 closure에 capture된
+  // 값이 아닌 "지금" 사용자가 보고 있는 month와 비교해야 stale 응답을 정확히
+  // 차단할 수 있다. (closure capture는 각 fetch가 자기 요청 month와 매칭되므로
+  // 항상 통과 → 빠른 navigate 시 늦게 도착한 응답이 winner가 되는 race 발생)
+  const selectedRef = useRef({ year: selectedYear, month: selectedMonth })
+  useEffect(() => {
+    selectedRef.current = { year: selectedYear, month: selectedMonth }
+  }, [selectedYear, selectedMonth])
+
   // 데이터 로드 (race condition 방지)
   // useCallback으로 selectedYear/Month 의존성을 명시 → 컴포넌트 내부 호출은 stale closure 없이.
   const loadData = useCallback(async () => {
@@ -103,11 +112,13 @@ export default function FinancialDashboard() {
       )
       const summaryData = await summaryRes.json()
       if (signal.aborted) return
-      // 응답에 들어있는 month/year가 요청한 것과 다르면 stale 응답 → 무시
+      // 응답에 들어있는 month/year가 "현재" 사용자가 보고 있는 month와 다르면
+      // stale 응답 → 무시. ref를 통해 closure capture 값이 아닌 최신 값과 비교.
+      const current = selectedRef.current
       if (
         summaryData.success &&
-        summaryData.data?.year === requestedYear &&
-        summaryData.data?.month === requestedMonth
+        summaryData.data?.year === current.year &&
+        summaryData.data?.month === current.month
       ) {
         setSummary(summaryData.data)
         setSyncPending(!!summaryData.sync_pending)
@@ -120,9 +131,9 @@ export default function FinancialDashboard() {
       const expenseData = await expenseRes.json()
       if (signal.aborted) return
       if (expenseData.success) {
-        // expense API는 응답에 month/year를 반환하지 않으므로 요청 시점이 여전히
-        // 현재 selectedMonth/Year인지 확인해 stale 갱신 방지
-        if (requestedYear === selectedYear && requestedMonth === selectedMonth) {
+        // 요청 시점의 month가 여전히 현재 사용자가 보고 있는 month인지 ref로 확인
+        const cur = selectedRef.current
+        if (requestedYear === cur.year && requestedMonth === cur.month) {
           setExpenses(expenseData.data || [])
         }
       }
