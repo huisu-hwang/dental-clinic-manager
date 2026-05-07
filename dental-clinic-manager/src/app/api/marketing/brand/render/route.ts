@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { renderBrandImage } from '@/lib/marketing/brand/render-engine';
-import type { BrandAssets, BrandImageType, BrandPhoto } from '@/types/brand';
+import type { BrandAssets, BrandImageType, BrandPhoto, DraftBrandAssets } from '@/types/brand';
 
 export const maxDuration = 60;
 
@@ -10,6 +10,27 @@ interface RenderBody {
   type: BrandImageType;
   copy?: string;
   photoId?: string;
+  /** 저장되지 않은 자산을 라이브 미리보기로 합성할 때 사용. 합성 결과는 캐시하지 않는다. */
+  draftAssets?: DraftBrandAssets;
+}
+
+const DRAFT_KEYS: (keyof DraftBrandAssets)[] = [
+  'name_ko', 'name_en', 'logo_url',
+  'primary_color', 'secondary_color', 'slogan',
+  'medical_law_preset', 'medical_law_top_text', 'medical_law_bottom_text',
+  'title_border_width',
+];
+
+function applyDraft(base: BrandAssets, draft: DraftBrandAssets | undefined): BrandAssets {
+  if (!draft) return base;
+  const merged = { ...base };
+  for (const k of DRAFT_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(draft, k)) {
+      // 안전한 동적 대입
+      (merged as unknown as Record<string, unknown>)[k] = (draft as unknown as Record<string, unknown>)[k];
+    }
+  }
+  return merged;
 }
 
 export async function POST(request: NextRequest) {
@@ -34,12 +55,14 @@ export async function POST(request: NextRequest) {
     const clinicId = profile.clinic_id;
 
     // 자산 조회
-    const { data: assets } = await (admin as any)
+    const { data: rawAssets } = await (admin as any)
       .from('clinic_brand_assets')
       .select('*')
       .eq('clinic_id', clinicId)
       .maybeSingle();
-    if (!assets) return NextResponse.json({ error: '브랜드 자산 미설정' }, { status: 404 });
+    if (!rawAssets) return NextResponse.json({ error: '브랜드 자산 미설정' }, { status: 404 });
+
+    const assets = applyDraft(rawAssets as BrandAssets, body.draftAssets);
 
     // 사진 조회 (필요 시)
     let photo: BrandPhoto | undefined;
@@ -57,9 +80,11 @@ export async function POST(request: NextRequest) {
 
     const url = await renderBrandImage({
       type: body.type,
-      assets: assets as BrandAssets,
+      assets,
       copy: body.copy,
       photo,
+      // draft 모드일 때는 cache hit/miss를 캐시 테이블에 기록하지 않음 (DB 미저장 상태이므로 의미 없음)
+      bypassCache: !!body.draftAssets,
     });
     return NextResponse.json({ url });
   } catch (err) {

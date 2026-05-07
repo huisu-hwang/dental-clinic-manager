@@ -30,6 +30,7 @@ export function computeCacheKey(
         assets.logo_url ?? '',
         assets.primary_color,
         assets.slogan ?? '',
+        String(assets.title_border_width ?? 16),
         inputs.copy ?? '',
       );
       break;
