@@ -29,6 +29,14 @@
     {
       "path": "/api/cron/referral-thanks",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/billing-charge",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/billing-retry",
+      "schedule": "0 18 * * *"
     }
   ]
 }
