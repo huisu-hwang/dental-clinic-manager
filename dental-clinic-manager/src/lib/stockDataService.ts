@@ -80,7 +80,8 @@ async function fetchFromYahooFinance(
   endDate: string,
 ): Promise<OHLCV[]> {
   // yahoo-finance2는 동적 import (서버 사이드 전용)
-  const yahooFinance = (await import('yahoo-finance2')).default
+  const YahooFinance = (await import('yahoo-finance2')).default
+  const yahooFinance = new YahooFinance()
 
   // 한국 종목은 .KS (KOSPI) 또는 .KQ (KOSDAQ) 접미사 필요
   const symbol = market === 'KR' ? `${ticker}.KS` : ticker
@@ -249,7 +250,8 @@ interface YahooQuoteResult {
  * KR은 자동으로 .KS/.KQ suffix 처리 (기존 fetchPrices와 동일 규칙)
  */
 export async function fetchCurrentQuote(ticker: string, market: Market): Promise<CurrentQuote> {
-  const yahooFinance = (await import('yahoo-finance2')).default
+  const YahooFinance = (await import('yahoo-finance2')).default
+  const yahooFinance = new YahooFinance()
 
   const trySymbols = market === 'KR' ? [`${ticker}.KS`, `${ticker}.KQ`] : [ticker]
 
