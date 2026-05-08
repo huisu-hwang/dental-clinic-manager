@@ -21,8 +21,6 @@
     "@google/genai": "^1.45.0",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
-    "@portone/browser-sdk": "^0.1.4",
-    "@portone/server-sdk": "^0.19.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
