@@ -452,3 +452,115 @@ export async function runDueCharges(): Promise<{
 
   return { processed: dueSubs.length, succeeded, failed }
 }
+
+// ===========================================================================
+// runRetries (cron 호출용 — past_due 재시도)
+// ===========================================================================
+
+const MAX_RETRY = 3 // 1~3회차까지 재시도 (Day+1, Day+2, Day+3)
+const SUSPEND_AFTER = 4 // retry_count >= 4 → 정지
+
+/**
+ * past_due 구독 재시도 (매일 KST 03:00 cron).
+ * - `status='past_due' AND next_retry_at <= NOW()` 구독을 조회
+ * - retry_count >= 4 → 토스 호출 없이 즉시 정지
+ * - 1~3회차 실패 → next_retry_at += 1day
+ * - 3회차 실패(retry_count 3 → 4) → next_retry_at += 7day (유예 후 다음 cron이 정지 처리)
+ * - 성공 시 status='active' 복구 + 다음 결제일 갱신
+ * - 토스 율 제한 회피를 위해 각 호출 간 150ms 지연
+ */
+export async function runRetries(): Promise<{
+  processed: number
+  recovered: number
+  suspended: number
+}> {
+  const supabase = await createClient()
+  const { data: candidates } = await supabase
+    .from('subscriptions')
+    .select(
+      'id, clinic_id, billing_key, customer_key, retry_count, plan:subscription_plans(*)'
+    )
+    .eq('status', 'past_due')
+    .lte('next_retry_at', new Date().toISOString())
+
+  if (!candidates || candidates.length === 0) {
+    return { processed: 0, recovered: 0, suspended: 0 }
+  }
+
+  let recovered = 0
+  let suspended = 0
+
+  for (const sub of candidates) {
+    if (sub.retry_count >= SUSPEND_AFTER) {
+      // 토스 호출 없이 즉시 정지
+      await supabase
+        .from('subscriptions')
+        .update({
+          status: 'suspended',
+        })
+        .eq('id', sub.id)
+      suspended++
+      continue
+    }
+
+    const plan = sub.plan as unknown as SubscriptionPlan | null
+    if (!plan || !sub.billing_key) {
+      suspended++
+      continue
+    }
+
+    // 클리닉 owner 정보
+    const { data: owner } = await supabase
+      .from('users')
+      .select('name, email')
+      .eq('clinic_id', sub.clinic_id)
+      .eq('role', 'owner')
+      .limit(1)
+      .maybeSingle()
+
+    const result = await chargeOne({
+      clinicId: sub.clinic_id,
+      subscriptionId: sub.id,
+      billingKey: sub.billing_key,
+      customerKey: sub.customer_key,
+      customerName: owner?.name ?? '',
+      customerEmail: owner?.email ?? '',
+      amount: plan.price,
+      planName: plan.display_name,
+      retryCount: sub.retry_count,
+    })
+
+    if (result.ok) {
+      recovered++
+      const nextBilling = addOneMonth(new Date())
+      await supabase
+        .from('subscriptions')
+        .update({
+          status: 'active',
+          current_period_start: new Date().toISOString(),
+          current_period_end: nextBilling.toISOString(),
+          next_billing_date: nextBilling.toISOString(),
+          retry_count: 0,
+          next_retry_at: null,
+        })
+        .eq('id', sub.id)
+    } else {
+      const newCount = sub.retry_count + 1
+      // 1~3회차: +1 day; 3회차 실패(newCount=4) → +7 day 유예; 그 후엔 cron이 retry_count=4 보고 즉시 정지
+      const nextRetryDays = newCount >= MAX_RETRY ? 7 : 1
+      await supabase
+        .from('subscriptions')
+        .update({
+          retry_count: newCount,
+          next_retry_at: new Date(
+            Date.now() + nextRetryDays * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        })
+        .eq('id', sub.id)
+    }
+
+    await sleep(150) // 토스 율 제한 회피
+  }
+
+  return { processed: candidates.length, recovered, suspended }
+}
