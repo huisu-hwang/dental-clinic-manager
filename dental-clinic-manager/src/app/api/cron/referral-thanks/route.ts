@@ -4,6 +4,7 @@
 // 미발송 + (referred_at + auto_thanks_after_days <= today) 인 소개 건에 일괄 발송
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { aligoFetch } from '@/lib/aligoFetch'
 
 export const maxDuration = 60
 
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
       if (msgType === 'LMS') fd.append('title', '소개 감사 인사')
 
       try {
-        const res = await fetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: fd })
+        const res = await aligoFetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: fd })
         const json = await res.json()
         // Aligo 스펙: result_code 는 Integer, >= 1 이면 성공.
         const codeNum = Number(json.result_code)
