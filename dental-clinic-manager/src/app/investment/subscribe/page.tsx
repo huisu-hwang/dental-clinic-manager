@@ -1,12 +1,12 @@
 // src/app/investment/subscribe/page.tsx
-// 미구독자 안내 + PortOne SDK로 빌링키 발급 + register API 호출
+// 미구독자 안내 + 토스페이먼츠 SDK로 빌링 인증 (successUrl 리다이렉트)
 'use client'
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { Loader2, CheckCircle } from 'lucide-react'
-import * as PortOne from '@portone/browser-sdk/v2'
+import { loadTossPayments } from '@tosspayments/tosspayments-sdk'
 
 interface Plan {
   id: string
@@ -17,13 +17,20 @@ interface Plan {
   is_active: boolean
 }
 
+interface StatusResponse {
+  subscription?: {
+    status?: string | null
+    plan?: Plan | null
+  } | null
+  plan?: Plan | null
+}
+
 export default function InvestmentSubscribePage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [plan, setPlan] = useState<Plan | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -33,58 +40,60 @@ export default function InvestmentSubscribePage() {
   useEffect(() => {
     fetch('/api/investment/subscription/status')
       .then(r => r.json())
-      .then(d => {
-        if (d.subscription?.status === 'active') router.replace('/investment')
-        setPlan(d.plan)
+      .then((d: StatusResponse) => {
+        if (d.subscription?.status === 'active') {
+          router.replace('/investment')
+          return
+        }
+        // status route는 { subscription, plan } 반환 — subscription.plan 우선 + 폴백
+        setPlan(d.subscription?.plan ?? d.plan ?? null)
       })
       .catch(e => setStatusError(e instanceof Error ? e.message : '구독 정보 조회 실패'))
   }, [router])
 
   const onSubscribe = async () => {
     if (!plan) return
-    setSubmitting(true); setError(null)
+    setSubmitting(true)
+    setError(null)
     try {
-      const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID
-      const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY
-      if (!storeId || !channelKey) {
-        setError('결제 모듈 설정이 누락되었습니다. 운영자에게 문의해주세요.')
+      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
+      if (!clientKey) {
+        setError('NEXT_PUBLIC_TOSS_CLIENT_KEY 미설정')
+        setSubmitting(false)
         return
       }
 
-      let res: { billingKey?: string; cardNumber?: string; cardName?: string; code?: string; message?: string } | undefined
-      try {
-        res = await PortOne.requestIssueBillingKey({
-          storeId,
-          channelKey,
-          billingKeyMethod: 'CARD',
-          issueId: `issue-${user?.id}-${Date.now()}`,
-          issueName: '자동매매 구독',
-        }) as typeof res
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '결제 모듈 호출 실패')
-        return
-      }
-
-      if (!res) return  // 모바일 리다이렉트 케이스
-      if (res.code !== undefined) { setError(res.message ?? '결제 수단 등록 실패'); return }
-      if (!res.billingKey) { setError('결제 수단 등록에 실패했습니다.'); return }
-
-      // CardRegistrationModal 패턴 정렬: PortOne은 카드 정보를 반환하지 않으므로 빈 문자열 전송
-      const reg = await fetch('/api/investment/subscription/register', {
+      // 1) customerKey 발급
+      const ckRes = await fetch('/api/investment/billing/customer-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          billingKey: res.billingKey,
-          planId: plan.id,
-          cardName: '',
-          cardNumberLast4: '',
-        }),
+        body: JSON.stringify({ planId: plan.id }),
       })
-      const regJson = await reg.json()
-      if (!reg.ok) { setError(regJson.error ?? '구독 등록 실패'); return }
-      setDone(true)
-      setTimeout(() => router.replace('/investment'), 1500)
-    } finally { setSubmitting(false) }
+      if (!ckRes.ok) {
+        const j = await ckRes.json().catch(() => ({}))
+        throw new Error(j.error ?? 'customerKey 발급 실패')
+      }
+      const { customerKey } = await ckRes.json()
+
+      // 2) 토스 빌링 인증 요청 (리다이렉트)
+      const tossPayments = await loadTossPayments(clientKey)
+      const payment = tossPayments.payment({ customerKey })
+
+      const params = new URLSearchParams({
+        planId: plan.id,
+        amount: String(plan.monthly_base_price),
+        planName: plan.display_name,
+      })
+
+      await payment.requestBillingAuth({
+        method: 'CARD',
+        successUrl: `${window.location.origin}/investment/subscribe/success?${params.toString()}`,
+        failUrl: `${window.location.origin}/investment/subscribe/fail`,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '결제 모듈 호출 실패')
+      setSubmitting(false)
+    }
   }
 
   if (authLoading) return <div className="p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
@@ -113,11 +122,10 @@ export default function InvestmentSubscribePage() {
       </div>
 
       {error && <div className="text-red-600 text-sm">{error}</div>}
-      {done && <div className="text-green-600 text-sm">구독이 시작되었습니다. 잠시 후 이동합니다.</div>}
 
       <button
         onClick={onSubscribe}
-        disabled={submitting || done}
+        disabled={submitting}
         className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-3 rounded-xl font-semibold"
       >
         {submitting ? '처리 중...' : '구독 시작'}

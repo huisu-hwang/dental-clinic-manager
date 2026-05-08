@@ -5,7 +5,7 @@ import {
   countActiveEmployees,
   getSubscription,
   getPlanById,
-} from '@/lib/subscriptionService'
+} from '@/lib/billingService'
 import { findPlanByHeadcount, requiresUpgrade } from '@/lib/subscriptionPlans'
 
 const FREE_LIMIT = 4

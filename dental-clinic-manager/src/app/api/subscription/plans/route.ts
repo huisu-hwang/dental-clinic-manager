@@ -2,7 +2,7 @@
 // 구독 플랜 목록 조회
 
 import { NextResponse } from 'next/server'
-import { getPlans } from '@/lib/subscriptionService'
+import { getPlans } from '@/lib/billingService'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

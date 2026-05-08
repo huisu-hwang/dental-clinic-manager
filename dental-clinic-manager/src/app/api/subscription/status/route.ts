@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getSubscriptionStatus } from '@/lib/subscriptionService'
+import { getSubscriptionStatus } from '@/lib/billingService'
 
 export async function GET() {
   const supabase = await createClient()

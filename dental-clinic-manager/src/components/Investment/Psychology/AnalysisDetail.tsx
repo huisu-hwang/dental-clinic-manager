@@ -16,6 +16,14 @@ interface Props {
 
 type Mode = 'now' | 'past'
 
+const DURATION_PRESETS = [
+  { value: 15, label: '15분' },
+  { value: 30, label: '30분' },
+  { value: 60, label: '1시간' },
+  { value: 120, label: '2시간' },
+  { value: 240, label: '4시간' },
+] as const
+
 /** datetime-local 입력값 (YYYY-MM-DDTHH:mm) → ISO string. 로컬 시간으로 해석. */
 function localInputToIso(value: string): string | null {
   if (!value) return null
@@ -34,6 +42,7 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>('now')
+  const [durationMin, setDurationMin] = useState<number>(60)
   // 기본값: 어제 같은 시간
   const [asOfLocal, setAsOfLocal] = useState<string>(() => {
     const d = new Date(Date.now() - 24 * 3600 * 1000)
@@ -53,6 +62,7 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
         ticker,
         market,
         triggerKind: 'manual',
+        durationMinutes: durationMin,
       }
       if (mode === 'past') {
         const iso = localInputToIso(asOfLocal)
@@ -70,11 +80,10 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
     } finally { setRunning(false) }
   }
 
-  // latest record에서 분석 시점 추출
-  const latestAsOf = (() => {
-    const snap = latest?.input_snapshot as { as_of?: string } | undefined
-    return snap?.as_of ?? null
-  })()
+  // latest record에서 분석 시점 / 기간 추출
+  const latestSnap = latest?.input_snapshot as { as_of?: string; duration_min?: number } | undefined
+  const latestAsOf = latestSnap?.as_of ?? null
+  const latestDuration = latestSnap?.duration_min ?? null
 
   return (
     <div className="space-y-4">
@@ -89,6 +98,12 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
                   <span className="ml-2 inline-flex items-center gap-1 text-at-accent">
                     <History className="w-3 h-3" />
                     분석 시점 {new Date(latestAsOf).toLocaleString('ko-KR')}
+                  </span>
+                )}
+                {latestDuration && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-at-text-weak">
+                    <Clock className="w-3 h-3" />
+                    {latestDuration}분
                   </span>
                 )}
               </p>
@@ -134,9 +149,35 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
                 max={maxLocal}
                 className="flex-1 sm:flex-none border border-at-border rounded-xl px-3 py-1.5 text-sm text-at-text bg-white focus:outline-none focus:ring-2 focus:ring-at-accent focus:border-transparent"
               />
-              <span className="text-[11px] text-at-text-weak">기준 직전 60분 분석 (최근 7일 이내)</span>
+              <span className="text-[11px] text-at-text-weak">최근 7일 이내</span>
             </div>
           )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <span className="text-xs font-medium text-at-text-secondary self-start sm:self-center">분석 기간</span>
+          <div className="inline-flex rounded-xl bg-at-surface-alt p-0.5 self-start flex-wrap">
+            {DURATION_PRESETS.map(d => {
+              const active = durationMin === d.value
+              return (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => setDurationMin(d.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    active
+                      ? 'bg-white text-at-accent shadow-sm'
+                      : 'text-at-text-secondary hover:text-at-text'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              )
+            })}
+          </div>
+          <span className="text-[11px] text-at-text-weak">
+            {mode === 'past' ? '선택 시점 직전' : '현재 시점 직전'} {durationMin}분 1분봉을 분석합니다
+          </span>
         </div>
       </div>
 

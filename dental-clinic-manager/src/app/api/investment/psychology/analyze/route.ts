@@ -36,11 +36,19 @@ export async function POST(req: NextRequest) {
     ticker?: string; market?: Market;
     triggerKind?: PsychologyTriggerKind; triggerDetail?: string;
     asOf?: string;
+    durationMinutes?: number;
   } | null
   const ticker = body?.ticker?.trim().toUpperCase()
   const market = body?.market === 'KR' || body?.market === 'US' ? body.market : null
   if (!ticker || !market) return NextResponse.json({ error: 'ticker, market 필수' }, { status: 400 })
   const triggerKind: PsychologyTriggerKind = body?.triggerKind ?? 'manual'
+
+  // durationMinutes — 분석 기간(분봉 개수). 15~240분 허용, 기본 60분
+  const ALLOWED_DURATIONS = [15, 30, 60, 120, 240]
+  const rawDuration = body?.durationMinutes
+  const duration = typeof rawDuration === 'number' && ALLOWED_DURATIONS.includes(rawDuration)
+    ? rawDuration
+    : 60
 
   // asOf — 과거 시점 분석. ISO string 파싱, 미래/너무 오래된 시점 차단
   let asOf: Date | undefined = undefined
@@ -62,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   let snapshot
   try {
-    snapshot = await fetchPsychologySnapshot(auth.user.id, ticker, market, 60, asOf)
+    snapshot = await fetchPsychologySnapshot(auth.user.id, ticker, market, duration, asOf)
   } catch (e) {
     const msg = e instanceof Error ? e.message : '데이터 수집 실패'
     return NextResponse.json({ error: msg }, { status: 502 })
@@ -83,10 +91,12 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = getSupabaseAdmin()!
-  // input_snapshot에 asOf 표기 (응답에서 클라이언트가 사용)
-  const inputSnapshotWithAsOf = asOf
-    ? { ...snapshot, as_of: asOf.toISOString() }
-    : snapshot
+  // input_snapshot에 asOf / duration 표기 (응답에서 클라이언트가 사용)
+  const inputSnapshotWithAsOf: typeof snapshot & { as_of?: string; duration_min: number } = {
+    ...snapshot,
+    duration_min: duration,
+    ...(asOf ? { as_of: asOf.toISOString() } : {}),
+  }
   const { data: inserted, error: insertErr } = await admin
     .from('psychology_analyses')
     .insert({

@@ -144,12 +144,10 @@ export default function SubscriptionStatus() {
         )}
 
         {/* 카드 정보 */}
-        {subscription?.card_name && (
+        {subscription?.card_company && (
           <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
             <CreditCard className="h-4 w-4 text-gray-400" />
-            <span>
-              {subscription.card_name} ****{subscription.card_number_last4}
-            </span>
+            <span>{subscription.card_company}</span>
           </div>
         )}
 

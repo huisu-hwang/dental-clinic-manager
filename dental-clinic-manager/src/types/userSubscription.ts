@@ -53,19 +53,25 @@ export interface UserSubscriptionPayment {
   id: string
   user_id: string
   subscription_id: string | null
-  portone_payment_id: string
-  portone_tx_id: string | null
+  // 토스 결제 식별자 (구 portone_* 컬럼 대체)
+  toss_payment_key: string | null
+  toss_order_id: string
+  toss_secret: string | null
+  idempotency_key: string | null
   amount: number
   base_amount: number
   revenue_share_amount: number
   realized_profit_basis: number
   status: UserSubscriptionPaymentStatus
+  method: string | null
+  receipt_url: string | null
   paid_at: string | null
   failed_at: string | null
   fail_reason: string | null
   billing_period_start: string | null
   billing_period_end: string | null
   order_name: string | null
+  raw_response: Record<string, unknown> | null
   created_at: string
 }
 

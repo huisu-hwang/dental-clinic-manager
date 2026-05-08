@@ -1,9 +1,9 @@
 // POST /api/subscription/upgrade
-// 플랜 변경 (업그레이드/다운그레이드)
+// 플랜 업그레이드 (더 비싼 플랜으로 즉시 차액 결제)
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { changePlan } from '@/lib/subscriptionService'
+import { upgradePlan } from '@/lib/billingService'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   const { data: userData } = await supabase
     .from('users')
-    .select('clinic_id, name, email')
+    .select('clinic_id')
     .eq('id', user.id)
     .single()
 
@@ -30,16 +30,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '플랜 ID가 필요합니다' }, { status: 400 })
   }
 
-  const result = await changePlan({
+  const result = await upgradePlan({
     clinicId: userData.clinic_id,
     newPlanId,
-    customerName: userData.name ?? '',
-    customerEmail: userData.email ?? user.email ?? '',
   })
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 })
   }
 
-  return NextResponse.json({ success: true, chargedAmount: result.chargedAmount })
+  return NextResponse.json({ success: true })
 }
