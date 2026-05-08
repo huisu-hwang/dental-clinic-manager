@@ -16,6 +16,49 @@ import {
 } from '@/types/marketing';
 import type { BrandImageOptions } from '@/types/brand';
 
+// ─── 환자 친화 후처리 ───
+// 1) 각 문단(빈 줄로 구분된 단락)의 첫 줄 시작 부분에 전각 공백을 자동 추가하여 들여쓰기 효과를 준다.
+//    - 이미 들여쓰기되어 있거나 헤딩/리스트/마커/이미지/구분선/해시태그/HTML 줄은 건드리지 않는다.
+// 2) 너무 긴 문단이 가독성을 해칠 수 있어 LLM에 짧은 문단을 요청하지만, 이미 생성된 본문은 보수적으로 그대로 유지한다.
+const PARAGRAPH_INDENT = '　'; // 전각 공백 U+3000
+
+function isParagraphStartLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  if (/^[\s　]/.test(line)) return false;        // 이미 들여쓰기된 줄
+  if (/^#{1,6}\s/.test(trimmed)) return false;       // 마크다운 헤딩
+  if (/^[-*+]\s/.test(trimmed)) return false;        // 글머리 기호
+  if (/^\d+\.\s/.test(trimmed)) return false;        // 번호 리스트
+  if (/^>/.test(trimmed)) return false;              // 인용
+  if (/^\[(IMAGE|BRAND_IMAGE|CLINICAL_PHOTO)/i.test(trimmed)) return false; // 본문 마커
+  if (/^!\[/.test(trimmed)) return false;            // 마크다운 이미지
+  if (/^---+$/.test(trimmed)) return false;          // 수평선
+  if (/^#[A-Za-z0-9가-힣]/.test(trimmed)) return false; // 해시태그 줄(예: #치과 #스케일링)
+  if (/^<\/?[a-zA-Z]/.test(trimmed)) return false;   // HTML 태그 줄
+  if (/^```/.test(trimmed)) return false;            // 코드 펜스
+  return true;
+}
+
+function applyParagraphIndent(body: string): string {
+  const lines = body.split('\n');
+  const result: string[] = [];
+  let prevIsBlank = true; // 본문 시작도 단락 시작으로 간주
+  for (const line of lines) {
+    if (!line.trim()) {
+      result.push(line);
+      prevIsBlank = true;
+      continue;
+    }
+    if (prevIsBlank && isParagraphStartLine(line)) {
+      result.push(PARAGRAPH_INDENT + line);
+    } else {
+      result.push(line);
+    }
+    prevIsBlank = false;
+  }
+  return result.join('\n');
+}
+
 // ─── 브랜드 이미지 마커 삽입 ───
 // options.brandImageOptions에 따라 [BRAND_IMAGE:...] 마커를 본문 위치(top/middle/bottom)에 삽입
 function insertBrandMarkers(body: string, opts?: BrandImageOptions): string {
@@ -318,11 +361,12 @@ export async function generateContent(
 
     const retryText = retryResponse.content[0].type === 'text' ? retryResponse.content[0].text : '';
     const retryParsed = parseGeneratedContent(retryText, options.keyword);
-    retryParsed.body = insertBrandMarkers(retryParsed.body, options.brandImageOptions);
+    // 단락 들여쓰기 후 브랜드 마커 삽입 (마커 줄은 들여쓰기 대상이 아니므로 순서 중요)
+    retryParsed.body = insertBrandMarkers(applyParagraphIndent(retryParsed.body), options.brandImageOptions);
     return retryParsed;
   }
 
-  parsed.body = insertBrandMarkers(parsed.body, options.brandImageOptions);
+  parsed.body = insertBrandMarkers(applyParagraphIndent(parsed.body), options.brandImageOptions);
   return parsed;
 }
 
