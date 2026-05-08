@@ -47,13 +47,18 @@ export async function checkInvestmentSubscription(userId: string): Promise<GateR
 }
 
 /**
- * API 라우트 전용. 통과 시 구독 객체 반환, 실패 시 NextResponse를 throw.
- * 사용 예:
- *   const sub = await requireInvestmentSubscription(userId)
+ * API 라우트 전용 게이팅. 통과 시 구독 객체, 실패 시 NextResponse 401/402를 반환.
+ * 호출 측에서 instanceof NextResponse로 분기한다.
+ *   const gate = await requireInvestmentSubscription(userId)
+ *   if (gate instanceof NextResponse) return gate
+ *   const sub = gate
+ *
+ * 이전에는 throw 패턴이었으나 Next.js App Router는 throw된 NextResponse를
+ * 자동 처리하지 않아 500이 발생하므로 결과 반환형으로 변경.
  */
 export async function requireInvestmentSubscription(
   userId: string
-): Promise<UserSubscription & { plan: UserSubscriptionPlan }> {
+): Promise<(UserSubscription & { plan: UserSubscriptionPlan }) | NextResponse> {
   const result = await checkInvestmentSubscription(userId)
   if (result.ok) return result.subscription
 
@@ -67,7 +72,7 @@ export async function requireInvestmentSubscription(
     SUSPENDED: '결제 실패로 구독이 일시 정지되었습니다.',
   }[result.reason]
 
-  throw NextResponse.json(
+  return NextResponse.json(
     { error: message, code: result.reason },
     { status }
   )

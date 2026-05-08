@@ -6,7 +6,8 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth()
   if (auth.error || !auth.user) return NextResponse.json({ error: auth.error }, { status: auth.status })
-  await requireInvestmentSubscription(auth.user.id)
+  const gate = await requireInvestmentSubscription(auth.user.id)
+  if (gate instanceof NextResponse) return gate
 
   const { id } = await ctx.params
   const body = await req.json().catch(() => null) as {

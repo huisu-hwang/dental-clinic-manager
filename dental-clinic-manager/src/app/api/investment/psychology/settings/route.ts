@@ -6,7 +6,8 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 export async function GET() {
   const auth = await requireAuth()
   if (auth.error || !auth.user) return NextResponse.json({ error: auth.error }, { status: auth.status })
-  await requireInvestmentSubscription(auth.user.id)
+  const gate = await requireInvestmentSubscription(auth.user.id)
+  if (gate instanceof NextResponse) return gate
 
   const admin = getSupabaseAdmin()!
   const { data } = await admin
@@ -25,7 +26,8 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const auth = await requireAuth()
   if (auth.error || !auth.user) return NextResponse.json({ error: auth.error }, { status: auth.status })
-  await requireInvestmentSubscription(auth.user.id)
+  const gate = await requireInvestmentSubscription(auth.user.id)
+  if (gate instanceof NextResponse) return gate
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
   const update: Record<string, unknown> = { user_id: auth.user.id, updated_at: new Date().toISOString() }

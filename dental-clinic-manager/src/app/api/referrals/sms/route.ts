@@ -87,9 +87,30 @@ export async function POST(req: NextRequest) {
     // 알리고 원본 메시지를 그대로 노출 — 발신번호 LMS 미등록·잔액 부족 등 실제 원인 확인용
     const aligoMsg = aligoJson.message || '문자 발송에 실패했습니다.'
     const lower = aligoMsg.toLowerCase()
+    const isIpError =
+      lower.includes('인증오류') ||
+      lower.includes('인증되지') ||
+      lower.includes('등록되지 않은 ip') ||
+      lower.includes('등록된 ip') ||
+      lower.includes('-ip') ||
+      /(?:^|[^a-z])ip(?:[^a-z]|$)/.test(lower)
+
     let hint: string | null = null
-    if (lower.includes('인증되지') || lower.includes('등록되지 않은 ip') || lower.includes('등록된 ip')) {
-      hint = '알리고 관리자(smartsms.aligo.in)에서 발송 서버 IP 인증을 해제하거나 현재 IP를 등록해주세요.'
+    if (isIpError) {
+      let serverIp: string | null = null
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' })
+        if (ipRes.ok) {
+          const ipJson = (await ipRes.json()) as { ip?: string }
+          serverIp = ipJson.ip ?? null
+        }
+      } catch {
+        /* IP 조회 실패는 무시 — 안내 본문만 표시 */
+      }
+      const ipLine = serverIp ? `\n현재 발송 서버 IP: ${serverIp}` : ''
+      hint =
+        '알리고 관리자(smartsms.aligo.in) → 보안설정에서 "API 인증 IP"를 해제하거나, 아래 IP를 등록해주세요.' +
+        ipLine
     } else if (lower.includes('발신번호') || lower.includes('sender')) {
       hint = `발신번호(${aligo.sender_number})가 알리고에 사전 등록되지 않았거나 LMS/MMS용으로 등록되지 않았습니다.`
     } else if (lower.includes('잔액') || lower.includes('충전') || lower.includes('포인트')) {

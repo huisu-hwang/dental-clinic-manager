@@ -21,13 +21,20 @@ export default function PsychologyChart({ candles, markers }: Props) {
   const data = candles.map((c, i) => ({ idx: i, close: c.close, ts: c.ts.slice(11, 16) }))
 
   return (
-    <div className="rounded-xl border bg-white p-3">
+    <div className="bg-white rounded-3xl shadow-sm border border-at-border p-5">
+      <h3 className="text-sm font-semibold text-at-text mb-3">분봉 차트 · 심리 마커</h3>
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey="ts" tick={{ fontSize: 10 }} interval={9} />
-          <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} width={48} />
-          <Tooltip />
+          <XAxis dataKey="ts" tick={{ fontSize: 10, fill: '#64748b' }} interval={9} />
+          <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#64748b' }} width={48} />
+          <Tooltip
+            contentStyle={{
+              borderRadius: 12,
+              border: '1px solid #e2e8f0',
+              fontSize: 12,
+            }}
+          />
           <Line type="monotone" dataKey="close" stroke="#0ea5e9" dot={false} strokeWidth={1.5} />
           {markers.map((m, i) => {
             const c = candles[m.candle_index]

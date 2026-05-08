@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, Sparkles, AlertCircle, Brain } from 'lucide-react'
 import ScoreGauge from './ScoreGauge'
 import PsychologyChart from './PsychologyChart'
 import OrderbookPressureBar from './OrderbookPressureBar'
@@ -34,40 +34,59 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">{ticker} <span className="text-sm text-gray-500">({market})</span></h2>
-          {latest && (
-            <p className="text-xs text-gray-500">
+      <div className="bg-white rounded-3xl shadow-sm border border-at-border p-5 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-at-text truncate">{ticker}</h2>
+          {latest ? (
+            <p className="text-xs text-at-text-secondary mt-0.5">
               마지막 분석: {new Date(latest.created_at).toLocaleString('ko-KR')}
             </p>
+          ) : (
+            <p className="text-xs text-at-text-weak mt-0.5">아직 분석 이력이 없습니다</p>
           )}
         </div>
         <button onClick={onAnalyze} disabled={running}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg">
+          className="inline-flex items-center gap-2 px-4 py-2 bg-at-accent text-white rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity flex-shrink-0">
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           지금 분석하기
         </button>
       </div>
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {error && (
+        <div className="flex items-center gap-2 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          {error}
+        </div>
+      )}
 
       {!latest && (
-        <div className="text-center text-gray-500 py-12 border rounded-xl bg-gray-50">
-          분석 이력이 없습니다. &ldquo;지금 분석하기&rdquo;를 눌러주세요.
+        <div className="bg-white rounded-3xl shadow-sm border border-at-border p-12 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-at-accent-light flex items-center justify-center mx-auto mb-3">
+            <Brain className="w-7 h-7 text-at-accent" />
+          </div>
+          <p className="text-sm text-at-text-secondary">
+            &ldquo;지금 분석하기&rdquo;를 눌러 첫 분석을 실행하세요.
+          </p>
         </div>
       )}
 
       {latest && (
         <>
           <ScoreGauge score={latest.psychology_score} label={latest.score_label} />
-          <div className="flex flex-wrap gap-2">
-            {latest.tags.map((t, i) => (
-              <span key={i} className="inline-block px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-medium">{t}</span>
-            ))}
-          </div>
-          <div className="rounded-xl border bg-white p-4 text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">
-            {latest.narrative}
+          {latest.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {latest.tags.map((t, i) => (
+                <span key={i} className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-medium">
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="bg-white rounded-3xl shadow-sm border border-at-border p-5">
+            <h3 className="text-sm font-semibold text-at-text mb-2">해석</h3>
+            <p className="text-sm leading-relaxed text-at-text-secondary whitespace-pre-wrap">
+              {latest.narrative}
+            </p>
           </div>
           <PsychologyChart candles={latest.input_snapshot.candles} markers={latest.markers} />
           {market === 'KR' && latest.orderbook_pressure && (
