@@ -1,9 +1,11 @@
 /**
  * 실제 데이터로 Smart Money 지표 검증 (Yahoo Finance)
  */
-import yahooFinance from 'yahoo-finance2'
+import YahooFinance from 'yahoo-finance2'
 import { calculateIndicators } from '../src/lib/indicatorEngine'
 import type { OHLCV, IndicatorConfig } from '../src/types/investment'
+
+const yahooFinance = new YahooFinance()
 
 async function fetchOHLCV(symbol: string, days: number): Promise<OHLCV[]> {
   const end = new Date()

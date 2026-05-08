@@ -4,8 +4,11 @@
 //   - KR: KIS API (분봉 + 호가 10단계)
 //   - US: yahoo-finance2 (분봉만, 호가 미지원)
 
-import yahooFinance from 'yahoo-finance2'
+import YahooFinance from 'yahoo-finance2'
 import { getKRMinutePrices, getKRAskingPrice } from '@/lib/kisApiService'
+
+// yahoo-finance2 v3: default export가 클래스 — 모듈 레벨에서 1회 인스턴스화
+const yahooFinance = new YahooFinance()
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { investmentDecrypt } from '@/lib/investmentCrypto'
 import type { Market } from '@/types/investment'

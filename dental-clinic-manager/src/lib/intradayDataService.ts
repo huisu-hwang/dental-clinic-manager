@@ -114,8 +114,9 @@ async function fetchFromYahooIntraday(
   startDate: string,
   endDate: string,
 ): Promise<OHLCV[]> {
-  // yahoo-finance2는 동적 import (서버 사이드 전용)
-  const yahooFinance = (await import('yahoo-finance2')).default
+  // yahoo-finance2는 동적 import (서버 사이드 전용) — v3 클래스 인스턴스화
+  const YahooFinance = (await import('yahoo-finance2')).default
+  const yahooFinance = new YahooFinance()
 
   // 한국 종목은 .KS / .KQ 접미사 필요
   const symbol = market === 'KR' ? `${ticker}.KS` : ticker

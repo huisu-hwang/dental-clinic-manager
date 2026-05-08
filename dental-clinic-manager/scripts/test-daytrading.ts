@@ -5,12 +5,14 @@
  * 2) yahoo-finance2로 AAPL 5분봉 7일치 가져와 실데이터 백테스트
  */
 
-import yf from 'yahoo-finance2'
+import YahooFinance from 'yahoo-finance2'
 import { calculateIndicators } from '../src/lib/indicatorEngine'
 import { runDayTradingBacktest } from '../src/lib/dayTradingBacktestEngine'
 import type {
   OHLCV, IndicatorConfig, ConditionGroup, RiskSettings,
 } from '../src/types/investment'
+
+const yf = new YahooFinance()
 
 // ============================================
 // 합성 데이터 헬퍼

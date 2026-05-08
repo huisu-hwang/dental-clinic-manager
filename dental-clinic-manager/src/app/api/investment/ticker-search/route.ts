@@ -84,7 +84,8 @@ export async function GET(request: NextRequest) {
 
     // 영문/숫자 쿼리는 yahoo로 KR/US 모두 보강
     try {
-      const yahooFinance = (await import('yahoo-finance2')).default
+      const YahooFinance = (await import('yahoo-finance2')).default
+      const yahooFinance = new YahooFinance()
       const searchResult = await yahooFinance.search(query, { newsCount: 0, quotesCount: 50 })
 
       const yahooQuotes = (searchResult.quotes || [])
@@ -165,7 +166,8 @@ export async function GET(request: NextRequest) {
 
   // yahoo-finance2 fallback (영문 쿼리 또는 미국 시장)
   try {
-    const yahooFinance = (await import('yahoo-finance2')).default
+    const YahooFinance = (await import('yahoo-finance2')).default
+    const yahooFinance = new YahooFinance()
 
     const searchResult = await yahooFinance.search(query, {
       newsCount: 0,
