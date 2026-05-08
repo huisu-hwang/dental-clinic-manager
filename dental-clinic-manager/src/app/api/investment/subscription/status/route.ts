@@ -1,55 +1,29 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth/requireAuth'
-import {
-  getUserSubscription,
-  getUserPayments,
-  getInvestmentPlan,
-} from '@/lib/userSubscriptionService'
-import { calculateMonthlyProfitForUser } from '@/lib/investmentProfit'
-import type { UserSubscriptionStatusResponse } from '@/types/userSubscription'
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
-  const auth = await requireAuth()
-  if (auth.error || !auth.user) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status })
-  }
+const FEATURE_INVESTMENT = 'investment'
 
-  const [sub, plan, payments] = await Promise.all([
-    getUserSubscription(auth.user.id),
-    getInvestmentPlan(),
-    getUserPayments(auth.user.id, 12),
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: '인증 필요' }, { status: 401 })
+
+  const [{ data: sub }, { data: plan }] = await Promise.all([
+    supabase
+      .from('user_subscriptions')
+      .select('*, plan:user_subscription_plans(*)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('user_subscription_plans')
+      .select('*')
+      .eq('feature_id', FEATURE_INVESTMENT)
+      .maybeSingle(),
   ])
 
-  let nextChargeEstimate: UserSubscriptionStatusResponse['nextChargeEstimate'] = null
-  if (sub && plan && sub.status === 'active') {
-    const now = new Date()
-    const kst = new Date(now.getTime() + 9 * 3600_000)
-    const { realized } = await calculateMonthlyProfitForUser(
-      auth.user.id, kst.getUTCFullYear(), kst.getUTCMonth() + 1
-    )
-    const revenueShare = Math.max(0, Math.floor(realized * (plan.revenue_share_pct / 100)))
-    nextChargeEstimate = {
-      base: plan.monthly_base_price,
-      revenueShareEstimate: revenueShare,
-      total: plan.monthly_base_price + revenueShare,
-      realizedProfitMonthToDate: realized,
-    }
-  }
-
-  let daysUntilExpiry: number | null = null
-  if (sub?.current_period_end) {
-    const end = new Date(sub.current_period_end)
-    daysUntilExpiry = Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  }
-
-  const response: UserSubscriptionStatusResponse = {
-    subscription: sub,
-    plan,
-    payments,
-    daysUntilExpiry,
-    nextChargeEstimate,
-  }
-  return NextResponse.json(response)
+  return NextResponse.json({ subscription: sub, plan })
 }

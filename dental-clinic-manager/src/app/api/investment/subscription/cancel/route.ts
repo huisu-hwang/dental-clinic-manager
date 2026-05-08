@@ -1,7 +1,7 @@
 // src/app/api/investment/subscription/cancel/route.ts
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/requireAuth'
-import { cancelUserSubscription } from '@/lib/userSubscriptionService'
+import { cancelUserSubscription } from '@/lib/userBillingService'
 
 export async function POST(request: Request) {
   const auth = await requireAuth()
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const immediate = body.immediate === true
 
-  const result = await cancelUserSubscription({ userId: auth.user.id, immediate })
-  if (!result.success) return NextResponse.json({ error: result.error }, { status: 400 })
+  const result = await cancelUserSubscription(auth.user.id, immediate)
+  if (!result.success) return NextResponse.json({ error: '취소 실패' }, { status: 400 })
   return NextResponse.json({ success: true })
 }
