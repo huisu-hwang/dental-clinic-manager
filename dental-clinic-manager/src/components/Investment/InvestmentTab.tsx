@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Link2, Target, TrendingUp, TrendingDown, Briefcase,
   Wallet, Activity, AlertCircle, OctagonX, Loader2,
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
-  Zap, GitCompare, Search, Brain,
+  Zap, GitCompare, Search, Brain, Users,
 } from 'lucide-react'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
@@ -18,10 +18,11 @@ import DayTradingContent from './DayTradingContent'
 import CompareContent from './CompareContent'
 import ScreenerContent from './ScreenerContent'
 import { SmartMoneyContent } from './SmartMoney/SmartMoneyContent'
+import PsychologyContent from './Psychology/PsychologyContent'
 import StrategyBuilder from './StrategyBuilder/StrategyBuilder'
 import type { InvestmentStrategy } from '@/types/investment'
 
-type SubTab = 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener' | 'smart-money' | 'trading' | 'portfolio'
+type SubTab = 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener' | 'smart-money' | 'trading' | 'psychology' | 'portfolio'
 
 const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
@@ -32,6 +33,7 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'screener', label: '종목 스크리너', icon: Search },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain },
   { id: 'trading', label: '자동매매', icon: TrendingUp },
+  { id: 'psychology', label: '심리 분석', icon: Users },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase },
 ]
 
@@ -237,6 +239,9 @@ export default function InvestmentTab() {
         )}
         {!inInlineView && subTab === 'trading' && (
           <TradingContent />
+        )}
+        {!inInlineView && subTab === 'psychology' && (
+          <PsychologyContent />
         )}
         {!inInlineView && subTab === 'portfolio' && (
           <div className="max-w-md mx-auto text-center py-12">
