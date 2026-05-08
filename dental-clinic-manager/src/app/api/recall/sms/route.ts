@@ -76,6 +76,12 @@ export async function POST(request: NextRequest) {
     // 메시지 길이에 따른 타입 자동 결정
     let actualMsgType = msg_type
     const msgLength = new Blob([message]).size  // 바이트 길이
+    if (msgLength > 2000) {
+      return NextResponse.json(
+        { success: false, error: '메시지 길이가 2000바이트를 초과합니다.' },
+        { status: 400 }
+      )
+    }
     if (msgLength > 90 && msg_type === 'SMS') {
       actualMsgType = 'LMS'
     }
@@ -89,6 +95,13 @@ export async function POST(request: NextRequest) {
     formData.append('msg', message)
     formData.append('msg_type', actualMsgType)
     if (title && actualMsgType !== 'SMS') {
+      const titleBytes = new Blob([title]).size
+      if (titleBytes > 44) {
+        return NextResponse.json(
+          { success: false, error: '문자 제목은 44바이트 이하여야 합니다.' },
+          { status: 400 }
+        )
+      }
       formData.append('title', title)
     }
     // 테스트 모드 (개발 환경에서만)
@@ -104,8 +117,12 @@ export async function POST(request: NextRequest) {
 
     const aligoResult: AligoResponse = await aligoResponse.json()
 
+    // Aligo 스펙: result_code 는 Integer, >= 1 이면 성공, < 0 이면 실패. 문자열 응답에도 안전하도록 Number 변환.
+    const resultCodeNum = Number(aligoResult.result_code)
+    const isSuccess = Number.isFinite(resultCodeNum) && resultCodeNum >= 1
+
     // 결과 반환
-    if (aligoResult.result_code === '1') {
+    if (isSuccess) {
       return NextResponse.json({
         success: true,
         message: '문자 발송이 완료되었습니다.',
@@ -116,10 +133,15 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
-      // IP 인증 오류 체크 - 알리고 관리자 페이지에서 IP 등록 필요
+      // IP 인증 오류 체크 - 알리고 관리자 페이지에서 IP 등록 필요 (스펙: -101 = 인증오류)
       let errorMessage = aligoResult.message || '문자 발송에 실패했습니다.'
-      if (errorMessage.includes('ip') || errorMessage.includes('IP') || errorMessage.includes('인증오류')) {
-        errorMessage = 'IP 인증 오류: 알리고 관리자 페이지(smartsms.aligo.in)에서 서버 IP를 등록해주세요.'
+      if (
+        resultCodeNum === -101 ||
+        errorMessage.includes('ip') ||
+        errorMessage.includes('IP') ||
+        errorMessage.includes('인증오류')
+      ) {
+        errorMessage = 'IP 인증 오류: 알리고 관리자 페이지(smartsms.aligo.in)에서 서버 IP를 등록하거나 API 인증 IP를 해제해주세요.'
       }
 
       return NextResponse.json({
@@ -199,8 +221,10 @@ export async function GET(request: NextRequest) {
     })
 
     const aligoResult = await aligoResponse.json()
+    const remainCodeNum = Number(aligoResult.result_code)
+    const isRemainSuccess = Number.isFinite(remainCodeNum) && remainCodeNum >= 1
 
-    if (aligoResult.result_code === '1') {
+    if (isRemainSuccess) {
       return NextResponse.json({
         success: true,
         data: {

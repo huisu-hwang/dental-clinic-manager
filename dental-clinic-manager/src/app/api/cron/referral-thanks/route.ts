@@ -106,6 +106,11 @@ export async function GET(request: NextRequest) {
         .replace(/\{\{병원명\}\}/g, clinicName)
 
       const byteSize = new Blob([message]).size
+      if (byteSize > 2000) {
+        summary.totalFailed++
+        summary.errors.push(`${clinicName}: ${r.referrer.patient_name} - 메시지 길이가 2000바이트를 초과합니다.`)
+        continue
+      }
       const msgType = byteSize > 90 ? 'LMS' : 'SMS'
 
       const fd = new FormData()
@@ -120,7 +125,9 @@ export async function GET(request: NextRequest) {
       try {
         const res = await fetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: fd })
         const json = await res.json()
-        const ok = json.result_code === '1'
+        // Aligo 스펙: result_code 는 Integer, >= 1 이면 성공.
+        const codeNum = Number(json.result_code)
+        const ok = Number.isFinite(codeNum) && codeNum >= 1
         await supabase.from('referral_sms_logs').insert({
           clinic_id: s.clinic_id,
           referral_id: r.id,

@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
     }
 
     const msgBytes = new Blob([message]).size
+    if (msgBytes > 2000) {
+      return NextResponse.json({ success: false, error: '메시지 길이가 2000바이트를 초과합니다.' }, { status: 400 })
+    }
     const actualType = msgBytes > 90 && msg_type === 'SMS' ? 'LMS' : msg_type
 
     const formData = new FormData()
@@ -48,17 +51,25 @@ export async function POST(req: NextRequest) {
     formData.append('receiver', phone_number)
     formData.append('msg', message)
     formData.append('msg_type', actualType)
-    if (title && actualType !== 'SMS') formData.append('title', title)
+    if (title && actualType !== 'SMS') {
+      const titleBytes = new Blob([title]).size
+      if (titleBytes > 44) {
+        return NextResponse.json({ success: false, error: '문자 제목은 44바이트 이하여야 합니다.' }, { status: 400 })
+      }
+      formData.append('title', title)
+    }
     if (process.env.NODE_ENV === 'development') formData.append('testmode_yn', 'Y')
 
     const aligoRes = await fetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: formData })
-    const aligoJson = (await aligoRes.json()) as { result_code: string; message: string; msg_id?: string }
+    const aligoJson = (await aligoRes.json()) as { result_code: string | number; message: string; msg_id?: string | number }
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('[referral sms]', JSON.stringify(aligoJson), 'type:', actualType, 'bytes:', msgBytes)
     }
 
-    const ok = aligoJson.result_code === '1'
+    // Aligo 스펙: result_code 는 Integer, >= 1 이면 성공, < 0 이면 실패. 문자열 응답에도 안전하도록 Number 변환.
+    const codeNum = Number(aligoJson.result_code)
+    const ok = Number.isFinite(codeNum) && codeNum >= 1
 
     await supabase.from('referral_sms_logs').insert({
       clinic_id,
@@ -87,7 +98,9 @@ export async function POST(req: NextRequest) {
     // 알리고 원본 메시지를 그대로 노출 — 발신번호 LMS 미등록·잔액 부족 등 실제 원인 확인용
     const aligoMsg = aligoJson.message || '문자 발송에 실패했습니다.'
     const lower = aligoMsg.toLowerCase()
+    // 스펙: -101 은 인증오류(IP 미등록 포함). 메시지 문자열 휴리스틱과 함께 사용.
     const isIpError =
+      codeNum === -101 ||
       lower.includes('인증오류') ||
       lower.includes('인증되지') ||
       lower.includes('등록되지 않은 ip') ||
