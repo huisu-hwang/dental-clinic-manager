@@ -12,7 +12,7 @@
  * 결과 캐시: 같은 ticker+오늘 날짜는 메모리 보존
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Brain,
   Loader2,
@@ -24,6 +24,7 @@ import {
   Sparkles,
   Link2,
   RefreshCw,
+  Radio,
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
@@ -210,6 +211,9 @@ const SESSION_BADGE: Record<SessionState, { label: string; cls: string }> = {
   closed: { label: '장외', cls: 'bg-slate-100 text-slate-600' },
 }
 
+/** 자동 갱신 폴링 간격 (초). KIS 분당 60req 한도 고려해 60초 (분봉 페이지네이션 ~43req). */
+const REFRESH_INTERVAL_SEC = 60
+
 export function SmartMoneyContent() {
   const [selected, setSelected] = useState<Selected | null>(null)
   const [analysis, setAnalysis] = useState<SmartMoneyAnalysis | null>(null)
@@ -218,6 +222,10 @@ export function SmartMoneyContent() {
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [llmLoading, setLlmLoading] = useState(false)
   const [includePreMarket, setIncludePreMarket] = useState(false)
+  // 실시간 자동 갱신 — 장중/Pre-Market에서만 동작, 60초 간격
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [secondsLeft, setSecondsLeft] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
 
   // 알림 모달
   const [alertModalOpen, setAlertModalOpen] = useState(false)
@@ -290,6 +298,51 @@ export function SmartMoneyContent() {
       setAnalysis(null)
     } finally {
       setLoading(false)
+    }
+  }, [selected, includePreMarket])
+
+  /** 백그라운드 재분석 — 자동 갱신 시 사용. LLM 스킵, 큰 로딩 UI 없이 조용히 갱신.
+   *  실패는 silent (기존 분석 유지). 기존 LLM 코멘트는 보존. */
+  const runAnalyzeBackground = useCallback(async () => {
+    if (!selected) return
+    setRefreshing(true)
+    try {
+      const res = await fetch('/api/investment/smart-money/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          ticker: selected.ticker,
+          market: selected.market,
+          includeLLM: false,
+          includePreMarket: includePreMarket && selected.market === 'US',
+        }),
+      })
+      if (!res.ok) return
+      const json = await res.json().catch(() => null)
+      const data: SmartMoneyAnalysis | undefined = json?.data
+      if (!data) return
+      setAnalysis(prev => {
+        if (!prev || prev.ticker !== data.ticker || prev.market !== data.market) return data
+        // LLM 코멘트 보존 — 폴링은 includeLLM=false라서 새로 안 옴
+        return {
+          ...data,
+          naturalLanguageComment: prev.naturalLanguageComment ?? data.naturalLanguageComment,
+          perCardComments: prev.perCardComments ?? data.perCardComments,
+          // byDay 각 일자의 LLM 코멘트도 보존
+          byDay: data.byDay?.map(d => {
+            const prevDay = prev.byDay?.find(p => p.asOfDate === d.asOfDate)
+            return prevDay?.naturalLanguageComment
+              ? { ...d, naturalLanguageComment: prevDay.naturalLanguageComment }
+              : d
+          }),
+        }
+      })
+      cacheRef.current.set(cacheKey(selected), data)
+    } catch {
+      /* silent — 폴링 실패는 사용자 차단 안 함 */
+    } finally {
+      setRefreshing(false)
     }
   }, [selected, includePreMarket])
 
@@ -371,11 +424,36 @@ export function SmartMoneyContent() {
 
   const isKisError = errorCode === 'NO_CREDENTIAL' || (error || '').toLowerCase().includes('kis')
 
+  // sessionState — secondsLeft 변경마다 재계산되지만 string enum이므로 동일 결과면 deps 안 흔들림.
+  // analysis.generatedAt 변경 시(폴링 시) + secondsLeft 변경 시 자연스럽게 시간대 진행 반영.
   const sessionState: SessionState | null = analysis
     ? marketSessionState(analysis.market, includePreMarket && analysis.market === 'US')
     : null
   const sessionBadge = sessionState ? SESSION_BADGE[sessionState] : null
   const lastRefreshLabel = analysis ? new Date(analysis.generatedAt).toLocaleTimeString('ko-KR') : ''
+  const isMarketActive = sessionState === 'live' || sessionState === 'pre'
+
+  // 자동 폴링 — 장중/Pre-Market에서만 동작.
+  // hasAnalysis(boolean)을 deps로 사용 → 폴링이 analysis 객체를 갱신해도 effect가 재시작되지 않아
+  // 카운트다운이 매끄럽게 60→0→60 사이클로 진행됨.
+  const hasAnalysis = !!analysis
+  useEffect(() => {
+    if (!autoRefresh || !isMarketActive || !selected || !hasAnalysis) {
+      setSecondsLeft(0)
+      return
+    }
+    setSecondsLeft(REFRESH_INTERVAL_SEC)
+    const tick = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) {
+          runAnalyzeBackground()
+          return REFRESH_INTERVAL_SEC
+        }
+        return s - 1
+      })
+    }, 1000)
+    return () => clearInterval(tick)
+  }, [autoRefresh, isMarketActive, selected, hasAnalysis, runAnalyzeBackground])
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto">
@@ -545,10 +623,54 @@ export function SmartMoneyContent() {
                         {sessionBadge.label}
                       </span>
                     )}
+                    {autoRefresh && isMarketActive && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-semibold bg-emerald-50 text-emerald-700">
+                        <Radio className={`w-3 h-3 ${refreshing ? 'animate-pulse' : ''}`} />
+                        실시간
+                        {refreshing
+                          ? <span className="font-mono">갱신 중</span>
+                          : secondsLeft > 0
+                            ? <span className="font-mono">{secondsLeft}s</span>
+                            : null}
+                      </span>
+                    )}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (autoRefresh) {
+                        setAutoRefresh(false)
+                        return
+                      }
+                      if (!isMarketActive) return
+                      setAutoRefresh(true)
+                    }}
+                    disabled={!isMarketActive && !autoRefresh}
+                    title={
+                      autoRefresh
+                        ? `자동 갱신 켜짐 — ${REFRESH_INTERVAL_SEC}초마다 재분석. 클릭하면 끄기`
+                        : isMarketActive
+                          ? `${REFRESH_INTERVAL_SEC}초마다 자동으로 최신 데이터로 재분석`
+                          : '장외 시간 — 자동 갱신을 사용할 수 없습니다'
+                    }
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
+                      autoRefresh
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    }`}
+                  >
+                    <Radio className={`w-4 h-4 ${autoRefresh && refreshing ? 'animate-pulse' : ''}`} />
+                    {autoRefresh
+                      ? refreshing
+                        ? '갱신 중'
+                        : isMarketActive
+                          ? `실시간 ${secondsLeft}s`
+                          : '장 마감 대기'
+                      : '실시간 자동 갱신'}
+                  </button>
                   <button
                     type="button"
                     onClick={runAnalyze}
@@ -560,7 +682,7 @@ export function SmartMoneyContent() {
                         ? 'Pre-Market 진행 중 — 최신 프리마켓 봉으로 재분석'
                         : '장외 시간 — 최신 일봉/마지막 세션으로 재분석'
                     }
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
