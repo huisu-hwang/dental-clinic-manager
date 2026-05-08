@@ -386,18 +386,6 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     ownerOnly: true,  // 대표 원장 전용 (권한 위임 시에도 owner만 표시 유지)
     premiumFeature: true,  // 프리미엄 기능
   },
-  {
-    id: 'psychology',
-    label: '└ 심리 분석',
-    icon: 'Users',
-    route: '/investment/psychology',
-    permissions: [],   // 자동매매 구독자만 진입 가능 (페이지 자체 게이팅)
-    categoryId: 'investment',
-    order: 16.6,
-    visible: true,
-    ownerOnly: true,
-    premiumFeature: true,
-  },
 
   // === 하단 고정 메뉴 ===
   {
