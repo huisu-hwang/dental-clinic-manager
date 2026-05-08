@@ -133,7 +133,8 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
-      // IP 인증 오류 체크 - 알리고 관리자 페이지에서 IP 등록 필요 (스펙: -101 = 인증오류)
+      // IP 인증 오류 체크 (스펙: -101 = 인증오류). 본 서비스는 Vercel 서버리스라 호출마다 IP가 달라
+      // IP 등록 방식은 안정적이지 않음 → "API 인증 IP 해제"를 1순위로 안내.
       let errorMessage = aligoResult.message || '문자 발송에 실패했습니다.'
       if (
         resultCodeNum === -101 ||
@@ -141,7 +142,9 @@ export async function POST(request: NextRequest) {
         errorMessage.includes('IP') ||
         errorMessage.includes('인증오류')
       ) {
-        errorMessage = 'IP 인증 오류: 알리고 관리자 페이지(smartsms.aligo.in)에서 서버 IP를 등록하거나 API 인증 IP를 해제해주세요.'
+        errorMessage =
+          'IP 인증 오류: 알리고 관리자(smartsms.aligo.in) → 보안설정에서 "API 인증 IP"를 해제해주세요. ' +
+          '본 서비스는 Vercel 서버리스로 동작하여 호출마다 발송 IP가 달라지므로 특정 IP 등록 방식은 권장되지 않습니다.'
       }
 
       return NextResponse.json({
