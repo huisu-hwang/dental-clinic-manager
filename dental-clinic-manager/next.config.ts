@@ -1,6 +1,9 @@
 import path from "path";
 import type { NextConfig } from "next";
 
+// 같은 프로세스 내 모든 참조가 동일 ID를 사용하도록 모듈 로드 시 1회만 계산
+const BUILD_ID = process.env.NEXT_BUILD_ID ?? `build-${Date.now()}`;
+
 const nextConfig: NextConfig = {
   /* config options here */
   // workspace root: 레포 루트를 가리킴 (scraping-worker 등 하위 패키지 포함)
@@ -30,13 +33,10 @@ const nextConfig: NextConfig = {
       './node_modules/pdfjs-dist/standard_fonts/**',
     ],
   },
-  // 빌드마다 고유한 ID 생성 (PWA 업데이트 감지용)
-  generateBuildId: async () => {
-    return `build-${Date.now()}`
-  },
+  generateBuildId: async () => BUILD_ID,
   env: {
-    BUILD_TIMESTAMP: Date.now().toString(),
-    NEXT_BUILD_ID: `build-${Date.now()}`,
+    BUILD_TIMESTAMP: BUILD_ID.replace(/^build-/, ''),
+    NEXT_BUILD_ID: BUILD_ID,
   },
 };
 

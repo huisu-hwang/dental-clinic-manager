@@ -23,6 +23,7 @@ import {
   Activity,
   Sparkles,
   Link2,
+  RefreshCw,
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import RecentTickersButtons from '@/components/Investment/RecentTickersButtons'
@@ -173,6 +174,42 @@ function findDefaultDayIndex(byDay: NonNullable<SmartMoneyAnalysis['byDay']>, as
   return matchedIdx >= 0 ? matchedIdx : Math.max(0, byDay.length - 1)
 }
 
+/** 시장 timezone 기준 현재 분(0~1439). 실패 시 null */
+function marketMinutesNow(market: Market): number | null {
+  const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(new Date())
+    const hh = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '00', 10)
+    const mm = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '00', 10)
+    return hh * 60 + mm
+  } catch {
+    return null
+  }
+}
+
+type SessionState = 'live' | 'pre' | 'closed'
+
+/** 시장의 현재 세션 상태 — 'live'(정규장 진행 중), 'pre'(미국 프리마켓 진행 중), 'closed' */
+function marketSessionState(market: Market, includePreMarket: boolean): SessionState {
+  const m = marketMinutesNow(market)
+  if (m === null) return 'closed'
+  if (market === 'KR') {
+    return m >= 9 * 60 && m < 15 * 60 + 30 ? 'live' : 'closed'
+  }
+  // US
+  if (m >= 9 * 60 + 30 && m < 16 * 60) return 'live'
+  if (includePreMarket && m >= 4 * 60 && m < 9 * 60 + 30) return 'pre'
+  return 'closed'
+}
+
+const SESSION_BADGE: Record<SessionState, { label: string; cls: string }> = {
+  live: { label: '장중', cls: 'bg-emerald-100 text-emerald-700' },
+  pre: { label: 'Pre-Market', cls: 'bg-amber-100 text-amber-700' },
+  closed: { label: '장외', cls: 'bg-slate-100 text-slate-600' },
+}
+
 export function SmartMoneyContent() {
   const [selected, setSelected] = useState<Selected | null>(null)
   const [analysis, setAnalysis] = useState<SmartMoneyAnalysis | null>(null)
@@ -220,6 +257,7 @@ export function SmartMoneyContent() {
       const res = await fetch('/api/investment/smart-money/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
         body: JSON.stringify({
           ticker: selected.ticker,
           market: selected.market,
@@ -332,6 +370,12 @@ export function SmartMoneyContent() {
     overallScore > 30 ? 'bg-emerald-500' : overallScore < -30 ? 'bg-rose-500' : 'bg-slate-400'
 
   const isKisError = errorCode === 'NO_CREDENTIAL' || (error || '').toLowerCase().includes('kis')
+
+  const sessionState: SessionState | null = analysis
+    ? marketSessionState(analysis.market, includePreMarket && analysis.market === 'US')
+    : null
+  const sessionBadge = sessionState ? SESSION_BADGE[sessionState] : null
+  const lastRefreshLabel = analysis ? new Date(analysis.generatedAt).toLocaleTimeString('ko-KR') : ''
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto">
@@ -492,12 +536,39 @@ export function SmartMoneyContent() {
                       ? `${Math.round(viewAnalysis.currentPrice).toLocaleString()}원`
                       : `$${viewAnalysis.currentPrice.toFixed(2)}`}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    기준 거래일 {viewAnalysis.asOfDate} · 생성 {new Date(analysis.generatedAt).toLocaleTimeString('ko-KR')}
+                  <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span>기준 거래일 {viewAnalysis.asOfDate}</span>
+                    <span>·</span>
+                    <span>마지막 갱신 {lastRefreshLabel}</span>
+                    {sessionBadge && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded font-semibold ${sessionBadge.cls}`}>
+                        {sessionBadge.label}
+                      </span>
+                    )}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={runAnalyze}
+                    disabled={loading}
+                    title={
+                      sessionState === 'live'
+                        ? '장중 실시간 분석 — 최신 분봉으로 재분석'
+                        : sessionState === 'pre'
+                        ? 'Pre-Market 진행 중 — 최신 프리마켓 봉으로 재분석'
+                        : '장외 시간 — 최신 일봉/마지막 세션으로 재분석'
+                    }
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    새로고침
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
