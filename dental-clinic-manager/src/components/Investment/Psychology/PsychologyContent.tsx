@@ -73,33 +73,46 @@ function PsychologyContentInner() {
   }
 
   if (loading) {
-    return <div className="p-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-at-accent" />
+      </div>
+    )
   }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
-      <aside className="rounded-xl border bg-white p-3">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold">워치리스트</h2>
-          <button onClick={() => setAddOpen(true)}
-            className="p-1 rounded hover:bg-gray-100" title="종목 추가">
+      <aside className="bg-white rounded-3xl shadow-sm border border-at-border overflow-hidden self-start">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-at-border">
+          <h2 className="text-sm font-semibold text-at-text">워치리스트</h2>
+          <button
+            onClick={() => setAddOpen(true)}
+            className="p-1.5 rounded-lg text-at-text-secondary hover:bg-at-surface-alt hover:text-at-accent transition-colors"
+            title="종목 추가"
+          >
             <Plus className="w-4 h-4" />
           </button>
         </div>
-        <Watchlist
-          items={items}
-          selected={selected}
-          onSelect={onSelect}
-          onToggleMonitoring={onToggleMonitoring}
-          onDelete={onDelete}
-        />
-        <div className="text-[10px] text-gray-400 mt-2">{items.length}/10</div>
+        <div className="p-2">
+          <Watchlist
+            items={items}
+            selected={selected}
+            onSelect={onSelect}
+            onToggleMonitoring={onToggleMonitoring}
+            onDelete={onDelete}
+          />
+        </div>
+        <div className="px-4 py-2 border-t border-at-border text-[11px] text-at-text-weak text-right">
+          {items.length}/10
+        </div>
       </aside>
 
-      <section className="space-y-4">
+      <section className="space-y-4 min-w-0">
         {!selected && (
-          <div className="rounded-xl border bg-gray-50 p-12 text-center text-gray-500 text-sm">
-            왼쪽에서 종목을 선택하세요.
+          <div className="bg-white rounded-3xl shadow-sm border border-at-border p-12 text-center">
+            <p className="text-sm text-at-text-secondary">
+              왼쪽에서 종목을 선택하세요.
+            </p>
           </div>
         )}
         {selected && (

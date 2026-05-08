@@ -6,7 +6,8 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 export async function GET(req: NextRequest) {
   const auth = await requireAuth()
   if (auth.error || !auth.user) return NextResponse.json({ error: auth.error }, { status: auth.status })
-  await requireInvestmentSubscription(auth.user.id)
+  const gate = await requireInvestmentSubscription(auth.user.id)
+  if (gate instanceof NextResponse) return gate
 
   const url = new URL(req.url)
   const ticker = url.searchParams.get('ticker')

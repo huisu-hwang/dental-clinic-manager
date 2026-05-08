@@ -25,7 +25,8 @@ function rateLimit(userId: string): boolean {
 export async function POST(req: NextRequest) {
   const auth = await requireAuth()
   if (auth.error || !auth.user) return NextResponse.json({ error: auth.error }, { status: auth.status })
-  await requireInvestmentSubscription(auth.user.id)
+  const gate = await requireInvestmentSubscription(auth.user.id)
+  if (gate instanceof NextResponse) return gate
 
   if (!rateLimit(auth.user.id)) {
     return NextResponse.json({ error: '분당 분석 요청 한도(5회) 초과' }, { status: 429 })
