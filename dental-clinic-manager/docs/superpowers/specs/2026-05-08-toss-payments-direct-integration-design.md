@@ -73,12 +73,17 @@ Toss Webhook                  → /api/webhooks/toss       → webhookService.ha
 ### `subscriptions` 테이블 (클리닉 구독)
 **신규 컬럼:**
 - `customer_key TEXT NOT NULL UNIQUE` — 토스 고객 식별자. 클리닉당 1회 UUID 발급 후 영구 저장. 카드 변경/구독 재가입 시에도 동일 값 재사용.
-- `card_company VARCHAR(50)` — 토스 빌링키 응답의 `cardCompany`
+- `card_issuer_code VARCHAR(10)` — 토스 빌링키 응답의 `card.issuerCode` (발급사 두 자리 코드, 예: `41`=현대카드)
+- `card_number_masked VARCHAR(20)` — 토스 빌링키 응답의 `card.number` (마스킹된 카드번호, 예: `1234********5678`)
+- `card_type VARCHAR(20)` — 토스 빌링키 응답의 `card.cardType` (`신용`/`체크`/`기프트`)
+- `card_owner_type VARCHAR(20)` — 토스 빌링키 응답의 `card.ownerType` (`개인`/`법인`)
 - `billing_method VARCHAR(20) DEFAULT 'card'` — 추후 결제 수단 확장 대비
 
 **삭제/변경 컬럼:**
-- 기존 `card_name` → 의미 변경: 카드 발급사명만 저장 (토스 응답에 카드 별명 없음)
+- 기존 `card_name` → 삭제 (토스 응답에 카드 별명 없음)
 - `billing_key TEXT` — 그대로 유지 (포트원/토스 모두 동일 명칭)
+
+> 발급사 코드 → 카드사명 매핑(`41` → `현대카드`)은 `src/lib/tossPayments/issuerCodes.ts` 유틸리티로 변환. UI 표시 시점에 변환.
 
 ### `subscription_payments` 테이블 (클리닉 결제 내역)
 **삭제 컬럼:**
@@ -452,4 +457,9 @@ NEXT_PUBLIC_PORTONE_CHANNEL_KEY
 - 가상계좌/계좌이체/간편결제 등 결제 수단 확장
 - 영수증/세금계산서 자동 발행
 - 환불 자동화 (현재는 `cancelPayment` 함수만 제공, UI 없음)
-- **카드 만료 임박 알림** (`subscription_card_expiring`) — 토스 빌링키 발급 응답에 카드 유효기간이 포함되는지 확인 후 구현. 응답에 만료일이 없으면 별도 카드사 조회 API 또는 사용자 수동 입력으로 대체 필요
+- **카드 만료 임박 사전 알림** (`subscription_card_expiring`) — 조사 결과 토스 `Billing` 객체에 만료일 필드 부재(2024-06-01 버전 기준). 사전 알림 구현 불가. 대안:
+  1. 사용자 카드 등록 시 만료일을 우리 UI에서 별도 입력받아 DB 저장 (UX 부담)
+  2. 카드사별 BIN(앞 6자리) 기반 추정 (정확도 낮음)
+  3. 외부 카드사 조회 API 연동 (비용/계약 필요)
+  
+  현재는 사후 대응으로 충분 — `EXPIRED_CARD` 에러 발생 시 §5 알림 시스템이 즉시 owner에게 카드 재등록 안내 발송.

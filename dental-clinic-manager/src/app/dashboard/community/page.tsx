@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Shield, Pencil } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { communityProfileService } from '@/lib/communityService'
@@ -20,6 +20,8 @@ type ViewMode = 'list' | 'detail' | 'form'
 
 export default function CommunityPage() {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
 
   // 동적 카테고리
@@ -31,10 +33,35 @@ export default function CommunityPage() {
   const [showNicknameSetup, setShowNicknameSetup] = useState(false)
   const [showNicknameChange, setShowNicknameChange] = useState(false)
 
-  // 뷰 상태
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+  // 뷰 상태 (URL ?post=<id> 와 동기화: 브라우저 뒤로가기로 list 복귀 가능)
+  const postIdFromUrl = searchParams.get('post')
+  const [viewMode, setViewMode] = useState<ViewMode>(postIdFromUrl ? 'detail' : 'list')
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(postIdFromUrl)
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null)
+
+  // URL 변경 시 viewMode 동기화 (form 모드는 별도 관리)
+  useEffect(() => {
+    if (viewMode === 'form') return
+    if (postIdFromUrl) {
+      if (viewMode !== 'detail' || selectedPostId !== postIdFromUrl) {
+        setSelectedPostId(postIdFromUrl)
+        setViewMode('detail')
+      }
+    } else if (viewMode === 'detail') {
+      setViewMode('list')
+      setSelectedPostId(null)
+    }
+  }, [postIdFromUrl, viewMode, selectedPostId])
+
+  const buildUrl = (overrides: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(overrides).forEach(([key, value]) => {
+      if (value === null) params.delete(key)
+      else params.set(key, value)
+    })
+    const query = params.toString()
+    return query ? `${pathname}?${query}` : pathname
+  }
 
   // 프로필 로드
   useEffect(() => {
@@ -67,10 +94,18 @@ export default function CommunityPage() {
     loadProfile()
   }
 
-  // 게시글 클릭
+  // 게시글 클릭 — URL에 ?post=<id> 푸시 (브라우저 뒤로가기로 목록 복귀)
   const handlePostClick = (post: CommunityPost) => {
     setSelectedPostId(post.id)
     setViewMode('detail')
+    router.push(buildUrl({ post: post.id }), { scroll: false })
+  }
+
+  // 상세 → 목록 (in-app 뒤로가기 버튼)
+  const handleBackToList = () => {
+    setViewMode('list')
+    setSelectedPostId(null)
+    router.push(buildUrl({ post: null }), { scroll: false })
   }
 
   // 새 글 작성
@@ -87,14 +122,31 @@ export default function CommunityPage() {
 
   // 작성/수정 완료
   const handleFormSubmit = () => {
-    setViewMode('list')
     setEditingPost(null)
+    if (postIdFromUrl) {
+      setViewMode('detail')
+    } else {
+      setViewMode('list')
+    }
   }
 
-  // 삭제 후
+  // 폼 취소 (편집 중이면 detail, 새 글이면 list)
+  const handleFormCancel = () => {
+    setEditingPost(null)
+    if (postIdFromUrl) {
+      setViewMode('detail')
+    } else {
+      setViewMode('list')
+    }
+  }
+
+  // 삭제 후 — URL의 post 파라미터도 제거
   const handlePostDeleted = () => {
     setViewMode('list')
     setSelectedPostId(null)
+    if (postIdFromUrl) {
+      router.replace(buildUrl({ post: null }), { scroll: false })
+    }
   }
 
   if (authLoading || profileLoading) {
@@ -190,7 +242,7 @@ export default function CommunityPage() {
                 nickname={profile?.nickname || ''}
                 labelMap={labelMap}
                 colorMap={colorMap}
-                onBack={() => setViewMode('list')}
+                onBack={handleBackToList}
                 onEdit={handleEditPost}
                 onDeleted={handlePostDeleted}
               />
@@ -202,7 +254,7 @@ export default function CommunityPage() {
                 categories={categories}
                 labelMap={labelMap}
                 onSubmit={handleFormSubmit}
-                onCancel={() => setViewMode('list')}
+                onCancel={handleFormCancel}
               />
             )}
           </div>
