@@ -219,10 +219,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (result.data.clinic_id) {
                   dataService.setCachedClinicId(result.data.clinic_id)
                 }
-              } else {
-                console.log('AuthContext: 사용자 프로필 로드 실패')
-                // 프로필이 없으면 로그아웃
+              } else if (result.success === true && !result.data) {
+                // 프로필이 DB에 실제로 존재하지 않을 때만 로그아웃 (예: 탈퇴 후 잔존 세션)
+                console.warn('AuthContext: 프로필이 DB에 존재하지 않음 - 로그아웃')
                 await supabase.auth.signOut()
+              } else {
+                // ⚠️ 일시적 로드 실패 (네트워크, 배포 직후 cold-start, RLS 일시 오류 등)
+                // 세션은 유지하고 캐시된 프로필로 폴백. 다음 요청에서 자동 재시도됨.
+                // 과거에는 무조건 signOut을 호출해 배포 후 간헐적 강제 로그아웃의 원인이었음.
+                console.warn('AuthContext: 프로필 로드 실패 (transient) - 세션 유지:', (result as { error?: string }).error)
+                const cachedUserRaw = safeLocalStorage.getItem('dental_user')
+                if (cachedUserRaw) {
+                  try {
+                    const cachedUser = JSON.parse(cachedUserRaw)
+                    if (cachedUser?.id === session.user.id) {
+                      console.log('AuthContext: 캐시된 프로필로 폴백')
+                      setUser(cachedUser)
+                      if (cachedUser.clinic_id) {
+                        dataService.setCachedClinicId(cachedUser.clinic_id)
+                      }
+                    }
+                  } catch {
+                    // 캐시 파싱 실패 — 세션은 그대로 유지
+                  }
+                }
               }
             } else {
               // Supabase 세션이 없으면 storage 확인 (기존 방식 호환)
