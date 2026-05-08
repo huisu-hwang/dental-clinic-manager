@@ -6,6 +6,7 @@ import { TossPaymentsError } from '@/lib/tossPayments/client'
 import { userMessageForCode } from '@/lib/tossPayments/errors'
 import { getIssuerName } from '@/lib/tossPayments/issuerCodes'
 import type {
+  Subscription,
   SubscriptionPlan,
   SubscriptionPayment,
   SubscriptionStatusResponse,
@@ -780,4 +781,140 @@ export async function downgradePlan(params: {
     error:
       '다운그레이드는 다음 결제일에 수동으로 적용됩니다. 콜센터에 문의해 주세요.',
   }
+}
+
+// ===========================================================================
+// Read/utility functions (migrated from subscriptionService)
+// ===========================================================================
+
+/**
+ * 클리닉의 현재 활성 구독 조회 (active/past_due/trialing/suspended).
+ */
+export async function getSubscription(clinicId: string): Promise<Subscription | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select(`
+      *,
+      plan:subscription_plans(*)
+    `)
+    .eq('clinic_id', clinicId)
+    .in('status', ['active', 'past_due', 'trialing', 'suspended'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error || !data) return null
+
+  return {
+    ...data,
+    plan: data.plan as unknown as SubscriptionPlan | null,
+  } as Subscription
+}
+
+/**
+ * 플랜 목록 조회 (활성 플랜만, sort_order 오름차순).
+ */
+export async function getPlans(type?: 'headcount' | 'feature'): Promise<SubscriptionPlan[]> {
+  const supabase = await createClient()
+  let query = supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order')
+
+  if (type) {
+    query = query.eq('type', type)
+  }
+
+  const { data, error } = await query
+  if (error || !data) return []
+
+  return data.map(plan => ({
+    ...plan,
+    features: Array.isArray(plan.features) ? plan.features : JSON.parse(String(plan.features ?? '[]')),
+  })) as SubscriptionPlan[]
+}
+
+/**
+ * 플랜 ID로 단건 조회.
+ */
+export async function getPlanById(planId: string): Promise<SubscriptionPlan | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('id', planId)
+    .single()
+
+  if (error || !data) return null
+  return {
+    ...data,
+    features: Array.isArray(data.features) ? data.features : JSON.parse(String(data.features ?? '[]')),
+  } as SubscriptionPlan
+}
+
+/**
+ * 인원수에 맞는 헤드카운트 플랜 추천.
+ */
+export async function getRecommendedPlan(userCount: number): Promise<SubscriptionPlan | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('type', 'headcount')
+    .eq('is_active', true)
+    .lte('min_users', userCount)
+    .gte('max_users', userCount)
+    .single()
+
+  if (error || !data) return null
+  return data as SubscriptionPlan
+}
+
+/**
+ * 클리닉 결제 내역 조회 (최신순, 기본 12건).
+ */
+export async function getPayments(clinicId: string, limit = 12): Promise<SubscriptionPayment[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('subscription_payments')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error || !data) return []
+  return data as SubscriptionPayment[]
+}
+
+/**
+ * 해당 병원의 승인된(active) 직원 수 조회 — 인원 상한 체크용.
+ */
+export async function countActiveEmployees(clinicId: string): Promise<number> {
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('clinic_id', clinicId)
+    .eq('status', 'active')
+  if (error) throw new Error(`countActiveEmployees: ${error.message}`)
+  return count ?? 0
+}
+
+/**
+ * 가장 최근 성공 결제 조회 (부분 환불 기준 계산용).
+ */
+export async function getLatestPaidPayment(clinicId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('subscription_payments')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('status', 'paid')
+    .order('paid_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`getLatestPaidPayment: ${error.message}`)
+  return data
 }

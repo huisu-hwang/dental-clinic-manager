@@ -1,7 +1,7 @@
 // src/app/api/staff/approve-bulk-auto/route.ts
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { countActiveEmployees, getSubscription, getPlanById } from '@/lib/subscriptionService'
+import { countActiveEmployees, getSubscription, getPlanById } from '@/lib/billingService'
 
 export async function POST() {
   const supabase = await createClient()

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { planForClinic, prorateRefund } from '@/lib/subscriptionReconciler'
-import { getLatestPaidPayment } from '@/lib/subscriptionService'
+import { getLatestPaidPayment } from '@/lib/billingService'
 
 export async function GET() {
   const supabase = await createClient()

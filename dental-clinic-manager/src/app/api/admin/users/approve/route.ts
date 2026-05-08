@@ -22,7 +22,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { safeErrorMessage } from '@/lib/utils/safeError'
 import { requireMasterAdmin } from '@/lib/auth/requireMasterAdmin'
-import { countActiveEmployees, getSubscription, getPlanById } from '@/lib/subscriptionService'
+import { countActiveEmployees, getSubscription, getPlanById } from '@/lib/billingService'
 import { findPlanByHeadcount, requiresUpgrade } from '@/lib/subscriptionPlans'
 
 function escapeHtml(str: string): string {
