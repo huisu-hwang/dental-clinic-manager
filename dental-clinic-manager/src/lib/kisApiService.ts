@@ -562,6 +562,8 @@ interface MinutePriceParams {
   intervalMinutes?: 1 | 5 | 10 | 30
   /** 반환할 봉 개수 (기본 30) — KIS 한 번 호출 당 최대 30개 */
   count?: number
+  /** 과거 시점 분석용 — 이 시각 이전의 분봉을 받아옴 (KST). 미지정 시 현재 시각 사용. */
+  endTime?: Date
 }
 
 /**
@@ -578,17 +580,19 @@ interface MinutePriceParams {
  * 5/10/30분봉이 요청되면 1분봉을 N개 단위로 집계하여 반환.
  */
 export async function getKRMinutePrices(params: MinutePriceParams): Promise<KRMinuteBar[]> {
-  const { credentialId, credential, ticker, intervalMinutes = 1, count = 30 } = params
+  const { credentialId, credential, ticker, intervalMinutes = 1, count = 30, endTime } = params
 
   const accumulated = new Map<string, KRMinuteBar>()
   const REQUEST_DELAY_MS = 60 // KIS rate limit 회피 (20 req/sec)
+  // endTime이 주어지면 그 시점 기준으로 cursor 시작 (과거 분석용)
+  const cursorBase = endTime ?? new Date()
 
   if (!credential.isPaperTrading) {
     // ===== 실전계좌: FHKST03010230 (date+hour cursor, 120봉/req) =====
     // 1200봉(≈3거래일) ≤ 11회 호출 + 안전 마진 = 16회
     const MAX_REQUESTS = 16
-    let cursorDate = kstYyyymmdd(new Date())
-    let cursorHour = kstHhmmss(new Date())
+    let cursorDate = kstYyyymmdd(cursorBase)
+    let cursorHour = kstHhmmss(cursorBase)
 
     for (let i = 0; i < MAX_REQUESTS; i++) {
       if (i > 0) await new Promise((r) => setTimeout(r, REQUEST_DELAY_MS))

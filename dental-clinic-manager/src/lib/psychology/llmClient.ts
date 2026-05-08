@@ -93,6 +93,8 @@ export interface AnalyzeArgs {
   triggerKind: PsychologyTriggerKind
   triggerDetail?: string
   snapshot: PsychologyInputSnapshot
+  /** 과거 시점 분석인 경우 ISO 8601 — LLM 프롬프트에 명시해 시제 정합성 확보 */
+  asOf?: string
 }
 
 export interface AnalyzeResult {
@@ -102,7 +104,7 @@ export interface AnalyzeResult {
 }
 
 function buildUserPrompt(args: AnalyzeArgs): string {
-  const { ticker, market, triggerKind, triggerDetail, snapshot } = args
+  const { ticker, market, triggerKind, triggerDetail, snapshot, asOf } = args
   const candleLines = snapshot.candles.map((c, i) =>
     `[${i}] ${c.ts} O=${c.open} H=${c.high} L=${c.low} C=${c.close} V=${c.volume}`
   ).join('\n')
@@ -110,17 +112,21 @@ function buildUserPrompt(args: AnalyzeArgs): string {
     ? `호가 (10단계): 매수총잔량=${snapshot.orderbook.totalBidQty}, 매도총잔량=${snapshot.orderbook.totalAskQty}\n` +
       `매수: ${snapshot.orderbook.bids.map(b => `${b.price}@${b.qty}`).join(', ')}\n` +
       `매도: ${snapshot.orderbook.asks.map(a => `${a.price}@${a.qty}`).join(', ')}`
-    : '호가 데이터 없음 (해외 종목)'
+    : '호가 데이터 없음 (해외 종목 또는 과거 시점 분석)'
+  const asOfLine = asOf
+    ? `분석 시점 (asOf): ${asOf} — 이 시각 기준으로 그 직전 ${snapshot.candles.length}분 동안의 흐름을 분석합니다. 과거 시점이므로 narrative는 과거형으로 작성하세요.`
+    : null
   return [
     `종목: ${ticker} (${market})`,
     `분석 요청 사유: ${triggerKind}${triggerDetail ? ` - ${triggerDetail}` : ''}`,
+    asOfLine,
     `최근 ${snapshot.candles.length}개 1분봉:`,
     candleLines,
     orderbookSummary,
     '',
     '위 데이터를 바탕으로 군중심리를 분석하여 submit_psychology_analysis 도구를 호출해주세요.',
     `markers의 candle_index는 위 분봉 배열의 [N] 번호와 정확히 일치해야 합니다. 최대 5개.`,
-  ].join('\n')
+  ].filter((line): line is string => line !== null).join('\n')
 }
 
 export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResult> {

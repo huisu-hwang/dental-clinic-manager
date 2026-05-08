@@ -55,10 +55,22 @@ async function getUserKisCredential(userId: string): Promise<KisCredentialResolv
 async function fetchKRSnapshot(
   userId: string,
   ticker: string,
-  count = 60
+  count = 60,
+  asOf?: Date
 ): Promise<PsychologyInputSnapshot> {
   const cred = await getUserKisCredential(userId)
   if (!cred) throw new Error('KIS 계좌 연결이 필요합니다')
+
+  // 모의계좌는 당일 데이터만 조회 가능 — 과거 일자 분석 차단
+  if (asOf && cred.isPaperTrading) {
+    const today = new Date()
+    const sameKstDay =
+      asOf.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) ===
+      today.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+    if (!sameKstDay) {
+      throw new Error('모의 계좌는 당일 데이터만 조회 가능합니다. 과거 일자 분석은 실전 계좌가 필요합니다.')
+    }
+  }
 
   const krCredential = {
     appKey: cred.appKey,
@@ -72,6 +84,7 @@ async function fetchKRSnapshot(
     ticker,
     intervalMinutes: 1,
     count,
+    endTime: asOf,
   })
 
   const candles: MinuteCandle[] = bars.map((b) => ({
@@ -83,28 +96,35 @@ async function fetchKRSnapshot(
     volume: b.volume,
   }))
 
+  // 호가는 실시간 정보라 과거 시점은 의미 없음 → asOf 지정 시 호가 생략
   let orderbook: OrderbookSnapshot | null = null
-  try {
-    const ob = await getKRAskingPrice({
-      credentialId: cred.credentialId,
-      credential: krCredential,
-      ticker,
-    })
-    orderbook = {
-      bids: ob.bids,
-      asks: ob.asks,
-      totalBidQty: ob.totalBidQty,
-      totalAskQty: ob.totalAskQty,
+  if (!asOf) {
+    try {
+      const ob = await getKRAskingPrice({
+        credentialId: cred.credentialId,
+        credential: krCredential,
+        ticker,
+      })
+      orderbook = {
+        bids: ob.bids,
+        asks: ob.asks,
+        totalBidQty: ob.totalBidQty,
+        totalAskQty: ob.totalAskQty,
+      }
+    } catch {
+      orderbook = null
     }
-  } catch {
-    orderbook = null
   }
 
   return { candles, orderbook }
 }
 
-async function fetchUSSnapshot(ticker: string, count = 60): Promise<PsychologyInputSnapshot> {
-  const period2 = new Date()
+async function fetchUSSnapshot(
+  ticker: string,
+  count = 60,
+  asOf?: Date
+): Promise<PsychologyInputSnapshot> {
+  const period2 = asOf ?? new Date()
   // yahoo-finance2 1m 차트는 보통 거래일 7일 이내만 허용 — 안전하게 충분히 받음
   const period1 = new Date(period2.getTime() - Math.max(count, 60) * 60 * 1000)
 
@@ -145,13 +165,16 @@ async function fetchUSSnapshot(ticker: string, count = 60): Promise<PsychologyIn
  * @param ticker 종목 코드 (KR: 6자리, US: 심볼)
  * @param market 'KR' | 'US'
  * @param count 분봉 개수 (기본 60)
+ * @param asOf  과거 시점 분석용 — 이 시각까지의 분봉을 받아옴. 미지정 시 현재 시각.
+ *              KR 모의계좌는 당일만 / yahoo는 거래일 7일 이내만 지원.
  */
 export async function fetchPsychologySnapshot(
   userId: string,
   ticker: string,
   market: Market,
-  count = 60
+  count = 60,
+  asOf?: Date
 ): Promise<PsychologyInputSnapshot> {
-  if (market === 'KR') return fetchKRSnapshot(userId, ticker, count)
-  return fetchUSSnapshot(ticker, count)
+  if (market === 'KR') return fetchKRSnapshot(userId, ticker, count, asOf)
+  return fetchUSSnapshot(ticker, count, asOf)
 }
