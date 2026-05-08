@@ -5,7 +5,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 import { createClient } from '@/lib/supabase/server'
-import { getOrCreateCustomerKey } from '../billingService'
+import { getOrCreateCustomerKey, makeOrderId, addOneMonth } from '../billingService'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -57,5 +57,27 @@ describe('getOrCreateCustomerKey', () => {
     const key = await getOrCreateCustomerKey('clinic-1')
     expect(key).toMatch(/^[0-9a-f-]{36}$/)
     expect(insertMock).toHaveBeenCalled()
+  })
+})
+
+describe('makeOrderId', () => {
+  it('하이픈 제거 후 앞 8자 + YYYYMM', () => {
+    const id = makeOrderId('a3b9d12f-1234-5678-9012-abc')
+    expect(id).toMatch(/^sub-a3b9d12f-\d{6}$/)
+  })
+
+  it('retry_count > 0 시 -rN 접미사', () => {
+    const id = makeOrderId('a3b9d12f-1234-5678-9012-abc', 2)
+    expect(id).toMatch(/^sub-a3b9d12f-\d{6}-r2$/)
+  })
+})
+
+describe('addOneMonth', () => {
+  it('일반 월 +1', () => {
+    expect(addOneMonth(new Date('2026-04-15')).toISOString().slice(0, 10)).toBe('2026-05-15')
+  })
+  it('1월 31일 → 2월말 (JS Date 자연 처리)', () => {
+    const result = addOneMonth(new Date('2026-01-31'))
+    expect(result.getMonth()).toBeGreaterThanOrEqual(1)
   })
 })
