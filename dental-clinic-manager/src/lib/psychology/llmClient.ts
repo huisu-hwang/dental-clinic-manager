@@ -10,22 +10,30 @@ import type {
 
 const MODEL_ID = 'claude-haiku-4-5-20251001'
 
+const VALID_MARKER_KINDS = ['panic_sell','fomo_entry','accumulation','distribution','capitulation','indecision'] as const
+
 const ZAnalysis = z.object({
-  psychology_score: z.number().int().min(0).max(100),
+  // 모델이 점수를 문자열/소수로 반환할 수 있어 coerce 처리 + clamp
+  psychology_score: z.coerce.number().transform(n => Math.max(0, Math.min(100, Math.round(n)))),
   score_label: z.string().min(1),
-  tags: z.array(z.string()).max(8),
+  tags: z.array(z.string()).max(8).default([]),
   narrative: z.string().min(1),
   markers: z.array(z.object({
-    ts: z.string(),
-    kind: z.enum(['panic_sell','fomo_entry','accumulation','distribution','capitulation','indecision']),
+    ts: z.string().default(''),
+    // 알 수 없는 kind는 'indecision'으로 fallback (전체 분석 폐기 방지)
+    kind: z.string().transform(v => (VALID_MARKER_KINDS as readonly string[]).includes(v) ? v as typeof VALID_MARKER_KINDS[number] : 'indecision'),
     label: z.string().min(1),
-    candle_index: z.number().int().min(0),
-  })).max(5),
-  orderbook_pressure: z.object({
-    bid_pct: z.number().min(0).max(100),
-    ask_pct: z.number().min(0).max(100),
-    interpretation: z.string(),
-  }).nullable(),
+    candle_index: z.coerce.number().int().min(0),
+  })).max(5).default([]),
+  // null 또는 객체 모두 허용 — 모델이 누락 시 null로 정규화
+  orderbook_pressure: z.union([
+    z.null(),
+    z.object({
+      bid_pct: z.coerce.number().min(0).max(100),
+      ask_pct: z.coerce.number().min(0).max(100),
+      interpretation: z.string(),
+    }),
+  ]).nullable().default(null),
 })
 
 const TOOL_DEFINITION = {
@@ -56,8 +64,10 @@ const TOOL_DEFINITION = {
           required: ['ts','kind','label','candle_index'],
         },
       },
+      // Anthropic tools input_schema는 'oneOf' 미지원 — anyOf로 표현
+      // 호가 데이터가 없는 해외 종목은 null 허용
       orderbook_pressure: {
-        oneOf: [
+        anyOf: [
           { type: 'null' },
           {
             type: 'object',
@@ -143,7 +153,9 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
     const parsed = ZAnalysis.safeParse(toolUse.input)
     if (!parsed.success) {
       if (attempt === 0) continue
-      throw new Error(`LLM 응답 스키마 검증 실패: ${parsed.error.message}`)
+      console.error('[psychology llm] schema fail. raw:', JSON.stringify(toolUse.input))
+      const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(' / ')
+      throw new Error(`LLM 응답 스키마 검증 실패: ${issues}`)
     }
 
     return {
