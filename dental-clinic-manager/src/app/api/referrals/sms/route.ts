@@ -120,12 +120,12 @@ export async function POST(req: NextRequest) {
       } catch {
         /* IP 조회 실패는 무시 — 안내 본문만 표시 */
       }
-      // Vercel 서버리스는 호출마다 IP가 달라질 수 있어 "API 인증 IP 해제"가 사실상 유일한 안정적 해법.
-      // PC IP를 등록해도 발송 호출은 항상 Vercel 서버에서 나가므로 매칭되지 않습니다.
-      const ipLine = serverIp ? `\n(참고: 이번 호출 시 Vercel 서버 IP = ${serverIp} — 호출마다 달라질 수 있음)` : ''
+      // 알리고 IP 보안 정책의 정확한 메뉴 명칭/위치는 공식 문서에 명시되지 않아 고객센터 문의로 안내.
+      // 본 서비스는 Vercel 서버리스로 동작해 호출마다 발송 IP가 달라질 수 있다는 사실은 고지.
+      const ipLine = serverIp ? `\n(참고: 이번 호출 시 발송 서버 IP = ${serverIp} — 호출마다 달라질 수 있음)` : ''
       hint =
-        '알리고 관리자(smartsms.aligo.in) → 보안설정에서 "API 인증 IP"를 해제해주세요.\n' +
-        '※ 본 서비스는 Vercel 서버리스로 동작해 호출마다 발송 IP가 달라지므로, 특정 IP만 등록하는 방식은 권장되지 않습니다. PC IP를 등록해도 발송은 Vercel에서 나가 매칭되지 않습니다.' +
+        '알리고 측에서 발송 IP 인증을 검증한 것으로 보입니다. 알리고 고객센터(1661-1565 또는 smartsms.aligo.in 문의하기)에 IP 인증 해제 또는 IP 등록 절차를 문의해주세요.\n' +
+        '※ 본 서비스는 Vercel 서버리스로 동작해 호출마다 발송 IP가 달라질 수 있어, 특정 IP만 등록하는 방식은 안정적이지 않습니다.' +
         ipLine
     } else if (lower.includes('발신번호') || lower.includes('sender')) {
       hint = `발신번호(${aligo.sender_number})가 알리고에 사전 등록되지 않았거나 LMS/MMS용으로 등록되지 않았습니다.`
