@@ -29,10 +29,6 @@
     {
       "path": "/api/cron/referral-thanks",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/investment/psychology/cron/scan",
-      "schedule": "* * * * *"
     }
   ]
 }
