@@ -3,7 +3,12 @@ import path from 'node:path'
 
 export default defineConfig({
   test: {
-    include: ['__tests__/**/*.test.ts', '__tests__/**/*.test.tsx'],
+    include: [
+      '__tests__/**/*.test.ts',
+      '__tests__/**/*.test.tsx',
+      'src/lib/**/__tests__/**/*.test.ts',
+      'src/lib/**/__tests__/**/*.test.tsx',
+    ],
     environment: 'node',
     testTimeout: 10000,
   },
