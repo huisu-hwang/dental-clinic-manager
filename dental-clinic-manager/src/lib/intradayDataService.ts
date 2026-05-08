@@ -121,8 +121,11 @@ async function fetchFromYahooIntraday(
   // 한국 종목은 .KS / .KQ 접미사 필요
   const symbol = market === 'KR' ? `${ticker}.KS` : ticker
 
-  const period1 = startDate
-  const period2 = endDate
+  // period2 를 'YYYY-MM-DD' 문자열로 넘기면 yahoo가 UTC 00:00으로 해석해
+  // endDate 당일 데이터(특히 ET 정규장 13:30~20:00 UTC)가 모두 누락됨.
+  // → endDate 의 23:59:59.999Z Date 객체로 명시해 당일 봉까지 포함.
+  const period1 = new Date(`${startDate}T00:00:00.000Z`)
+  const period2 = new Date(`${endDate}T23:59:59.999Z`)
 
   const tryFetch = async (sym: string): Promise<OHLCV[]> => {
     const result = await yahooFinance.chart(sym, {
