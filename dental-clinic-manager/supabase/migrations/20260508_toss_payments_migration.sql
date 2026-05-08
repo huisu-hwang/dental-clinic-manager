@@ -22,6 +22,17 @@ DO $$
 DECLARE
   cnt INTEGER;
 BEGIN
+  -- subscriptions / user_subscriptions: customer_key SET NOT NULL이 기존 행에서 실패하므로 0행 강제
+  SELECT COUNT(*) INTO cnt FROM subscriptions;
+  IF cnt > 0 THEN
+    RAISE EXCEPTION '[abort] subscriptions has % rows; toss migration assumes 0 operational rows (customer_key NOT NULL constraint would fail). Clear data before proceeding.', cnt;
+  END IF;
+
+  SELECT COUNT(*) INTO cnt FROM user_subscriptions;
+  IF cnt > 0 THEN
+    RAISE EXCEPTION '[abort] user_subscriptions has % rows; toss migration assumes 0 operational rows (customer_key NOT NULL constraint would fail). Clear data before proceeding.', cnt;
+  END IF;
+
   SELECT COUNT(*) INTO cnt FROM subscription_payments;
   IF cnt > 0 THEN
     RAISE EXCEPTION '[abort] subscription_payments has % rows; toss migration assumes 0 operational rows. Clear data before proceeding.', cnt;
@@ -170,6 +181,8 @@ ALTER TABLE user_notifications ADD CONSTRAINT user_notifications_type_check
     'important', 'system',
     -- 추가 (preserve from 20260501_add_monthly_report_notification_type.sql)
     'monthly_report_ready',
+    -- 추가 (preserve from 20260429_create_patient_referrals.sql)
+    'referral_new_added',
     -- 신규 (this migration)
     'subscription_payment_failed',
     'subscription_payment_warning',
