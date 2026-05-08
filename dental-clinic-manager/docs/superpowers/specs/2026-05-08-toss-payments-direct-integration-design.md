@@ -21,6 +21,10 @@
 5. **모달 UI 폐기** → redirect 기반 페이지(success/fail) 일원화
 6. **정기결제 스케줄링**: Vercel Cron + Supabase 쿼리 자체 구현 (토스 미지원)
 7. **재시도 정책**: 결제일 실패 후 3일간 매일 재시도 → 7일 유예 → Day+10에 자동 정지
+8. **재시도 시 새 `orderId`** (`-r{retry_count}` 접미사) — 토스 `ALREADY_PROCESSED_PAYMENT` 방지
+9. **단계적 저장(saga)** — 빌링키 발급 → DB UPSERT(`pending`) → 결제 시도 → 결과 반영 순으로 부분 실패 시에도 일관성 유지
+10. **cron 직렬 처리 + 150ms 지연** — 토스 API 율 제한 회피
+11. **운영 데이터 0건 사전 검증 SQL** 마이그레이션 직전 필수 실행
 
 ### 비목표
 - 1회성 결제(빌링키 없는 결제) 지원은 이번 범위 밖.
@@ -200,21 +204,46 @@ registerSubscription(params: {
   authKey: string
   customerKey: string
 }): Promise<{ subscription, payment }>
-// 1. issueBillingKey({ authKey, customerKey }) → billingKey
-// 2. confirmBilling({ billingKey, customerKey, orderId, ... }) → Payment
-// 3. subscriptions UPDATE (status='active', billing_key, current_period_*, next_billing_date)
-// 4. subscription_payments INSERT
-// 트랜잭션 단위로 처리. 실패 시 롤백 + 사용자에게 명확한 에러 응답.
+// 단계적 저장 (saga 스타일) — 외부 API와 DB는 한 트랜잭션이 될 수 없으므로 단계별 일관성 보장
+//
+// Step 0: 중복 방지 검증
+//   - subscriptions에서 (clinic_id, status IN ('active','past_due','trialing')) 조회
+//   - 기존 구독 존재 시 409 응답 ("이미 활성 구독이 있습니다. 플랜 변경은 upgrade 사용")
+//
+// Step 1: 빌링키 발급
+//   - issueBillingKey({ authKey, customerKey }) → billingKey
+//   - subscriptions UPSERT (status='pending', billing_key, customer_key, card_company)
+//   - 이 시점에 서버 크래시가 일어나도 다음 요청에서 같은 customerKey로 재진입 가능
+//
+// Step 2: 첫 결제
+//   - subscription_payments INSERT (status='pending', toss_order_id, idempotency_key, amount)
+//     ← 결제 호출 직전에 INSERT해 "시도 기록" 보존
+//   - confirmBilling({ billingKey, customerKey, orderId, ... }) → Payment
+//
+// Step 3: 결과 반영
+//   - 성공: subscription_payments UPDATE (status='paid', toss_payment_key, toss_secret, raw_response)
+//           subscriptions UPDATE (status='active', current_period_*, next_billing_date)
+//   - 실패: subscription_payments UPDATE (status='failed', fail_reason)
+//           subscriptions UPDATE (status='past_due', retry_count=1, next_retry_at)
+//           사용자에게 4xx 응답 + 카드 재등록 안내
+//
+// 모든 INSERT/UPDATE는 toss_order_id UNIQUE로 중복 INSERT 방지.
 
 runDueCharges(): Promise<{ processed, succeeded, failed }>
-// SELECT * FROM subscriptions
-// WHERE status='active' AND next_billing_date <= NOW()
-// 각 행에 대해 confirmBilling 호출 → 성공/실패 분기
+// SELECT * FROM subscriptions WHERE status='active' AND next_billing_date <= NOW()
+// 각 행에 대해 직렬 처리 (for-of, 호출 간 150ms 지연으로 토스 율 제한 회피)
+// 각 결제는 registerSubscription의 Step 2~3 패턴과 동일:
+//   1. subscription_payments INSERT (status='pending', new toss_order_id)
+//   2. confirmBilling 호출
+//   3. 성공 → status='paid', subscriptions.next_billing_date += 1month
+//      실패 → status='failed', subscriptions.status='past_due', retry_count=1, next_retry_at=Day+1
+// toss_secret은 성공 응답에서 받아 subscription_payments에 저장 (웹훅 검증용)
 
 runRetries(): Promise<{ processed, recovered, suspended }>
-// SELECT * FROM subscriptions
-// WHERE status='past_due' AND next_retry_at <= NOW()
-// retry_count에 따라 재시도 또는 정지
+// SELECT * FROM subscriptions WHERE status='past_due' AND next_retry_at <= NOW()
+// 각 행 직렬 처리, 호출 간 150ms 지연
+// retry_count >= 4 → 토스 호출 없이 status='suspended'
+// retry_count < 4  → 재시도, 매 시도마다 새 toss_order_id 사용 (재시도 충돌 방지)
 
 upgradePlan(...) / downgradePlan(...) / cancelSubscription(...)
 // 기존 로직 유지, PG 호출 부분만 토스로 교체
@@ -233,15 +262,29 @@ upgradePlan(...) / downgradePlan(...) / cancelSubscription(...)
 }
 ```
 - UTC 17:00 = KST 02:00, UTC 18:00 = KST 03:00
-- 라우트에서 `Authorization: Bearer ${CRON_SECRET}` 검증
+- 라우트 인증 (Vercel Cron이 환경변수 `CRON_SECRET` 자동 부착):
+  ```ts
+  // app/api/cron/billing-charge/route.ts
+  export async function GET(request: Request) {
+    const auth = request.headers.get('authorization')
+    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+    // ... 처리
+  }
+  ```
 
 ### 주문번호 생성 규칙
-- 정기결제: `sub-{clinicIdPrefix8}-{YYYYMM}` (예: `sub-a3b9d12f-202605`) — 월 1회 보장 (DB UNIQUE)
+- 정기결제(원결제): `sub-{clinicIdPrefix8}-{YYYYMM}` (예: `sub-a3b9d12f-202605`)
+- **재시도**: `sub-{clinicIdPrefix8}-{YYYYMM}-r{retry_count}` (예: `sub-a3b9d12f-202605-r1`)
+  - 토스에 동일 orderId로 재호출 시 `ALREADY_PROCESSED_PAYMENT` 에러 가능 → 재시도마다 새 orderId 필수
 - 업그레이드 차액: `sub-{clinicIdPrefix8}-{YYYYMM}-upgrade-{Date.now()}`
-- 투자 구독: `inv-{userIdPrefix8}-{YYYYMM}`
+- 투자 구독: `inv-{userIdPrefix8}-{YYYYMM}` (재시도 시 동일하게 `-r{N}` 접미사)
+
+`subscription_payments.toss_order_id UNIQUE`이므로 결제 시도 1회당 1행이 INSERT됨. 같은 청구 주기 내 재시도는 별개 row로 기록되어 결제 이력이 추적 가능.
 
 ### `Idempotency-Key` 헤더
-토스 결제 호출 시 `toss_order_id`를 그대로 멱등키로 사용. 동일 주문번호로 중복 호출 시 토스가 동일 결과 반환.
+토스 결제 호출 시 `toss_order_id`를 그대로 멱등키로 사용. 단일 시도 내 네트워크 재시도(예: 타임아웃 후 fetch 재호출)에서 토스가 동일 응답 반환. 시도 자체가 다르면(다른 날 재시도) orderId가 바뀌므로 멱등키도 자연스럽게 달라짐.
 
 ---
 
@@ -279,9 +322,10 @@ upgradePlan(...) / downgradePlan(...) / cancelSubscription(...)
 | 결제 실패(재시도 예약) | `subscription_payment_failed` *(신규)* | owner |
 | 정지 임박(Day +3 이후) | `subscription_payment_warning` *(신규)* | owner |
 | 서비스 정지 | `subscription_suspended` *(신규)* | owner + manager |
-| 카드 만료 임박 | `subscription_card_expiring` *(신규)* | owner |
 
-`user_notifications` CHECK 제약(현재 `20260419_user_notifications_subscription_types.sql`)에 신규 타입 4개 추가 마이그레이션 포함.
+`user_notifications` CHECK 제약(현재 `20260419_user_notifications_subscription_types.sql`)에 신규 타입 3개 추가 마이그레이션 포함.
+
+> 카드 만료 임박 알림(`subscription_card_expiring`)은 토스 빌링키 발급 응답에 카드 만료일이 포함되는지 확인 필요. 응답에 만료일이 없을 경우 구현 불가하므로 §9 후속 작업으로 이전.
 
 ### 웹훅 처리 (`/api/webhooks/toss`)
 1. 페이로드 수신 → `billing_webhook_events` INSERT (`UNIQUE(event_type, payment_key, status)`로 중복 차단)
@@ -291,8 +335,17 @@ upgradePlan(...) / downgradePlan(...) / cancelSubscription(...)
 5. 처리 실패 시 `processed_at IS NULL`, `process_error` 기록 → 수동 재처리 가능
 
 **역할 분담:**
-- cron이 능동적으로 결제를 호출 → 즉시 응답 받아 DB 반영
+- cron이 능동적으로 결제를 호출 → 즉시 응답 받아 DB 반영 (`toss_secret`도 이 시점에 저장됨)
 - 웹훅은 **상태 동기화 안전망** (가상계좌 입금, 사후 취소 등 비동기 상태 변화 캐치)
+
+### 에러 로깅 · 운영자 알림
+- **모든 cron/웹훅 실패는 `console.error`로 stdout 출력** (Vercel Logs에서 확인 가능)
+- **운영자 즉시 알림** (선택, 환경변수 `BILLING_ALERT_SLACK_WEBHOOK` 설정 시 활성화):
+  - cron이 정지(`status='suspended'`)를 트리거한 경우 → Slack
+  - 웹훅 처리 실패 5회 이상 누적 시 → Slack
+  - 토스 API 5xx 응답이 cron 1회차에 50% 이상 → Slack (전체 장애 의심)
+- **owner 알림**(인앱)은 §5 알림 타입 표 그대로
+- 디버깅용 원본 응답 보관: `subscription_payments.raw_response JSONB`로 토스 응답 전체 저장
 
 ---
 
@@ -340,14 +393,23 @@ NEXT_PUBLIC_PORTONE_CHANNEL_KEY
 ```
 
 ### 배포 순서 (Zero-downtime 불필요)
-1. **DB 마이그레이션 적용** (Supabase MCP): `20260508_toss_payments_migration.sql`
-2. **환경 변수 등록** (Vercel Dashboard): 토스 키 + `CRON_SECRET`
-3. **코드 배포** (develop → main PR 머지)
-4. **배포 직후 검증**:
+1. **마이그레이션 사전 검증** (Supabase MCP, `mcp__supabase__execute_sql`):
+   ```sql
+   -- 운영 데이터 0건 재확인
+   SELECT
+     (SELECT COUNT(*) FROM subscription_payments) AS clinic_payments,
+     (SELECT COUNT(*) FROM user_subscriptions WHERE billing_key IS NOT NULL) AS user_subs_with_billing,
+     (SELECT COUNT(*) FROM subscriptions WHERE billing_key IS NOT NULL) AS clinic_subs_with_billing;
+   -- 모두 0 이어야 함. 하나라도 0이 아니면 마이그레이션 중단 + 데이터 처리 계획 재검토.
+   ```
+2. **DB 마이그레이션 적용** (Supabase MCP, `mcp__supabase__apply_migration`): `20260508_toss_payments_migration.sql`
+3. **환경 변수 등록** (Vercel Dashboard): 토스 키 + `CRON_SECRET` + (선택) `BILLING_ALERT_SLACK_WEBHOOK`
+4. **코드 배포** (develop → main PR 머지)
+5. **배포 직후 검증**:
    - 빌드/배포 성공
    - `/api/cron/billing-charge` 헬스체크 (빈 결과)
    - 토스 어드민에서 웹훅 URL 등록: `https://<domain>/api/webhooks/toss`
-5. **테스트 결제** (테스트 키로 끝까지 1회 검증)
+6. **테스트 결제** (테스트 키로 끝까지 1회 검증)
 
 ### 코드 정리 (마이그레이션 후 일괄 삭제)
 - `src/lib/portone.ts`
@@ -372,10 +434,14 @@ NEXT_PUBLIC_PORTONE_CHANNEL_KEY
 |---|---|
 | Vercel Cron 누락 (서버 다운) | 다음 cron 사이클에서 자연 복구. `next_billing_date`는 변경되지 않으므로 결과적 일관성 보장 |
 | 토스 API 일시 장애 (5xx) | 일시 실패로 분류 → 재시도 큐로 자동 진입 |
-| 빌링키 발급 후 첫 결제 실패 | `registerSubscription` 트랜잭션에서 빌링키만 저장하고 `status='past_due'`로 시작, 사용자에게 즉시 안내 |
+| 빌링키 발급 후 첫 결제 실패 | 단계적 저장: 빌링키 먼저 DB 저장(`status='pending'`) → 결제 시도 → 실패 시 `past_due` 전이 + 카드 재등록 안내 |
+| 빌링키 발급 후 서버 크래시 | Step 1에서 customerKey/billingKey가 이미 저장되어 있으므로 사용자 재진입 시 동일 customerKey 재사용 가능. 고아 빌링키 방지 |
 | 동일 결제 중복 청구 | `toss_order_id` UNIQUE + `Idempotency-Key` 헤더로 이중 방어 |
-| 웹훅 위변조 | 페이로드 신뢰 안 함, 토스 API로 다시 조회 후 `secret` 일치 검증 |
+| 재시도 시 토스 `ALREADY_PROCESSED_PAYMENT` | 재시도마다 새 orderId(`-r{N}` 접미사) 사용, 매 시도가 별개 row |
+| 다수 클리닉 동시 결제로 토스 율 제한 | cron이 직렬 처리 + 호출 간 150ms 지연 |
+| 웹훅 위변조 | 페이로드 신뢰 안 함, 토스 API로 다시 조회 후 `secret` 일치 검증 (`secret`은 결제 성공 시점에 `subscription_payments.toss_secret`에 저장) |
 | customerKey 분실 | `subscriptions.customer_key NOT NULL UNIQUE`로 영구 보존, 카드 재등록에도 동일 키 재사용 |
+| 중복 구독 등록 | `registerSubscription` Step 0에서 기존 active/past_due/trialing 구독 존재 시 409 응답 |
 
 ---
 
@@ -386,3 +452,4 @@ NEXT_PUBLIC_PORTONE_CHANNEL_KEY
 - 가상계좌/계좌이체/간편결제 등 결제 수단 확장
 - 영수증/세금계산서 자동 발행
 - 환불 자동화 (현재는 `cancelPayment` 함수만 제공, UI 없음)
+- **카드 만료 임박 알림** (`subscription_card_expiring`) — 토스 빌링키 발급 응답에 카드 유효기간이 포함되는지 확인 후 구현. 응답에 만료일이 없으면 별도 카드사 조회 API 또는 사용자 수동 입력으로 대체 필요
