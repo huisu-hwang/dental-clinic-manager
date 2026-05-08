@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { aligoFetch } from '@/lib/aligoFetch'
 
 const ALIGO_API_URL = 'https://apis.aligo.in'
 
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
     if (process.env.NODE_ENV === 'development') formData.append('testmode_yn', 'Y')
 
-    const aligoRes = await fetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: formData })
+    const aligoRes = await aligoFetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: formData })
     const aligoJson = (await aligoRes.json()) as { result_code: string | number; message: string; msg_id?: string | number }
 
     if (process.env.NODE_ENV !== 'production') {
@@ -112,7 +113,8 @@ export async function POST(req: NextRequest) {
     if (isIpError) {
       let serverIp: string | null = null
       try {
-        const ipRes = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' })
+        // 알리고가 본 발신 IP 를 정확히 확인하기 위해 동일한 프록시 경로(aligoFetch) 로 ipify 조회
+        const ipRes = await aligoFetch('https://api.ipify.org?format=json', { cache: 'no-store' })
         if (ipRes.ok) {
           const ipJson = (await ipRes.json()) as { ip?: string }
           serverIp = ipJson.ip ?? null

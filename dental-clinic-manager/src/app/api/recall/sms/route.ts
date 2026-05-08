@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { aligoFetch } from '@/lib/aligoFetch'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 알리고 API 호출
-    const aligoResponse = await fetch(`${ALIGO_API_URL}/send/`, {
+    const aligoResponse = await aligoFetch(`${ALIGO_API_URL}/send/`, {
       method: 'POST',
       body: formData
     })
@@ -173,8 +174,8 @@ export async function GET(request: NextRequest) {
     // IP 확인 요청인 경우
     if (checkIp === 'true') {
       try {
-        // 외부 서비스로 서버의 공인 IP 확인
-        const ipResponse = await fetch('https://api.ipify.org?format=json')
+        // 알리고가 보는 실제 발신 IP 를 알기 위해 알리고 호출과 동일한 프록시 경로로 조회
+        const ipResponse = await aligoFetch('https://api.ipify.org?format=json')
         const ipData = await ipResponse.json()
         return NextResponse.json({
           success: true,
@@ -218,7 +219,7 @@ export async function GET(request: NextRequest) {
     formData.append('key', aligoSettings.api_key)
     formData.append('user_id', aligoSettings.user_id)
 
-    const aligoResponse = await fetch(`${ALIGO_API_URL}/remain/`, {
+    const aligoResponse = await aligoFetch(`${ALIGO_API_URL}/remain/`, {
       method: 'POST',
       body: formData
     })
