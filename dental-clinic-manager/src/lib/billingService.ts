@@ -271,3 +271,184 @@ export async function registerSubscription(
     }
   }
 }
+
+// ===========================================================================
+// runDueCharges (cron 호출용)
+// ===========================================================================
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+interface ChargeOneParams {
+  clinicId: string
+  subscriptionId: string
+  billingKey: string
+  customerKey: string
+  customerName: string
+  customerEmail: string
+  amount: number
+  planName: string
+  retryCount: number
+}
+
+async function chargeOne(
+  p: ChargeOneParams
+): Promise<{ ok: boolean; failMsg?: string; errorCode?: string }> {
+  const supabase = await createClient()
+  const orderId = makeOrderId(p.clinicId, p.retryCount)
+  const orderName = `${p.planName} 플랜 (월 구독)`
+
+  // 시도 row 사전 INSERT (orderId UNIQUE 충돌 시 결제만 재시도)
+  const { data: paymentRow, error: insertErr } = await supabase
+    .from('subscription_payments')
+    .insert({
+      clinic_id: p.clinicId,
+      subscription_id: p.subscriptionId,
+      toss_order_id: orderId,
+      idempotency_key: orderId,
+      amount: p.amount,
+      status: 'pending',
+      order_name: orderName,
+    })
+    .select('id')
+    .single()
+
+  let paymentRowId: string | undefined = paymentRow?.id
+  if (insertErr) {
+    const { data: existing } = await supabase
+      .from('subscription_payments')
+      .select('id, status')
+      .eq('toss_order_id', orderId)
+      .single()
+    if (!existing) return { ok: false, failMsg: 'INSERT 실패 + 기존 row 없음' }
+    if (existing.status === 'paid') return { ok: true } // 이미 결제됨
+    paymentRowId = existing.id
+  }
+
+  try {
+    const payment = await confirmBilling({
+      billingKey: p.billingKey,
+      customerKey: p.customerKey,
+      orderId,
+      orderName,
+      amount: p.amount,
+      customerName: p.customerName,
+      customerEmail: p.customerEmail,
+    })
+
+    await supabase
+      .from('subscription_payments')
+      .update({
+        status: 'paid',
+        toss_payment_key: payment.paymentKey,
+        toss_secret: payment.secret ?? null,
+        method: payment.method,
+        receipt_url: payment.receipt?.url ?? null,
+        raw_response: payment as unknown as Record<string, unknown>,
+        paid_at: payment.approvedAt ?? new Date().toISOString(),
+      })
+      .eq('id', paymentRowId)
+
+    return { ok: true }
+  } catch (err) {
+    const tossErr = err instanceof TossPaymentsError ? err : null
+    const failMsg = tossErr ? `${tossErr.code}: ${tossErr.message}` : String(err)
+
+    await supabase
+      .from('subscription_payments')
+      .update({
+        status: 'failed',
+        fail_reason: failMsg,
+        failed_at: new Date().toISOString(),
+      })
+      .eq('id', paymentRowId)
+
+    return { ok: false, failMsg, errorCode: tossErr?.code }
+  }
+}
+
+/**
+ * 결제일 도래 구독을 직렬로 일괄 청구.
+ * - 매일 KST 02:00 cron이 호출
+ * - `next_billing_date <= NOW() AND status='active'` 인 구독을 조회
+ * - 토스 율 제한 회피를 위해 각 호출 간 150ms 지연
+ */
+export async function runDueCharges(): Promise<{
+  processed: number
+  succeeded: number
+  failed: number
+}> {
+  const supabase = await createClient()
+  const { data: dueSubs } = await supabase
+    .from('subscriptions')
+    .select(
+      'id, clinic_id, billing_key, customer_key, plan_id, plan:subscription_plans(*)'
+    )
+    .eq('status', 'active')
+    .lte('next_billing_date', new Date().toISOString())
+
+  if (!dueSubs || dueSubs.length === 0) {
+    return { processed: 0, succeeded: 0, failed: 0 }
+  }
+
+  let succeeded = 0
+  let failed = 0
+
+  for (const sub of dueSubs) {
+    const plan = sub.plan as unknown as SubscriptionPlan | null
+    if (!plan || !sub.billing_key) {
+      failed++
+      continue
+    }
+
+    // 클리닉 owner 정보
+    const { data: owner } = await supabase
+      .from('users')
+      .select('name, email')
+      .eq('clinic_id', sub.clinic_id)
+      .eq('role', 'owner')
+      .limit(1)
+      .maybeSingle()
+
+    const result = await chargeOne({
+      clinicId: sub.clinic_id,
+      subscriptionId: sub.id,
+      billingKey: sub.billing_key,
+      customerKey: sub.customer_key,
+      customerName: owner?.name ?? '',
+      customerEmail: owner?.email ?? '',
+      amount: plan.price,
+      planName: plan.display_name,
+      retryCount: 0,
+    })
+
+    if (result.ok) {
+      succeeded++
+      const nextBilling = addOneMonth(new Date())
+      await supabase
+        .from('subscriptions')
+        .update({
+          current_period_start: new Date().toISOString(),
+          current_period_end: nextBilling.toISOString(),
+          next_billing_date: nextBilling.toISOString(),
+          retry_count: 0,
+        })
+        .eq('id', sub.id)
+    } else {
+      failed++
+      await supabase
+        .from('subscriptions')
+        .update({
+          status: 'past_due',
+          retry_count: 1,
+          next_retry_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .eq('id', sub.id)
+    }
+
+    await sleep(150) // 토스 율 제한 회피
+  }
+
+  return { processed: dueSubs.length, succeeded, failed }
+}
