@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const ticker = body?.ticker?.trim().toUpperCase()
   const market = body?.market === 'KR' || body?.market === 'US' ? body.market : null
   if (!ticker || !market) return NextResponse.json({ error: 'ticker, market 필수' }, { status: 400 })
-  const triggerKind: PsychologyTriggerKind = body.triggerKind ?? 'manual'
+  const triggerKind: PsychologyTriggerKind = body?.triggerKind ?? 'manual'
 
   let snapshot
   try {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   let result
   try {
     result = await analyzePsychology({
-      ticker, market, triggerKind, triggerDetail: body.triggerDetail,
+      ticker, market, triggerKind, triggerDetail: body?.triggerDetail,
       snapshot,
     })
   } catch (e) {
