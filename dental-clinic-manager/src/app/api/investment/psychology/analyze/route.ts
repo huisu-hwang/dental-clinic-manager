@@ -35,15 +35,34 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null) as {
     ticker?: string; market?: Market;
     triggerKind?: PsychologyTriggerKind; triggerDetail?: string;
+    asOf?: string;
   } | null
   const ticker = body?.ticker?.trim().toUpperCase()
   const market = body?.market === 'KR' || body?.market === 'US' ? body.market : null
   if (!ticker || !market) return NextResponse.json({ error: 'ticker, market 필수' }, { status: 400 })
   const triggerKind: PsychologyTriggerKind = body?.triggerKind ?? 'manual'
 
+  // asOf — 과거 시점 분석. ISO string 파싱, 미래/너무 오래된 시점 차단
+  let asOf: Date | undefined = undefined
+  if (body?.asOf) {
+    const d = new Date(body.asOf)
+    if (Number.isNaN(d.getTime())) {
+      return NextResponse.json({ error: 'asOf 형식 오류 (ISO 8601 필요)' }, { status: 400 })
+    }
+    const now = Date.now()
+    if (d.getTime() > now + 60_000) {
+      return NextResponse.json({ error: 'asOf는 미래 시점일 수 없습니다' }, { status: 400 })
+    }
+    // yahoo 1m 차트는 7일 이내만 / KIS는 약 3거래일 — 7일 한도
+    if (now - d.getTime() > 7 * 24 * 3600_000) {
+      return NextResponse.json({ error: '과거 7일 이내 시점만 분석 가능합니다' }, { status: 400 })
+    }
+    asOf = d
+  }
+
   let snapshot
   try {
-    snapshot = await fetchPsychologySnapshot(auth.user.id, ticker, market, 60)
+    snapshot = await fetchPsychologySnapshot(auth.user.id, ticker, market, 60, asOf)
   } catch (e) {
     const msg = e instanceof Error ? e.message : '데이터 수집 실패'
     return NextResponse.json({ error: msg }, { status: 502 })
@@ -57,12 +76,17 @@ export async function POST(req: NextRequest) {
     result = await analyzePsychology({
       ticker, market, triggerKind, triggerDetail: body?.triggerDetail,
       snapshot,
+      asOf: asOf?.toISOString(),
     })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'LLM 분석 실패' }, { status: 500 })
   }
 
   const admin = getSupabaseAdmin()!
+  // input_snapshot에 asOf 표기 (응답에서 클라이언트가 사용)
+  const inputSnapshotWithAsOf = asOf
+    ? { ...snapshot, as_of: asOf.toISOString() }
+    : snapshot
   const { data: inserted, error: insertErr } = await admin
     .from('psychology_analyses')
     .insert({
@@ -74,7 +98,7 @@ export async function POST(req: NextRequest) {
       narrative: result.output.narrative,
       markers: result.output.markers,
       orderbook_pressure: result.output.orderbook_pressure,
-      input_snapshot: snapshot,
+      input_snapshot: inputSnapshotWithAsOf,
       llm_model: result.model,
       llm_latency_ms: result.latencyMs,
     })
