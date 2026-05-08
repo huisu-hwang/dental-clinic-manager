@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Search, Plus, AlertCircle, MessageCircle, TrendingUp, Heart, Bookmark } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -21,15 +22,39 @@ interface CommunityPostListProps {
 }
 
 export default function CommunityPostList({ profileId, isBanned, isLoggedIn, categories, labelMap, colorMap, onPostClick, onNewPost }: CommunityPostListProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const categoryFromUrl = (searchParams.get('category') || '') as CommunityCategory | ''
+
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<CommunityCategory | ''>('')
+  const [selectedCategory, setSelectedCategory] = useState<CommunityCategory | ''>(categoryFromUrl)
   const [searchQuery, setSearchQuery] = useState('')
   const [sort, setSort] = useState<'latest' | 'popular' | 'my_likes' | 'my_scraps'>('latest')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const ITEMS_PER_PAGE = 20
+
+  // URL의 category 파라미터가 변경되면 동기화 (브라우저 뒤로가기 등)
+  useEffect(() => {
+    if (categoryFromUrl !== selectedCategory) {
+      setSelectedCategory(categoryFromUrl)
+      setPage(1)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFromUrl])
+
+  const handleCategoryChange = (cat: CommunityCategory | '') => {
+    setSelectedCategory(cat)
+    setPage(1)
+    const params = new URLSearchParams(searchParams.toString())
+    if (cat) params.set('category', cat)
+    else params.delete('category')
+    const query = params.toString()
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+  }
 
   const fetchPosts = useCallback(async () => {
     setError(null)
@@ -147,7 +172,7 @@ export default function CommunityPostList({ profileId, isBanned, isLoggedIn, cat
       </div>
 
       {/* 카테고리 필터 */}
-      <CategoryFilter selected={selectedCategory} onChange={(cat) => { setSelectedCategory(cat); setPage(1) }} categories={categories} labelMap={labelMap} colorMap={colorMap} />
+      <CategoryFilter selected={selectedCategory} onChange={handleCategoryChange} categories={categories} labelMap={labelMap} colorMap={colorMap} />
 
       {/* 검색 */}
       <form onSubmit={handleSearch} className="flex gap-2">
