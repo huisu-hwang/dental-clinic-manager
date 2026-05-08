@@ -1,10 +1,15 @@
 import { randomUUID } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { issueBillingKey, confirmBilling } from '@/lib/tossPayments/billing'
+import { cancelPayment } from '@/lib/tossPayments/payments'
 import { TossPaymentsError } from '@/lib/tossPayments/client'
 import { userMessageForCode } from '@/lib/tossPayments/errors'
 import { getIssuerName } from '@/lib/tossPayments/issuerCodes'
-import type { SubscriptionPlan } from '@/types/subscription'
+import type {
+  SubscriptionPlan,
+  SubscriptionPayment,
+  SubscriptionStatusResponse,
+} from '@/types/subscription'
 
 /**
  * 클리닉의 토스 customerKey를 발급/조회.
@@ -563,4 +568,216 @@ export async function runRetries(): Promise<{
   }
 
   return { processed: candidates.length, recovered, suspended }
+}
+
+// ===========================================================================
+// getSubscriptionStatus / cancelSubscription / upgradePlan / downgradePlan
+// ===========================================================================
+
+/**
+ * 클리닉의 현재 구독 상태 + 최근 결제 내역(최대 12건) + 파생 플래그 반환.
+ * - 가장 최근 subscriptions row(상태 무관) 1건 + 그 플랜
+ * - 최근 결제 12건
+ * - isFreePlan: 활성 구독이 아니면 true
+ * - canUpgrade: 활성 구독이 있을 때만 true (Free 상태에서는 신규 등록 흐름 사용)
+ * - daysUntilExpiry: current_period_end 기준 잔여 일수 (없으면 null)
+ */
+export async function getSubscriptionStatus(
+  clinicId: string
+): Promise<SubscriptionStatusResponse> {
+  const supabase = await createClient()
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('*, plan:subscription_plans(*)')
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { data: payments } = await supabase
+    .from('subscription_payments')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: false })
+    .limit(12)
+
+  const plan = (sub?.plan as unknown) as SubscriptionPlan | null
+  const isFreePlan =
+    !sub ||
+    sub.status === 'pending' ||
+    sub.status === 'cancelled' ||
+    sub.status === 'expired'
+  const daysUntilExpiry = sub?.current_period_end
+    ? Math.ceil(
+        (new Date(sub.current_period_end).getTime() - Date.now()) /
+          (24 * 60 * 60 * 1000)
+      )
+    : null
+
+  return {
+    subscription: sub as never,
+    plan,
+    payments: (payments ?? []) as SubscriptionPayment[],
+    isFreePlan,
+    canUpgrade: !isFreePlan,
+    daysUntilExpiry,
+  }
+}
+
+/**
+ * 활성 구독 취소.
+ * - immediate=true: 즉시 cancelled 상태로 전환 + next_billing_date 제거
+ * - immediate=false: 현재 결제 주기 종료 시점에 만료 (cancel_at_period_end=true)
+ */
+export async function cancelSubscription(params: {
+  clinicId: string
+  immediate: boolean
+}): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('id, status')
+    .eq('clinic_id', params.clinicId)
+    .in('status', ['active', 'past_due', 'trialing'])
+    .maybeSingle()
+
+  if (!sub) return { success: false, error: '활성 구독이 없습니다.' }
+
+  if (params.immediate) {
+    await supabase
+      .from('subscriptions')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        next_billing_date: null,
+      })
+      .eq('id', sub.id)
+  } else {
+    await supabase
+      .from('subscriptions')
+      .update({
+        cancel_at_period_end: true,
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq('id', sub.id)
+  }
+  return { success: true }
+}
+
+/**
+ * 활성 구독을 더 비싼 플랜으로 즉시 업그레이드.
+ * - 일할 차액 = (newPrice - oldPrice) × 남은 일수 / 30 (Math.ceil)
+ * - 차액을 토스 빌링키로 즉시 결제
+ * - 성공 시 subscriptions.plan_id 갱신
+ *
+ * 다운그레이드는 별도 API(downgradePlan) 사용.
+ */
+export async function upgradePlan(params: {
+  clinicId: string
+  newPlanId: string
+}): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select(
+      'id, billing_key, customer_key, plan_id, plan:subscription_plans(*), current_period_end'
+    )
+    .eq('clinic_id', params.clinicId)
+    .in('status', ['active'])
+    .maybeSingle()
+
+  if (!sub) return { success: false, error: '활성 구독이 없습니다.' }
+
+  const oldPlan = (sub.plan as unknown) as SubscriptionPlan
+  const { data: newPlan } = await supabase
+    .from('subscription_plans')
+    .select('*')
+    .eq('id', params.newPlanId)
+    .single<SubscriptionPlan>()
+
+  if (!newPlan) return { success: false, error: '신규 플랜을 찾을 수 없습니다.' }
+  if (newPlan.price <= oldPlan.price) {
+    return {
+      success: false,
+      error: '업그레이드는 더 비싼 플랜만 가능합니다. 다운그레이드를 사용하세요.',
+    }
+  }
+
+  // 일할 차액 = (newPrice - oldPrice) × 남은일수 / 30
+  const remainingMs = sub.current_period_end
+    ? new Date(sub.current_period_end).getTime() - Date.now()
+    : 0
+  const remainingDays = Math.max(
+    1,
+    Math.ceil(remainingMs / (24 * 60 * 60 * 1000))
+  )
+  const diff = Math.ceil(((newPlan.price - oldPlan.price) * remainingDays) / 30)
+
+  // 차액 결제
+  const orderId = `sub-${params.clinicId.replace(/-/g, '').slice(0, 8)}-upgrade-${Date.now()}`
+  if (!sub.billing_key) return { success: false, error: 'billing_key가 없습니다.' }
+
+  try {
+    const payment = await confirmBilling({
+      billingKey: sub.billing_key,
+      customerKey: sub.customer_key,
+      orderId,
+      orderName: `${oldPlan.display_name} → ${newPlan.display_name} 업그레이드 차액`,
+      amount: diff,
+      customerName: '',
+      customerEmail: '',
+    })
+
+    await supabase.from('subscription_payments').insert({
+      clinic_id: params.clinicId,
+      subscription_id: sub.id,
+      toss_order_id: orderId,
+      toss_payment_key: payment.paymentKey,
+      toss_secret: payment.secret ?? null,
+      idempotency_key: orderId,
+      amount: diff,
+      status: 'paid',
+      order_name: `업그레이드 차액 (${diff.toLocaleString()}원)`,
+      method: payment.method,
+      receipt_url: payment.receipt?.url ?? null,
+      raw_response: payment as unknown as Record<string, unknown>,
+      paid_at: payment.approvedAt ?? new Date().toISOString(),
+    })
+
+    await supabase
+      .from('subscriptions')
+      .update({
+        plan_id: params.newPlanId,
+      })
+      .eq('id', sub.id)
+
+    return { success: true }
+  } catch (err) {
+    const tossErr = err instanceof TossPaymentsError ? err : null
+    return {
+      success: false,
+      error: tossErr
+        ? userMessageForCode(tossErr.code)
+        : '업그레이드 결제에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 다운그레이드 — 본 범위에서는 자동 적용을 지원하지 않고 안내만 반환.
+ * (현재 스키마에 다음 결제일 시점 플랜 변경을 위한 컬럼/워커가 없음)
+ */
+export async function downgradePlan(params: {
+  clinicId: string
+  newPlanId: string
+}): Promise<{ success: boolean; error?: string }> {
+  void params // unused param 명시적 표시
+  return {
+    success: false,
+    error:
+      '다운그레이드는 다음 결제일에 수동으로 적용됩니다. 콜센터에 문의해 주세요.',
+  }
 }
