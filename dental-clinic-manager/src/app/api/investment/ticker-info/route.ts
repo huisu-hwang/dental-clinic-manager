@@ -33,8 +33,8 @@ function rangeToInterval(range: Range): { period: number; interval: '1d' | '1wk'
 }
 
 async function getYahoo() {
-  const YahooFinance = (await import('yahoo-finance2')).default
-  return new YahooFinance()
+  // yahoo-finance2 v2: default export가 싱글톤 인스턴스
+  return (await import('yahoo-finance2')).default
 }
 
 async function resolveSymbol(yahoo: any, ticker: string, market: 'KR' | 'US'): Promise<string | null> {

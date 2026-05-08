@@ -51,8 +51,7 @@ interface ProfileSummary {
 }
 
 async function fetchProfile(symbol: string): Promise<ProfileSummary | null> {
-  const YahooFinance = (await import('yahoo-finance2')).default
-  const yahoo = new YahooFinance()
+  const yahoo = (await import('yahoo-finance2')).default
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sum: any = await yahoo.quoteSummary(symbol, {
@@ -95,8 +94,7 @@ async function resolveSymbol(ticker: string, market: 'KR' | 'US'): Promise<strin
   const t = ticker.toUpperCase().trim()
   if (!t) return null
   if (market === 'US') return t
-  const YahooFinance = (await import('yahoo-finance2')).default
-  const yahoo = new YahooFinance()
+  const yahoo = (await import('yahoo-finance2')).default
   for (const suffix of ['.KS', '.KQ']) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
