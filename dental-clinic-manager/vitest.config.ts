@@ -8,6 +8,8 @@ export default defineConfig({
       '__tests__/**/*.test.tsx',
       'src/lib/**/__tests__/**/*.test.ts',
       'src/lib/**/__tests__/**/*.test.tsx',
+      'src/lib/**/*.test.ts',
+      'src/lib/**/*.test.tsx',
     ],
     environment: 'node',
     testTimeout: 10000,
