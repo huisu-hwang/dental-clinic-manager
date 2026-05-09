@@ -49,7 +49,8 @@ const daysAgo = (n: number) => {
 const DEFAULT_FILTER: HistoryFilterState = {
   strategyId: '',     // '전체'
   ticker: '',
-  preset: '30d',
+  preset: 'all',      // 기본은 전체 — 다중 종목·다중 전략 비교 시 한 세션이 50건을 쉽게 넘어
+                      // 좁은 기간 필터 + 작은 limit 조합으로 옛 기록이 가려지던 문제를 막는다.
 }
 
 function presetToSince(preset: HistoryFilterState['preset']): string | null {
@@ -93,7 +94,9 @@ export default function HistoryTab() {
         if (filter.ticker.trim()) params.set('ticker', filter.ticker.trim())
         const since = presetToSince(filter.preset)
         if (since) params.set('since', since)
-        params.set('limit', '50')
+        // 비교 한 번에 N종목 × M전략(예: 10×5=50) 행이 생성될 수 있어 작은 limit이면
+        // 오늘 세션이 차지하고 옛 기록이 잘려 보인다. 서버 캡(500)에 가깝게 충분히 키운다.
+        params.set('limit', '500')
         const r = await fetch(`/api/investment/backtest?${params.toString()}`)
         if (!r.ok) {
           const err = (await r.json().catch(() => ({}))) as { error?: string }
