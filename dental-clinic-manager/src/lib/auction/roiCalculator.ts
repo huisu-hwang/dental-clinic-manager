@@ -32,6 +32,8 @@ interface ExtraCostInput {
   unpaidDues?: number
 }
 
+// 주택(아파트/빌라/단독)만 다주택 12% 중과세 적용 (조정대상지역 가정).
+// 비주거(상가·토지·공장·임야 등)와 오피스텔은 단일 4.6%.
 const ACQUISITION_TAX_RATES: Record<PropertyType, { single: number; multi: number }> = {
   apt:        { single: 0.046, multi: 0.12 },
   officetel:  { single: 0.046, multi: 0.046 },
@@ -61,6 +63,7 @@ export function calculateSecondary(
   market: MarketPrice,
   opts: { isMultiOwner: boolean; vacancyCost?: number; repairCost?: number; unpaidDues?: number }
 ): RoiSecondary | null {
+  // 3개월 거래가 부족하면 12개월 중위가로 폴백; 둘 다 없으면 시세 매칭 불가 → null
   const expected = market.median_price_3m ?? market.median_price_12m
   if (!expected) return null
   const extras = calculateExtraCosts({
@@ -93,6 +96,7 @@ export function calculateTertiary(item: AuctionItem, input: SimulatorInput): Roi
     repairCost: input.repair_cost,
     unpaidDues: input.unpaid_dues,
   })
+  // 임대 모델은 공실비용 미반영 — 월세 캐시플로우로 대체. (Secondary는 매도 모델이라 공실비용 포함)
   const totalInvestment = input.bid_price + extras.acquisition_tax + extras.registration_fee + extras.repair_cost + extras.unpaid_dues
   const annualNetRent = (input.monthly_rent - input.monthly_management_cost) * 12 - input.annual_property_tax
   const rentalYield = totalInvestment > 0 ? annualNetRent / totalInvestment * 100 : 0
