@@ -58,6 +58,7 @@ export interface BrokerCredentialSafe {
 export type IndicatorType =
   | 'RSI' | 'MACD' | 'SMA' | 'EMA'
   | 'BB'  // Bollinger Bands
+  | 'DONCHIAN'  // Donchian Channel — N일 high/low 가격 박스 (Turtle Trading)
   | 'STOCH'  // Stochastic
   | 'ATR' | 'ADX' | 'CCI'
   | 'WILLR'  // Williams %R

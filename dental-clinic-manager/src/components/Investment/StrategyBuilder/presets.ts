@@ -1453,6 +1453,95 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
     },
   },
 
+  // ============================================
+  // 🐢 터틀 트레이딩 (Richard Dennis & William Eckhardt, 1983)
+  // 추세 추종 시스템. Donchian Channel 돌파 시 진입, 반대 채널 이탈 시 청산.
+  // System 1: 단기 (20일 돌파 매수 / 10일 이탈 청산)
+  // System 2: 장기 (55일 돌파 매수 / 20일 이탈 청산)
+  // ============================================
+
+  {
+    id: 'turtle-system-1',
+    name: '🐢 터틀 트레이딩 System 1 (단기 20/10)',
+    description: '직전 20일 최고가를 종가가 상향 돌파 시 매수, 직전 10일 최저가를 하향 돌파 시 매도. Richard Dennis 의 단기 추세 추종 시스템',
+    indicators: [
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },                  // 종가(SMA(1) = close)
+      { id: 'DONCHIAN_20', type: 'DONCHIAN', params: { period: 20 } },      // 매수용 (직전 20일 high)
+      { id: 'DONCHIAN_10', type: 'DONCHIAN', params: { period: 10 } },      // 매도용 (직전 10일 low)
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 종가가 직전 20일 최고가를 상향 돌파
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'DONCHIAN_20', property: 'upper' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // 종가가 직전 10일 최저가를 하향 돌파
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'DONCHIAN_10', property: 'lower' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 8,        // Turtle 원전은 ATR(20) × 2N 기반 — 본 시스템은 percent 근사
+      takeProfitPercent: 0,      // 추세 추종이라 익절 미설정 (Donchian 이탈로만 청산)
+      maxHoldingDays: 90,
+    },
+  },
+
+  {
+    id: 'turtle-system-2',
+    name: '🐢 터틀 트레이딩 System 2 (장기 55/20)',
+    description: '직전 55일 최고가를 종가가 상향 돌파 시 매수, 직전 20일 최저가를 하향 돌파 시 매도. Turtle 의 장기 버전 — 큰 추세만 노림',
+    indicators: [
+      { id: 'SMA_1', type: 'SMA', params: { period: 1 } },
+      { id: 'DONCHIAN_55', type: 'DONCHIAN', params: { period: 55 } },
+      { id: 'DONCHIAN_20', type: 'DONCHIAN', params: { period: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'DONCHIAN_55', property: 'upper' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_1' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'DONCHIAN_20', property: 'lower' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 12,
+      takeProfitPercent: 0,
+      maxHoldingDays: 180,
+    },
+  },
+
   {
     id: 'rsi-rebound-cross',
     name: 'RSI 임계값 반등 매매 (30/70 통과)',

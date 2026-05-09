@@ -54,6 +54,13 @@ const TEMPLATES: IndicatorTemplate[] = [
     paramLabels: { period: '기간', stdDev: '표준편차' },
   },
   {
+    type: 'DONCHIAN',
+    label: 'Donchian 채널 (가격 박스)',
+    description: '직전 N일 최고/최저가 박스 — Turtle Trading 의 핵심',
+    defaultParams: { period: 20 },
+    paramLabels: { period: '기간' },
+  },
+  {
     type: 'STOCH',
     label: '스토캐스틱',
     description: '%K, %D 기반 과매수/과매도',
