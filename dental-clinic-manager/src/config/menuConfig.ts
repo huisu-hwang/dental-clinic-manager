@@ -386,6 +386,18 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     ownerOnly: true,  // 대표 원장 전용 (권한 위임 시에도 owner만 표시 유지)
     premiumFeature: true,  // 프리미엄 기능
   },
+  {
+    id: 'auction',
+    label: '부동산 경매',
+    icon: 'Gavel',
+    route: '/investment/auction',
+    permissions: ['auction_view'],
+    categoryId: 'investment',
+    order: 16.6,
+    visible: true,
+    ownerOnly: true,
+    premiumFeature: true,
+  },
 
   // === 하단 고정 메뉴 ===
   {

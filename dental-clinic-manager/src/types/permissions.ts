@@ -106,6 +106,10 @@ export type Permission =
   | 'referral_manage'         // 소개 등록/수정/삭제
   | 'referral_sms_send'       // 감사 문자 발송
   | 'referral_points_adjust'  // 포인트 적립/차감
+  // 부동산 경매 관리 권한
+  | 'auction_view'             // 부동산 경매 물건 조회
+  | 'auction_favorite'         // 관심물건 저장 및 시뮬레이션
+  | 'auction_ai'               // AI 권리분석 코멘트 생성
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -161,7 +165,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 월간 성과 보고서 (모든 권한)
     'monthly_report_view', 'monthly_report_manage',
     // 소개환자 관리 (모든 권한)
-    'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust'
+    'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust',
+    // 부동산 경매 관리 (모든 권한)
+    'auction_view', 'auction_favorite', 'auction_ai'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -309,6 +315,7 @@ export const NEW_FEATURE_PREFIXES = [
   'investment_',
   'monthly_report_',
   'referral_',
+  'auction_',
 ] as const
 
 // 기존 그룹에 추가된 단독 신규 권한 (prefix 보충 대상이 아니라 직접 보충)
@@ -450,6 +457,11 @@ export const PERMISSION_GROUPS = {
     { key: 'referral_sms_send', label: '감사 문자 발송' },
     { key: 'referral_points_adjust', label: '포인트 적립/차감' }
   ],
+  '부동산 경매': [
+    { key: 'auction_view', label: '부동산 경매 조회' },
+    { key: 'auction_favorite', label: '관심물건 저장 및 시뮬레이션' },
+    { key: 'auction_ai', label: 'AI 권리분석 코멘트' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -562,5 +574,9 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'referral_view': '소개환자 관리 페이지의 소개 내역과 통계를 조회할 수 있습니다.',
   'referral_manage': '환자 간 소개 관계를 등록·수정·삭제할 수 있습니다.',
   'referral_sms_send': '소개해주신 분께 감사 문자를 발송할 수 있습니다.',
-  'referral_points_adjust': '환자에게 포인트를 적립하거나 차감할 수 있습니다.'
+  'referral_points_adjust': '환자에게 포인트를 적립하거나 차감할 수 있습니다.',
+  // 부동산 경매 관리 권한 설명
+  'auction_view': '부동산 경매 물건 목록과 상세를 조회할 수 있습니다.',
+  'auction_favorite': '관심물건을 저장하고 입찰 시뮬레이션을 사용할 수 있습니다.',
+  'auction_ai': 'AI 권리분석 코멘트를 생성할 수 있습니다 (Claude Haiku 4.5 호출).',
 }
