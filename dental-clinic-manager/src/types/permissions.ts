@@ -109,6 +109,10 @@ export type Permission =
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
+  master_admin: [
+    // 마스터 관리자는 사이드바에서 커뮤니티 메뉴만 사용 (그 외 운영 권한은 /master 패널에서 직접 처리)
+    'community_view', 'community_post', 'community_manage'
+  ],
   owner: [
     // 대표원장은 모든 권한
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
