@@ -239,6 +239,48 @@ export const PRESET_METADATA: Record<string, PresetMetadata> = {
     source: 'Gerald Appel — MACD 변형',
   },
 
+  // 🐢 터틀 트레이딩 시리즈
+  'turtle-system-1': {
+    longDescription:
+      '1983년 Richard Dennis 와 William Eckhardt 가 무경험자들을 트레이더로 양성하면서 가르친 시스템 1. 직전 20일 최고가를 종가가 상향 돌파(Donchian Upper Band) 하면 매수, 직전 10일 최저가를 하향 돌파하면 매도. 추세 추종 + 변동성 기반 진입의 정수로 평가받는 가장 유명한 백테스트 시스템 중 하나. Trend-following 의 교과서.',
+    bestFor: [
+      '추세가 명확한 대형주 / 지수 ETF',
+      '원자재·암호화폐 등 큰 추세가 자주 형성되는 자산',
+      '거래량 풍부한 종목',
+    ],
+    marketConditions: ['weak-uptrend', 'strong-uptrend', 'high-volatility'],
+    typicalHolding: '2주~3개월',
+    pros: [
+      '큰 추세를 놓치지 않음',
+      '단순 명확한 규칙 — 재량 거의 없음',
+      '40+년 동안 다양한 시장에서 검증됨',
+    ],
+    cons: [
+      '가짜 돌파(whipsaw) 빈번 — 횡보장에서 연속 손절',
+      '큰 추세 1~2회로 1년 수익 만드는 구조 → 인내 필요',
+      '원전은 ATR 기반 손절·포지션 사이징 — 본 시스템은 percent 손절로 근사',
+    ],
+    source: 'Richard Dennis & William Eckhardt (1983, "Turtle Traders" — Curtis Faith 정리)',
+  },
+  'turtle-system-2': {
+    longDescription:
+      '터틀 시스템의 장기 버전. 직전 55일 최고가 돌파 시 매수, 직전 20일 최저가 이탈 시 매도. System 1 보다 진입 빈도는 적지만 한 번 잡힌 추세는 더 오래 보유. 수년간 이어지는 거시 추세를 포착하는 데 적합.',
+    bestFor: ['지수 ETF', '시가총액 큰 우량주', '장기 추세가 강한 산업 리더 종목'],
+    marketConditions: ['strong-uptrend'],
+    typicalHolding: '2~6개월',
+    pros: [
+      '거대한 다년 추세 포착',
+      'System 1 보다 가짜 돌파 적음',
+      '거래 빈도 낮음 → 수수료/세금 부담 ↓',
+    ],
+    cons: [
+      '진입 자체가 매우 드물어 자본이 놀고 있을 가능성',
+      '추세 반전 시 큰 평가손 가능',
+      'percent 기반 손절은 원전 ATR 방식과 차이가 있음',
+    ],
+    source: 'Curtis Faith (2007, "Way of the Turtle")',
+  },
+
   'rsi-rebound-cross': {
     longDescription:
       'RSI(14) 가 30 이하 → 30 이상으로 올라오는 정확한 시점에 매수, 70 이상 → 70 이하로 내려오는 시점에 매도. 단순 "RSI < 30 이면 매수" 와의 차이는 한 번 통과 후엔 다시 30 아래로 떨어졌다가 다시 올라와야 신호가 발생한다는 점. 같은 과매도 구간에서 매번 매수가 반복되는 현상 방지.',

@@ -94,6 +94,40 @@ function calcBB(prices: OHLCV[], params: Record<string, number>): Record<string,
   return padLeft(mapped, prices.length, { upper: NaN, middle: NaN, lower: NaN })
 }
 
+/**
+ * Donchian Channel — Turtle Trading 시스템에서 핵심으로 사용.
+ * upper = 직전 N일 (현재 봉 제외) 최고가
+ * lower = 직전 N일 (현재 봉 제외) 최저가
+ * middle = (upper + lower) / 2
+ *
+ * "현재 봉 제외" 가 중요한 이유: 매수 조건이 "오늘 종가가 직전 N일 최고가를
+ * 돌파했는가" 이므로 현재 봉 high 가 upper 에 포함되면 항상 close <= upper 가 되어
+ * 돌파 신호가 안 잡힘.
+ */
+function calcDonchian(prices: OHLCV[], params: Record<string, number>): Record<string, number>[] {
+  const period = Math.max(2, Math.floor(params.period || 20))
+  const result: Record<string, number>[] = []
+  for (let i = 0; i < prices.length; i++) {
+    if (i < period) {
+      result.push({ upper: NaN, middle: NaN, lower: NaN })
+      continue
+    }
+    let high = -Infinity
+    let low = Infinity
+    // 직전 period 봉 (현재 봉 제외): [i-period, i-1]
+    for (let j = i - period; j <= i - 1; j++) {
+      if (prices[j].high > high) high = prices[j].high
+      if (prices[j].low < low) low = prices[j].low
+    }
+    if (!Number.isFinite(high) || !Number.isFinite(low)) {
+      result.push({ upper: NaN, middle: NaN, lower: NaN })
+      continue
+    }
+    result.push({ upper: high, lower: low, middle: (high + low) / 2 })
+  }
+  return result
+}
+
 function calcStochastic(prices: OHLCV[], params: Record<string, number>): Record<string, number>[] {
   const period = params.period || 14
   const signalPeriod = params.signalPeriod || 3
@@ -684,6 +718,7 @@ const INDICATOR_CALCULATORS: Record<IndicatorType, (prices: OHLCV[], params: Rec
   EMA: calcEMA,
   MACD: calcMACD,
   BB: calcBB,
+  DONCHIAN: calcDonchian,
   STOCH: calcStochastic,
   ATR: calcATR,
   ADX: calcADX,
