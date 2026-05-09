@@ -1,7 +1,12 @@
 'use client'
 
-import PsychologyContent from '@/components/Investment/Psychology/PsychologyContent'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function PsychologyPage() {
-  return <PsychologyContent />
+export default function RedirectPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/dashboard?tab=investment&sub=psychology')
+  }, [router])
+  return null
 }

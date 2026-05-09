@@ -1,7 +1,12 @@
 'use client'
 
-import ScreenerContent from '@/components/Investment/ScreenerContent'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function ScreenerPage() {
-  return <ScreenerContent />
+export default function RedirectPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/dashboard?tab=investment&sub=screener')
+  }, [router])
+  return null
 }

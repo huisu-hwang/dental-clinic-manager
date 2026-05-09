@@ -33,19 +33,21 @@ interface NavItem {
   href: string
 }
 
+// 메인 투자 메뉴는 /dashboard?tab=investment&sub=X 통합 페이지로 통일.
+// /investment/* 독립 페이지는 redirect 로 동작하지만 명시적으로 dashboard 링크를 사용해 latency 제거.
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: '대시보드', icon: LayoutDashboard, href: '/investment' },
-  { id: 'connect', label: '계좌 연결', icon: Link2, href: '/investment/connect' },
-  { id: 'strategy', label: '전략 관리', icon: Target, href: '/investment/strategy' },
-  { id: 'daytrading', label: '단타 (분봉)', icon: Zap, href: '/investment/daytrading' },
-  { id: 'compare', label: '전략 비교', icon: GitCompare, href: '/investment/compare' },
-  { id: 'rankings', label: '전략 랭킹', icon: Trophy, href: '/investment/rankings' },
-  { id: 'screener', label: '종목 스크리너', icon: Search, href: '/investment/screener' },
-  { id: 'smart-money', label: '스마트머니 분석', icon: Brain, href: '/investment/smart-money' },
+  { id: 'dashboard', label: '대시보드', icon: LayoutDashboard, href: '/dashboard?tab=investment' },
+  { id: 'connect', label: '계좌 연결', icon: Link2, href: '/dashboard?tab=investment&sub=connect' },
+  { id: 'strategy', label: '전략 관리', icon: Target, href: '/dashboard?tab=investment&sub=strategy' },
+  { id: 'daytrading', label: '단타 (분봉)', icon: Zap, href: '/dashboard?tab=investment&sub=daytrading' },
+  { id: 'compare', label: '전략 비교', icon: GitCompare, href: '/dashboard?tab=investment&sub=compare' },
+  { id: 'rankings', label: '전략 랭킹', icon: Trophy, href: '/dashboard?tab=investment&sub=rankings' },
+  { id: 'screener', label: '종목 스크리너', icon: Search, href: '/dashboard?tab=investment&sub=screener' },
+  { id: 'smart-money', label: '스마트머니 분석', icon: Brain, href: '/dashboard?tab=investment&sub=smart-money' },
   { id: 'auction', label: '부동산 경매', icon: Gavel, href: '/investment/auction' },
-  { id: 'trading', label: '자동매매', icon: TrendingUp, href: '/investment/trading' },
-  { id: 'psychology', label: '└ 심리 분석', icon: Users, href: '/investment/psychology' },
-  { id: 'portfolio', label: '포트폴리오', icon: Briefcase, href: '/investment/portfolio' },
+  { id: 'trading', label: '자동매매', icon: TrendingUp, href: '/dashboard?tab=investment&sub=trading' },
+  { id: 'psychology', label: '└ 심리 분석', icon: Users, href: '/dashboard?tab=investment&sub=psychology' },
+  { id: 'portfolio', label: '포트폴리오', icon: Briefcase, href: '/dashboard?tab=investment&sub=portfolio' },
 ]
 
 export default function InvestmentLayout({ children }: { children: React.ReactNode }) {

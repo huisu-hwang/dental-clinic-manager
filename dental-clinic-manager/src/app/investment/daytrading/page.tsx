@@ -1,7 +1,12 @@
 'use client'
 
-import DayTradingContent from '@/components/Investment/DayTradingContent'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function DayTradingPage() {
-  return <DayTradingContent />
+export default function RedirectPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/dashboard?tab=investment&sub=daytrading')
+  }, [router])
+  return null
 }
