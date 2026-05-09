@@ -219,15 +219,28 @@ function LiveCompareSection() {
     [strategies, market]
   )
 
-  // 사용자가 이미 내 전략으로 저장(클론)한 프리셋 ID 집합 — 프리셋 목록에서 중복 제거용
-  const clonedPresetIds = useMemo(
-    () => new Set(
-      strategies
-        .filter(s => s.target_market === market && s.source_preset_id)
-        .map(s => s.source_preset_id as string)
-    ),
-    [strategies, market]
-  )
+  // 사용자가 이미 내 전략으로 저장(클론)한 프리셋 ID 집합 — 프리셋 목록에서 중복 제거용.
+  // (1) source_preset_id 가 정상적으로 설정된 경우 그대로 사용.
+  // (2) source_preset_id 가 null 인 레거시 클론(이름만 "...(자동 추가)" 형태)도
+  //     이름 매칭으로 dedupe 대상에 포함 → 같은 로직 전략 두 번 실행 방지.
+  const clonedPresetIds = useMemo(() => {
+    const set = new Set<string>()
+    const presetByName = new Map<string, string>()
+    for (const p of PRESET_STRATEGIES) {
+      presetByName.set(p.name.trim(), p.id)
+    }
+    for (const s of strategies) {
+      if (s.target_market !== market) continue
+      if (s.source_preset_id) {
+        set.add(s.source_preset_id)
+        continue
+      }
+      const baseName = s.name.replace(/\s*\(자동 추가\)\s*$/, '').trim()
+      const matchedId = presetByName.get(baseName)
+      if (matchedId) set.add(matchedId)
+    }
+    return set
+  }, [strategies, market])
 
   // 프리셋 전략 (단타 제외 + 사용자가 이미 저장한 프리셋 제외)
   // 같은 로직의 전략을 user/preset 양쪽에서 보여 전체 선택 시 중복 실행되는 문제 방지.
