@@ -3,7 +3,7 @@
 /**
  * 날짜 범위 선택 컴포넌트 — 백테스트 기간 입력용.
  * - 두 개의 일자 입력(시작/종료)을 한 팝업 달력에서 선택
- * - 빠른 프리셋(1주/1개월/3개월/6개월/1년/3년/올해/작년)
+ * - 빠른 프리셋(1주/1개월/3개월/6개월/1년/3년/5년/10년/올해/작년)
  * - native date input 대비 통일된 디자인 + 더 나은 사용성
  */
 
@@ -138,13 +138,15 @@ export default function DateRangePicker({ startDate, endDate, onChange, minDate,
           </div>
 
           {/* 빠른 프리셋 */}
-          <div className="grid grid-cols-4 gap-1.5 mb-3">
+          <div className="grid grid-cols-5 gap-1.5 mb-3">
             <PresetButton onClick={() => applyPreset(0.25)}>1주</PresetButton>
             <PresetButton onClick={() => applyPreset(1)}>1개월</PresetButton>
             <PresetButton onClick={() => applyPreset(3)}>3개월</PresetButton>
             <PresetButton onClick={() => applyPreset(6)}>6개월</PresetButton>
             <PresetButton onClick={() => applyPreset(12)}>1년</PresetButton>
             <PresetButton onClick={() => applyPreset(36)}>3년</PresetButton>
+            <PresetButton onClick={() => applyPreset(60)}>5년</PresetButton>
+            <PresetButton onClick={() => applyPreset(120)}>10년</PresetButton>
             <PresetButton onClick={() => applyPreset(0, 'thisYear')}>올해</PresetButton>
             <PresetButton onClick={() => applyPreset(0, 'lastYear')}>작년</PresetButton>
           </div>
