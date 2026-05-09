@@ -1,0 +1,27 @@
+{
+  "name": "auction-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start:daily": "node dist/jobs/dailyScrape.js",
+    "start:dday": "node dist/jobs/ddayAlerts.js",
+    "start:filter": "node dist/jobs/filterMatchAlerts.js",
+    "test": "vitest run",
+    "dev:daily": "tsx src/jobs/dailyScrape.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "playwright": "^1.49.0",
+    "pdf-parse": "^1.1.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0",
+    "@types/pdf-parse": "^1.1.4"
+  }
+}
