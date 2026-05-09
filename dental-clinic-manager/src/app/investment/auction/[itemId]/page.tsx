@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import { AuctionDetailHeader } from '@/components/Investment/Auction/AuctionDetailHeader'
 import { OverviewTab } from '@/components/Investment/Auction/tabs/OverviewTab'
 import { SimulatorTab } from '@/components/Investment/Auction/tabs/SimulatorTab'
+import { RightsTab } from '@/components/Investment/Auction/tabs/RightsTab'
 import type { AuctionItem, MarketPrice, SimulatorInput } from '@/types/auction'
 
 interface DetailResponse {
@@ -80,7 +81,7 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ itemId
             }}
           />
         )}
-        {tab === 'rights'      && <div className="text-at-text-secondary text-sm py-8 text-center">권리분석 탭 (Task 7에서 구현)</div>}
+        {tab === 'rights'      && <RightsTab itemId={data.item.id} rights={data.rights} initialAi={data.ai} />}
         {tab === 'history'     && <div className="text-at-text-secondary text-sm py-8 text-center">이력·통계 탭 (Task 8에서 구현)</div>}
         {tab === 'attachments' && <div className="text-at-text-secondary text-sm py-8 text-center">첨부 탭 (Task 8에서 구현)</div>}
       </div>
