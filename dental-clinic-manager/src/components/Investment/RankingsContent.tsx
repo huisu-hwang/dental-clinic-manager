@@ -8,9 +8,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Trophy, TrendingUp, TrendingDown, Target as TargetIcon, BarChart3, Activity,
-  Share2, Copy, Loader2, RefreshCw, Award, Users,
+  Share2, Copy, Loader2, RefreshCw, Award, Users, Sparkles,
 } from 'lucide-react'
 import type { Market } from '@/types/investment'
 
@@ -19,7 +20,9 @@ type SortKey =
   | 'avgPF' | 'avgMDD' | 'totalTrades' | 'cloneCount'
 
 interface Ranking {
-  strategyId: string
+  type: 'shared' | 'preset'
+  strategyId?: string
+  presetId?: string
   name: string
   description: string | null
   targetMarket: Market
@@ -54,31 +57,42 @@ const SORT_OPTIONS: Array<{ key: SortKey; label: string; desc: string; icon: Rea
 const MARKET_LABELS: Record<string, string> = { ALL: '전체', KR: '국내', US: '미국' }
 
 export default function RankingsContent() {
+  const router = useRouter()
   const [market, setMarket] = useState<'ALL' | Market>('ALL')
   const [sortBy, setSortBy] = useState<SortKey>('avgReturn')
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'shared' | 'preset'>('ALL')
   const [items, setItems] = useState<Ranking[]>([])
   const [totalShared, setTotalShared] = useState<number>(0)
+  const [totalPresets, setTotalPresets] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [cloning, setCloning] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/investment/strategies/rankings?market=${market}&sortBy=${sortBy}&limit=100`, {
+      const res = await fetch(`/api/investment/strategies/rankings?market=${market}&sortBy=${sortBy}&limit=200`, {
         cache: 'no-store',
       })
       const json = await res.json()
       if (res.ok) {
         setItems(json.data ?? [])
         setTotalShared(json.totalShared ?? 0)
+        setTotalPresets(json.totalPresets ?? 0)
       } else {
         setItems([])
         setTotalShared(0)
+        setTotalPresets(0)
       }
     } finally {
       setLoading(false)
     }
   }, [market, sortBy])
+
+  // 타입 필터 적용
+  const filteredItems = useMemo(() => {
+    if (typeFilter === 'ALL') return items
+    return items.filter(it => it.type === typeFilter)
+  }, [items, typeFilter])
 
   useEffect(() => { load() }, [load])
 
@@ -87,25 +101,32 @@ export default function RankingsContent() {
     [sortBy],
   )
 
-  const handleClone = async (strategyId: string, name: string) => {
-    if (!confirm(`"${name}" 을(를) 내 전략으로 복사하시겠습니까?`)) return
-    setCloning(strategyId)
-    try {
-      const res = await fetch('/api/investment/strategies/clone', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ strategyId }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        alert(json.error || '클론 실패')
-        return
+  const handleAction = async (item: Ranking) => {
+    // 프리셋: 상세 페이지로 이동 (기존 프리셋 클론 흐름 사용)
+    if (item.type === 'preset' && item.presetId) {
+      router.push(`/investment/strategy/preset/${item.presetId}`)
+      return
+    }
+    // 공유 user 전략: 클론 API 호출
+    if (item.type === 'shared' && item.strategyId) {
+      if (!confirm(`"${item.name}" 을(를) 내 전략으로 복사하시겠습니까?`)) return
+      setCloning(item.strategyId)
+      try {
+        const res = await fetch('/api/investment/strategies/clone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategyId: item.strategyId }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          alert(json.error || '클론 실패')
+          return
+        }
+        alert(`✅ 내 전략에 복사되었습니다. "전략 관리" 페이지에서 확인하세요.`)
+        load()
+      } finally {
+        setCloning(null)
       }
-      alert(`✅ 내 전략에 복사되었습니다. "전략 관리" 페이지에서 확인하세요.`)
-      // 클론 후 인기 카운트 갱신
-      load()
-    } finally {
-      setCloning(null)
     }
   }
 
@@ -117,7 +138,7 @@ export default function RankingsContent() {
           <h1 className="text-xl font-bold text-at-text">전략 랭킹</h1>
         </div>
         <p className="text-sm text-at-text-secondary mt-1">
-          다른 구독자들이 공유한 전략을 백테스트 통계 기준으로 정렬해 보여줍니다. 마음에 드는 전략은 내 계정으로 복사할 수 있어요.
+          공식 프리셋 + 다른 구독자가 공유한 전략의 백테스트 통계를 종합해 정렬합니다. 마음에 드는 전략은 내 계정으로 복사할 수 있어요.
         </p>
       </div>
 
@@ -145,7 +166,7 @@ export default function RankingsContent() {
               })}
             </div>
             <span className="ml-auto text-[11px] text-at-text-weak">
-              총 공유 전략 <span className="font-semibold text-at-text">{totalShared}</span>개
+              프리셋 <span className="font-semibold text-at-text">{totalPresets}</span>개 · 공유 전략 <span className="font-semibold text-at-text">{totalShared}</span>개
               {items.length > 0 && (
                 <span> · 통계 충분 {items.length}개</span>
               )}
@@ -159,6 +180,32 @@ export default function RankingsContent() {
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
               새로고침
             </button>
+          </div>
+
+          {/* 종류 필터 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-at-text-secondary">종류</span>
+            <div className="inline-flex rounded-xl bg-at-surface-alt p-0.5">
+              {([
+                { key: 'ALL', label: '전체' },
+                { key: 'preset', label: '프리셋' },
+                { key: 'shared', label: '공유 전략' },
+              ] as const).map(opt => {
+                const active = typeFilter === opt.key
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setTypeFilter(opt.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      active ? 'bg-white text-at-accent shadow-sm' : 'text-at-text-secondary hover:text-at-text'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* 정렬 기준 */}
@@ -195,27 +242,26 @@ export default function RankingsContent() {
           <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
           랭킹 불러오는 중...
         </div>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-at-border p-10 text-center text-at-text-secondary">
           <Share2 className="w-10 h-10 mx-auto mb-2 opacity-30" />
           <p className="text-sm">
-            {totalShared === 0
-              ? '아직 공유된 전략이 없습니다. 전략 관리 페이지에서 본인 전략을 공유해보세요.'
-              : '백테스트 횟수가 충분한 전략이 없습니다 (각 전략당 최소 3회 이상 백테스트 필요).'}
+            백테스트 횟수가 충분한 전략이 없습니다 (각 전략당 최소 3회 이상 백테스트 필요).
+            {typeFilter === 'shared' && totalShared === 0 && ' 전략 관리 페이지에서 본인 전략을 공유해보세요.'}
           </p>
         </div>
       ) : (
         <div className="space-y-2">
           <p className="text-xs text-at-text-weak">
-            {sortLabel} 기준 상위 {items.length}개 전략
+            {sortLabel} 기준 상위 {filteredItems.length}개 전략 · {filteredItems.filter(i => i.type === 'preset').length}개 프리셋 + {filteredItems.filter(i => i.type === 'shared').length}개 공유 전략
           </p>
-          {items.map((it, idx) => (
+          {filteredItems.map((it, idx) => (
             <RankingCard
-              key={it.strategyId}
+              key={`${it.type}:${it.strategyId ?? it.presetId}:${it.targetMarket}`}
               rank={idx + 1}
               item={it}
               sortBy={sortBy}
-              onClone={() => handleClone(it.strategyId, it.name)}
+              onAction={() => handleAction(it)}
               cloning={cloning === it.strategyId}
             />
           ))}
@@ -226,14 +272,15 @@ export default function RankingsContent() {
 }
 
 function RankingCard({
-  rank, item, sortBy, onClone, cloning,
+  rank, item, sortBy, onAction, cloning,
 }: {
   rank: number
   item: Ranking
   sortBy: SortKey
-  onClone: () => void
+  onAction: () => void
   cloning: boolean
 }) {
+  const isPreset = item.type === 'preset'
   const featureValue = (() => {
     switch (sortBy) {
       case 'avgReturn': return `${item.avgReturn > 0 ? '+' : ''}${item.avgReturn.toFixed(2)}%`
@@ -266,6 +313,17 @@ function RankingCard({
             }`}>
               {item.targetMarket === 'KR' ? '국내' : '미국'}
             </span>
+            {isPreset ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-bold inline-flex items-center gap-0.5">
+                <Sparkles className="w-3 h-3" />
+                프리셋
+              </span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold inline-flex items-center gap-0.5">
+                <Share2 className="w-3 h-3" />
+                공유
+              </span>
+            )}
             {item.isMine && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">내 전략</span>
             )}
@@ -303,13 +361,13 @@ function RankingCard({
           )}
           <button
             type="button"
-            onClick={onClone}
+            onClick={onAction}
             disabled={cloning || item.isMine}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-at-accent text-white text-xs font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-            title={item.isMine ? '본인 전략은 클론할 필요가 없습니다' : '내 전략으로 복사'}
+            title={item.isMine ? '본인 전략입니다' : isPreset ? '프리셋 상세 보기 / 내 전략으로 추가' : '내 전략으로 복사'}
           >
             {cloning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-            {item.isMine ? '내 전략' : '내 전략으로 복사'}
+            {item.isMine ? '내 전략' : isPreset ? '프리셋 상세' : '내 전략으로 복사'}
           </button>
         </div>
       </div>
