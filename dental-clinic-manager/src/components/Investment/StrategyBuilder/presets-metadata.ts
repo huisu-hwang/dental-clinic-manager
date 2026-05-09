@@ -238,4 +238,79 @@ export const PRESET_METADATA: Record<string, PresetMetadata> = {
     cons: ['횡보장 가짜 신호 多', '즉각 반전 시 손실'],
     source: 'Gerald Appel — MACD 변형',
   },
+
+  'rsi-rebound-cross': {
+    longDescription:
+      'RSI(14) 가 30 이하 → 30 이상으로 올라오는 정확한 시점에 매수, 70 이상 → 70 이하로 내려오는 시점에 매도. 단순 "RSI < 30 이면 매수" 와의 차이는 한 번 통과 후엔 다시 30 아래로 떨어졌다가 다시 올라와야 신호가 발생한다는 점. 같은 과매도 구간에서 매번 매수가 반복되는 현상 방지.',
+    bestFor: ['중간 변동성 종목', '횡보~약상승 구간', '시장 ETF'],
+    marketConditions: ['sideways', 'oversold-bounce'],
+    typicalHolding: '수일~3주',
+    pros: [
+      '임계값 통과 시점에 한 번만 발동 → 잦은 진입 방지',
+      '"바닥 확인 후 매수" 의 직관적 구현',
+      '단일 지표로 운용 가능',
+    ],
+    cons: [
+      '강한 하락 추세에서 30 통과 후 다시 급락 시 손절',
+      '과매도가 깊지 않으면(30 미터치) 평생 진입 안 함',
+      '단일 지표 의존',
+    ],
+    source: 'J. Welles Wilder (1978) RSI + Cross 시그널 응용',
+  },
+
+  // 🔢 피보나치 시리즈
+  'fib-ema-trend-8-21-55': {
+    longDescription:
+      '피보나치 수 8·21·55 를 EMA 기간으로 사용해 단기·중기·장기 추세를 동시에 점검. 세 EMA 가 EMA(8) > EMA(21) > EMA(55) 순서로 정렬되면 강한 상승 추세로 판단해 매수, 단기/중기 또는 중기/장기 라인이 하향 돌파하면 매도. Daryl Guppy 의 Multiple Moving Averages(MMA) 와 피보나치 비율 결합 변형.',
+    bestFor: ['장기 추세가 형성되는 대형 우량주', '지수 ETF', '강한 추세 보이는 성장주'],
+    marketConditions: ['weak-uptrend', 'strong-uptrend'],
+    typicalHolding: '1~3개월',
+    pros: [
+      '추세 정렬 확인으로 가짜 신호 ↓',
+      '피보나치 수가 시장 자연 주기에 부합한다는 가설',
+      '여러 시간대의 모멘텀을 동시 검증',
+    ],
+    cons: [
+      '횡보장에서 진입 신호가 거의 없음',
+      '추세 끝물 진입 위험 (3중 정렬 후엔 이미 충분히 상승)',
+      'EMA 후행성으로 진입이 늦음',
+    ],
+    source: 'Daryl Guppy "Trend Trading" + Robert Fischer "Fibonacci Applications" (1993)',
+  },
+  'fib-cross-13-55': {
+    longDescription:
+      '클래식 골든크로스(SMA 20/50) 의 피보나치 변형. SMA(13) 이 SMA(55) 를 상향 돌파 시 매수, 하향 돌파(데드크로스) 시 매도. 13·55 조합은 20·50 보다 노이즈가 적어 더 의미있는 추세 전환만 포착하는 경향이 있다. 일봉/주봉 모두 적용 가능.',
+    bestFor: ['추세 명확한 대형주', '지수 ETF', '저변동성 우량주'],
+    marketConditions: ['weak-uptrend', 'strong-uptrend'],
+    typicalHolding: '2~6개월',
+    pros: [
+      '20/50 골든크로스보다 가짜 신호 적음',
+      '단순한 진입/청산 규칙',
+      '심리적으로 따르기 쉬움',
+    ],
+    cons: [
+      '강한 추세 반전 시 진입/이탈 매우 늦음',
+      '거래 빈도가 낮아 횡보장 활용 어려움',
+      '큰 손절 폭 (장기 추세 전제)',
+    ],
+    source: 'Robert Fischer (1993, "Fibonacci Applications and Strategies for Traders")',
+  },
+  'fib-rsi-retracement': {
+    longDescription:
+      'RSI 의 임계값을 단순 30/70 대신 피보나치 황금비 38.2/61.8 로 적용. RSI(13, 피보나치 기간) 가 38.2 이하로 떨어지면 황금 되돌림 영역으로 보고 매수, 61.8 위로 올라가면 매도. Constance Brown 이 제안한 RSI 의 피보나치 영역 분석 응용. 횡보~약상승장에서 매매 빈도가 적당히 발생하는 균형형 평균 회귀 전략.',
+    bestFor: ['중대형 변동성 종목', '횡보 또는 약한 추세 시장', '시장 ETF'],
+    marketConditions: ['sideways', 'oversold-bounce', 'weak-uptrend'],
+    typicalHolding: '1~4주',
+    pros: [
+      '엄격한 30/70 보다 진입 기회 많음',
+      '피보나치 비율의 자연 회귀 가설',
+      '단순 RSI 1지표로 운용 가능',
+    ],
+    cons: [
+      '강한 하락 추세에서 연속 손절',
+      '단일 지표 의존 — 거래량/추세 미고려',
+      '임계값 선택의 자의성',
+    ],
+    source: 'Constance Brown (1999, "Technical Analysis for the Trading Professional")',
+  },
 }

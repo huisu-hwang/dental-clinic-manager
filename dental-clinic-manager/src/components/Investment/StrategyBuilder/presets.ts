@@ -1352,4 +1352,182 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       maxHoldingDays: 14,
     },
   },
+
+  // ============================================
+  // 🔢 피보나치 수열 기반 전략 — 8 / 13 / 21 / 34 / 55 / 89 시퀀스 활용
+  // 피보나치 비율(38.2%, 50%, 61.8%) 또는 피보나치 수를 기간(period)으로 사용.
+  // ============================================
+
+  {
+    id: 'fib-ema-trend-8-21-55',
+    name: '🔢 피보나치 EMA 추세 정렬 (8/21/55)',
+    description: '피보나치 수 8·21·55 EMA가 단→중→장기 순서로 정렬되어 강한 추세를 형성할 때 매수, 단기 EMA가 중기 EMA를 하향 돌파 시 매도',
+    indicators: [
+      { id: 'EMA_8', type: 'EMA', params: { period: 8 } },
+      { id: 'EMA_21', type: 'EMA', params: { period: 21 } },
+      { id: 'EMA_55', type: 'EMA', params: { period: 55 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // EMA(8) > EMA(21): 단기가 중기 위
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'EMA_8' },
+          operator: '>',
+          right: { type: 'indicator', id: 'EMA_21' },
+        },
+        // EMA(21) > EMA(55): 중기가 장기 위 — 추세 정렬 완성
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'EMA_21' },
+          operator: '>',
+          right: { type: 'indicator', id: 'EMA_55' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        // 단기 EMA 가 중기 EMA 를 하향 돌파 — 추세 약화 시그널
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'EMA_8' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'EMA_21' },
+        },
+        // 중기 EMA 가 장기 EMA 를 하향 돌파 — 추세 종료
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'EMA_21' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'EMA_55' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 6,
+      takeProfitPercent: 18,
+      maxHoldingDays: 60,
+    },
+  },
+
+  {
+    id: 'fib-cross-13-55',
+    name: '🔢 피보나치 크로스 (13/55)',
+    description: '클래식 골든크로스의 피보나치 변형 — SMA(13)이 SMA(55)를 상향 돌파 시 매수, 하향 돌파 시 매도. 20/50 보다 노이즈가 적고 의미있는 전환점 포착',
+    indicators: [
+      { id: 'SMA_13', type: 'SMA', params: { period: 13 } },
+      { id: 'SMA_55', type: 'SMA', params: { period: 55 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_13' },
+          operator: 'crossOver',
+          right: { type: 'indicator', id: 'SMA_55' },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'SMA_13' },
+          operator: 'crossUnder',
+          right: { type: 'indicator', id: 'SMA_55' },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 7,
+      takeProfitPercent: 20,
+      maxHoldingDays: 90,
+    },
+  },
+
+  {
+    id: 'rsi-rebound-cross',
+    name: 'RSI 임계값 반등 매매 (30/70 통과)',
+    description: 'RSI(14)가 30 이하에서 30 이상으로 올라오는 순간 매수, 70 이상에서 70 이하로 내려오는 순간 매도. 단순 RSI<30/>70 비교와 달리 임계값 통과 시점에서 단 한 번만 신호 발생 — 가짜 진입/청산 ↓',
+    indicators: [
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // RSI 가 30 을 상향 돌파 — 과매도 → 회복 전환점
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: 'crossOver',
+          right: { type: 'constant', value: 30 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        // RSI 가 70 을 하향 돌파 — 과매수 → 조정 전환점
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: 'crossUnder',
+          right: { type: 'constant', value: 70 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 12,
+      maxHoldingDays: 30,
+    },
+  },
+
+  {
+    id: 'fib-rsi-retracement',
+    name: '🔢 피보나치 RSI 되돌림 (38.2 / 61.8)',
+    description: 'RSI(13, 피보나치 기간)가 38.2 황금비 이하로 떨어지면 매수, 61.8 황금비 위로 올라가면 매도. 단순 30/70보다 정교한 되돌림 영역 포착',
+    indicators: [
+      { id: 'RSI_13', type: 'RSI', params: { period: 13 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_13' },
+          operator: '<',
+          right: { type: 'constant', value: 38.2 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_13' },
+          operator: '>',
+          right: { type: 'constant', value: 61.8 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 12,
+      maxHoldingDays: 30,
+    },
+  },
 ]
