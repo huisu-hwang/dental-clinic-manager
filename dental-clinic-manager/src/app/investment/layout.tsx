@@ -21,6 +21,7 @@ import {
   Brain,
   Users,
   Gavel,
+  Trophy,
 } from 'lucide-react'
 import type { InvestmentTab } from '@/types/investment'
 import Footer from '@/components/Layout/Footer'
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'strategy', label: '전략 관리', icon: Target, href: '/investment/strategy' },
   { id: 'daytrading', label: '단타 (분봉)', icon: Zap, href: '/investment/daytrading' },
   { id: 'compare', label: '전략 비교', icon: GitCompare, href: '/investment/compare' },
+  { id: 'rankings', label: '전략 랭킹', icon: Trophy, href: '/investment/rankings' },
   { id: 'screener', label: '종목 스크리너', icon: Search, href: '/investment/screener' },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain, href: '/investment/smart-money' },
   { id: 'auction', label: '부동산 경매', icon: Gavel, href: '/investment/auction' },
