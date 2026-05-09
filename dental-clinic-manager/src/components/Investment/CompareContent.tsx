@@ -219,10 +219,21 @@ function LiveCompareSection() {
     [strategies, market]
   )
 
-  // 프리셋 전략 (단타 제외 = 일봉 swing)
+  // 사용자가 이미 내 전략으로 저장(클론)한 프리셋 ID 집합 — 프리셋 목록에서 중복 제거용
+  const clonedPresetIds = useMemo(
+    () => new Set(
+      strategies
+        .filter(s => s.target_market === market && s.source_preset_id)
+        .map(s => s.source_preset_id as string)
+    ),
+    [strategies, market]
+  )
+
+  // 프리셋 전략 (단타 제외 + 사용자가 이미 저장한 프리셋 제외)
+  // 같은 로직의 전략을 user/preset 양쪽에서 보여 전체 선택 시 중복 실행되는 문제 방지.
   const presetItems = useMemo<SelectableItem[]>(
     () => PRESET_STRATEGIES
-      .filter(p => !DAYTRADING_PRESET_IDS.has(p.id))
+      .filter(p => !DAYTRADING_PRESET_IDS.has(p.id) && !clonedPresetIds.has(p.id))
       .map((p: PresetStrategy) => ({
         key: `preset:${p.id}`,
         statsKey: `preset:${p.id}`,
@@ -237,7 +248,7 @@ function LiveCompareSection() {
           riskSettings: p.riskSettings,
         },
       })),
-    []
+    [clonedPresetIds]
   )
 
   const allItems = useMemo(() => [...userItems, ...presetItems], [userItems, presetItems])
@@ -1641,6 +1652,22 @@ export function CompareResultsView({
     return arr
   }, [results, sortKey, sortDir])
 
+  // 종목별 B&H 수익률 — 같은 종목의 결과들 중 첫 유효값 사용. baseline 행 렌더용.
+  const bhBaseline = useMemo(() => {
+    const arr: Array<{ ticker: string; name: string; totalReturn: number | null }> = []
+    for (const t of tickers) {
+      const found = results.find(
+        (r) => r.ticker === t.ticker && !r.error && r.buyHold && typeof r.buyHold.totalReturn === 'number',
+      )
+      arr.push({
+        ticker: t.ticker,
+        name: t.name || t.ticker,
+        totalReturn: found?.buyHold?.totalReturn ?? null,
+      })
+    }
+    return arr
+  }, [results, tickers])
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
     else { setSortKey(key); setSortDir(key === 'mdd' ? 'asc' : 'desc') }
@@ -1734,6 +1761,39 @@ export function CompareResultsView({
                 </tr>
               </thead>
               <tbody>
+                {/* 단순 보유(B&H) baseline 행 — 종목별 1행, 정렬과 무관하게 항상 맨 위 */}
+                {bhBaseline.map((bh) => {
+                  const val = bh.totalReturn
+                  const valCls = val == null
+                    ? 'text-at-text-weak'
+                    : val > 0
+                      ? 'text-red-500'
+                      : val < 0
+                        ? 'text-blue-500'
+                        : 'text-at-text-secondary'
+                  const colSpanRest = 6 // 승률/거래/Sharpe/MDD/PF + B&H 컬럼 합계
+                  return (
+                    <tr key={`bh-${bh.ticker}`} className="border-t border-at-border bg-amber-50/40">
+                      <td className="px-2 py-2"></td>
+                      <td className="px-3 py-2 text-at-text-weak text-xs">기준</td>
+                      {tickers.length > 1 && (
+                        <td className="px-3 py-2 font-mono font-semibold text-at-text">{bh.ticker}</td>
+                      )}
+                      <td className="px-3 py-2 font-medium text-at-text">
+                        <span className="inline-flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3 text-amber-600" />
+                          단순 보유 (B&amp;H)
+                        </span>
+                      </td>
+                      <td className={`px-3 py-2 text-right font-mono font-semibold ${valCls}`}>
+                        {val == null ? '—' : `${val > 0 ? '+' : ''}${val.toFixed(2)}%`}
+                      </td>
+                      <td colSpan={colSpanRest} className="px-3 py-2 text-right text-at-text-weak text-xs">
+                        같은 기간 매수 후 보유했을 때의 수익률
+                      </td>
+                    </tr>
+                  )
+                })}
                 {sortedResults.map((r, i) => {
                   const color = COLORS[i % COLORS.length]
                   const colSpanWithTicker = tickers.length > 1 ? 8 : 7
