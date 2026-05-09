@@ -26,8 +26,8 @@ export function usePermissions() {
 
     let userPermissions: Permission[] = []
 
-    // 'master_admin'과 'owner'는 모든 권한을 가짐
-    if (user.role === 'master_admin' || user.role === 'owner') {
+    // 'owner'는 모든 권한을 가짐
+    if (user.role === 'owner') {
       userPermissions = Object.keys(PERMISSION_DESCRIPTIONS) as Permission[]
     } else if (user.permissions && user.permissions.length > 0) {
       // 사용자에게 직접 할당된 권한이 있으면 사용
@@ -76,8 +76,8 @@ export function usePermissions() {
     const required = tabPermissions[tabName]
     if (!required || required.length === 0) return true
 
-    // 'master_admin'과 'owner'는 모든 탭 접근 가능
-    if (user?.role === 'master_admin' || user?.role === 'owner') return true
+    // 'owner'는 모든 탭 접근 가능
+    if (user?.role === 'owner') return true
 
     // 필요한 권한 중 하나라도 있으면 접근 가능
     return required.some(p => permissions.has(p))
