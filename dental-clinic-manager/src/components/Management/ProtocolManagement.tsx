@@ -509,7 +509,7 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 type: 'protocol_review_requested',
                 title: '프로토콜 검토 요청',
                 content: `${userName}님이 "${editingProtocol.title}" 프로토콜의 검토를 요청했습니다`,
-                link: `/management?tab=protocols&review=${editingProtocol.id}`,
+                link: `/dashboard?tab=protocols&review=${editingProtocol.id}`,
                 reference_type: 'protocol_review',
                 reference_id: reviewResult.data.id,
               }))
