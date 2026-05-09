@@ -1,7 +1,12 @@
 'use client'
 
-import PortfolioContent from '@/components/Investment/PortfolioContent'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function PortfolioPage() {
-  return <PortfolioContent />
+export default function RedirectPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/dashboard?tab=investment&sub=portfolio')
+  }, [router])
+  return null
 }

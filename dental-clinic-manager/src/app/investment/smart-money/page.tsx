@@ -1,11 +1,12 @@
 'use client'
 
-import { SmartMoneyContent } from '@/components/Investment/SmartMoney/SmartMoneyContent'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function Page() {
-  return (
-    <div className="container mx-auto p-4">
-      <SmartMoneyContent />
-    </div>
-  )
+export default function RedirectPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/dashboard?tab=investment&sub=smart-money')
+  }, [router])
+  return null
 }

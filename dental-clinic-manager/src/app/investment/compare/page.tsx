@@ -1,7 +1,12 @@
 'use client'
 
-import CompareContent from '@/components/Investment/CompareContent'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function ComparePage() {
-  return <CompareContent />
+export default function RedirectPage() {
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/dashboard?tab=investment&sub=compare')
+  }, [router])
+  return null
 }

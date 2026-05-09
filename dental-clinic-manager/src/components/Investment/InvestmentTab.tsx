@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Link2, Target, TrendingUp, TrendingDown, Briefcase,
   Wallet, Activity, AlertCircle, OctagonX, Loader2,
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
-  Zap, GitCompare, Search, Brain, Users,
+  Zap, GitCompare, Search, Brain, Users, Trophy, Cpu,
 } from 'lucide-react'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
@@ -19,10 +20,14 @@ import CompareContent from './CompareContent'
 import ScreenerContent from './ScreenerContent'
 import { SmartMoneyContent } from './SmartMoney/SmartMoneyContent'
 import PsychologyContent from './Psychology/PsychologyContent'
+import RankingsContent from './RankingsContent'
+import RLModelsContent from './RLModelsContent'
 import StrategyBuilder from './StrategyBuilder/StrategyBuilder'
 import type { InvestmentStrategy } from '@/types/investment'
 
-type SubTab = 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener' | 'smart-money' | 'trading' | 'psychology' | 'portfolio'
+type SubTab =
+  | 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener'
+  | 'smart-money' | 'trading' | 'psychology' | 'rankings' | 'rl-models' | 'portfolio'
 
 const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
@@ -30,16 +35,56 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'strategy', label: '전략 관리', icon: Target },
   { id: 'daytrading', label: '단타 (분봉)', icon: Zap },
   { id: 'compare', label: '전략 비교', icon: GitCompare },
+  { id: 'rankings', label: '전략 랭킹', icon: Trophy },
   { id: 'screener', label: '종목 스크리너', icon: Search },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain },
   { id: 'trading', label: '자동매매', icon: TrendingUp },
   { id: 'psychology', label: '심리 분석', icon: Users },
+  { id: 'rl-models', label: 'RL 모델', icon: Cpu },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase },
 ]
 
+const SUB_TAB_IDS = new Set<SubTab>([
+  'dashboard', 'connect', 'strategy', 'daytrading', 'compare', 'screener',
+  'smart-money', 'trading', 'psychology', 'rankings', 'rl-models', 'portfolio',
+])
+
+function isSubTab(v: string | null): v is SubTab {
+  return v != null && SUB_TAB_IDS.has(v as SubTab)
+}
+
 export default function InvestmentTab() {
   const { user } = useAuth()
-  const [subTab, setSubTab] = useState<SubTab>('dashboard')
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  // URL ?sub= 파라미터에서 초기 서브탭 결정 (페이지 새로고침 / 직접 링크 시 유지)
+  const initialSub: SubTab = (() => {
+    const v = searchParams?.get('sub')
+    return isSubTab(v) ? v : 'dashboard'
+  })()
+  const [subTab, setSubTabState] = useState<SubTab>(initialSub)
+
+  // setSubTab — state 업데이트 + URL 동기화
+  const setSubTab = useCallback((next: SubTab) => {
+    setSubTabState(next)
+    const params = new URLSearchParams(Array.from(searchParams?.entries() ?? []))
+    params.set('tab', 'investment')
+    if (next === 'dashboard') params.delete('sub')
+    else params.set('sub', next)
+    const url = `${pathname}?${params.toString()}`
+    router.replace(url, { scroll: false })
+  }, [router, pathname, searchParams])
+
+  // 외부에서 ?sub= 변경 시(예: 다른 메뉴에서 redirect) 동기화
+  useEffect(() => {
+    const v = searchParams?.get('sub')
+    const next: SubTab = isSubTab(v) ? v : 'dashboard'
+    if (next !== subTab) setSubTabState(next)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   const [hasCredential, setHasCredential] = useState<boolean | null>(null)
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loading, setLoading] = useState(true)
@@ -242,6 +287,12 @@ export default function InvestmentTab() {
         )}
         {!inInlineView && subTab === 'psychology' && (
           <PsychologyContent />
+        )}
+        {!inInlineView && subTab === 'rankings' && (
+          <RankingsContent />
+        )}
+        {!inInlineView && subTab === 'rl-models' && (
+          <RLModelsContent />
         )}
         {!inInlineView && subTab === 'portfolio' && (
           <div className="max-w-md mx-auto text-center py-12">
