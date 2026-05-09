@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { requireInvestmentSubscription } from '@/lib/userSubscription'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { PRESET_STRATEGIES } from '@/components/Investment/StrategyBuilder/presets'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,8 +28,11 @@ type SortKey =
   | 'avgReturn' | 'bestReturn' | 'avgWinRate' | 'avgSharpe'
   | 'avgPF' | 'avgMDD' | 'totalTrades' | 'cloneCount'
 
-interface SharedStrategyRanking {
-  strategyId: string
+interface RankingItem {
+  /** 'shared' = 공유된 user strategy, 'preset' = 시스템 프리셋 */
+  type: 'shared' | 'preset'
+  strategyId?: string  // type='shared' 일 때
+  presetId?: string    // type='preset' 일 때
   name: string
   description: string | null
   targetMarket: 'KR' | 'US'
@@ -95,10 +99,6 @@ export async function GET(req: NextRequest) {
     clone_count: number | null
   }>
 
-  if (shared.length === 0) {
-    return NextResponse.json({ data: [], totalShared: 0 })
-  }
-
   // 2. 작성자 이름 매핑 (users.name)
   const userIds = Array.from(new Set(shared.map(s => s.user_id)))
   const { data: usersRaw } = await supabase
@@ -112,15 +112,10 @@ export async function GET(req: NextRequest) {
 
   // 3. 백테스트 통계 집계 — strategy_id 가 공유 전략 ID 인 모든 run
   const strategyIds = shared.map(s => s.id)
-  const { data: runsRaw } = await supabase
-    .from('backtest_runs')
-    .select('strategy_id, ticker, total_return, win_rate, max_drawdown, sharpe_ratio, profit_factor, total_trades, executed_at')
-    .in('strategy_id', strategyIds)
-    .eq('status', 'completed')
-    .limit(20000)
-
   type RunRow = {
-    strategy_id: string
+    strategy_id: string | null
+    preset_id?: string | null
+    market?: string | null
     ticker: string
     total_return: number | null
     win_rate: number | null
@@ -130,17 +125,28 @@ export async function GET(req: NextRequest) {
     total_trades: number | null
     executed_at: string | null
   }
-  const runs = (runsRaw ?? []) as RunRow[]
+
+  const runs: RunRow[] = []
+  if (strategyIds.length > 0) {
+    const { data: sharedRunsRaw } = await supabase
+      .from('backtest_runs')
+      .select('strategy_id, ticker, total_return, win_rate, max_drawdown, sharpe_ratio, profit_factor, total_trades, executed_at')
+      .in('strategy_id', strategyIds)
+      .eq('status', 'completed')
+      .limit(20000)
+    for (const r of (sharedRunsRaw ?? []) as RunRow[]) runs.push(r)
+  }
 
   const byStrategy = new Map<string, RunRow[]>()
   for (const r of runs) {
+    if (!r.strategy_id) continue
     const arr = byStrategy.get(r.strategy_id) ?? []
     arr.push(r)
     byStrategy.set(r.strategy_id, arr)
   }
 
-  // 4. 랭킹 항목 빌드
-  const items: SharedStrategyRanking[] = []
+  // 4. 랭킹 항목 빌드 — 우선 공유 user 전략
+  const items: RankingItem[] = []
   for (const s of shared) {
     const sRuns = byStrategy.get(s.id) ?? []
     if (sRuns.length < MIN_RUNS_FOR_RANKING) continue
@@ -162,6 +168,7 @@ export async function GET(req: NextRequest) {
     const authorAlias = anonymize(s.share_alias, userInfo?.name, userInfo?.hospital_name)
 
     items.push({
+      type: 'shared',
       strategyId: s.id,
       name: s.name,
       description: s.description,
@@ -184,6 +191,85 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  // 4b. 프리셋 전략 백테스트 집계 (시스템 프리셋, 모든 사용자 공통)
+  // backtest_runs.preset_id 로 식별. (preset_id, market) 별로 별도 항목 (시장에 따라 성과 다름).
+  const presetIdSet = new Set(PRESET_STRATEGIES.map(p => p.id))
+  let presetRunsQuery = supabase
+    .from('backtest_runs')
+    .select('preset_id, market, ticker, total_return, win_rate, max_drawdown, sharpe_ratio, profit_factor, total_trades, executed_at')
+    .not('preset_id', 'is', null)
+    .eq('status', 'completed')
+  if (market === 'KR' || market === 'US') {
+    presetRunsQuery = presetRunsQuery.eq('market', market)
+  }
+  const { data: presetRunsRaw } = await presetRunsQuery.limit(50000)
+
+  // (preset_id, market) → runs
+  const byPresetMarket = new Map<string, RunRow[]>()
+  for (const r of (presetRunsRaw ?? []) as RunRow[]) {
+    if (!r.preset_id || !presetIdSet.has(r.preset_id)) continue
+    const m = (r.market === 'KR' || r.market === 'US') ? r.market : null
+    if (!m) continue
+    const key = `${r.preset_id}|${m}`
+    const arr = byPresetMarket.get(key) ?? []
+    arr.push(r)
+    byPresetMarket.set(key, arr)
+  }
+
+  // 프리셋 클론 횟수 (user strategies 중 source_preset_id 카운트)
+  const { data: clonesRaw } = await supabase
+    .from('investment_strategies')
+    .select('source_preset_id')
+    .not('source_preset_id', 'is', null)
+  const cloneCountByPreset = new Map<string, number>()
+  for (const c of (clonesRaw ?? []) as Array<{ source_preset_id: string | null }>) {
+    if (!c.source_preset_id) continue
+    cloneCountByPreset.set(c.source_preset_id, (cloneCountByPreset.get(c.source_preset_id) ?? 0) + 1)
+  }
+
+  for (const [key, pRuns] of byPresetMarket) {
+    if (pRuns.length < MIN_RUNS_FOR_RANKING) continue
+    const [presetId, mk] = key.split('|')
+    const preset = PRESET_STRATEGIES.find(p => p.id === presetId)
+    if (!preset) continue
+
+    const returns = pRuns.map(r => Number(r.total_return ?? 0))
+    const winRates = pRuns.map(r => Number(r.win_rate ?? 0))
+    const sharpes = pRuns.map(r => Number(r.sharpe_ratio ?? 0))
+    const mdds = pRuns.map(r => Number(r.max_drawdown ?? 0))
+    const pfs = pRuns.map(r => Number(r.profit_factor ?? 0)).filter(v => isFinite(v) && v > 0)
+    const trades = pRuns.reduce((sum, r) => sum + Number(r.total_trades ?? 0), 0)
+    const tickers = new Set(pRuns.map(r => r.ticker))
+    const lastRunAt = pRuns
+      .map(r => r.executed_at)
+      .filter((x): x is string => Boolean(x))
+      .sort()
+      .pop() ?? null
+
+    items.push({
+      type: 'preset',
+      presetId,
+      name: preset.name,
+      description: preset.description,
+      targetMarket: mk as 'KR' | 'US',
+      authorAlias: '공식 프리셋',
+      sharedAt: null,
+      cloneCount: cloneCountByPreset.get(presetId) ?? 0,
+      isMine: false,
+      runs: pRuns.length,
+      tickerCount: tickers.size,
+      avgReturn: avg(returns),
+      bestReturn: returns.length > 0 ? Math.max(...returns) : 0,
+      worstReturn: returns.length > 0 ? Math.min(...returns) : 0,
+      avgWinRate: avg(winRates),
+      avgSharpe: avg(sharpes),
+      avgMDD: avg(mdds),
+      avgPF: avg(pfs),
+      totalTrades: trades,
+      lastRunAt,
+    })
+  }
+
   // 5. 정렬 (sortBy 기준 내림차순. avgMDD 만 오름차순(낮을수록 좋음))
   const dir = sortBy === 'avgMDD' ? 1 : -1
   items.sort((a, b) => {
@@ -192,10 +278,16 @@ export async function GET(req: NextRequest) {
     return (av - bv) * dir
   })
 
+  const presetItemsCount = items.filter(i => i.type === 'preset').length
+  const sharedItemsCount = items.filter(i => i.type === 'shared').length
+
   return NextResponse.json({
     data: items.slice(0, limit),
     totalShared: shared.length,
+    totalPresets: PRESET_STRATEGIES.length,
     rankedCount: items.length,
+    sharedItemsCount,
+    presetItemsCount,
   })
 }
 
