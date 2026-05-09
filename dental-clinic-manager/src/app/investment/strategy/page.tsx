@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Target, Plus, Play, Pause, Trash2, BarChart3, Edit3 } from 'lucide-react'
+import { Target, Plus, Play, Pause, Trash2, BarChart3, Edit3, Share2, Lock } from 'lucide-react'
 import Link from 'next/link'
 import type { InvestmentStrategy } from '@/types/investment'
 import BacktestPanel from '@/components/Investment/BacktestPanel'
@@ -34,6 +34,21 @@ export default function StrategyListPage() {
       body: JSON.stringify({ id, isActive: !isActive }),
     })
     if (res.ok) loadStrategies()
+  }
+
+  const toggleShare = async (id: string, currentlyShared: boolean) => {
+    const next = !currentlyShared
+    if (next && !confirm('이 전략을 공유하시겠습니까?\n공유하면 다른 구독자가 전략 랭킹에서 이 전략을 보고 자기 계정으로 클론할 수 있습니다. (작성자 이름은 마스킹되어 표시)')) return
+    const res = await fetch('/api/investment/strategies/share', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ strategyId: id, shared: next }),
+    })
+    if (res.ok) loadStrategies()
+    else {
+      const json = await res.json().catch(() => ({}))
+      alert(json.error || '공유 상태 변경 실패')
+    }
   }
 
   const deleteStrategy = async (id: string) => {
@@ -119,6 +134,12 @@ export default function StrategyListPage() {
                     <span className="px-2 py-0.5 text-xs rounded-full bg-at-accent-light text-at-accent font-medium">
                       {MARKET_LABELS[s.target_market] || s.target_market}
                     </span>
+                    {s.is_shared && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700 font-medium inline-flex items-center gap-1">
+                        <Share2 className="w-3 h-3" />
+                        공유 중{(s.clone_count ?? 0) > 0 ? ` · ${s.clone_count}회 클론됨` : ''}
+                      </span>
+                    )}
                   </div>
                   {s.description && (
                     <p className="text-xs text-at-text-secondary mt-1 break-words">{s.description}</p>
@@ -150,6 +171,17 @@ export default function StrategyListPage() {
                     title={s.is_active ? '비활성화' : '활성화'}
                   >
                     {s.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => toggleShare(s.id, Boolean(s.is_shared))}
+                    className={`p-2 rounded-lg transition-colors ${
+                      s.is_shared
+                        ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                        : 'text-at-text-secondary hover:bg-at-bg'
+                    }`}
+                    title={s.is_shared ? '공유 중지 (랭킹에서 숨김)' : '전략 공유 (랭킹에 노출)'}
+                  >
+                    {s.is_shared ? <Share2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                   </button>
                   <button
                     onClick={() => deleteStrategy(s.id)}

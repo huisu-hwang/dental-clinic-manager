@@ -202,6 +202,14 @@ export interface InvestmentStrategy {
   updated_at: string
   /** 프리셋에서 생성된 경우 원본 프리셋 ID (통계 집계 시 같은 그룹으로 합산) */
   source_preset_id?: string | null
+  /** 공유 전략 여부 — 다른 사용자가 랭킹에서 보고 클론할 수 있음 */
+  is_shared?: boolean
+  /** 최초 공유 시각 */
+  shared_at?: string | null
+  /** 공유 시 표시할 작성자 별명 */
+  share_alias?: string | null
+  /** 다른 사용자가 이 전략을 클론한 횟수 */
+  clone_count?: number
 }
 
 export interface StrategyInput {
