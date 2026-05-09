@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { AuctionDetailHeader } from '@/components/Investment/Auction/AuctionDetailHeader'
 import { OverviewTab } from '@/components/Investment/Auction/tabs/OverviewTab'
-import type { AuctionItem, MarketPrice } from '@/types/auction'
+import { SimulatorTab } from '@/components/Investment/Auction/tabs/SimulatorTab'
+import type { AuctionItem, MarketPrice, SimulatorInput } from '@/types/auction'
 
 interface DetailResponse {
   item: AuctionItem
@@ -60,7 +61,25 @@ export default function AuctionDetailPage({ params }: { params: Promise<{ itemId
 
       <div>
         {tab === 'overview'    && <OverviewTab item={data.item} market={data.market} />}
-        {tab === 'simulator'   && <div className="text-at-text-secondary text-sm py-8 text-center">시뮬레이터 탭 (Task 6에서 구현)</div>}
+        {tab === 'simulator' && (
+          <SimulatorTab
+            item={data.item}
+            market={data.market}
+            onSave={async (input: SimulatorInput) => {
+              await fetch('/api/auction/favorites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  itemId: data.item.id,
+                  target_bid_price: input.bid_price,
+                  expected_extra_cost: input.repair_cost + input.unpaid_dues,
+                  expected_monthly_rent: input.monthly_rent,
+                }),
+              })
+              alert('관심물건에 저장되었습니다.')
+            }}
+          />
+        )}
         {tab === 'rights'      && <div className="text-at-text-secondary text-sm py-8 text-center">권리분석 탭 (Task 7에서 구현)</div>}
         {tab === 'history'     && <div className="text-at-text-secondary text-sm py-8 text-center">이력·통계 탭 (Task 8에서 구현)</div>}
         {tab === 'attachments' && <div className="text-at-text-secondary text-sm py-8 text-center">첨부 탭 (Task 8에서 구현)</div>}
