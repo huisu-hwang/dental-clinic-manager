@@ -1,0 +1,153 @@
+import 'dotenv/config'
+import { scrapeAllLists } from '../scrapers/courtAuctionListScraper.js'
+import { scrapeDetails } from '../scrapers/courtAuctionDetailScraper.js'
+import { downloadPdf } from '../scrapers/pdfDownloader.js'
+import { extractRightsFromPdf } from '../parsers/rightsExtractor.js'
+import { fetchTrades, type MolitKind } from '../matchers/molitTradeClient.js'
+import { matchMarketPrice } from '../matchers/marketPriceMatcher.js'
+import { supabase } from '../lib/supabase.js'
+import { log } from '../lib/logger.js'
+import { runDdayAlerts } from './ddayAlerts.js'
+import { runFilterMatchAlerts } from './filterMatchAlerts.js'
+
+const KIND_MAP: Record<string, MolitKind | null> = {
+  apt: 'apt', officetel: 'officetel', villa: 'villa',
+  house: null, commercial: null, land: null, factory: null, forest: null, other: null,
+}
+
+async function main() {
+  const startedAt = new Date()
+  log.info('daily_scrape_start', { startedAt: startedAt.toISOString() })
+
+  const listItems = await scrapeAllLists()
+  if (listItems.length === 0) {
+    log.error('daily_scrape_zero_items')
+    await notifyOps('경매 데이터 0건 — 사이트 차단/구조변경 의심')
+    process.exit(1)
+  }
+
+  const details = await scrapeDetails(listItems)
+
+  for (const d of details) {
+    const discount = (d.appraisalPrice - d.minBidPrice) / d.appraisalPrice * 100
+    const { data: itemRow, error } = await supabase
+      .from('auction_items')
+      .upsert({
+        case_number: d.caseNumber,
+        item_number: d.itemNumber,
+        court_name: d.courtName,
+        court_code: d.courtCode || '00',
+        property_type: d.propertyType,
+        address_road: d.addressRoad,
+        address_jibun: d.addressJibun,
+        sido: d.sido,
+        sigungu: d.sigungu,
+        eupmyeondong: d.eupmyeondong,
+        pnu: d.pnu,
+        land_area_m2: d.landAreaM2,
+        building_area_m2: d.buildingAreaM2,
+        floor: d.floor,
+        total_floors: d.totalFloors,
+        building_year: d.buildingYear,
+        appraisal_price: d.appraisalPrice,
+        min_bid_price: d.minBidPrice,
+        bid_deposit: d.bidDeposit,
+        failure_count: d.failureCount,
+        discount_rate: Math.round(discount * 100) / 100,
+        next_auction_date: d.nextAuctionDate,
+        status: d.status,
+        sold_price: d.soldPrice,
+        sold_at: d.soldAt,
+        source_url: d.sourceUrl,
+        notice_pdf_url: d.noticePdfUrl,
+        appraisal_pdf_url: d.appraisalPdfUrl,
+        photos: d.photos,
+        last_synced_at: new Date().toISOString(),
+      }, { onConflict: 'court_code,case_number,item_number' })
+      .select('id')
+      .single()
+    if (error || !itemRow) { log.warn('upsert_failed', { caseNumber: d.caseNumber, error: error?.message }); continue }
+    const itemId = itemRow.id
+
+    if (d.noticePdfUrl) {
+      const pdfPath = await downloadPdf(d.noticePdfUrl, `${d.courtCode || '00'}-${d.caseNumber}-${d.itemNumber}-notice`)
+      if (pdfPath) {
+        const rights = await extractRightsFromPdf(pdfPath)
+        await supabase.from('auction_rights_analysis').upsert({
+          item_id: itemId,
+          base_right_type: rights.baseRightType,
+          base_right_date: rights.baseRightDate,
+          has_senior_tenant: rights.hasSeniorTenant,
+          tenant_count: rights.tenantCount,
+          total_deposit: rights.totalDeposit,
+          unsettled_taxes: rights.unsettledTaxes,
+          risk_flags: rights.riskFlags,
+          parser_version: rights.parserVersion,
+          parse_status: rights.parseStatus,
+          raw_text: rights.rawText,
+          parsed_at: new Date().toISOString(),
+        }, { onConflict: 'item_id' })
+      }
+    }
+
+    const kind = KIND_MAP[d.propertyType]
+    if (kind && d.sigungu && d.buildingAreaM2) {
+      const lawdCd = await resolveLawdCd(d.sido, d.sigungu)
+      if (lawdCd) {
+        const ym1 = ymOffset(0)
+        const ym2 = ymOffset(-1)
+        const ym3 = ymOffset(-2)
+        const trades = [
+          ...await fetchTrades(kind, lawdCd, ym1),
+          ...await fetchTrades(kind, lawdCd, ym2),
+          ...await fetchTrades(kind, lawdCd, ym3),
+        ]
+        const result = matchMarketPrice(
+          { complexName: d.addressJibun?.split(' ').slice(-1)[0] ?? null, areaM2: d.buildingAreaM2 },
+          trades,
+          new Date().toISOString().slice(0, 10)
+        )
+        await supabase.from('auction_market_prices').upsert({
+          item_id: itemId,
+          source: `molit_${kind}_trade`,
+          matched_complex: result.matched_complex,
+          median_price_3m: result.median_price_3m,
+          trade_count_3m: result.trade_count_3m,
+          median_price_12m: result.median_price_12m,
+          last_trade_date: result.last_trade_date,
+          match_confidence: result.match_confidence,
+          fetched_at: new Date().toISOString(),
+        }, { onConflict: 'item_id,source' })
+      }
+    }
+  }
+
+  await runDdayAlerts()
+  await runFilterMatchAlerts()
+
+  const elapsed = Date.now() - startedAt.getTime()
+  log.info('daily_scrape_done', { elapsedMs: elapsed, itemsProcessed: details.length })
+}
+
+function ymOffset(months: number): string {
+  const d = new Date(); d.setMonth(d.getMonth() + months)
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// MVP placeholder — real implementation needs LAWD_CD lookup table.
+// Returning null causes market matching to be skipped (which is acceptable for MVP).
+async function resolveLawdCd(_sido: string | null, _sigungu: string | null): Promise<string | null> {
+  return null
+}
+
+async function notifyOps(message: string) {
+  const url = process.env.SLACK_WEBHOOK_URL
+  if (!url) return
+  await fetch(url, { method: 'POST', body: JSON.stringify({ text: `[auction-worker] ${message}` }), headers: { 'Content-Type': 'application/json' } }).catch(() => {})
+}
+
+main().catch(e => {
+  log.error('daily_scrape_uncaught', { error: String(e) })
+  notifyOps(`치명적 오류: ${e}`)
+  process.exit(1)
+})
