@@ -15,6 +15,10 @@
       "schedule": "30 15 * * *"
     },
     {
+      "path": "/api/cron/telegram-summary",
+      "schedule": "0 1 * * *"
+    },
+    {
       "path": "/api/cron/generate-approved-posts",
       "schedule": "0 18 * * *"
     },
