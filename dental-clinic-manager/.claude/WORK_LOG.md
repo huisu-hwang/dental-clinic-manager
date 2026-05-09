@@ -10,6 +10,38 @@
 
 ---
 
+## 2026-05-09 [기능 개발] 부동산 경매 투자 분석 도구 (MVP)
+
+**키워드:** #investment #auction #real-estate #ai-analysis #scraping-worker #court-auction #molit
+
+### 📋 작업 내용
+- 투자 카테고리에 `/investment/auction` 추가 (목록/상세 5탭/관심물건)
+- ROI 3단계 다층 모델: 1차(객관 — 할인율/유찰/D-day/㎡당가) / 2차(시세 매칭) / 3차(임대 시뮬)
+- DB 7개 테이블: `auction_items`, `auction_history`, `auction_market_prices`, `auction_rights_analysis`, `auction_ai_comments`, `auction_user_favorites`, `auction_user_filters`
+- AI 권리분석 코멘트 — Claude Haiku 4.5 + 24h DB 캐시 + prompt caching (사용자 클릭 트리거)
+- 5개 신규 API: `/api/auction/items`, `/[itemId]`, `/[itemId]/complex-stats`, `/favorites`, `/ai-comment/[itemId]`
+- 권한 3종 (auction_view/favorite/ai) + 메뉴(투자 사이드바 + 중앙 menuConfig)
+- Mac mini M4 워커 (`scraping-worker/auction/`): Playwright 스크래퍼 + PDF 파서 + 국토부 OpenAPI 시세 매칭 + cron 진입점 (TDD 10개 테스트 통과)
+
+### ✅ 검증
+- `npm run build` 통과 (auction 라우트 8개 모두 등록)
+- `npm run check:permissions` 통과 (Permission union 92 / GROUPS 92 / DESCRIPTIONS 92)
+- `roiCalculator` 21개 단위 테스트 통과
+- 워커 `noticeParser`/`marketPriceMatcher` 10개 단위 테스트 통과
+- develop 푸시 → main PR #544 머지 (`9dfcf27a`)
+
+### 🔍 후속 작업 (Phase 2)
+- `resolveLawdCd` placeholder — 행정안전부 OpenAPI 매핑 테이블 추가 필요 (현재 시세 매칭 스킵)
+- courtauction.go.kr 셀렉터 캘리브레이션 (Mac mini M4 첫 실행 시)
+- 지도 클러스터링 / 임장 노트 / 공동투자 메모 / 토지 시세 추정
+
+### 💡 배운 점
+- 한국 법원경매 OpenAPI는 사실상 부재 → courtauction.go.kr 자체 스크래핑 + 국토부 OpenAPI 보조 하이브리드가 시장 표준
+- ROI 종류별 정확도 차이를 신뢰도(High/Mid/Low)로 명시 노출 → 사용자 오해 방지
+- AI 권리분석은 룰 기반 1차 추출 + 사용자 클릭 시 보강 → 비용 통제 + 의도된 호출만 발생
+
+---
+
 ## 2026-05-06 [기능 개발] 종목 상세 모달 + 즐겨찾기 시스템
 
 **키워드:** #investment #favorites #ticker-info #screener #yahoo-finance2 #broadcast-channel
