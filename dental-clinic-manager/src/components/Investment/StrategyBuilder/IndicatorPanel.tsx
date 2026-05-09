@@ -131,11 +131,12 @@ export default function IndicatorPanel({ indicators, onChange }: Props) {
       alert('지표는 최대 8개까지 추가 가능합니다')
       return
     }
-    const id = generateId(template.type, template.defaultParams)
-    // 중복 체크
-    if (indicators.some(i => i.id === id)) {
-      alert('이미 추가된 지표입니다')
-      return
+    // 동일 type 추가 시 ID 충돌 자동 회피 (RSI_14 → RSI_14_2 → ...)
+    let baseId = generateId(template.type, template.defaultParams)
+    let id = baseId
+    let seq = 2
+    while (indicators.some(i => i.id === id)) {
+      id = `${baseId}_${seq++}`
     }
     onChange([...indicators, { id, type: template.type, params: { ...template.defaultParams } }])
     setShowAdd(false)
@@ -146,11 +147,11 @@ export default function IndicatorPanel({ indicators, onChange }: Props) {
   }
 
   const updateParam = (id: string, key: string, value: number) => {
+    // ⚠️ ID 는 변경하지 않음 — 매수/매도 조건이 indicator.id 를 참조하므로
+    // params 변경 때마다 ID 가 바뀌면 조건 ref 가 끊겨 시그널이 동작 안 함 (사용자 보고 RSI 버그).
     onChange(indicators.map(ind => {
       if (ind.id !== id) return ind
-      const newParams = { ...ind.params, [key]: value }
-      const newId = generateId(ind.type, newParams)
-      return { ...ind, id: newId, params: newParams }
+      return { ...ind, params: { ...ind.params, [key]: value } }
     }))
   }
 

@@ -11,7 +11,9 @@ import RecentTickersButtons from './RecentTickersButtons'
 import FavoritesButtons from './FavoritesButtons'
 import StrategyStatsBlock, { type StrategyBacktestStats } from './StrategyStatsBlock'
 import { useRecentTickers } from '@/hooks/useRecentTickers'
-import type { InvestmentStrategy, Market } from '@/types/investment'
+import type {
+  InvestmentStrategy, Market, ConditionGroup, ConditionLeaf, IndicatorRef, ConstantRef,
+} from '@/types/investment'
 
 interface WatchlistItem {
   id: string
@@ -226,9 +228,12 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
         </div>
       )}
 
-      {/* 확장 영역: 감시 종목 관리 */}
+      {/* 확장 영역: 전략 세부 + 감시 종목 관리 */}
       {expanded && (
         <div className="mt-4 pt-4 border-t border-at-border space-y-4">
+          {/* 전략 세부 내용 — 지표/매수조건/매도조건/리스크 */}
+          <StrategyDetailsSummary strategy={strategy} />
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-semibold text-at-text">감시 종목 (자동매매 대상)</h4>
@@ -297,6 +302,138 @@ export default function StrategyCard({ strategy, hasCredential, onRefresh, onBac
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ============================================
+// 전략 세부 내용 요약 — 지표 / 매수조건 / 매도조건 / 리스크
+// ============================================
+
+const OPERATOR_LABELS: Record<string, string> = {
+  '>': '>', '<': '<', '>=': '≥', '<=': '≤', '==': '=', '!=': '≠',
+  'crosses_above': '↗ 상향돌파', 'crosses_below': '↘ 하향돌파',
+}
+
+function formatRef(ref: IndicatorRef | ConstantRef): string {
+  if (ref.type === 'constant') return String(ref.value)
+  return ref.property ? `${ref.id}.${ref.property}` : ref.id
+}
+
+function ConditionTreeSummary({ tree, depth = 0 }: { tree: ConditionGroup; depth?: number }) {
+  if (!tree.conditions || tree.conditions.length === 0) {
+    return <p className="text-[11px] text-at-text-weak italic">조건 없음</p>
+  }
+  const opLabel = tree.operator === 'AND' ? '모두 충족 (AND)' : '하나라도 충족 (OR)'
+  const opCls = tree.operator === 'AND' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+  return (
+    <div className={`pl-2 ${depth > 0 ? 'border-l border-at-border' : ''} space-y-1`}>
+      <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded ${opCls} font-medium`}>{opLabel}</span>
+      {tree.conditions.map((node, i) => {
+        if (node.type === 'leaf') {
+          const leaf = node as ConditionLeaf
+          const left = formatRef(leaf.left)
+          const right = formatRef(leaf.right)
+          const op = OPERATOR_LABELS[leaf.operator] || leaf.operator
+          return (
+            <div key={i} className="font-mono text-[11px] bg-white rounded px-2 py-1 border border-at-border">
+              <span className="text-at-text">{left}</span>
+              <span className="mx-1.5 text-at-accent font-semibold">{op}</span>
+              <span className="text-at-text">{right}</span>
+            </div>
+          )
+        }
+        return <ConditionTreeSummary key={i} tree={node} depth={depth + 1} />
+      })}
+    </div>
+  )
+}
+
+function StrategyDetailsSummary({ strategy }: { strategy: InvestmentStrategy }) {
+  const indicators = (strategy.indicators ?? []) as Array<{ id: string; type: string; params?: Record<string, number> }>
+  const buy = (strategy.buy_conditions ?? { type: 'group', operator: 'AND', conditions: [] }) as ConditionGroup
+  const sell = (strategy.sell_conditions ?? { type: 'group', operator: 'AND', conditions: [] }) as ConditionGroup
+  const risk = strategy.risk_settings ?? {}
+  const rk = risk as { stopLossPercent?: number; takeProfitPercent?: number; maxHoldingDays?: number; maxPositionSizePercent?: number }
+
+  return (
+    <div className="bg-at-surface-alt rounded-xl p-3 space-y-3">
+      <h4 className="text-sm font-semibold text-at-text">⚙️ 전략 세부 내용</h4>
+
+      {/* 지표 */}
+      <div>
+        <p className="text-xs font-semibold text-at-text-secondary mb-1.5">📊 기술 지표 ({indicators.length}개)</p>
+        {indicators.length === 0 ? (
+          <p className="text-[11px] text-at-text-weak italic">지표 없음</p>
+        ) : (
+          <ul className="space-y-1">
+            {indicators.map((ind) => (
+              <li key={ind.id} className="font-mono text-[11px] bg-white rounded px-2 py-1 border border-at-border">
+                <span className="font-semibold text-at-accent">{ind.type}</span>
+                <span className="mx-1.5 text-at-text-weak">→</span>
+                <span className="text-at-text">id={ind.id}</span>
+                {ind.params && Object.keys(ind.params).length > 0 && (
+                  <span className="ml-2 text-at-text-secondary">
+                    ({Object.entries(ind.params).map(([k, v]) => `${k}=${v}`).join(', ')})
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* 매수 조건 */}
+      <div>
+        <p className="text-xs font-semibold text-at-text-secondary mb-1.5">📈 매수 조건</p>
+        <ConditionTreeSummary tree={buy} />
+      </div>
+
+      {/* 매도 조건 */}
+      <div>
+        <p className="text-xs font-semibold text-at-text-secondary mb-1.5">📉 매도 조건</p>
+        <ConditionTreeSummary tree={sell} />
+      </div>
+
+      {/* 리스크 설정 */}
+      <div>
+        <p className="text-xs font-semibold text-at-text-secondary mb-1.5">🛡 리스크 설정</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {rk.stopLossPercent != null && rk.stopLossPercent > 0 && (
+            <RiskPill label="손절" value={`${rk.stopLossPercent}%`} tone="rose" />
+          )}
+          {rk.takeProfitPercent != null && rk.takeProfitPercent > 0 && (
+            <RiskPill label="익절" value={`${rk.takeProfitPercent}%`} tone="emerald" />
+          )}
+          {rk.maxHoldingDays != null && rk.maxHoldingDays > 0 && (
+            <RiskPill label="최대 보유" value={`${rk.maxHoldingDays}일`} tone="amber" />
+          )}
+          {rk.maxPositionSizePercent != null && rk.maxPositionSizePercent > 0 && (
+            <RiskPill label="최대 포지션" value={`${rk.maxPositionSizePercent}%`} tone="slate" />
+          )}
+        </div>
+      </div>
+
+      {strategy.source_preset_id && (
+        <p className="text-[11px] text-at-text-weak">
+          ✨ 원본 프리셋: <span className="font-mono">{strategy.source_preset_id}</span>
+        </p>
+      )}
+    </div>
+  )
+}
+
+function RiskPill({ label, value, tone }: { label: string; value: string; tone: 'rose' | 'emerald' | 'amber' | 'slate' }) {
+  const cls = {
+    rose: 'bg-rose-50 border-rose-200 text-rose-900',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+    amber: 'bg-amber-50 border-amber-200 text-amber-900',
+    slate: 'bg-slate-50 border-slate-200 text-slate-900',
+  }[tone]
+  return (
+    <div className={`rounded-lg border px-2 py-1.5 ${cls}`}>
+      <p className="text-[10px] font-medium opacity-80">{label}</p>
+      <p className="text-sm font-bold font-mono">{value}</p>
     </div>
   )
 }

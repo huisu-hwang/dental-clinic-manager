@@ -47,13 +47,16 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
   }
 
   const applyPreset = (preset: PresetStrategy) => {
-    setName(preset.name)
+    // 프리셋 이름에 (커스텀) suffix — 사용자가 자기 색깔로 이름/설명 수정 후 진행하도록 유도.
+    setName(`${preset.name} (커스텀)`)
     setDescription(preset.description)
     setIndicators(preset.indicators)
     setBuyConditions(preset.buyConditions)
     setSellConditions(preset.sellConditions)
     setSourcePresetId(preset.id)
-    setStep('indicators')
+    // step 을 'basic' 으로 유지 → 사용자가 이름/시장/주기 수정 가능
+    setStep('basic')
+    // 프리셋 적용 안내 toast 대신 시각적으로 표시 (아래 안내문 추가)
   }
 
   const handleSave = async () => {
@@ -185,16 +188,27 @@ export default function StrategyBuilder({ onSaved, onCancel }: Props) {
           {/* 기본 설정 */}
           <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5 space-y-4">
             <h2 className="font-semibold text-at-text">기본 설정</h2>
+            {sourcePresetId && (
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-900">
+                <span className="font-semibold">✨ 프리셋이 적용되었습니다.</span> 아래에서 이름·시장·주기를 자유롭게 수정한 뒤
+                <span className="font-semibold"> 「지표 선택」</span> 단계에서 RSI 기간 등 지표 파라미터도 변형할 수 있습니다.
+              </div>
+            )}
             <div>
               <label className="block text-sm text-at-text-secondary mb-1">전략 이름 *</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="예: RSI 과매도 반등"
+                placeholder="예: RSI 과매도 반등 — 21일 변형"
                 className="w-full px-3 py-2 rounded-xl border border-at-border bg-at-bg text-at-text text-sm focus:outline-none focus:border-at-accent"
                 maxLength={100}
               />
+              {sourcePresetId && (
+                <p className="text-[11px] text-at-text-weak mt-1">
+                  💡 같은 프리셋에서 여러 변형을 만들 때는 이름에 변형 포인트(예: "RSI 21일", "MACD 12/26 변형")를 함께 넣으면 구분이 쉽습니다.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm text-at-text-secondary mb-1">설명</label>
