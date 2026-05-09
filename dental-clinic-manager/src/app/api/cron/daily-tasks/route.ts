@@ -1,9 +1,8 @@
-// 일일 작업 통합 크론 (뉴스 크롤링 + 텔레그램 요약)
-// Vercel Hobby 플랜 크론 2개 제한으로 인해 news + telegram-summary 통합
+// 일일 작업 크론 (뉴스 크롤링)
+// 텔레그램 요약은 다음날 KST 10시 발송 정책에 따라 /api/cron/telegram-summary 로 분리됨.
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { runNewsCrawl } from '@/lib/newsCrawlService'
-import { runTelegramSummary } from '@/lib/telegramSummaryCron'
 
 export const maxDuration = 60
 
@@ -22,20 +21,18 @@ export async function GET(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  // 뉴스 + 텔레그램 요약을 병렬 실행
-  const [newsResult, summaryResult] = await Promise.allSettled([
-    runNewsCrawl(supabase),
-    runTelegramSummary(supabase),
-  ])
-
-  return NextResponse.json({
-    success: true,
-    news: newsResult.status === 'fulfilled'
-      ? { success: true, results: newsResult.value }
-      : { success: false, error: newsResult.reason?.message ?? 'Unknown error' },
-    telegramSummary: summaryResult.status === 'fulfilled'
-      ? { success: true, results: summaryResult.value }
-      : { success: false, error: summaryResult.reason?.message ?? 'Unknown error' },
-    timestamp: new Date().toISOString(),
-  })
+  try {
+    const news = await runNewsCrawl(supabase)
+    return NextResponse.json({
+      success: true,
+      news: { success: true, results: news },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      news: { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      timestamp: new Date().toISOString(),
+    }, { status: 500 })
+  }
 }
