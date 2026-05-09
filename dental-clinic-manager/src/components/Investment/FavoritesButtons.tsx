@@ -42,8 +42,8 @@ export default function FavoritesButtons({
   if (filtered.length === 0) return null
 
   return (
-    <div className="flex flex-wrap gap-1.5 items-center">
-      <span className="text-xs text-at-text-weak inline-flex items-center gap-1 mr-1">
+    <div className="flex flex-nowrap sm:flex-wrap gap-1.5 items-center overflow-x-auto sm:overflow-visible -mx-1 px-1 sm:mx-0 sm:px-0 pb-1 sm:pb-0 scrollbar-thin">
+      <span className="text-xs text-at-text-weak inline-flex items-center gap-1 mr-1 flex-shrink-0">
         <Star className="w-3 h-3 text-amber-500" />
         {label}:
       </span>
@@ -54,7 +54,7 @@ export default function FavoritesButtons({
         return (
           <span
             key={key}
-            className={`inline-flex items-center rounded text-xs ${
+            className={`inline-flex items-center rounded text-xs flex-shrink-0 ${
               compact
                 ? 'px-1.5 py-0.5 bg-amber-50 text-at-text-secondary border border-amber-200/60'
                 : 'px-2 py-1 bg-amber-50 text-at-text-secondary border border-amber-200/60'
