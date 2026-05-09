@@ -550,7 +550,7 @@ export const userNotificationService = {
       type: 'protocol_review_requested',
       title: '프로토콜 검토 요청',
       content: `${requesterName}님이 "${protocolTitle}" 프로토콜의 검토를 요청했습니다`,
-      link: `/management?tab=protocols&review=${protocolId}`,
+      link: `/dashboard?tab=protocols&review=${protocolId}`,
       reference_type: 'protocol_review',
       reference_id: reviewId,
     })
@@ -570,7 +570,7 @@ export const userNotificationService = {
       type: 'protocol_review_approved',
       title: '프로토콜 검토 승인',
       content: `"${protocolTitle}" 프로토콜이 승인되어 활성화되었습니다`,
-      link: `/management?tab=protocols&view=${protocolId}`,
+      link: `/dashboard?tab=protocols&view=${protocolId}`,
       reference_type: 'protocol_review',
       reference_id: reviewId,
     })
@@ -594,7 +594,7 @@ export const userNotificationService = {
       content: reason
         ? `"${protocolTitle}" 프로토콜이 반려되었습니다. 사유: ${reason}`
         : `"${protocolTitle}" 프로토콜이 반려되었습니다`,
-      link: `/management?tab=protocols&view=${protocolId}`,
+      link: `/dashboard?tab=protocols&view=${protocolId}`,
       reference_type: 'protocol_review',
       reference_id: reviewId,
     })

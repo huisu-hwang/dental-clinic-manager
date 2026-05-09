@@ -73,14 +73,23 @@ const DEFAULT_NOTIFICATION_LINKS: Partial<Record<UserNotificationType, string>> 
   telegram_board_pending: '/dashboard/community/admin?tab=telegram',
   task_assigned: '/dashboard/tasks',
   task_completed: '/dashboard/tasks',
-  protocol_review_requested: '/management?tab=protocols',
-  protocol_review_approved: '/management?tab=protocols',
-  protocol_review_rejected: '/management?tab=protocols',
+  protocol_review_requested: '/dashboard?tab=protocols',
+  protocol_review_approved: '/dashboard?tab=protocols',
+  protocol_review_rejected: '/dashboard?tab=protocols',
+}
+
+// 과거에 저장된 잘못된 링크(/management?tab=protocols...)를 정상 경로로 보정
+function normalizeNotificationLink(link: string): string {
+  if (link.startsWith('/management?tab=protocols')) {
+    return link.replace('/management?tab=protocols', '/dashboard?tab=protocols')
+  }
+  return link
 }
 
 // 알림의 이동 링크 결정 (명시적 link > 타입별 기본 link)
 function getNotificationLink(notification: UserNotification): string | null {
-  return notification.link || DEFAULT_NOTIFICATION_LINKS[notification.type] || null
+  const raw = notification.link || DEFAULT_NOTIFICATION_LINKS[notification.type] || null
+  return raw ? normalizeNotificationLink(raw) : null
 }
 
 // 상대 시간 계산
