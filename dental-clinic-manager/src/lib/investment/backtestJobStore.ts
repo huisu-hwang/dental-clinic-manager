@@ -14,7 +14,11 @@
  *   안에 끝나므로 새로고침 후 backtest_runs 테이블에서 결과 복구 가능 (별도 흐름)
  */
 
-import type { BacktestMetrics, BacktestTrade, EquityCurvePoint, Market } from '@/types/investment'
+import type {
+  BacktestMetrics, BacktestTrade, EquityCurvePoint, Market,
+} from '@/types/investment'
+// Re-import (used in restoreFromStorage)
+export type { BacktestMetrics, BacktestTrade } from '@/types/investment'
 
 export interface BuyHoldData {
   totalReturn: number
@@ -59,6 +63,56 @@ type Listener = () => void
 const jobs = new Map<string, BacktestJob>()
 const listeners = new Map<string, Set<Listener>>()
 
+// sessionStorage 키 포맷
+const SS_KEY = 'backtest-jobs-v1'
+
+interface PersistedJobMeta {
+  strategyId: string
+  startedAt: number
+  params: BacktestJobParams
+  /** DB 폴링이 아직 진행 중인 ticker 들 */
+  pendingTickers: string[]
+}
+
+function loadPersisted(): Record<string, PersistedJobMeta> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.sessionStorage.getItem(SS_KEY)
+    if (!raw) return {}
+    return JSON.parse(raw) as Record<string, PersistedJobMeta>
+  } catch {
+    return {}
+  }
+}
+
+function savePersisted(map: Record<string, PersistedJobMeta>) {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(SS_KEY, JSON.stringify(map))
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function persistJob(strategyId: string, job: BacktestJob) {
+  const all = loadPersisted()
+  all[strategyId] = {
+    strategyId,
+    startedAt: job.startedAt,
+    params: job.params,
+    pendingTickers: Array.from(job.runningTickers),
+  }
+  savePersisted(all)
+}
+
+function clearPersisted(strategyId: string) {
+  const all = loadPersisted()
+  if (all[strategyId]) {
+    delete all[strategyId]
+    savePersisted(all)
+  }
+}
+
 function notify(strategyId: string) {
   const set = listeners.get(strategyId)
   if (!set) return
@@ -99,6 +153,7 @@ export function startJob(params: BacktestJobParams): BacktestJob {
     done: tickers.length === 0,
   }
   jobs.set(strategyId, job)
+  persistJob(strategyId, job)
   notify(strategyId)
 
   // 각 ticker 별 fetch 실행 — Promise 는 모듈 레벨이라 컴포넌트 unmount 영향 없음
@@ -150,11 +205,126 @@ export function startJob(params: BacktestJobParams): BacktestJob {
         const cur = jobs.get(strategyId)
         if (!cur || cur.startedAt !== job.startedAt) return
         cur.runningTickers.delete(entry.ticker)
-        if (cur.runningTickers.size === 0) cur.done = true
+        if (cur.runningTickers.size === 0) {
+          cur.done = true
+          clearPersisted(strategyId)
+        } else {
+          persistJob(strategyId, cur)
+        }
         notify(strategyId)
       })
   }
 
+  return job
+}
+
+/**
+ * 새로고침/탭 종료 후 다시 진입했을 때 sessionStorage 의 진행 중 잡을 DB 폴링으로 복구.
+ * Vercel function 은 클라이언트 disconnect 후에도 maxDuration 까지 실행되므로
+ * 백테스트 결과는 backtest_runs 에 저장됨 → 폴링으로 회수 가능.
+ */
+export function restoreFromStorage(strategyId: string): BacktestJob | undefined {
+  // 이미 in-memory 잡이 있으면 그대로 사용
+  const existing = jobs.get(strategyId)
+  if (existing) return existing
+
+  const all = loadPersisted()
+  const meta = all[strategyId]
+  if (!meta) return undefined
+
+  // 너무 오래된 잡은 stale 로 간주 (3분 timeout)
+  const ageMs = Date.now() - meta.startedAt
+  if (ageMs > 3 * 60_000) {
+    clearPersisted(strategyId)
+    return undefined
+  }
+
+  // in-memory 잡 재생성 (DB 폴링 모드)
+  const job: BacktestJob = {
+    startedAt: meta.startedAt,
+    params: meta.params,
+    runningTickers: new Set(meta.pendingTickers),
+    results: [],
+    errors: [],
+    done: meta.pendingTickers.length === 0,
+  }
+  jobs.set(strategyId, job)
+  notify(strategyId)
+
+  if (meta.pendingTickers.length === 0) return job
+
+  // 백그라운드 폴링 시작 — 5초마다 결과 확인, 최대 90초
+  const pollIntervalMs = 5_000
+  const pollTimeoutMs = 90_000
+  const startedAt = meta.startedAt
+  const sinceIso = new Date(meta.startedAt - 1000).toISOString() // 1초 여유
+  const tickersParam = meta.pendingTickers.join(',')
+  const market = meta.params.tickers[0]?.market
+
+  const poll = async () => {
+    const cur = jobs.get(strategyId)
+    if (!cur || cur.startedAt !== startedAt) return
+
+    try {
+      const res = await fetch(
+        `/api/investment/backtest/results?strategyId=${encodeURIComponent(strategyId)}` +
+          `&tickers=${encodeURIComponent(tickersParam)}` +
+          (market ? `&market=${market}` : '') +
+          `&since=${encodeURIComponent(sinceIso)}`,
+        { cache: 'no-store' },
+      )
+      if (res.ok) {
+        const json = await res.json().catch(() => ({}))
+        const items = (json.data ?? []) as Array<{
+          ticker: string
+          market: 'KR' | 'US'
+          metrics?: BacktestMetrics
+          trades?: BacktestTrade[]
+          equityCurve?: EquityCurvePoint[]
+        }>
+        const tickerNameMap = new Map(meta.params.tickers.map(t => [t.ticker, t.name]))
+        for (const it of items) {
+          if (!cur.runningTickers.has(it.ticker)) continue
+          if (!it.metrics) continue
+          cur.results.push({
+            ticker: it.ticker,
+            tickerName: tickerNameMap.get(it.ticker) || it.ticker,
+            market: it.market,
+            metrics: it.metrics,
+            trades: it.trades ?? [],
+            equityCurve: it.equityCurve ?? [],
+          })
+          cur.runningTickers.delete(it.ticker)
+        }
+        cur.results.sort((a, b) => b.metrics.totalReturn - a.metrics.totalReturn)
+        if (cur.runningTickers.size === 0) {
+          cur.done = true
+          clearPersisted(strategyId)
+        } else {
+          persistJob(strategyId, cur)
+        }
+        notify(strategyId)
+      }
+    } catch {
+      /* 일시 네트워크 오류 — 다음 tick 에서 재시도 */
+    }
+
+    // 계속 폴링
+    if (cur.runningTickers.size > 0 && Date.now() - startedAt < pollTimeoutMs) {
+      setTimeout(poll, pollIntervalMs)
+    } else if (cur.runningTickers.size > 0) {
+      // timeout
+      for (const t of cur.runningTickers) {
+        cur.errors.push(`${t}: 결과 폴링 시간 초과 (서버 측 백테스트가 완료되지 않았거나 실패)`)
+      }
+      cur.runningTickers.clear()
+      cur.done = true
+      clearPersisted(strategyId)
+      notify(strategyId)
+    }
+  }
+
+  setTimeout(poll, pollIntervalMs) // 첫 폴링은 5초 후 (서버에 결과 도착할 시간)
   return job
 }
 
