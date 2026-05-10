@@ -71,7 +71,20 @@ export default function HistoryTab() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showCompare, setShowCompare] = useState(false)
-  const [viewMode, setViewMode] = useState<'hierarchy' | 'matrix' | 'flat'>('hierarchy')
+  // 사용자 보고: "백테스트 히스토리는 원래 처음 백테스트 실행했을 때의 매트릭스 형식으로
+  // 날짜별로 정리해서 볼 수 있게 해야 한다" — 기본 뷰를 'matrix' (날짜별 결과표) 로 설정.
+  // localStorage 에 마지막 선택 저장하여 다음 진입 시 유지.
+  const [viewMode, setViewMode] = useState<'hierarchy' | 'matrix' | 'flat'>(() => {
+    if (typeof window === 'undefined') return 'matrix'
+    const saved = window.localStorage.getItem('compareHistoryViewMode')
+    return (saved === 'hierarchy' || saved === 'matrix' || saved === 'flat') ? saved : 'matrix'
+  })
+
+  // viewMode 변경 시 localStorage 에 저장
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { window.localStorage.setItem('compareHistoryViewMode', viewMode) } catch { /* ignore */ }
+  }, [viewMode])
 
   // 전략 옵션 1회 로드
   useEffect(() => {
@@ -158,17 +171,17 @@ export default function HistoryTab() {
             <div className="inline-flex items-center rounded-xl border border-at-border bg-white text-xs overflow-hidden">
               <button
                 type="button"
-                onClick={() => setViewMode('hierarchy')}
-                className={`px-3 py-1.5 ${viewMode === 'hierarchy' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
-              >
-                날짜·세션
-              </button>
-              <button
-                type="button"
                 onClick={() => setViewMode('matrix')}
                 className={`px-3 py-1.5 ${viewMode === 'matrix' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
               >
-                날짜별 결과표
+                날짜별 결과표 (기본)
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('hierarchy')}
+                className={`px-3 py-1.5 ${viewMode === 'hierarchy' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
+              >
+                날짜·세션 트리
               </button>
               <button
                 type="button"
