@@ -12,10 +12,6 @@
     },
     {
       "path": "/api/cron/daily-tasks",
-      "schedule": "30 15 * * *"
-    },
-    {
-      "path": "/api/cron/telegram-summary",
       "schedule": "0 1 * * *"
     },
     {
