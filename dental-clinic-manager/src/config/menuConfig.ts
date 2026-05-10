@@ -189,6 +189,16 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     visible: true,
   },
   {
+    id: 'consult-management',
+    label: '상담 관리',
+    icon: 'MessageSquare',
+    route: '/dashboard/consultations',
+    permissions: ['consult_view'],
+    categoryId: 'work',
+    order: 5.5,
+    visible: true,
+  },
+  {
     id: 'ai-analysis',
     label: 'AI 데이터 분석',
     icon: 'Sparkles',
@@ -436,6 +446,7 @@ export const KNOWN_NON_MENU_ROUTES: string[] = [
   '/test-protocol',      // 테스트 프로토콜
   '/guide',              // 가이드 (별도 라우트, 메뉴는 /dashboard?tab=guide)
   '/dashboard/ai-analysis', // AI 분석 (별도 라우트, 메뉴는 /dashboard?tab=ai-analysis)
+  '/dashboard/consultations', // 상담 관리 (consult-management 메뉴와 매칭)
 ]
 
 // ============================================
