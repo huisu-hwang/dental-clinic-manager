@@ -9,7 +9,7 @@ import TickerSearch from '@/components/Investment/TickerSearch'
 import DateRangePicker from '@/components/Investment/DateRangePicker'
 import type { InvestmentStrategy, Market, EquityCurvePoint } from '@/types/investment'
 import {
-  startJob, getJob, subscribe as subscribeJob,
+  startJob, getJob, subscribe as subscribeJob, restoreFromStorage,
   type BacktestResultData,
 } from '@/lib/investment/backtestJobStore'
 
@@ -134,8 +134,11 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
     })
   }, [strategyId])
 
-  // mount 시 기존 작업 있으면 즉시 복원 + 변경 알림 구독
+  // mount 시 기존 작업 있으면 즉시 복원 + 변경 알림 구독.
+  // 새로고침/탭 종료 후 진입 시에는 restoreFromStorage 가 sessionStorage 의 잡 메타로
+  // DB 폴링을 시작해 결과를 회수.
   useEffect(() => {
+    restoreFromStorage(strategyId)
     syncFromStore()
     const unsub = subscribeJob(strategyId, syncFromStore)
     return unsub
