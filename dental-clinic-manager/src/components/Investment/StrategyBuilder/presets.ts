@@ -1496,8 +1496,10 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       ],
     },
     riskSettings: {
-      stopLossPercent: 8,        // Turtle 원전은 ATR(20) × 2N 기반 — 본 시스템은 percent 근사
-      takeProfitPercent: 0,      // 추세 추종이라 익절 미설정 (Donchian 이탈로만 청산)
+      stopLossPercent: 0,                  // ATR 손절 사용 (아래 옵션)
+      stopLossAtrMultiplier: 2,            // 2N — Turtle 정통
+      stopLossAtrPeriod: 20,               // ATR(20)
+      takeProfitPercent: 0,                // 추세 추종이라 익절 미설정 (Donchian 이탈로만 청산)
       maxHoldingDays: 90,
     },
   },
@@ -1536,7 +1538,9 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       ],
     },
     riskSettings: {
-      stopLossPercent: 12,
+      stopLossPercent: 0,
+      stopLossAtrMultiplier: 2,            // System 2 도 동일하게 2N (장기는 변동성 더 크지만 비율은 유지)
+      stopLossAtrPeriod: 20,
       takeProfitPercent: 0,
       maxHoldingDays: 180,
     },

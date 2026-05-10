@@ -17,7 +17,7 @@ import type {
   BacktestTrade, BacktestMetrics, EquityCurvePoint,
   SignalSnapshot,
 } from '@/types/investment'
-import { calculateIndicators, type IndicatorResultMap } from './indicatorEngine'
+import { calculateIndicators, calcATR, type IndicatorResultMap } from './indicatorEngine'
 import { evaluateConditionTreeWithMatches, type EvaluationContext } from './signalEngine'
 
 // ============================================
@@ -77,6 +77,9 @@ interface SimPosition {
   quantity: number
   holdingDays: number
   entrySignal?: SignalSnapshot
+  /** ATR 기반 손절가 (Turtle Trading) — 진입 시점에 계산되고 보유 동안 고정.
+   *  null/undefined 면 ATR 손절 비활성. */
+  stopPrice?: number | null
 }
 
 /**
@@ -133,6 +136,14 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
   // 1. 지표 계산
   const indicatorResults = calculateIndicators(prices, indicators)
 
+  // 1b. ATR 손절(Turtle 방식) — 옵트인. 활성 시 별도 ATR 시리즈 계산.
+  const atrMult = riskSettings.stopLossAtrMultiplier ?? 0
+  const atrPeriod = riskSettings.stopLossAtrPeriod ?? 20
+  const atrStopEnabled = atrMult > 0 && atrPeriod > 1
+  const atrSeries: number[] | null = atrStopEnabled
+    ? calcATR(prices, { period: atrPeriod })
+    : null
+
   // 2. 시뮬레이션 변수
   let cash = initialCapital
   let position: SimPosition | null = null
@@ -160,6 +171,42 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
       if (position) {
         position.holdingDays++
 
+        // === ATR 기반 손절 체크 (Turtle Trading 방식, 옵트인) ===
+        // 우선순위: ATR stop > 전략 매도 신호. 손절가가 당일 저가보다 위면 트리거.
+        // 체결가는 손절가(갭다운 시 시가) 기준 — 보수적으로 worst-of(시가, 손절가) 사용.
+        if (position.stopPrice != null && bar.low <= position.stopPrice) {
+          const exitPrice = Math.min(bar.open, position.stopPrice)
+          const sellAmount = exitPrice * position.quantity
+          const sellFee = sellAmount * (commissionRate.sellCommission + commissionRate.sellTax)
+          const pnl = (exitPrice - position.entryPrice) * position.quantity - sellFee
+            - (position.entryPrice * position.quantity * commissionRate.buyCommission)
+          cash += sellAmount - sellFee
+
+          const exitSignal: SignalSnapshot = {
+            reason: 'stopLoss',
+            indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),
+            matchedConditions: [],
+          }
+
+          trades.push({
+            entryDate: position.entryDate,
+            exitDate: bar.date,
+            ticker,
+            direction: 'buy',
+            entryPrice: position.entryPrice,
+            exitPrice,
+            quantity: position.quantity,
+            pnl,
+            pnlPercent: ((exitPrice - position.entryPrice) / position.entryPrice) * 100,
+            holdingDays: position.holdingDays,
+            entrySignal: position.entrySignal,
+            exitSignal,
+          })
+          position = null
+        }
+      }
+
+      if (position) {
         // 백테스트는 전략의 매도 조건으로만 매매 — 손절/익절/최대보유는 비활성화
         const sellResult = evaluateConditionTreeWithMatches(sellConditions, prevCtx)
 
@@ -216,11 +263,21 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
             const totalCost = entryPrice * quantity + (entryPrice * quantity * commissionRate.buyCommission)
             cash -= totalCost
 
+            // ATR 손절가 계산 (활성 시) — 진입 봉(i)의 ATR 사용. NaN 이면 손절 비활성.
+            let stopPrice: number | null = null
+            if (atrStopEnabled && atrSeries) {
+              const atr = atrSeries[i]
+              if (Number.isFinite(atr) && atr > 0) {
+                stopPrice = entryPrice - atrMult * atr
+              }
+            }
+
             position = {
               entryDate: bar.date,
               entryPrice,
               quantity,
               holdingDays: 0,
+              stopPrice,
               entrySignal: {
                 reason: 'signal',
                 indicators: buildIndicatorSnapshot(indicators, indicatorResults, i - 1),

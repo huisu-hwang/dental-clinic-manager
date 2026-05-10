@@ -142,9 +142,14 @@ export interface RiskSettings {
   maxDailyLossPercent: number     // 일일 최대 손실율 (예: 2)
   maxPositions: number            // 최대 동시 보유 종목 수
   maxPositionSizePercent: number  // 종목당 최대 비중 (예: 20)
-  stopLossPercent: number         // 손절 기준 (예: 5)
+  stopLossPercent: number         // 손절 기준 % (예: 5). 0 = 비활성
   takeProfitPercent: number       // 익절 기준 (예: 10)
   maxHoldingDays: number          // 최대 보유 기간 (0 = 무제한)
+  /** ATR 기반 손절 (Turtle Trading 방식) — 활성 시 백테스트/실거래 모두에서 동작.
+   *  손절가 = 진입가 - (multiplier × ATR_at_entry). 0 또는 undefined 면 비활성. */
+  stopLossAtrMultiplier?: number  // 예: 2 = 2N (Turtle 정통)
+  /** ATR 손절에 사용할 ATR 기간 (기본 20) */
+  stopLossAtrPeriod?: number      // 예: 20
 }
 
 // ============================================

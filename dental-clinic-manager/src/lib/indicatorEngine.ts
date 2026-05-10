@@ -148,7 +148,7 @@ function calcStochastic(prices: OHLCV[], params: Record<string, number>): Record
   return padLeft(mapped, prices.length, { k: NaN, d: NaN })
 }
 
-function calcATR(prices: OHLCV[], params: Record<string, number>): number[] {
+export function calcATR(prices: OHLCV[], params: Record<string, number>): number[] {
   const period = params.period || 14
   const result = ATR.calculate({
     high: prices.map(p => p.high),
