@@ -7,23 +7,11 @@ import {
 } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
 import DateRangePicker from '@/components/Investment/DateRangePicker'
-import type { InvestmentStrategy, BacktestMetrics, BacktestTrade, EquityCurvePoint, Market } from '@/types/investment'
-
-interface BuyHoldData {
-  totalReturn: number
-  annualizedReturn: number
-  equityCurve: EquityCurvePoint[]
-}
-
-interface BacktestResultData {
-  ticker: string
-  tickerName?: string
-  market: Market
-  metrics: BacktestMetrics
-  trades: BacktestTrade[]
-  equityCurve: EquityCurvePoint[]
-  buyHold?: BuyHoldData
-}
+import type { InvestmentStrategy, Market, EquityCurvePoint } from '@/types/investment'
+import {
+  startJob, getJob, subscribe as subscribeJob,
+  type BacktestResultData,
+} from '@/lib/investment/backtestJobStore'
 
 interface TickerEntry {
   ticker: string
@@ -132,7 +120,28 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
     setTickers(prev => prev.filter((_, i) => i !== idx))
   }
 
-  const runAllBacktests = async () => {
+  // 글로벌 store 의 작업 상태를 BacktestPanel state 에 반영 — 페이지 이동/재방문에도 결과 유지
+  const syncFromStore = useCallback(() => {
+    const job = getJob(strategyId)
+    if (!job) return
+    setRunningTickers(new Set(job.runningTickers))
+    setResults(job.results.slice())
+    setError(job.errors.length > 0 ? job.errors.join('\n') : null)
+    // 결과가 처음 도착했고 아직 선택된 결과가 없으면 1위 자동 선택
+    setSelectedResultIdx(prev => {
+      if (prev != null) return prev
+      return job.results.length > 0 ? 0 : null
+    })
+  }, [strategyId])
+
+  // mount 시 기존 작업 있으면 즉시 복원 + 변경 알림 구독
+  useEffect(() => {
+    syncFromStore()
+    const unsub = subscribeJob(strategyId, syncFromStore)
+    return unsub
+  }, [strategyId, syncFromStore])
+
+  const runAllBacktests = () => {
     if (tickers.length === 0) { setError('종목을 추가해주세요'); return }
     if (!startDate || !endDate) { setError('기간을 설정해주세요'); return }
     // 사전 검증: 미래 날짜/역순/너무 짧은 기간을 RL 서버 호출 전에 차단해
@@ -145,50 +154,11 @@ export default function BacktestPanel({ strategyId, onBack }: BacktestPanelProps
     if (spanDays < 7) { setError('백테스트 기간은 최소 7일 이상이어야 합니다 (현재: ' + spanDays + '일)'); return }
 
     setError(null)
-    setResults([])
     setSelectedResultIdx(null)
 
-    const allTickers = new Set(tickers.map(t => t.ticker))
-    setRunningTickers(allTickers)
-
-    const promises = tickers.map(async (entry) => {
-      try {
-        const res = await fetch('/api/investment/backtest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ strategyId, ticker: entry.ticker, market: entry.market, startDate, endDate, initialCapital }),
-        })
-        const json = await res.json()
-        if (!res.ok) return { ticker: entry.ticker, error: json.error }
-        const data = json.data
-        return {
-          ticker: entry.ticker,
-          tickerName: entry.name,
-          market: entry.market,
-          metrics: data.metrics || data.full_metrics,
-          trades: data.trades || [],
-          equityCurve: data.equityCurve || data.equity_curve || [],
-          buyHold: data.buyHold || data.buy_hold || undefined,
-        }
-      } catch (err) {
-        const reason = err instanceof Error ? err.message : '네트워크 오류'
-        return { ticker: entry.ticker, error: reason }
-      } finally {
-        setRunningTickers(prev => { const next = new Set(prev); next.delete(entry.ticker); return next })
-      }
-    })
-
-    const settled = await Promise.all(promises)
-    const successes: BacktestResultData[] = []
-    const errors: string[] = []
-    for (const result of settled) {
-      if ('error' in result && result.error) errors.push(`${result.ticker}: ${result.error}`)
-      else if ('metrics' in result && result.metrics) successes.push(result as BacktestResultData)
-    }
-    successes.sort((a, b) => b.metrics.totalReturn - a.metrics.totalReturn)
-    setResults(successes)
-    if (successes.length > 0) setSelectedResultIdx(0)
-    if (errors.length > 0) setError(errors.join('\n'))
+    // 글로벌 store 에서 실행 — 컴포넌트 unmount 와 무관하게 백그라운드 진행
+    startJob({ strategyId, tickers, startDate, endDate, initialCapital })
+    syncFromStore()
   }
 
   const isRunning = runningTickers.size > 0
