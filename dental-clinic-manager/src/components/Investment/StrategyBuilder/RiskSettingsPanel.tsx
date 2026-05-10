@@ -86,6 +86,24 @@ export default function RiskSettingsPanel({ riskSettings, onChange }: Props) {
     onChange({ ...riskSettings, [key]: value })
   }
 
+  const atrEnabled = (riskSettings.stopLossAtrMultiplier ?? 0) > 0
+  const atrMult = riskSettings.stopLossAtrMultiplier ?? 0
+  const atrPeriod = riskSettings.stopLossAtrPeriod ?? 20
+
+  const setAtrEnabled = (enabled: boolean) => {
+    onChange({
+      ...riskSettings,
+      stopLossAtrMultiplier: enabled ? (atrMult > 0 ? atrMult : 2) : 0,
+      stopLossAtrPeriod: enabled ? atrPeriod : (riskSettings.stopLossAtrPeriod ?? 20),
+    })
+  }
+  const setAtrMult = (v: number) => {
+    onChange({ ...riskSettings, stopLossAtrMultiplier: Math.max(0, Math.min(10, v)) })
+  }
+  const setAtrPeriod = (v: number) => {
+    onChange({ ...riskSettings, stopLossAtrPeriod: Math.max(2, Math.min(100, Math.floor(v))) })
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-at-border p-5">
       <h2 className="font-semibold text-at-text mb-1">리스크 관리</h2>
@@ -104,7 +122,7 @@ export default function RiskSettingsPanel({ riskSettings, onChange }: Props) {
 
       <div className="space-y-6">
         {FIELDS.map(field => {
-          const value = riskSettings[field.key]
+          const value = riskSettings[field.key] ?? 0
           const percent = ((value - field.min) / (field.max - field.min)) * 100
           return (
             <div key={field.key}>
@@ -163,6 +181,64 @@ export default function RiskSettingsPanel({ riskSettings, onChange }: Props) {
             </div>
           )
         })}
+      </div>
+
+      {/* ATR 기반 손절 (Turtle Trading) */}
+      <div className="mt-6 pt-5 border-t border-at-border">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="text-sm font-semibold text-at-text">🐢 ATR 기반 손절 (Turtle Trading)</h3>
+            <p className="text-xs text-at-text-secondary mt-0.5">진입 시점 ATR(N일 평균 진폭) 기반 변동성 손절. 활성 시 위 % 손절보다 우선.</p>
+          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={atrEnabled}
+              onChange={(e) => setAtrEnabled(e.target.checked)}
+              className="w-4 h-4 rounded border-at-border text-at-accent focus:ring-at-accent"
+            />
+            <span className="text-xs font-medium text-at-text">{atrEnabled ? '사용' : '미사용'}</span>
+          </label>
+        </div>
+
+        {atrEnabled && (
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div>
+              <label className="block text-xs font-medium text-at-text mb-1">ATR 배수 (multiplier)</label>
+              <input
+                type="number"
+                value={atrMult}
+                onChange={(e) => setAtrMult(Number(e.target.value))}
+                min={0.5}
+                max={10}
+                step={0.5}
+                className="w-full px-2 py-1 rounded-lg border border-at-border bg-white text-at-text text-sm font-mono focus:outline-none focus:border-at-accent"
+              />
+              <p className="text-[11px] text-at-text-weak mt-1">손절가 = 진입가 − {atrMult}×ATR. Turtle 정통 = 2N (2배)</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-at-text mb-1">ATR 기간 (일)</label>
+              <input
+                type="number"
+                value={atrPeriod}
+                onChange={(e) => setAtrPeriod(Number(e.target.value))}
+                min={2}
+                max={100}
+                step={1}
+                className="w-full px-2 py-1 rounded-lg border border-at-border bg-white text-at-text text-sm font-mono focus:outline-none focus:border-at-accent"
+              />
+              <p className="text-[11px] text-at-text-weak mt-1">ATR 계산 기간. Turtle 정통 = 20일</p>
+            </div>
+          </div>
+        )}
+
+        {atrEnabled && (
+          <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
+            <strong>📘 Turtle Trading 손절</strong>: Richard Dennis 가 사용한 정통 방식. 종목별 변동성(ATR)에
+            맞춰 손절폭을 조정 → 변동성 큰 종목은 더 멀리, 작은 종목은 더 가까이 손절. percent 손절보다
+            wing(가짜 손절) 가 줄고 큰 추세를 더 오래 보유 가능.
+          </div>
+        )}
       </div>
     </div>
   )

@@ -258,7 +258,7 @@ export const PRESET_METADATA: Record<string, PresetMetadata> = {
     cons: [
       '가짜 돌파(whipsaw) 빈번 — 횡보장에서 연속 손절',
       '큰 추세 1~2회로 1년 수익 만드는 구조 → 인내 필요',
-      '원전은 ATR 기반 손절·포지션 사이징 — 본 시스템은 percent 손절로 근사',
+      'ATR 기반 손절(2N)은 본 시스템 옵션으로 적용. 포지션 사이징은 미적용',
     ],
     source: 'Richard Dennis & William Eckhardt (1983, "Turtle Traders" — Curtis Faith 정리)',
   },
@@ -276,7 +276,7 @@ export const PRESET_METADATA: Record<string, PresetMetadata> = {
     cons: [
       '진입 자체가 매우 드물어 자본이 놀고 있을 가능성',
       '추세 반전 시 큰 평가손 가능',
-      'percent 기반 손절은 원전 ATR 방식과 차이가 있음',
+      '진입 빈도 매우 낮아 한 해 거래 1~3회',
     ],
     source: 'Curtis Faith (2007, "Way of the Turtle")',
   },

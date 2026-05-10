@@ -354,7 +354,10 @@ function StrategyDetailsSummary({ strategy }: { strategy: InvestmentStrategy }) 
   const buy = (strategy.buy_conditions ?? { type: 'group', operator: 'AND', conditions: [] }) as ConditionGroup
   const sell = (strategy.sell_conditions ?? { type: 'group', operator: 'AND', conditions: [] }) as ConditionGroup
   const risk = strategy.risk_settings ?? {}
-  const rk = risk as { stopLossPercent?: number; takeProfitPercent?: number; maxHoldingDays?: number; maxPositionSizePercent?: number }
+  const rk = risk as {
+    stopLossPercent?: number; takeProfitPercent?: number; maxHoldingDays?: number; maxPositionSizePercent?: number
+    stopLossAtrMultiplier?: number; stopLossAtrPeriod?: number
+  }
 
   return (
     <div className="bg-at-surface-alt rounded-xl p-3 space-y-3">
@@ -401,6 +404,9 @@ function StrategyDetailsSummary({ strategy }: { strategy: InvestmentStrategy }) 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {rk.stopLossPercent != null && rk.stopLossPercent > 0 && (
             <RiskPill label="손절" value={`${rk.stopLossPercent}%`} tone="rose" />
+          )}
+          {rk.stopLossAtrMultiplier != null && rk.stopLossAtrMultiplier > 0 && (
+            <RiskPill label="ATR 손절" value={`${rk.stopLossAtrMultiplier}N (ATR${rk.stopLossAtrPeriod ?? 20})`} tone="rose" />
           )}
           {rk.takeProfitPercent != null && rk.takeProfitPercent > 0 && (
             <RiskPill label="익절" value={`${rk.takeProfitPercent}%`} tone="emerald" />

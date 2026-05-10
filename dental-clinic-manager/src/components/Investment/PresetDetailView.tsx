@@ -184,6 +184,13 @@ export default function PresetDetailView({ presetId, variant = 'page' }: Props) 
           {preset.riskSettings.stopLossPercent !== undefined && preset.riskSettings.stopLossPercent > 0 && (
             <RiskBox label="손절" value={`${preset.riskSettings.stopLossPercent}%`} color="rose" />
           )}
+          {(preset.riskSettings.stopLossAtrMultiplier ?? 0) > 0 && (
+            <RiskBox
+              label="ATR 손절 (Turtle)"
+              value={`${preset.riskSettings.stopLossAtrMultiplier}N · ATR${preset.riskSettings.stopLossAtrPeriod ?? 20}`}
+              color="rose"
+            />
+          )}
           {preset.riskSettings.takeProfitPercent !== undefined && preset.riskSettings.takeProfitPercent > 0 && (
             <RiskBox label="익절" value={`${preset.riskSettings.takeProfitPercent}%`} color="emerald" />
           )}
