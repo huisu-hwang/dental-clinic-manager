@@ -8,6 +8,8 @@ export type Permission =
   | 'stats_monthly_view'     // 월간 통계 보기
   | 'stats_annual_view'      // 연간 통계 보기
   | 'logs_view'              // 상세 기록 보기
+  | 'consult_view'           // 상담 관리 보기 (월별)
+  | 'consult_manage'         // 상담 관리 메모/상태 수정
   | 'inventory_view'         // 재고 관리 보기
   | 'inventory_manage'       // 재고 관리 수정
   | 'staff_view'             // 직원 목록 보기
@@ -121,7 +123,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 대표원장은 모든 권한
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
-    'logs_view', 'inventory_view', 'inventory_manage',
+    'logs_view', 'consult_view', 'consult_manage', 'inventory_view', 'inventory_manage',
     'staff_view', 'staff_manage', 'clinic_settings', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit', 'protocol_delete',
     'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
@@ -174,7 +176,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 유료 기능(리콜/AI/경영현황/월간보고서/소개환자/마케팅/투자)은 기본 제외 — 대표원장만 보유
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
-    'logs_view', 'inventory_view', 'inventory_manage',
+    'logs_view', 'consult_view', 'consult_manage', 'inventory_view', 'inventory_manage',
     'staff_view', 'guide_view',
     'protocol_view', 'protocol_create', 'protocol_edit',
     'protocol_version_restore', 'protocol_history_view', 'protocol_category_manage',
@@ -209,7 +211,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 유료 기능(리콜/AI/경영현황/월간보고서/소개환자/마케팅/투자)은 기본 제외 — 대표원장만 보유
     'daily_report_view', 'daily_report_create', 'daily_report_edit', 'daily_report_delete',
     'stats_weekly_view', 'stats_monthly_view', 'stats_annual_view',
-    'logs_view', 'inventory_view', 'inventory_manage',
+    'logs_view', 'consult_view', 'consult_manage', 'inventory_view', 'inventory_manage',
     'staff_view', 'guide_view',
     'protocol_view', 'protocol_history_view',
     // 근로계약서 관리 (조회만)
@@ -241,7 +243,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 유료 기능(리콜/AI/경영현황/월간보고서/소개환자/마케팅/투자)은 기본 제외 — 대표원장만 보유
     'daily_report_view', 'daily_report_create', 'daily_report_edit',
     'stats_weekly_view', 'stats_monthly_view',
-    'logs_view', 'inventory_view', 'guide_view',
+    'logs_view', 'consult_view', 'inventory_view', 'guide_view',
     'protocol_view', 'protocol_history_view',
     // 근로계약서 관리 (본인 것만 조회)
     'contract_view',
@@ -302,6 +304,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
 // 기존 직원의 저장된 커스텀 권한에 해당 prefix 권한이 하나도 없으면
 // 역할 기본 권한에서 자동 보충 (usePermissions / PermissionSelector 공용)
 export const NEW_FEATURE_PREFIXES = [
+  'consult_',
   'payroll_',
   'task_checklist_',
   'task_directive_',
@@ -338,6 +341,10 @@ export const PERMISSION_GROUPS = {
     { key: 'logs_view', label: '상세 기록 보기' },
     { key: 'inventory_view', label: '재고 현황 보기' },
     { key: 'inventory_manage', label: '재고 관리' }
+  ],
+  '상담 관리': [
+    { key: 'consult_view', label: '상담 관리 조회 (월별)' },
+    { key: 'consult_manage', label: '상담 메모/상태 수정' }
   ],
   '직원 관리': [
     { key: 'staff_view', label: '직원 목록 보기' },
@@ -477,6 +484,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'stats_monthly_view': '월간 통계를 조회할 수 있습니다.',
   'stats_annual_view': '연간 통계를 조회할 수 있습니다.',
   'logs_view': '상세 기록을 조회할 수 있습니다.',
+  'consult_view': '상담 관리 페이지에서 월별로 상담 내역을 조회할 수 있습니다.',
+  'consult_manage': '상담의 확정/미확정 상태와 메모를 수정할 수 있습니다.',
   'inventory_view': '재고 현황을 조회할 수 있습니다.',
   'inventory_manage': '재고를 추가/수정/삭제할 수 있습니다.',
   'staff_view': '직원 목록을 조회할 수 있습니다.',
