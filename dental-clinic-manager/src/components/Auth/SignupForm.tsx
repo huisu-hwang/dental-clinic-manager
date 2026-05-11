@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { EyeIcon, EyeSlashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { dataService } from '@/lib/dataService'
@@ -26,6 +27,11 @@ export default function SignupForm({
   onSignupSuccess,
   onSearchClinics,
 }: SignupFormProps) {
+  // 초대 링크 등을 통해 진입한 경우 ?redirect=... 로 원래 가려던 경로가 운반된다.
+  // 회원가입 → 이메일 인증 → 자동 진입 흐름에서 next 파라미터로 끝까지 보존하기 위해 읽어둔다.
+  const searchParams = useSearchParams()
+  const redirectAfterAuth = searchParams.get('redirect') || ''
+
   const [formData, setFormData] = useState({
     userId: '',
     name: '', // 사용자 이름 필드 추가
@@ -255,11 +261,17 @@ export default function SignupForm({
 
       // 1. 인증 사용자 생성
       console.log('[Signup] Creating auth user...');
+      // 초대 링크 등으로 진입한 경우, 인증 메일의 콜백 URL에 next 파라미터를 운반해
+      // 인증 후 원래 가려던 페이지로 곧장 안내한다.
+      const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
+      if (redirectAfterAuth) {
+        callbackUrl.searchParams.set('next', redirectAfterAuth);
+      }
       const { data: authData, error: authError} = await supabase.auth.signUp({
         email: formData.userId,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: callbackUrl.toString(),
         }
       });
 
