@@ -80,16 +80,35 @@ export async function GET(
     return NextResponse.json({ data: null, error: '권한이 없습니다' }, { status: 403 })
   }
 
+  // telegram_group_join_requests.user_id 가 auth.users(id) 를 참조하므로 PostgREST
+  // 임베디드 join 은 schema cache 에서 관계를 못 찾는다. 별도 쿼리로 사용자 정보를 merge.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = (supabase as any)
     .from('telegram_group_join_requests')
-    .select('*, applicant:users!telegram_group_join_requests_user_id_fkey(id, name, email)')
+    .select('*')
     .eq('telegram_group_id', groupId)
     .order('created_at', { ascending: false })
   if (statusFilter !== 'all') q = q.eq('status', statusFilter)
-  const { data, error } = await q
+  const { data: rows, error } = await q
   if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 })
-  return NextResponse.json({ data, error: null })
+
+  const userIds = Array.from(new Set((rows ?? []).map((r: { user_id: string }) => r.user_id)))
+  const userMap = new Map<string, { id: string; name: string | null; email: string | null }>()
+  if (userIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: users } = await (supabase as any)
+      .from('users')
+      .select('id, name, email')
+      .in('id', userIds)
+    for (const u of (users ?? []) as Array<{ id: string; name: string | null; email: string | null }>) {
+      userMap.set(u.id, u)
+    }
+  }
+  const merged = (rows ?? []).map((r: { user_id: string }) => ({
+    ...r,
+    applicant: userMap.get(r.user_id) ?? null,
+  }))
+  return NextResponse.json({ data: merged, error: null })
 }
 
 export async function POST(
