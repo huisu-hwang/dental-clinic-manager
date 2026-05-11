@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, MessageSquare, Gift, Package, ArrowRight, Check, Search, X, Banknote } from 'lucide-react'
+import { FileText, MessageSquare, Gift, Package, Search, X, Banknote } from 'lucide-react'
 import type { DailyReport, ConsultLog, GiftLog, InventoryLog, CashRegisterLog } from '@/types'
 import SpecialNotesHistory from './SpecialNotesHistory'
-import { appConfirm, appAlert } from '@/components/ui/AppDialog'
+import ConsultLogsTab from './ConsultLogsTab'
+import { appConfirm } from '@/components/ui/AppDialog'
 
 interface LogsSectionProps {
   dailyReports: DailyReport[]
@@ -41,12 +42,8 @@ export default function LogsSection({
   canDelete
 }: LogsSectionProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('daily')
-  const [consultFilter, setConsultFilter] = useState<'all' | 'completed' | 'incomplete' | 'undecided'>('all')
-  const [consultSearch, setConsultSearch] = useState('')
   const [giftSort, setGiftSort] = useState<'default' | 'type' | 'date'>('default')
   const [giftSearch, setGiftSearch] = useState('')
-  const [updatingId, setUpdatingId] = useState<number | null>(null)
-  const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set())
 
   // URL 해시가 #consult-logs인 경우 상담 탭으로 전환
   useEffect(() => {
@@ -60,40 +57,6 @@ export default function LogsSection({
     window.addEventListener('hashchange', handleHashScroll)
     return () => window.removeEventListener('hashchange', handleHashScroll)
   }, [])
-
-  const handleUpdateStatus = async (consultId: number) => {
-    if (!onUpdateConsultStatus || updatingId !== null) return
-    setUpdatingId(consultId)
-    try {
-      const result = await onUpdateConsultStatus(consultId)
-      if (result.success) {
-        setRecentlyUpdatedIds(prev => new Set(prev).add(consultId))
-        setTimeout(() => {
-          setRecentlyUpdatedIds(prev => {
-            const newSet = new Set(prev)
-            newSet.delete(consultId)
-            return newSet
-          })
-        }, 5000)
-      } else if (result.error) {
-        await appAlert(result.error)
-      }
-    } catch {
-      await appAlert('상태 변경 중 오류가 발생했습니다.')
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  const filteredConsultLogs = consultLogs.filter(log => {
-    const searchTerm = consultSearch.trim().toLowerCase()
-    if (searchTerm && !log.patient_name.toLowerCase().includes(searchTerm)) return false
-    if (consultFilter === 'all') return true
-    if (consultFilter === 'completed') return log.consult_status === 'O'
-    if (consultFilter === 'incomplete') return log.consult_status === 'X'
-    if (consultFilter === 'undecided') return log.consult_status === '△'
-    return true
-  })
 
   const filteredGiftLogs = giftLogs.filter(log => {
     const searchTerm = giftSearch.trim().toLowerCase()
@@ -192,158 +155,9 @@ export default function LogsSection({
         </div>
       )}
 
-      {/* 2. 상담 상세 기록 */}
+      {/* 2. 상담 상세 기록 — 별도 컴포넌트 (기간 필터·메모 편집 포함) */}
       {activeTab === 'consult' && (
-        <div>
-          <div className="flex flex-col gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
-              <div className="flex gap-1 sm:gap-2 flex-wrap">
-                <button
-                  onClick={() => setConsultFilter('all')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
-                    consultFilter === 'all'
-                      ? 'bg-at-accent text-white'
-                      : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
-                  }`}
-                >
-                  전체 ({consultLogs.length})
-                </button>
-                <button
-                  onClick={() => setConsultFilter('completed')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
-                    consultFilter === 'completed'
-                      ? 'bg-at-success text-white'
-                      : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
-                  }`}
-                >
-                  진행완료 ({consultLogs.filter(log => log.consult_status === 'O').length})
-                </button>
-                <button
-                  onClick={() => setConsultFilter('incomplete')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
-                    consultFilter === 'incomplete'
-                      ? 'bg-at-warning text-white'
-                      : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
-                  }`}
-                >
-                  진행보류 ({consultLogs.filter(log => log.consult_status === 'X').length})
-                </button>
-                <button
-                  onClick={() => setConsultFilter('undecided')}
-                  className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-xl transition-colors ${
-                    consultFilter === 'undecided'
-                      ? 'bg-at-warning text-white'
-                      : 'bg-at-surface-alt text-at-text-secondary hover:bg-at-surface-hover'
-                  }`}
-                >
-                  미결정 ({consultLogs.filter(log => log.consult_status === '△').length})
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-at-text-weak" />
-                <input
-                  type="text"
-                  placeholder="환자명 검색..."
-                  value={consultSearch}
-                  onChange={(e) => setConsultSearch(e.target.value)}
-                  className="w-full pl-8 sm:pl-9 pr-8 py-1.5 sm:py-2 text-xs sm:text-sm border border-at-border rounded-xl focus:ring-2 focus:ring-at-accent focus:border-at-accent transition-colors"
-                />
-                {consultSearch && (
-                  <button
-                    onClick={() => setConsultSearch('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-at-text-weak hover:text-at-text rounded-full hover:bg-at-surface-hover"
-                    title="검색어 지우기"
-                  >
-                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                )}
-              </div>
-              {consultSearch && (
-                <span className="text-xs sm:text-sm text-at-text-weak">
-                  {filteredConsultLogs.length}건 검색됨
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="border border-at-border rounded-xl overflow-hidden overflow-x-auto">
-            <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
-              <table className="w-full text-xs sm:text-sm text-left min-w-[700px]">
-                <thead className="bg-at-surface-alt text-at-text sticky top-0 z-10">
-                  <tr>
-                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">날짜</th>
-                    <th className="p-2 sm:p-3 font-medium">환자명</th>
-                    <th className="p-2 sm:p-3 font-medium">상담내용</th>
-                    <th className="p-2 sm:p-3 font-medium whitespace-nowrap">진행여부</th>
-                    <th className="p-2 sm:p-3 font-medium">참고사항</th>
-                    {onUpdateConsultStatus && <th className="p-2 sm:p-3 font-medium text-center whitespace-nowrap">상태변경</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredConsultLogs.map(log => (
-                    <tr key={log.id} className="border-b border-at-border hover:bg-at-surface-hover">
-                      <td className="p-2 sm:p-3 whitespace-nowrap">{log.date}</td>
-                      <td className="p-2 sm:p-3">{log.patient_name}</td>
-                      <td className="p-2 sm:p-3">{log.consult_content}</td>
-                      <td className="p-2 sm:p-3 whitespace-nowrap">
-                        {(() => {
-                          const isCompleted = log.consult_status === 'O' || recentlyUpdatedIds.has(log.id!)
-                          const isUndecided = log.consult_status === '△' && !recentlyUpdatedIds.has(log.id!)
-                          const badgeClass = isCompleted
-                            ? 'bg-at-success-bg text-at-success'
-                            : 'bg-at-warning-bg text-at-warning'
-                          const label = isCompleted ? '진행완료' : isUndecided ? '미결정' : '진행보류'
-                          return (
-                            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium ${badgeClass}`}>
-                              {label}
-                            </span>
-                          )
-                        })()}
-                      </td>
-                      <td className="p-2 sm:p-3">{log.remarks}</td>
-                      {onUpdateConsultStatus && (
-                        <td className="p-2 sm:p-3 text-center">
-                          {(log.consult_status === 'X' || log.consult_status === '△') && !recentlyUpdatedIds.has(log.id!) ? (
-                            <button
-                              onClick={() => log.id && handleUpdateStatus(log.id)}
-                              disabled={updatingId !== null}
-                              className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 text-xs font-medium rounded transition-colors
-                                ${updatingId === log.id
-                                  ? 'bg-at-surface-alt text-at-text-weak cursor-wait'
-                                  : 'bg-at-accent-light text-at-accent hover:bg-at-tag border border-at-border'
-                                }`}
-                              title="진행으로 변경"
-                            >
-                              {updatingId === log.id ? (
-                                <>
-                                  <span className="animate-spin w-3 h-3 border-2 border-blue-300 border-t-blue-600 rounded-full"></span>
-                                  <span className="hidden sm:inline">변경중...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <ArrowRight className="w-3 h-3" />
-                                  <span className="hidden sm:inline">진행으로 변경</span>
-                                </>
-                              )}
-                            </button>
-                          ) : recentlyUpdatedIds.has(log.id!) ? (
-                            <span className="inline-flex items-center gap-1 text-at-success text-xs">
-                              <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              <span className="hidden sm:inline">변경완료</span>
-                            </span>
-                          ) : (
-                            <span className="text-at-text-weak text-xs">-</span>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <ConsultLogsTab consultLogs={consultLogs} onUpdateConsultStatus={onUpdateConsultStatus} />
       )}
 
       {/* 3. 선물 증정 및 리뷰 상세 기록 */}
