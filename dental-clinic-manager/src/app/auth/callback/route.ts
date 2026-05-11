@@ -77,8 +77,18 @@ export async function GET(request: NextRequest) {
         } else if (profile) {
           console.log('[Auth Callback] User profile:', { status: profile.status, email: profile.email })
 
+          // 공개 소모임 초대 링크로 가입한 사용자는 next 가 해당 경로면 승인 전이어도 그쪽으로 안내한다.
+          // (DashboardLayout 도 같은 경로에서는 pending/rejected 통과를 허용함)
+          const isPublicTelegramGroupRoute =
+            next.startsWith('/dashboard/community/telegram/') &&
+            next.replace('/dashboard/community/telegram/', '').length > 0
+
           // status에 따라 적절한 페이지로 리다이렉트
           if (profile.status === 'pending') {
+            if (isPublicTelegramGroupRoute) {
+              console.log('[Auth Callback] Pending user with public telegram group invite, redirecting to:', next)
+              return NextResponse.redirect(new URL(next, request.url))
+            }
             console.log('[Auth Callback] User is pending approval, redirecting to /pending-approval')
             return NextResponse.redirect(new URL('/pending-approval', request.url))
           } else if (profile.status === 'rejected') {

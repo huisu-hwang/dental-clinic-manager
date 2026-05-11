@@ -83,25 +83,10 @@ export default function TelegramBoardPage() {
             </Button>
           </div>
         </div>
-      ) : isMember === false && group.visibility === 'public_list' ? (
-        /* 목록만 공개 - 게시글 열람 불가 */
-        <div className="text-center py-20">
-          <div className="w-16 h-16 bg-at-tag rounded-full flex items-center justify-center mx-auto mb-4">
-            <Globe className="w-8 h-8 text-at-accent" />
-          </div>
-          <h2 className="text-lg font-semibold text-at-text mb-2">{group.board_title}</h2>
-          {group.board_description && (
-            <p className="text-sm text-at-text-weak mb-2">{group.board_description}</p>
-          )}
-          <p className="text-sm text-at-text-weak mb-6">게시글을 열람하려면 모임에 가입해야 합니다.</p>
-          <JoinRequestButton groupId={group.id} onJoined={() => router.refresh()} />
-          <div className="mt-6">
-            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/community/telegram')}>
-              게시판 목록으로
-            </Button>
-          </div>
-        </div>
       ) : (
+        // 공개 모임(public_list / public_read / public_full)은 비멤버도 게시글 열람 허용.
+        // 글쓰기/댓글 권한은 본문 안내 배너 + 작성 UI 측에서 visibility 별로 제한.
+
         <>
           {/* 게시판 헤더 */}
           <div className="bg-gradient-to-r from-sky-500 to-blue-600 px-4 sm:px-6 py-3 sm:py-4 rounded-t-xl shadow-sm">

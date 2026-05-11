@@ -51,6 +51,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     enabled: !!user?.clinic_id
   })
 
+  // 공개 소모임 상세 페이지(/dashboard/community/telegram/<slug>)는
+  // 가입 승인 전(pending/rejected)에도 초대 링크 진입자가 본문을 열람할 수 있도록 통과시킨다.
+  // 정책: 비공개 모임이면 페이지 자체에서 가입 안내 화면을 노출하므로 layout 분기는 경로 기반으로만 처리.
+  const isPublicTelegramGroupRoute =
+    pathname.startsWith('/dashboard/community/telegram/') &&
+    pathname.replace('/dashboard/community/telegram/', '').length > 0
+
   // 사용자 상태 체크 - 퇴사자, 승인대기, 거절된 사용자 리다이렉트
   // 미로그인 사용자는 홈(로그인 화면)으로 리다이렉트하며 원래 URL 을 redirect 파라미터로 전달
   // (그렇지 않으면 무한 로딩 스피너만 노출됨 — 소모임 초대 링크 같은 진입 경로 차단)
@@ -68,11 +75,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return
     }
     if (user.status === 'pending' || user.status === 'rejected') {
+      if (isPublicTelegramGroupRoute) {
+        // 공개 모임 초대 링크 진입자는 가입 승인 전이어도 본문 열람 허용
+        return
+      }
       console.log('[DashboardLayout] User is pending/rejected, redirecting to /pending-approval')
       router.replace('/pending-approval')
       return
     }
-  }, [user, loading, router, pathname, searchParams])
+  }, [user, loading, router, pathname, searchParams, isPublicTelegramGroupRoute])
 
   // 페이지 변경 시 모바일 메뉴 닫기 및 activeTab 동기화
   useEffect(() => {
@@ -128,7 +139,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  if (!user || user.status === 'resigned' || user.status === 'pending' || user.status === 'rejected') {
+  if (!user || user.status === 'resigned') {
+    return (
+      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
+      </div>
+    )
+  }
+  // pending/rejected 사용자는 공개 모임 상세 페이지에 한해 본문 렌더 허용
+  if ((user.status === 'pending' || user.status === 'rejected') && !isPublicTelegramGroupRoute) {
     return (
       <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
