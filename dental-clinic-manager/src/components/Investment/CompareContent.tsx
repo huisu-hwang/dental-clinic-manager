@@ -34,6 +34,8 @@ interface SelectableItem {
   description?: string
   indicatorCount: number
   isActive?: boolean
+  /** 사용자 전략에 한해 — 어떤 시장 종목에 맞춰 만들어진 전략인지 (UI 뱃지용) */
+  targetMarket?: Market
   // 백테스트 호출용 데이터
   strategyId?: string
   preset?: {
@@ -120,10 +122,11 @@ export interface BacktestResultItem {
 
 export type SortKey = 'totalReturn' | 'buyHold' | 'winRate' | 'totalTrades' | 'sharpe' | 'mdd' | 'profitFactor'
 
-/** 선택된 종목 정보 (다중 종목 비교용) */
+/** 선택된 종목 정보 (다중 종목 비교용) — 시장 혼합 비교 지원: 각 종목이 자기 market 보유 */
 interface SelectedTicker {
   ticker: string
   name: string
+  market: Market
 }
 
 type ViewMode = 'matrix' | 'list'
@@ -133,8 +136,11 @@ function LiveCompareSection() {
   const [loadingStrategies, setLoadingStrategies] = useState(true)
   const [statsByStrategy, setStatsByStrategy] = useState<Map<string, StrategyBacktestStats>>(new Map())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [tickers, setTickers] = useState<SelectedTicker[]>([{ ticker: 'AAPL', name: 'Apple Inc.' }])
-  const [market, setMarket] = useState<Market>('US')
+  const [tickers, setTickers] = useState<SelectedTicker[]>([{ ticker: 'AAPL', name: 'Apple Inc.', market: 'US' }])
+  // 선택된 종목들에 포함된 시장 (혼합 가능). RecommendSection / 일부 라벨은 단일 시장 컨텍스트가
+  // 필요하므로 "주된 시장"을 첫 종목 기준으로 derive — 기능 변경 없이 호환만.
+  const market: Market = tickers[0]?.market ?? 'US'
+  const hasMixedMarkets = tickers.some(t => t.market !== market)
   const [startDate, setStartDate] = useState(() => {
     const d = new Date()
     d.setFullYear(d.getFullYear() - 1)
@@ -202,27 +208,26 @@ function LiveCompareSection() {
     loadStrategyStats()
   }, [loadStrategies, loadStrategyStats])
 
-  // 사용자 저장 전략 (시장 일치)
+  // 사용자 저장 전략 — 시장 구분 없이 모두 표시 (혼합 비교 지원).
+  // 백테스트는 (전략 × 종목) 페어로 실행하며 종목마다 자기 market 으로 호출되므로
+  // 전략의 target_market 과 종목 market 이 달라도 실행 자체는 가능.
   const userItems = useMemo<SelectableItem[]>(
-    () => strategies
-      .filter(s => s.target_market === market)
-      .map(s => ({
-        key: `user:${s.id}`,
-        statsKey: s.source_preset_id ? `preset:${s.source_preset_id}` : `user:${s.id}`,
-        source: 'user' as const,
-        name: s.name,
-        description: s.description || undefined,
-        indicatorCount: Array.isArray(s.indicators) ? s.indicators.length : 0,
-        isActive: s.is_active,
-        strategyId: s.id,
-      })),
-    [strategies, market]
+    () => strategies.map(s => ({
+      key: `user:${s.id}`,
+      statsKey: s.source_preset_id ? `preset:${s.source_preset_id}` : `user:${s.id}`,
+      source: 'user' as const,
+      name: s.name,
+      description: s.description || undefined,
+      indicatorCount: Array.isArray(s.indicators) ? s.indicators.length : 0,
+      isActive: s.is_active,
+      strategyId: s.id,
+      targetMarket: s.target_market as Market | undefined,
+    })),
+    [strategies]
   )
 
   // 사용자가 이미 내 전략으로 저장(클론)한 프리셋 ID 집합 — 프리셋 목록에서 중복 제거용.
-  // (1) source_preset_id 가 정상적으로 설정된 경우 그대로 사용.
-  // (2) source_preset_id 가 null 인 레거시 클론(이름만 "...(자동 추가)" 형태)도
-  //     이름 매칭으로 dedupe 대상에 포함 → 같은 로직 전략 두 번 실행 방지.
+  // 시장 구분 없이 모든 클론을 dedupe 대상으로 포함.
   const clonedPresetIds = useMemo(() => {
     const set = new Set<string>()
     const presetByName = new Map<string, string>()
@@ -230,7 +235,6 @@ function LiveCompareSection() {
       presetByName.set(p.name.trim(), p.id)
     }
     for (const s of strategies) {
-      if (s.target_market !== market) continue
       if (s.source_preset_id) {
         set.add(s.source_preset_id)
         continue
@@ -240,7 +244,7 @@ function LiveCompareSection() {
       if (matchedId) set.add(matchedId)
     }
     return set
-  }, [strategies, market])
+  }, [strategies])
 
   // 프리셋 전략 (단타 제외 + 사용자가 이미 저장한 프리셋 제외)
   // 같은 로직의 전략을 user/preset 양쪽에서 보여 전체 선택 시 중복 실행되는 문제 방지.
@@ -281,24 +285,17 @@ function LiveCompareSection() {
   const handleTickerSelect = (t: string, name?: string, m?: Market) => {
     const symbol = t.trim().toUpperCase()
     if (!symbol) return
-    rememberTicker(symbol, name || symbol, m ?? market)
-    // 다른 시장 종목 선택 시 시장 전환 (기존 종목/전략 초기화)
-    if (m && m !== market) {
-      const ok = window.confirm(`다른 시장(${m === 'KR' ? '국내' : '미국'})으로 전환합니다. 선택한 종목과 전략이 초기화됩니다.`)
-      if (!ok) return
-      setMarket(m)
-      setSelectedIds(new Set())
-      setTickers([{ ticker: symbol, name: name || symbol }])
-      return
-    }
+    const tickerMarket = m ?? market
+    rememberTicker(symbol, name || symbol, tickerMarket)
+    // 시장 혼합 허용: KR 과 US 종목을 같은 배치에 추가 가능. (전환 confirm 제거)
     setTickers(prev => {
-      if (prev.some(p => p.ticker === symbol)) return prev
-      return [...prev, { ticker: symbol, name: name || symbol }]
+      if (prev.some(p => p.ticker === symbol && p.market === tickerMarket)) return prev
+      return [...prev, { ticker: symbol, name: name || symbol, market: tickerMarket }]
     })
   }
 
-  const removeTicker = (t: string) => {
-    setTickers(prev => prev.filter(p => p.ticker !== t))
+  const removeTicker = (t: string, m?: Market) => {
+    setTickers(prev => prev.filter(p => !(p.ticker === t && (m ? p.market === m : true))))
   }
 
   const runCompare = async () => {
@@ -331,7 +328,7 @@ function LiveCompareSection() {
           const rowKey = `${strategyKey}::${tk.ticker}`
           const body: Record<string, unknown> = {
             ticker: tk.ticker,
-            market,
+            market: tk.market,
             startDate,
             endDate,
             initialCapital,
@@ -539,25 +536,28 @@ function LiveCompareSection() {
               <RecentTickersButtons
                 market="ALL"
                 onSelect={(t, name, m) => handleTickerSelect(t, name, m)}
-                excludeKeys={new Set(tickers.map((tk) => `${market}:${tk.ticker}`))}
+                excludeKeys={new Set(tickers.map((tk) => `${tk.market}:${tk.ticker}`))}
               />
             </div>
             {tickers.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {tickers.map(t => (
                   <span
-                    key={t.ticker}
-                    className={`inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-xs border ${
-                      market === 'KR' ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-purple-50 border-purple-200 text-purple-800'
+                    key={`${t.market}:${t.ticker}`}
+                    className={`inline-flex items-center gap-1 pl-1 pr-1 py-0.5 rounded-full text-xs border ${
+                      t.market === 'KR' ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-purple-50 border-purple-200 text-purple-800'
                     }`}
                   >
+                    <span className={`text-[9px] px-1 py-0.5 rounded font-bold ${
+                      t.market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                    }`}>{t.market}</span>
                     <span className="font-mono font-semibold">{t.ticker}</span>
                     {t.name && t.name !== t.ticker && (
                       <span className="text-at-text-secondary truncate max-w-[120px]">{t.name}</span>
                     )}
                     <button
                       type="button"
-                      onClick={() => removeTicker(t.ticker)}
+                      onClick={() => removeTicker(t.ticker, t.market)}
                       className="ml-0.5 p-0.5 rounded-full hover:bg-white/60"
                       title="제거"
                     >
@@ -568,10 +568,10 @@ function LiveCompareSection() {
               </div>
             )}
             <p className="text-[11px] text-at-text-weak mt-1">
-              <span className={`mr-1 text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                market === 'KR' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-              }`}>{market === 'KR' ? '국내' : '미국'}</span>
-              종목은 같은 시장 내에서만 묶을 수 있어요. 다른 시장 종목 선택 시 시장이 전환됩니다.
+              한국·미국 종목을 함께 추가해 한 번에 비교할 수 있어요.
+              {hasMixedMarkets && (
+                <span className="ml-1 text-at-accent font-semibold">한·미 혼합 선택됨</span>
+              )}
             </p>
           </div>
 
@@ -636,7 +636,7 @@ function LiveCompareSection() {
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="font-semibold text-at-text">📋 비교할 전략 선택</h2>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-at-text-secondary">{selectedIds.size}개 선택됨 ({market})</span>
+            <span className="text-xs text-at-text-secondary">{selectedIds.size}개 선택됨</span>
             <button
               onClick={() => {
                 const total = userItems.length + presetItems.length
@@ -660,11 +660,11 @@ function LiveCompareSection() {
           </div>
         </div>
 
-        {/* 내 전략 그룹 */}
+        {/* 내 전략 그룹 — 시장 무관 표시 (각 카드의 뱃지로 시장 구분) */}
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-at-accent" />
-            <h3 className="text-sm font-semibold text-at-text">내 전략 ({market === 'KR' ? '국내' : '미국'})</h3>
+            <h3 className="text-sm font-semibold text-at-text">내 전략</h3>
             <span className="text-xs text-at-text-weak">{userItems.length}개</span>
           </div>
           {loadingStrategies ? (
@@ -672,7 +672,7 @@ function LiveCompareSection() {
           ) : userItems.length === 0 ? (
             <div className="rounded-xl border border-dashed border-at-border bg-at-surface-alt p-4 text-center text-xs text-at-text-secondary">
               <AlertCircle className="w-5 h-5 mx-auto mb-1 opacity-40" />
-              {market === 'KR' ? '국내' : '미국'} 시장 저장 전략이 없습니다. 아래 프리셋으로 바로 비교하실 수 있어요.
+              저장된 전략이 없습니다. 아래 프리셋으로 바로 비교하실 수 있어요.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
