@@ -248,24 +248,12 @@ Deno.serve(async (req) => {
 
     console.log("[telegram-webhook] Message type:", messageType, "hasFile:", hasFile, "hasLink:", hasLink, "sender:", senderName)
 
-    // 파일 URL 해석 (file_id -> file_path -> URL)
-    let fileUrl: string | null = null
-    if (hasFile && fileId && botToken) {
-      try {
-        const getFileRes = await fetch(
-          `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`
-        )
-        const getFileData = await getFileRes.json()
-        if (getFileData.ok && getFileData.result?.file_path) {
-          fileUrl = `https://api.telegram.org/file/bot${botToken}/${getFileData.result.file_path}`
-          console.log("[telegram-webhook] Resolved file URL for file_id:", fileId)
-        } else {
-          console.error("[telegram-webhook] getFile failed:", getFileData)
-        }
-      } catch (fileErr) {
-        console.error("[telegram-webhook] Error resolving file URL:", fileErr)
-      }
-    }
+    // 파일 URL은 우리 서버 프록시(/api/telegram/files/[messageId])로 통일.
+    // Telegram file_path 는 1시간 후 만료되며, 직링크에 BOT_TOKEN 이 포함되면
+    // DB / 사용자 브라우저에 토큰이 노출되는 보안 사고가 발생한다. 따라서 여기서는
+    // file_url 을 DB 에 채우지 않고, 다운로드 시점에 메시지 id 로 프록시가 처리.
+    // (getFile 호출은 webhook 단계에서 굳이 필요 없고, file_id 만 보관해도 충분)
+    const fileUrl: string | null = null
 
     // extracted_links: { url: string; title?: string }[] 형식
     const extractedLinks = allUrls.length > 0
@@ -321,12 +309,12 @@ Deno.serve(async (req) => {
       if (hasFile) {
         postTitle = `[파일] ${fileName || messageType} - ${senderName}`
         postType = 'file'
-        postFileUrls = fileUrl ? [{ url: fileUrl, name: fileName || undefined, type: fileMimeType || undefined, size: fileSize || undefined }] : []
+        // 다운로드 URL 은 우리 서버 프록시 경유 — 만료/토큰 노출 문제 해소
+        const proxyUrl = `/api/telegram/files/${savedMessage.id}`
+        postFileUrls = [{ url: proxyUrl, name: fileName || undefined, type: fileMimeType || undefined, size: fileSize || undefined }]
 
         contentHtml = `<p>${text ? text.replace(/\n/g, '<br>') : ''}</p>`
-        if (fileUrl) {
-          contentHtml += `<p><strong>파일:</strong> <a href="${fileUrl}" target="_blank">${fileName || messageType}</a></p>`
-        }
+        contentHtml += `<p><strong>파일:</strong> <a href="${proxyUrl}" target="_blank">${fileName || messageType}</a></p>`
         if (fileSize) {
           contentHtml += `<p><strong>크기:</strong> ${Math.round(fileSize / 1024)}KB</p>`
         }

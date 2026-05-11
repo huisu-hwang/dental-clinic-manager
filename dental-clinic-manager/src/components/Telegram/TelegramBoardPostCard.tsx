@@ -40,6 +40,20 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
 
   const showCheckbox = selectMode || alwaysShowCheckbox
 
+  // 첫 첨부 파일이 이미지면 카드에 작은 썸네일 표시 (서버 프록시 경유)
+  const firstImage = (() => {
+    const files = post.file_urls ?? []
+    const ids = post.source_message_ids ?? []
+    if (!files.length) return null
+    const f = files[0]
+    const name = f.name ?? ''
+    const mime = f.type ?? ''
+    const isImage = mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif)$/i.test(name)
+    if (!isImage) return null
+    const messageId = ids[0]
+    return messageId ? `/api/telegram/files/${messageId}` : null
+  })()
+
   const handleClick = () => {
     if (selectMode && selectable && onToggleSelect) {
       onToggleSelect(post.id)
@@ -89,6 +103,15 @@ export default function TelegramBoardPostCard({ post, onClick, selectMode = fals
       </div>
       {/* 제목 */}
       <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        {firstImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={firstImage}
+            alt=""
+            loading="lazy"
+            className="w-7 h-7 rounded object-cover flex-shrink-0 bg-at-surface-alt border border-at-border"
+          />
+        )}
         <span className={`sm:hidden text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${catColorClasses.bg} ${catColorClasses.text}`}>
           {categoryName}
         </span>
