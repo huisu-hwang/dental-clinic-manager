@@ -88,13 +88,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 알리고 API 요청 데이터 준비
-    const formData = new FormData()
-    formData.append('key', aligoSettings.api_key)
-    formData.append('user_id', aligoSettings.user_id)
-    formData.append('sender', aligoSettings.sender_number)
-    formData.append('receiver', receiverList.join(','))
-    formData.append('msg', message)
-    formData.append('msg_type', actualMsgType)
+    // multipart/form-data 대신 application/x-www-form-urlencoded 사용 — undici ProxyAgent + Fixie
+    // 터널링 환경에서 multipart boundary 가 깨져 알리고가 파라미터를 못 읽는 문제 회피.
+    const params = new URLSearchParams()
+    params.append('key', aligoSettings.api_key)
+    params.append('user_id', aligoSettings.user_id)
+    params.append('sender', aligoSettings.sender_number)
+    params.append('receiver', receiverList.join(','))
+    params.append('msg', message)
+    params.append('msg_type', actualMsgType)
     if (title && actualMsgType !== 'SMS') {
       const titleBytes = new Blob([title]).size
       if (titleBytes > 44) {
@@ -103,17 +105,18 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-      formData.append('title', title)
+      params.append('title', title)
     }
     // 테스트 모드 (개발 환경에서만)
     if (process.env.NODE_ENV === 'development') {
-      formData.append('testmode_yn', 'Y')
+      params.append('testmode_yn', 'Y')
     }
 
     // 알리고 API 호출
     const aligoResponse = await aligoFetch(`${ALIGO_API_URL}/send/`, {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
     })
 
     const aligoResult: AligoResponse = await aligoResponse.json()
@@ -134,19 +137,13 @@ export async function POST(request: NextRequest) {
         }
       })
     } else {
-      // IP 인증 오류 체크 (스펙: -101 = 인증오류). 알리고 IP 보안 정책의 정확한 메뉴 명칭은 공식 문서에 없어
-      // 고객센터 문의로 안내. 본 서비스는 Vercel 서버리스라 호출마다 IP가 달라질 수 있다는 사실은 고지.
-      let errorMessage = aligoResult.message || '문자 발송에 실패했습니다.'
-      if (
-        resultCodeNum === -101 ||
-        errorMessage.includes('ip') ||
-        errorMessage.includes('IP') ||
-        errorMessage.includes('인증오류')
-      ) {
-        errorMessage =
-          'IP 인증 오류로 보입니다. 알리고 고객센터(1661-1565 또는 smartsms.aligo.in 문의하기)에 IP 인증 해제 또는 IP 등록 절차를 문의해주세요. ' +
-          '본 서비스는 Vercel 서버리스로 동작하여 호출마다 발송 IP가 달라질 수 있어 특정 IP 등록 방식은 안정적이지 않습니다.'
-      }
+      // 알리고가 반환한 원본 메시지를 그대로 보여줌. IP 인증 오류처럼 보여도 실제로는 다른 원인(파라미터 누락 등)일 수 있어 휴리스틱 변환은 위험.
+      // 알리고 원본 message 가 "-IP" 등 IP 관련 단서를 포함할 때만 부가 안내 덧붙임.
+      const aligoMessage = aligoResult.message || '문자 발송에 실패했습니다.'
+      const isIpAuthError = /-IP\b/i.test(aligoMessage) || aligoMessage.includes('등록되지 않은 IP') || aligoMessage.includes('등록되지 않은 ip')
+      const errorMessage = isIpAuthError
+        ? `${aligoMessage}\n\n발신 IP 가 알리고에 등록되지 않은 것 같습니다. Fixie 고정 IP(52.5.155.132, 52.87.82.133) 가 알리고 IP 인증 화이트리스트에 모두 등록되어 있는지 확인해주세요.`
+        : aligoMessage
 
       return NextResponse.json({
         success: false,
@@ -214,14 +211,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 알리고 잔여 문자 조회 API 호출
-    const formData = new FormData()
-    formData.append('key', aligoSettings.api_key)
-    formData.append('user_id', aligoSettings.user_id)
+    // 알리고 잔여 문자 조회 API 호출 (urlencoded — multipart/프록시 호환성 이슈 회피)
+    const params = new URLSearchParams()
+    params.append('key', aligoSettings.api_key)
+    params.append('user_id', aligoSettings.user_id)
 
     const aligoResponse = await aligoFetch(`${ALIGO_API_URL}/remain/`, {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
     })
 
     const aligoResult = await aligoResponse.json()
