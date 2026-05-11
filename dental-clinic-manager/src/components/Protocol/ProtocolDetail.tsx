@@ -49,6 +49,8 @@ interface ProtocolDetailProps {
   onEdit: (protocol: Protocol) => void
   onDelete: (protocolId: string) => void
   onSplit?: (protocol: Protocol) => void
+  /** 본문 변경(승인/반려/검토요청 등)으로 protocol 이 갱신되면 부모에 즉시 알림 */
+  onProtocolChanged?: (protocol: Protocol) => void
 }
 
 export default function ProtocolDetail({
@@ -56,7 +58,8 @@ export default function ProtocolDetail({
   onClose,
   onEdit,
   onDelete,
-  onSplit
+  onSplit,
+  onProtocolChanged,
 }: ProtocolDetailProps) {
   const { hasPermission } = usePermissions()
   const { user } = useAuth()
@@ -97,7 +100,9 @@ export default function ProtocolDetail({
         setError(result.error)
         setProtocol(null)
       } else {
-        setProtocol((result.data as Protocol | null) ?? null)
+        const fresh = (result.data as Protocol | null) ?? null
+        setProtocol(fresh)
+        if (fresh) onProtocolChanged?.(fresh)
 
         // 개별 권한 확인 (대표원장이 아닌 경우에만)
         if (user && user.role !== 'owner') {
