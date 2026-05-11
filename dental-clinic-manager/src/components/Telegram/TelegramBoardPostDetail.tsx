@@ -40,6 +40,20 @@ export default function TelegramBoardPostDetail({
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [scrapCount, setScrapCount] = useState(post.scrap_count ?? 0)
 
+  // 텔레그램 첨부파일: 만료된 직링크(`api.telegram.org/file/bot.../...`) 대신
+  // 우리 서버 프록시(/api/telegram/files/[messageId])로 다운로드.
+  const files = useMemo(() => {
+    const ids = post.source_message_ids ?? []
+    return (post.file_urls ?? []).map((f, i) => {
+      const messageId = ids[i] ?? ids[0]
+      const proxyUrl = messageId ? `/api/telegram/files/${messageId}` : f.url
+      const name = f.name ?? ''
+      const mime = f.type ?? ''
+      const isImage = mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif)$/i.test(name)
+      return { ...f, proxyUrl, isImage }
+    })
+  }, [post.file_urls, post.source_message_ids])
+
   const handleToggleLike = async () => {
     if (!currentUserId) return
     const { data } = await telegramBoardPostService.toggleLike(currentUserId, post.id)
@@ -178,29 +192,45 @@ export default function TelegramBoardPostDetail({
             )}
           </div>
 
-          {/* 파일 목록 */}
-          {(post.file_urls?.length ?? 0) > 0 && (
+          {/* 첨부 파일 (이미지 인라인 + 그 외 다운로드) */}
+          {files.length > 0 && (
             <div className="mb-4 p-3 bg-at-accent-light rounded-xl">
               <h4 className="text-sm font-medium text-at-accent mb-2 flex items-center gap-1">
                 <FileText className="w-4 h-4" />첨부 파일
               </h4>
-              <div className="space-y-2">
-                {post.file_urls.map((file, i) => (
-                  <a
-                    key={i}
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-at-accent hover:text-at-accent hover:underline"
-                  >
-                    <Download className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="truncate">{file.name || `파일 ${i + 1}`}</span>
-                    {file.size && (
-                      <span className="text-xs text-at-text-weak flex-shrink-0">
-                        ({formatFileSize(file.size)})
-                      </span>
+              <div className="space-y-3">
+                {files.map((file, i) => (
+                  <div key={i}>
+                    {file.isImage ? (
+                      <a href={file.proxyUrl} target="_blank" rel="noopener noreferrer" className="block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={file.proxyUrl}
+                          alt={file.name || `이미지 ${i + 1}`}
+                          loading="lazy"
+                          className="max-h-[420px] w-auto rounded-lg border border-at-border bg-white object-contain"
+                        />
+                        {file.name && (
+                          <p className="text-xs text-at-text-weak mt-1 truncate">{file.name}</p>
+                        )}
+                      </a>
+                    ) : (
+                      <a
+                        href={file.proxyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-at-accent hover:text-at-accent hover:underline"
+                      >
+                        <Download className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{file.name || `파일 ${i + 1}`}</span>
+                        {file.size && (
+                          <span className="text-xs text-at-text-weak flex-shrink-0">
+                            ({formatFileSize(file.size)})
+                          </span>
+                        )}
+                      </a>
                     )}
-                  </a>
+                  </div>
                 ))}
               </div>
             </div>
