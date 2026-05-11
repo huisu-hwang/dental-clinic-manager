@@ -433,6 +433,11 @@ class ContractService {
 
   /**
    * Update contract data
+   *
+   * 불변성: 서명 단계 이후의 계약서는 본문(contract_data) 변경을 거부한다.
+   * 동일 보호가 DB BEFORE UPDATE 트리거(enforce_contract_immutability)로도 걸려 있으나,
+   * 서비스 레이어에서 더 명확한 에러 메시지를 주기 위해 사전 가드 한다.
+   * status 자체 전이는 updateContractStatus 를 사용한다.
    */
   async updateContract(
     contractId: string,
@@ -444,6 +449,26 @@ class ContractService {
     }
 
     try {
+      // 현재 상태 조회
+      const { data: existing, error: fetchError } = await supabase
+        .from('employment_contracts')
+        .select('status')
+        .eq('id', contractId)
+        .single()
+      if (fetchError) {
+        return { success: false, error: fetchError.message }
+      }
+
+      const locked = ['pending_employee_signature', 'pending_employer_signature', 'completed']
+        .includes((existing as { status: string }).status)
+      const tryingToChangeBody = Object.prototype.hasOwnProperty.call(updates, 'contract_data')
+      if (locked && tryingToChangeBody) {
+        return {
+          success: false,
+          error: '서명 단계 이후의 계약서 본문은 변경할 수 없습니다.',
+        }
+      }
+
       const { data, error } = await supabase
         .from('employment_contracts')
         .update({
