@@ -161,7 +161,10 @@ export const telegramGroupService = {
   },
 
   /**
-   * 마스터 전용 — 모든 소모임 조회 (status/visibility 필터 없음, 모임장/멤버수 join)
+   * 마스터 전용 — 모든 소모임 조회 (status/visibility 필터 없음, 모임장/멤버수 정보 포함)
+   * telegram_groups.created_by 는 auth.users(id) 를 참조하므로 PostgREST 의 임베디드
+   * resource(users join)가 schema cache 에서 관계를 찾지 못해 오류가 난다.
+   * → 그룹 / 멤버 / 모임장 사용자 3개를 각각 단순 쿼리한 뒤 클라이언트에서 merge.
    * RLS 가 master_admin 을 허용해야 정상 동작. 권한 부족 시 빈 결과로 폴백.
    */
   async getAllGroupsForMaster(): Promise<{ data: TelegramGroup[] | null; error: string | null }> {
@@ -169,16 +172,19 @@ export const telegramGroupService = {
       const supabase = await ensureConnection()
       if (!supabase) throw new Error('Database connection failed')
 
-      // 1) 그룹 + 모임장 join
+      // 1) 그룹 본문 (조인 없음)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data: rawGroups, error } = await (supabase as any)
         .from('telegram_groups')
-        .select('*, creator:users!telegram_groups_created_by_fkey(id, name, email)')
+        .select('*')
         .order('created_at', { ascending: false })
       if (error) throw error
 
-      // 2) 멤버 수 별도 집계 (그룹 수가 많지 않으므로 단순 N+1 회피용 단일 쿼리)
-      const groupIds = (data ?? []).map((g: { id: string }) => g.id)
+      const groups = (rawGroups ?? []) as TelegramGroup[]
+      const groupIds = groups.map(g => g.id)
+      const creatorIds = Array.from(new Set(groups.map(g => g.created_by).filter((v): v is string => !!v)))
+
+      // 2) 멤버 수 집계
       const memberCounts = new Map<string, number>()
       if (groupIds.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -191,8 +197,22 @@ export const telegramGroupService = {
         }
       }
 
-      const enriched = (data ?? []).map((g: TelegramGroup) => ({
+      // 3) 모임장 사용자 정보 (별도 쿼리)
+      const creatorMap = new Map<string, { id: string; name: string | null; email: string | null }>()
+      if (creatorIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: users } = await (supabase as any)
+          .from('users')
+          .select('id, name, email')
+          .in('id', creatorIds)
+        for (const u of (users ?? []) as Array<{ id: string; name: string | null; email: string | null }>) {
+          creatorMap.set(u.id, u)
+        }
+      }
+
+      const enriched = groups.map(g => ({
         ...g,
+        creator: g.created_by ? (creatorMap.get(g.created_by) ?? null) : null,
         member_count: memberCounts.get(g.id) ?? 0,
       }))
       return { data: enriched, error: null }
