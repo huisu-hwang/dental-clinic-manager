@@ -221,7 +221,7 @@ function calcVolumeSMA(prices: OHLCV[], params: Record<string, number>): number[
  *
  * @param params { rsiPeriod, bbPeriod, volPeriod, momentumPeriod }
  */
-function calcFearGreed(prices: OHLCV[], params: Record<string, number>): number[] {
+export function calcFearGreed(prices: OHLCV[], params: Record<string, number> = {}): number[] {
   const rsiPeriod = params.rsiPeriod || 14
   const bbPeriod = params.bbPeriod || 20
   const volPeriod = params.volPeriod || 20
