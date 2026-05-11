@@ -49,7 +49,7 @@ export default function AddTickerModal({ onClose, onAdded }: {
         const res = await fetch('/api/investment/psychology/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticker: it.ticker, market: it.market }),
+          body: JSON.stringify({ ticker: it.ticker, name: it.name, market: it.market }),
         })
         const data = await res.json().catch(() => ({}))
         if (res.ok) {
