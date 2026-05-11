@@ -34,6 +34,9 @@ export interface TelegramGroup {
   created_by: string
   created_at: string
   updated_at: string
+  /** 마스터 화면에서만 채워서 내려보내는 부가 정보(운영자/멤버 수 등) */
+  creator?: { id: string; name: string | null; email: string | null } | null
+  member_count?: number
 }
 
 // 그룹 멤버
