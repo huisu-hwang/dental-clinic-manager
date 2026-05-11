@@ -32,12 +32,20 @@ export default function SignupForm({
   const searchParams = useSearchParams()
   const redirectAfterAuth = searchParams.get('redirect') || ''
 
-  const [formData, setFormData] = useState({
+  // 공개 소모임 초대 링크 진입자는 가입 즉시 자동 승인(status='active')으로 처리한다.
+  // 보안: 임의 사용자가 본인이 진술한 클리닉의 환자/매출 데이터를 가로채지 못하도록
+  //       clinic_id 를 NULL 로 두어 클리닉 RLS(같은 clinic_id 공유 시 전체 데이터 접근)를 차단한다.
+  //       → 이 계정은 공개 모임 본문 열람 외 다른 클리닉 기능은 사용하지 못한다.
+  const isCommunityInviteSignup =
+    !!redirectAfterAuth && redirectAfterAuth.startsWith('/dashboard/community/telegram/')
+
+  const [formData, setFormData] = useState(() => ({
     userId: '',
     name: '', // 사용자 이름 필드 추가
     password: '',
     confirmPassword: '',
-    role: 'owner', // 직책 기본값을 '대표원장'으로 변경
+    // 초대 링크 진입자는 직책/병원 선택 단계가 없으므로 비-owner(staff)로 시작한다.
+    role: isCommunityInviteSignup ? 'staff' : 'owner',
     phone: '', // 개인 전화번호
     address: '', // 주소
     residentNumber: '', // 주민등록번호
@@ -46,7 +54,7 @@ export default function SignupForm({
     clinicAddress: '',
     clinicPhone: '',
     clinicEmail: ''
-  });
+  }));
   const [publicClinics, setPublicClinics] = useState<any[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState('');
   const [selectedClinicName, setSelectedClinicName] = useState('');
@@ -205,7 +213,8 @@ export default function SignupForm({
         setError('치과 정보에 올바른 이메일 주소를 입력해주세요.');
         return false;
       }
-    } else {
+    } else if (!isCommunityInviteSignup) {
+      // 초대 링크 진입자는 공개 모임만 이용하는 계정이라 병원 선택을 강제하지 않는다.
       if (!selectedClinicId) {
         setError('소속될 병원을 선택해주세요.');
         return false;
@@ -289,7 +298,7 @@ export default function SignupForm({
       const newUserId = authData.user.id;
       console.log('[Signup] User created with ID:', newUserId);
 
-      if (formData.role === 'owner') {
+      if (formData.role === 'owner' && !isCommunityInviteSignup) {
         // 시나리오 A: 대표원장으로 신규 병원 생성
         // SECURITY DEFINER 함수를 사용하여 RLS 우회 및 트랜잭션 보장
         console.log('[Signup] Creating new clinic with owner via RPC...');
@@ -338,16 +347,18 @@ export default function SignupForm({
           await supabase.from('users').delete().eq('id', existingRejected.id);
         }
 
+        // 초대 링크 진입자는 clinic_id=NULL + status='active' 로 가입한다.
+        // → 클리닉 데이터 RLS 격리는 그대로 유지되면서 공개 모임 본문은 열람 가능.
         const { error: userProfileError } = await (supabase.from('users') as any).insert({
           id: newUserId,
-          clinic_id: selectedClinicId,
+          clinic_id: isCommunityInviteSignup ? null : selectedClinicId,
           email: formData.userId,
           name: formData.name,
           phone: formData.phone,
           address: formData.address,
           resident_registration_number: encryptedResidentNumber,
           role: formData.role,
-          status: 'pending', // 승인 대기 상태
+          status: isCommunityInviteSignup ? 'active' : 'pending',
         });
 
         console.log('[Signup] User profile creation result:', { userProfileError });
@@ -445,11 +456,25 @@ export default function SignupForm({
             <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
           </div>
           <h2 className="text-3xl font-bold text-at-text mb-2">회원가입</h2>
-          <p className="text-at-text-secondary">치과 정보를 입력하여 계정을 생성하세요</p>
+          <p className="text-at-text-secondary">
+            {isCommunityInviteSignup
+              ? '공개 소모임 초대 링크를 통한 가입입니다. 가입 완료 즉시 모임 본문을 열람할 수 있습니다.'
+              : '치과 정보를 입력하여 계정을 생성하세요'}
+          </p>
         </div>
 
         {/* Form */}
         <div className="bg-white p-8 rounded-2xl shadow-at-card border border-at-border">
+          {isCommunityInviteSignup && (
+            <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+              <p className="font-semibold mb-1">📌 공개 소모임 초대 가입</p>
+              <p>
+                별도 승인 절차 없이 가입 즉시 소모임 본문을 열람할 수 있습니다. 단,
+                병원 데이터(환자/매출/계약서 등) 기능은 사용할 수 없으며, 추후 치과에
+                정식 소속되려면 대표원장에게 별도로 가입 승인을 요청해야 합니다.
+              </p>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 로그인 정보 */}
             <div className="pb-4 border-b border-at-border">
@@ -612,29 +637,31 @@ export default function SignupForm({
                 </p>
               )}
 
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium text-at-text-secondary mb-1">
-                  직책 *
-                </label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent bg-white"
-                  disabled={loading}
-                >
-                  <option value="owner">대표원장</option>
-                  <option value="vice_director">부원장</option>
-                  <option value="manager">실장</option>
-                  <option value="team_leader">진료팀장</option>
-                  <option value="staff">진료팀원</option>
-                </select>
-              </div>
+              {!isCommunityInviteSignup && (
+                <div>
+                  <label htmlFor="role" className="block text-sm font-medium text-at-text-secondary mb-1">
+                    직책 *
+                  </label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-at-border rounded-xl focus:ring-at-accent focus:border-at-accent bg-white"
+                    disabled={loading}
+                  >
+                    <option value="owner">대표원장</option>
+                    <option value="vice_director">부원장</option>
+                    <option value="manager">실장</option>
+                    <option value="team_leader">진료팀장</option>
+                    <option value="staff">진료팀원</option>
+                  </select>
+                </div>
+              )}
             </div>
 
-            {/* 역할에 따른 분기 UI */}
-            {formData.role === 'owner' ? (
+            {/* 역할에 따른 분기 UI — 초대 링크 진입자는 직책/병원 선택 없이 가입 */}
+            {isCommunityInviteSignup ? null : formData.role === 'owner' ? (
               // 대표원장 선택 시: 신규 치과 정보 입력
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-at-text mb-4">치과 정보</h3>
