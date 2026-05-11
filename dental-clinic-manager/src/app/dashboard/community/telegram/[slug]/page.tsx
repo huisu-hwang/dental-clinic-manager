@@ -33,9 +33,11 @@ export default function TelegramBoardPage() {
         }
         setGroup(groupData)
 
-        // 멤버십 확인
+        // 멤버십 확인 — 모임장(created_by) 본인이거나 master_admin 이면 멤버 테이블
+        // 등록 여부와 무관하게 멤버처럼 본문 접근 허용 (가입 신청 화면을 노출하지 않음).
         const { data: membershipData } = await telegramMemberService.checkMembership(groupData.id)
-        setIsMember(membershipData ?? false)
+        const ownerOrMaster = groupData.created_by === user.id || user.role === 'master_admin'
+        setIsMember(ownerOrMaster ? true : (membershipData ?? false))
         setLoading(false)
       }
       fetchGroup()

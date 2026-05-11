@@ -146,7 +146,7 @@ export default function TelegramBoardMemberPanel({
   }
 
   const handleCopyLink = async (link: TelegramInviteLink) => {
-    const url = `${window.location.origin}/community/telegram/join/${link.invite_code}`
+    const url = `${window.location.origin}/dashboard/community/telegram/join/${link.invite_code}`
     await navigator.clipboard.writeText(url)
     setCopiedLinkId(link.id)
     setTimeout(() => setCopiedLinkId(null), 2000)
