@@ -161,6 +161,48 @@ export const telegramGroupService = {
   },
 
   /**
+   * 마스터 전용 — 모든 소모임 조회 (status/visibility 필터 없음, 모임장/멤버수 join)
+   * RLS 가 master_admin 을 허용해야 정상 동작. 권한 부족 시 빈 결과로 폴백.
+   */
+  async getAllGroupsForMaster(): Promise<{ data: TelegramGroup[] | null; error: string | null }> {
+    try {
+      const supabase = await ensureConnection()
+      if (!supabase) throw new Error('Database connection failed')
+
+      // 1) 그룹 + 모임장 join
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('telegram_groups')
+        .select('*, creator:users!telegram_groups_created_by_fkey(id, name, email)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+
+      // 2) 멤버 수 별도 집계 (그룹 수가 많지 않으므로 단순 N+1 회피용 단일 쿼리)
+      const groupIds = (data ?? []).map((g: { id: string }) => g.id)
+      const memberCounts = new Map<string, number>()
+      if (groupIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: mems } = await (supabase as any)
+          .from('telegram_group_members')
+          .select('telegram_group_id')
+          .in('telegram_group_id', groupIds)
+        for (const m of (mems ?? []) as Array<{ telegram_group_id: string }>) {
+          memberCounts.set(m.telegram_group_id, (memberCounts.get(m.telegram_group_id) ?? 0) + 1)
+        }
+      }
+
+      const enriched = (data ?? []).map((g: TelegramGroup) => ({
+        ...g,
+        member_count: memberCounts.get(g.id) ?? 0,
+      }))
+      return { data: enriched, error: null }
+    } catch (error) {
+      console.error('[telegramGroupService.getAllGroupsForMaster] Error:', error)
+      return { data: null, error: extractErrorMessage(error) }
+    }
+  },
+
+  /**
    * 공개 그룹 조회 (visibility !== 'private')
    */
   async getPublicGroups(): Promise<{ data: TelegramGroup[] | null; error: string | null }> {

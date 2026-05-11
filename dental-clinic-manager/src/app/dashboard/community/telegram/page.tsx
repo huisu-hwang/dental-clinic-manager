@@ -2,20 +2,32 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Send, Loader2, Inbox, Plus, Globe } from 'lucide-react'
+import { Send, Loader2, Inbox, Plus, Globe, ShieldCheck, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { telegramGroupService } from '@/lib/telegramService'
 import TelegramBoardApplicationForm from '@/components/Telegram/TelegramBoardApplicationForm'
 import TelegramMyApplications from '@/components/Telegram/TelegramMyApplications'
 import type { TelegramGroup, ApplyTelegramGroupDto } from '@/types/telegram'
-import { TELEGRAM_VISIBILITY_LABELS } from '@/types/telegram'
+import { TELEGRAM_VISIBILITY_LABELS, TELEGRAM_GROUP_STATUS_LABELS } from '@/types/telegram'
+
+function formatKstDate(iso: string | null): string {
+  if (!iso) return '-'
+  try {
+    return new Date(iso).toLocaleDateString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      timeZone: 'Asia/Seoul',
+    })
+  } catch { return '-' }
+}
 
 export default function TelegramBoardListPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  const isMaster = user?.role === 'master_admin'
   const [groups, setGroups] = useState<TelegramGroup[]>([])
   const [publicGroups, setPublicGroups] = useState<TelegramGroup[]>([])
+  const [allGroups, setAllGroups] = useState<TelegramGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [showApplyForm, setShowApplyForm] = useState(false)
   const [applying, setApplying] = useState(false)
@@ -25,9 +37,10 @@ export default function TelegramBoardListPage() {
   useEffect(() => {
     if (user) {
       const fetchGroups = async (retryCount = 0) => {
-        const [myRes, publicRes] = await Promise.all([
+        const [myRes, publicRes, allRes] = await Promise.all([
           telegramGroupService.getMyGroups(),
           telegramGroupService.getPublicGroups(),
+          isMaster ? telegramGroupService.getAllGroupsForMaster() : Promise.resolve({ data: null, error: null }),
         ])
         // 에러 발생 시 재시도 (빈 배열로 덮어쓰지 않음)
         if (myRes.error && retryCount < 2) {
@@ -40,11 +53,12 @@ export default function TelegramBoardListPage() {
         // 공개 그룹 중 내가 멤버가 아닌 것만 표시
         const myGroupIds = new Set(myGroups.map(g => g.id))
         setPublicGroups((publicRes.data || []).filter(g => !myGroupIds.has(g.id)))
+        if (isMaster) setAllGroups(allRes.data || [])
         setLoading(false)
       }
       fetchGroups()
     }
-  }, [user])
+  }, [user, isMaster])
 
   const handleApply = async (dto: ApplyTelegramGroupDto) => {
     setApplying(true)
@@ -179,6 +193,93 @@ export default function TelegramBoardListPage() {
 
       {/* 내 신청 현황 */}
       <TelegramMyApplications />
+
+      {/* 마스터 전용 — 전체 소모임 목록 + 운영 메타데이터 */}
+      {isMaster && (
+        <div className="pt-4 border-t border-at-border">
+          <h3 className="text-sm font-semibold text-at-text-secondary flex items-center gap-1.5 mb-3">
+            <ShieldCheck className="w-4 h-4 text-at-accent" />
+            마스터 전용 — 전체 소모임 ({allGroups.length})
+          </h3>
+          {allGroups.length === 0 ? (
+            <p className="text-xs text-at-text-weak">등록된 소모임이 없습니다.</p>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {allGroups.map(group => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => router.push(`/dashboard/community/telegram/${group.board_slug}`)}
+                  className="text-left p-4 rounded-xl border border-at-border bg-white hover:border-sky-300 hover:shadow-sm transition-all"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${group.color_bg}`}>
+                      <Send className={`w-5 h-5 ${group.color_text}`} />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="text-sm font-semibold text-at-text truncate">{group.board_title}</h4>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-at-surface-alt text-at-text-secondary flex-shrink-0">
+                          {TELEGRAM_VISIBILITY_LABELS[group.visibility]}
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ${
+                          group.status === 'approved' ? 'bg-at-success-bg text-at-success'
+                          : group.status === 'pending' ? 'bg-at-warning-bg text-amber-700'
+                          : 'bg-at-error-bg text-at-error'
+                        }`}>
+                          {TELEGRAM_GROUP_STATUS_LABELS[group.status]}
+                        </span>
+                        {!group.is_active && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-at-surface-alt text-at-text-weak flex-shrink-0">
+                            비활성
+                          </span>
+                        )}
+                      </div>
+                      {group.board_description && (
+                        <p className="text-xs text-at-text-weak truncate">{group.board_description}</p>
+                      )}
+                      <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-at-text-secondary mt-1">
+                        <div className="col-span-2 flex items-center gap-1 truncate">
+                          <span className="text-at-text-weak shrink-0">모임장</span>
+                          <span className="font-medium text-at-text truncate">
+                            {group.creator?.name || '(미지정)'}
+                          </span>
+                          {group.creator?.email && (
+                            <span className="text-at-text-weak truncate">· {group.creator.email}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-at-text-weak">신청일</span>
+                          <span>{formatKstDate(group.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-at-text-weak">개설일</span>
+                          <span>{formatKstDate(group.reviewed_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-at-text-weak inline-flex items-center gap-0.5">
+                            <Users className="w-3 h-3" />멤버
+                          </span>
+                          <span>{group.member_count ?? 0}명</span>
+                        </div>
+                        <div className="flex items-center gap-1 truncate">
+                          <span className="text-at-text-weak shrink-0">slug</span>
+                          <code className="text-at-text font-mono truncate">{group.board_slug}</code>
+                        </div>
+                      </dl>
+                      {group.application_reason && (
+                        <p className="text-[11px] text-at-text-weak mt-1 line-clamp-2">
+                          <span className="text-at-text-secondary">신청 사유:</span> {group.application_reason}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
