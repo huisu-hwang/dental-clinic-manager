@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     // 1) 신규 가입자 정보 조회
     const { data: newUser, error: newUserErr } = await supabase
       .from('users')
-      .select('id, name, email, role, status, clinic_id, clinic:clinics(name)')
+      .select('id, name, email, role, status, clinic_id, created_at, master_notify_sent_at, clinic:clinics(name)')
       .eq('id', userId)
       .single()
     if (newUserErr || !newUser) {
@@ -45,6 +45,17 @@ export async function POST(req: NextRequest) {
     // owner 가입에만 마스터에게 발송
     if (newUser.role !== 'owner') {
       return NextResponse.json({ success: true, skipped: 'not owner role' })
+    }
+    // 스팸 방지: 이미 발송된 사용자 차단
+    if (newUser.master_notify_sent_at) {
+      return NextResponse.json({ success: true, skipped: 'already notified' })
+    }
+    // 스팸 방지: 가입 직후(30분) 진입자에 한해서만 발송
+    if (newUser.created_at) {
+      const ageMs = Date.now() - new Date(newUser.created_at).getTime()
+      if (ageMs > 30 * 60 * 1000 || ageMs < 0) {
+        return NextResponse.json({ success: true, skipped: 'out of grace window' })
+      }
     }
 
     // 2) 마스터 사용자 + 전화번호 조회
@@ -130,6 +141,15 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         results.push({ userId: m.id, phone: m.phone, ok: false, message: e instanceof Error ? e.message : String(e) })
       }
+    }
+
+    // 6) 1회 발송 후 sent_at 기록 — 이후 같은 userId 로 호출 시 차단됨
+    const anySuccess = results.some((r) => r.ok)
+    if (anySuccess) {
+      await supabase
+        .from('users')
+        .update({ master_notify_sent_at: new Date().toISOString() })
+        .eq('id', userId)
     }
 
     return NextResponse.json({ success: true, sent: results })
