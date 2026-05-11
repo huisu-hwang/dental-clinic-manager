@@ -364,13 +364,13 @@ function SessionResultView({
 
   const tickers = useMemo(() => {
     const seen = new Set<string>()
-    const arr: { ticker: string; name: string }[] = []
+    const arr: { ticker: string; name: string; market: 'KR' | 'US' }[] = []
     for (const r of fullRows) {
       const t = r.ticker.toUpperCase()
       const k = `${r.market}:${t}`
       if (seen.has(k)) continue
       seen.add(k)
-      arr.push({ ticker: t, name: t })
+      arr.push({ ticker: t, name: t, market: r.market })
     }
     return arr
   }, [fullRows])
