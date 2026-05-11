@@ -45,23 +45,28 @@ export async function POST(req: NextRequest) {
     }
     const actualType = msgBytes > 90 && msg_type === 'SMS' ? 'LMS' : msg_type
 
-    const formData = new FormData()
-    formData.append('key', aligo.api_key)
-    formData.append('user_id', aligo.user_id)
-    formData.append('sender', aligo.sender_number)
-    formData.append('receiver', phone_number)
-    formData.append('msg', message)
-    formData.append('msg_type', actualType)
+    // urlencoded 사용 — undici ProxyAgent + Fixie 터널링에서 multipart boundary 손상되는 문제 회피
+    const params = new URLSearchParams()
+    params.append('key', aligo.api_key)
+    params.append('user_id', aligo.user_id)
+    params.append('sender', aligo.sender_number)
+    params.append('receiver', phone_number)
+    params.append('msg', message)
+    params.append('msg_type', actualType)
     if (title && actualType !== 'SMS') {
       const titleBytes = new Blob([title]).size
       if (titleBytes > 44) {
         return NextResponse.json({ success: false, error: '문자 제목은 44바이트 이하여야 합니다.' }, { status: 400 })
       }
-      formData.append('title', title)
+      params.append('title', title)
     }
-    if (process.env.NODE_ENV === 'development') formData.append('testmode_yn', 'Y')
+    if (process.env.NODE_ENV === 'development') params.append('testmode_yn', 'Y')
 
-    const aligoRes = await aligoFetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: formData })
+    const aligoRes = await aligoFetch(`${ALIGO_API_URL}/send/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    })
     const aligoJson = (await aligoRes.json()) as { result_code: string | number; message: string; msg_id?: string | number }
 
     if (process.env.NODE_ENV !== 'production') {

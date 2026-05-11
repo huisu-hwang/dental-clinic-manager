@@ -114,17 +114,22 @@ export async function GET(request: NextRequest) {
       }
       const msgType = byteSize > 90 ? 'LMS' : 'SMS'
 
-      const fd = new FormData()
-      fd.append('key', aligo.api_key)
-      fd.append('user_id', aligo.user_id)
-      fd.append('sender', aligo.sender_number)
-      fd.append('receiver', r.referrer.phone_number)
-      fd.append('msg', message)
-      fd.append('msg_type', msgType)
-      if (msgType === 'LMS') fd.append('title', '소개 감사 인사')
+      // urlencoded 사용 — Fixie/ProxyAgent 환경에서 multipart 가 깨지는 문제 회피
+      const params = new URLSearchParams()
+      params.append('key', aligo.api_key)
+      params.append('user_id', aligo.user_id)
+      params.append('sender', aligo.sender_number)
+      params.append('receiver', r.referrer.phone_number)
+      params.append('msg', message)
+      params.append('msg_type', msgType)
+      if (msgType === 'LMS') params.append('title', '소개 감사 인사')
 
       try {
-        const res = await aligoFetch(`${ALIGO_API_URL}/send/`, { method: 'POST', body: fd })
+        const res = await aligoFetch(`${ALIGO_API_URL}/send/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString(),
+        })
         const json = await res.json()
         // Aligo 스펙: result_code 는 Integer, >= 1 이면 성공.
         const codeNum = Number(json.result_code)
