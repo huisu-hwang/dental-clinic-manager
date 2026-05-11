@@ -95,7 +95,9 @@ const TOOL_DEFINITION = {
   },
 }
 
-const SYSTEM_PROMPT = `당신은 주식 시장 군중심리 분석 전문가입니다. 주어진 분봉 시계열과 호가 스냅샷을 보고, 호가창과 차트를 수시로 보고 있는 일반 투자자(대중)가 지금 이 순간 느낄 심리를 분석합니다. 출력은 반드시 submit_psychology_analysis 도구를 통해 제출하며, 한국어로 작성합니다. 추측이 아닌 데이터에서 직접 관찰 가능한 패턴 위주로 분석하고, 단정적 매매 권유 표현은 사용하지 않습니다.`
+const SYSTEM_PROMPT = `당신은 주식 시장 군중심리 분석 전문가입니다. 주어진 분봉 시계열과 호가 스냅샷을 보고, 호가창과 차트를 수시로 보고 있는 일반 투자자(대중)가 지금 이 순간 느낄 심리를 분석합니다. 출력은 반드시 submit_psychology_analysis 도구를 통해 제출하며, 한국어로 작성합니다. 추측이 아닌 데이터에서 직접 관찰 가능한 패턴 위주로 분석하고, 단정적 매매 권유 표현은 사용하지 않습니다.
+
+**공포·탐욕 지수 인용 규칙 (필수)**: 각 분봉마다 사전 계산된 공포·탐욕 지수(F 값, 0~100)가 함께 주어집니다. narrative 본문에서 특징적 시점·시각을 언급할 때마다 그 시점의 F 값과 라벨(극공포/공포/중립/탐욕/극탐욕)을 즉시 옆에 표기해야 합니다. 예: "13:42 (공포·탐욕 지수 18, 극공포)에 매도세가 집중되며…". markers 로 표시한 모든 시점은 본문에서도 한 번 이상 명시적으로 인용하며 같은 형식을 사용합니다. 시각을 언급하지 않은 일반 서술에는 표기하지 않습니다.`
 
 export interface AnalyzeArgs {
   ticker: string
@@ -197,9 +199,10 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
       throw new Error(`LLM 응답 스키마 검증 실패: ${issues}`)
     }
 
-    // 안전망: LLM이 narrative에 공포·탐욕 지수를 빠뜨렸을 경우 markers 기반으로 자동 append.
-    // 이미 narrative 안에 지수 언급이 충분하면(예: "공포·탐욕 지수 18") skip — 중복 표기 방지.
-    const enriched = appendFearGreedToNarrative(
+    // 안전망 (2단):
+    //  1) 본문에 등장한 모든 HH:MM 시각 옆에 (공포·탐욕 지수 NN, 라벨) inline 자동 보강
+    //  2) markers 중 본문에 인용되지 않은 항목은 끝에 요약 블록으로 부착 (빠짐 방지)
+    const enriched = enrichNarrativeWithFearGreed(
       parsed.data,
       fearGreedSeries,
       args.snapshot.candles.map(c => c.ts),
@@ -215,38 +218,71 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
 }
 
 /**
- * narrative에 marker별 공포·탐욕 지수 요약을 보강.
- *
- * - LLM이 본문에 이미 "공포·탐욕 지수" 키워드를 충분히 포함했다면 그대로 둠 (중복 방지).
- * - 그렇지 않으면 본문 끝에 "**주요 지점 공포·탐욕 지수**" 섹션을 append.
+ * narrative 후처리 보강 (2단계):
+ *   1) inline annotation — 본문에 등장한 모든 HH:MM 시각 옆에 (공포·탐욕 지수 NN, 라벨) 자동 추가.
+ *      이미 같은 시각 옆에 표기가 있으면 skip (중복 방지).
+ *   2) 요약 블록 — markers 중 본문에 인용되지 않은 항목은 끝에 "**주요 지점 공포·탐욕 지수**" 부착.
  */
-function appendFearGreedToNarrative(
+function enrichNarrativeWithFearGreed(
   output: PsychologyAnalysisOutput,
   fearGreed: number[],
   timestamps: string[],
 ): PsychologyAnalysisOutput {
-  if (fearGreed.length === 0 || output.markers.length === 0) return output
+  if (fearGreed.length === 0) return output
 
-  // 본문에 이미 marker 개수만큼(또는 그 이상) "공포" 또는 "F=" 가 들어있으면 LLM 작업으로 충분.
-  const fearKeywordCount = (output.narrative.match(/공포·탐욕 지수|공포 지수|F=\d/g) ?? []).length
-  if (fearKeywordCount >= Math.min(2, output.markers.length)) return output
+  // HH:MM → 점수/라벨 매핑 (candle ts 형식 그대로 사용 — LLM 도 동일 형식 사용 추정)
+  const hmToData = new Map<string, { score: number; label: string }>()
+  for (let i = 0; i < timestamps.length; i++) {
+    const score = fearGreed[i]
+    if (typeof score !== 'number' || Number.isNaN(score)) continue
+    const ts = timestamps[i]
+    if (!ts || ts.length < 16) continue
+    const hm = ts.slice(11, 16) // "HH:MM"
+    if (!hmToData.has(hm)) {
+      hmToData.set(hm, { score: Math.round(score), label: fearGreedLabel(score) })
+    }
+  }
 
-  const lines = output.markers
-    .slice()
-    .sort((a, b) => a.candle_index - b.candle_index)
-    .map((m) => {
-      const score = fearGreed[m.candle_index]
-      if (typeof score !== 'number' || Number.isNaN(score)) return null
-      const rounded = Math.round(score)
-      // marker.ts 가 비어있으면 candles[index].ts 로 보강 (LLM이 ts 누락 시)
-      const ts = m.ts || timestamps[m.candle_index] || ''
-      const tsLabel = ts ? ts.slice(11, 16) : `idx ${m.candle_index}`
-      return `- ${tsLabel} ${m.label}: 공포·탐욕 지수 ${rounded} (${fearGreedLabel(score)})`
-    })
-    .filter((s): s is string => s !== null)
+  // 1) inline 보강 — 본문 안 HH:MM 패턴 옆에 (공포·탐욕 지수 NN, 라벨) 자동 부착
+  const annotated = output.narrative.replace(
+    /(\d{1,2}):(\d{2})/g,
+    (match, _h, _m, offset, full: string) => {
+      const data = hmToData.get(match.length === 5 ? match : `0${match}`) ?? hmToData.get(match)
+      if (!data) return match
+      // 직후 40자 안에 이미 공포/탐욕 관련 표기가 있으면 skip
+      const tail = full.slice(offset + match.length, offset + match.length + 40)
+      if (/공포·탐욕|공포\s*지수|F=\d|극공포|극탐욕|\(공포|\(탐욕|\(중립/.test(tail)) {
+        return match
+      }
+      return `${match} (공포·탐욕 지수 ${data.score}, ${data.label})`
+    },
+  )
 
-  if (lines.length === 0) return output
+  // 2) 요약 블록 — markers 중 본문에서 인용되지 않은 시점만 부착 (빠짐 방지)
+  const missing = output.markers.filter((m) => {
+    const ts = m.ts || timestamps[m.candle_index] || ''
+    const hm = ts.length >= 16 ? ts.slice(11, 16) : ''
+    return hm && !annotated.includes(hm)
+  })
 
-  const appended = `${output.narrative.trim()}\n\n**주요 지점 공포·탐욕 지수**\n${lines.join('\n')}`
-  return { ...output, narrative: appended }
+  let finalNarrative = annotated
+  if (missing.length > 0) {
+    const lines = missing
+      .slice()
+      .sort((a, b) => a.candle_index - b.candle_index)
+      .map((m) => {
+        const score = fearGreed[m.candle_index]
+        if (typeof score !== 'number' || Number.isNaN(score)) return null
+        const rounded = Math.round(score)
+        const ts = m.ts || timestamps[m.candle_index] || ''
+        const tsLabel = ts ? ts.slice(11, 16) : `idx ${m.candle_index}`
+        return `- ${tsLabel} ${m.label}: 공포·탐욕 지수 ${rounded} (${fearGreedLabel(score)})`
+      })
+      .filter((s): s is string => s !== null)
+    if (lines.length > 0) {
+      finalNarrative = `${annotated.trim()}\n\n**본문에서 누락된 주요 지점 공포·탐욕 지수**\n${lines.join('\n')}`
+    }
+  }
+
+  return { ...output, narrative: finalNarrative }
 }
