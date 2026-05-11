@@ -316,6 +316,9 @@ export type UserNotificationType =
   | 'subscription_upgrade_required'  // 구독 업그레이드 필요 (원장에게)
   | 'subscription_payment_succeeded' // 결제 성공 후 대기자 승인 안내 (원장에게)
   | 'monthly_report_ready'           // 월간 성과 보고서 생성 완료 (대표원장/실장에게)
+  | 'group_join_requested'           // 소모임 가입 신청 (모임장에게)
+  | 'group_join_approved'            // 소모임 가입 승인 (신청자에게)
+  | 'group_join_rejected'            // 소모임 가입 거절 (신청자에게)
 
 // 사용자 알림 타입 라벨
 export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string> = {
@@ -343,7 +346,10 @@ export const USER_NOTIFICATION_TYPE_LABELS: Record<UserNotificationType, string>
   system: '시스템 알림',
   subscription_upgrade_required: '구독 업그레이드 필요',
   subscription_payment_succeeded: '결제 완료 · 승인 대기',
-  monthly_report_ready: '월간 성과 보고서'
+  monthly_report_ready: '월간 성과 보고서',
+  group_join_requested: '소모임 가입 신청',
+  group_join_approved: '소모임 가입 승인',
+  group_join_rejected: '소모임 가입 거절'
 }
 
 // 사용자 알림 아이콘 매핑
@@ -372,7 +378,10 @@ export const USER_NOTIFICATION_TYPE_ICONS: Record<UserNotificationType, string> 
   system: 'bell',
   subscription_upgrade_required: 'alert-circle',
   subscription_payment_succeeded: 'credit-card',
-  monthly_report_ready: 'file-bar-chart-2'
+  monthly_report_ready: 'file-bar-chart-2',
+  group_join_requested: 'user-plus',
+  group_join_approved: 'check-circle',
+  group_join_rejected: 'x-circle'
 }
 
 // 사용자 알림 색상 매핑
@@ -401,7 +410,10 @@ export const USER_NOTIFICATION_TYPE_COLORS: Record<UserNotificationType, { icon:
   system: { icon: 'text-blue-500', bg: 'bg-blue-50', text: 'text-blue-700' },
   subscription_upgrade_required: { icon: 'text-amber-500', bg: 'bg-amber-50', text: 'text-amber-700' },
   subscription_payment_succeeded: { icon: 'text-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  monthly_report_ready: { icon: 'text-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-700' }
+  monthly_report_ready: { icon: 'text-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-700' },
+  group_join_requested: { icon: 'text-sky-500', bg: 'bg-sky-50', text: 'text-sky-700' },
+  group_join_approved: { icon: 'text-green-500', bg: 'bg-green-50', text: 'text-green-700' },
+  group_join_rejected: { icon: 'text-red-500', bg: 'bg-red-50', text: 'text-red-700' }
 }
 
 // 사용자 알림 인터페이스

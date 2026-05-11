@@ -1,15 +1,27 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Sparkles } from 'lucide-react'
+import { Plus, Send, ChevronDown, ChevronUp, Power, PowerOff, Loader2, AlertCircle, Sparkles, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { telegramGroupService } from '@/lib/telegramService'
+import { telegramGroupService, telegramMemberService } from '@/lib/telegramService'
 import { useAuth } from '@/contexts/AuthContext'
 import AdminTelegramGroupSetupGuide from './AdminTelegramGroupSetupGuide'
 import AdminTelegramMembers from './AdminTelegramMembers'
 import AdminTelegramSyncStatus from './AdminTelegramSyncStatus'
 import AdminTelegramApplications from './AdminTelegramApplications'
-import type { TelegramGroup } from '@/types/telegram'
+import GroupOwnerEditor from './GroupOwnerEditor'
+import type { TelegramGroup, TelegramGroupVisibility } from '@/types/telegram'
+import { TELEGRAM_VISIBILITY_LABELS, TELEGRAM_GROUP_STATUS_LABELS } from '@/types/telegram'
+
+function formatKstDate(iso: string | null): string {
+  if (!iso) return '-'
+  try {
+    return new Date(iso).toLocaleDateString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      timeZone: 'Asia/Seoul',
+    })
+  } catch { return '-' }
+}
 
 export default function AdminTelegramManager() {
   const { user } = useAuth()
@@ -26,7 +38,8 @@ export default function AdminTelegramManager() {
 
   const fetchGroups = async () => {
     setLoading(true)
-    const { data, error: fetchError } = await telegramGroupService.getGroups()
+    // 마스터 관리자 페이지에서는 전체 그룹 + 모임장/멤버수까지 함께 받아 화면에 표기
+    const { data, error: fetchError } = await telegramGroupService.getAllGroupsForMaster()
     if (fetchError) {
       setError(fetchError)
     } else {
@@ -195,9 +208,63 @@ export default function AdminTelegramManager() {
                 )}
               </div>
 
-              {/* 확장된 상세 (멤버 관리) */}
+              {/* 확장된 상세 (메타 + 모임장 + 멤버 관리) */}
               {expandedGroupId === group.id && (
-                <div className="border-t border-at-border p-4 bg-at-surface-alt">
+                <div className="border-t border-at-border p-4 bg-at-surface-alt space-y-4">
+                  {/* 그룹 메타 정보 */}
+                  <div className="bg-white rounded-lg p-3 space-y-2 border border-at-border">
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+                      <span className="px-1.5 py-0.5 rounded bg-at-surface-alt text-at-text-secondary">
+                        {TELEGRAM_VISIBILITY_LABELS[(group.visibility ?? 'private') as TelegramGroupVisibility]}
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded ${
+                        group.status === 'approved' ? 'bg-at-success-bg text-at-success'
+                        : group.status === 'pending' ? 'bg-at-warning-bg text-amber-700'
+                        : 'bg-at-error-bg text-at-error'
+                      }`}>
+                        {TELEGRAM_GROUP_STATUS_LABELS[group.status]}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700">
+                        멤버 {group.member_count ?? 0}명
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-at-text-secondary">
+                      <div className="flex items-center gap-1">
+                        <span className="text-at-text-weak shrink-0">신청일</span>
+                        <span>{formatKstDate(group.created_at)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-at-text-weak shrink-0">개설일</span>
+                        <span>{formatKstDate(group.reviewed_at)}</span>
+                      </div>
+                      <div className="col-span-2 flex items-center gap-1 truncate">
+                        <span className="text-at-text-weak shrink-0">slug</span>
+                        <code className="text-at-text font-mono truncate">{group.board_slug}</code>
+                      </div>
+                      {group.board_description && (
+                        <div className="col-span-2 flex items-center gap-1 truncate">
+                          <span className="text-at-text-weak shrink-0">설명</span>
+                          <span className="text-at-text truncate">{group.board_description}</span>
+                        </div>
+                      )}
+                      {group.application_reason && (
+                        <div className="col-span-2 line-clamp-2">
+                          <span className="text-at-text-weak">신청 사유: </span>
+                          <span>{group.application_reason}</span>
+                        </div>
+                      )}
+                    </dl>
+
+                    {/* 모임장 지정/교체 (마스터 전용) */}
+                    <div className="pt-2 border-t border-at-border">
+                      <GroupOwnerEditor
+                        groupId={group.id}
+                        currentOwner={group.creator ?? null}
+                        onChanged={(owner) => setGroups(prev => prev.map(g => g.id === group.id ? { ...g, creator: owner, created_by: owner.id } : g))}
+                      />
+                    </div>
+                  </div>
+
                   <AdminTelegramMembers groupId={group.id} />
                 </div>
               )}

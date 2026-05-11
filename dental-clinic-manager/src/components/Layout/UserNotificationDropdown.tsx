@@ -19,6 +19,7 @@ import {
   ClipboardDocumentListIcon,
   ClipboardDocumentCheckIcon,
   ChevronRightIcon,
+  UserPlusIcon,
 } from '@heroicons/react/24/outline'
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid'
 import type { UserNotification, UserNotificationType } from '@/types/notification'
@@ -52,6 +53,9 @@ const NotificationTypeIcons: Record<UserNotificationType, React.ComponentType<{ 
   subscription_upgrade_required: ExclamationCircleIcon,
   subscription_payment_succeeded: CheckCircleIcon,
   monthly_report_ready: DocumentTextIcon,
+  group_join_requested: UserPlusIcon,
+  group_join_approved: CheckCircleIcon,
+  group_join_rejected: XCircleIcon,
 }
 
 // 알림 타입별 기본 링크 매핑 (link가 없는 경우 fallback)
