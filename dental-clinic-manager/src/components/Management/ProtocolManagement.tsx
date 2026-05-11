@@ -84,7 +84,10 @@ interface ProtocolManagementProps {
 export default function ProtocolManagement({ currentUser, hideHeader = false }: ProtocolManagementProps) {
   const searchParams = useSearchParams()
   const { hasPermission } = usePermissions()
-  const autoOpenedRef = useRef(false)
+  // 알림 바로가기를 같은 페이지에서 다시 눌렀을 때도 동작하도록, 마지막으로 자동
+  // 오픈한 protocolId 를 기억하고 다른 id 일 때만 다시 오픈한다(단일 boolean 가드는
+  // 페이지 첫 진입 이후 모든 후속 변경을 막아 같은 페이지에서의 알림 클릭이 무시됨).
+  const lastAutoOpenedIdRef = useRef<string | null>(null)
   const [activeSubTab, setActiveSubTab] = useState<'list' | 'categories' | 'permissions'>('list')
   const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [protocols, setProtocols] = useState<Protocol[]>([])
@@ -203,18 +206,20 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
     }
   }, [])
 
-  // URL의 review/view 파라미터로 해당 프로토콜 상세 자동 오픈
+  // URL의 review/view 파라미터로 해당 프로토콜 상세 자동 오픈.
+  // 같은 페이지에 머문 채로 알림 바로가기를 눌러도 (id 가 다르면) 다시 오픈하도록
+  // lastAutoOpenedIdRef 와 비교한다.
   useEffect(() => {
     const protocolId = searchParams.get('review') || searchParams.get('view')
-    if (protocolId && initialLoadDone && !autoOpenedRef.current) {
-      autoOpenedRef.current = true
-      dataService.getProtocolById(protocolId).then((result) => {
-        if (result.data) {
-          setSelectedProtocol(result.data as Protocol)
-          setShowDetail(true)
-        }
-      })
-    }
+    if (!protocolId || !initialLoadDone) return
+    if (lastAutoOpenedIdRef.current === protocolId) return
+    lastAutoOpenedIdRef.current = protocolId
+    dataService.getProtocolById(protocolId).then((result) => {
+      if (result.data) {
+        setSelectedProtocol(result.data as Protocol)
+        setShowDetail(true)
+      }
+    })
   }, [searchParams, initialLoadDone])
 
   const fetchProtocols = async () => {
@@ -1185,6 +1190,11 @@ export default function ProtocolManagement({ currentUser, hideHeader = false }: 
                 onEdit={handleEditProtocol}
                 onDelete={handleDeleteProtocol}
                 onSplit={canEdit ? handleSplitProtocol : undefined}
+                // 승인/반려/검토 요청 등으로 protocol 이 갱신되면 즉시 목록 반영
+                onProtocolChanged={(updated) => {
+                  setProtocols(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
+                  setSelectedProtocol(prev => prev && prev.id === updated.id ? { ...prev, ...updated } : prev)
+                }}
               />
             )}
 
