@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { Send, Loader2, ShieldAlert, ChevronLeft, Settings, Globe, UserPlus } from 'lucide-react'
+import { Send, Loader2, ShieldAlert, ChevronLeft, Settings, Globe } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import TelegramBoardPostList from '@/components/Telegram/TelegramBoardPostList'
 import TelegramBoardMemberPanel from '@/components/Telegram/TelegramBoardMemberPanel'
+import JoinRequestButton from '@/components/Telegram/JoinRequestButton'
 import { telegramGroupService, telegramMemberService } from '@/lib/telegramService'
-import type { TelegramGroup, TelegramGroupVisibility } from '@/types/telegram'
-import { TELEGRAM_VISIBILITY_LABELS } from '@/types/telegram'
+import type { TelegramGroup } from '@/types/telegram'
 
 export default function TelegramBoardPage() {
   const router = useRouter()
@@ -69,11 +69,17 @@ export default function TelegramBoardPage() {
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="w-8 h-8 text-amber-500" />
           </div>
-          <h2 className="text-lg font-semibold text-at-text mb-2">접근 권한이 없습니다</h2>
-          <p className="text-sm text-at-text-weak mb-6">이 게시판은 모임 멤버만 열람할 수 있습니다.<br />초대 링크를 통해 가입해 주세요.</p>
-          <Button variant="outline" onClick={() => router.push('/dashboard/community/telegram')}>
-            게시판 목록으로
-          </Button>
+          <h2 className="text-lg font-semibold text-at-text mb-2">{group.board_title}</h2>
+          {group.board_description && (
+            <p className="text-sm text-at-text-weak mb-2">{group.board_description}</p>
+          )}
+          <p className="text-sm text-at-text-weak mb-6">비공개 모임입니다. 가입 신청 후 모임장 승인을 받아야 열람할 수 있습니다.</p>
+          <JoinRequestButton groupId={group.id} onJoined={() => router.refresh()} />
+          <div className="mt-6">
+            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/community/telegram')}>
+              게시판 목록으로
+            </Button>
+          </div>
         </div>
       ) : isMember === false && group.visibility === 'public_list' ? (
         /* 목록만 공개 - 게시글 열람 불가 */
@@ -86,9 +92,12 @@ export default function TelegramBoardPage() {
             <p className="text-sm text-at-text-weak mb-2">{group.board_description}</p>
           )}
           <p className="text-sm text-at-text-weak mb-6">게시글을 열람하려면 모임에 가입해야 합니다.</p>
-          <Button variant="outline" onClick={() => router.push('/dashboard/community/telegram')}>
-            게시판 목록으로
-          </Button>
+          <JoinRequestButton groupId={group.id} onJoined={() => router.refresh()} />
+          <div className="mt-6">
+            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/community/telegram')}>
+              게시판 목록으로
+            </Button>
+          </div>
         </div>
       ) : (
         <>

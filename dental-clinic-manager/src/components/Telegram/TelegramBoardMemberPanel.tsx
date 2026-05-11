@@ -11,6 +11,7 @@ import { telegramMemberService, telegramInviteLinkService, telegramGroupService 
 import type { TelegramGroupMember, TelegramInviteLink, TelegramGroupVisibility } from '@/types/telegram'
 import { TELEGRAM_VISIBILITY_LABELS, TELEGRAM_VISIBILITY_DESCRIPTIONS } from '@/types/telegram'
 import { appConfirm } from '@/components/ui/AppDialog'
+import JoinRequestManager from './JoinRequestManager'
 
 interface TelegramBoardMemberPanelProps {
   groupId: string
@@ -260,6 +261,11 @@ export default function TelegramBoardMemberPanel({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* 가입 신청 대기 섹션 */}
+              <div className="pt-2 border-t border-at-border">
+                <JoinRequestManager groupId={groupId} />
               </div>
 
               {/* 초대 링크 섹션 */}
