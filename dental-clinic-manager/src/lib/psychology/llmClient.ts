@@ -18,6 +18,28 @@ function fearGreedLabel(score: number): string {
   return '극탐욕'
 }
 
+/**
+ * ISO ts (KR=+09:00, US=Z) → KST 표현으로 변환.
+ *
+ * - 사용자 보고: 미국 종목의 시각이 UTC 로 표시되어 한국 시간과 차이가 큼 → 통일 필요.
+ * - LLM 프롬프트 입력 ts 와 후처리 inline 매칭 모두 같은 KST HH:MM 을 쓰도록 통일.
+ */
+function toKstParts(iso: string): { iso: string; hm: string } | null {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  const kst = new Date(d.getTime() + 9 * 3600 * 1000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(kst.getUTCDate()).padStart(2, '0')
+  const hh = String(kst.getUTCHours()).padStart(2, '0')
+  const mm = String(kst.getUTCMinutes()).padStart(2, '0')
+  const ss = String(kst.getUTCSeconds()).padStart(2, '0')
+  return {
+    iso: `${y}-${m}-${day}T${hh}:${mm}:${ss}+09:00`,
+    hm: `${hh}:${mm}`,
+  }
+}
+
 const MODEL_ID = 'claude-haiku-4-5-20251001'
 
 const VALID_MARKER_KINDS = ['panic_sell','fomo_entry','accumulation','distribution','capitulation','indecision'] as const
@@ -97,6 +119,8 @@ const TOOL_DEFINITION = {
 
 const SYSTEM_PROMPT = `당신은 주식 시장 군중심리 분석 전문가입니다. 주어진 분봉 시계열과 호가 스냅샷을 보고, 호가창과 차트를 수시로 보고 있는 일반 투자자(대중)가 지금 이 순간 느낄 심리를 분석합니다. 출력은 반드시 submit_psychology_analysis 도구를 통해 제출하며, 한국어로 작성합니다. 추측이 아닌 데이터에서 직접 관찰 가능한 패턴 위주로 분석하고, 단정적 매매 권유 표현은 사용하지 않습니다.
 
+**시간 표기 규칙 (필수)**: 모든 시각은 **한국 시간(KST, +09:00) 기준**으로 표기합니다. 입력 분봉의 ts는 이미 KST 로 변환되어 제공되므로 그대로 사용하세요. 미국 시장 종목도 본문에는 KST 시각을 사용합니다 (예: "23:42").
+
 **공포·탐욕 지수 인용 규칙 (필수)**: 각 분봉마다 사전 계산된 공포·탐욕 지수(F 값, 0~100)가 함께 주어집니다. narrative 본문에서 특징적 시점·시각을 언급할 때마다 그 시점의 F 값과 라벨(극공포/공포/중립/탐욕/극탐욕)을 즉시 옆에 표기해야 합니다. 예: "13:42 (공포·탐욕 지수 18, 극공포)에 매도세가 집중되며…". markers 로 표시한 모든 시점은 본문에서도 한 번 이상 명시적으로 인용하며 같은 형식을 사용합니다. 시각을 언급하지 않은 일반 서술에는 표기하지 않습니다.`
 
 export interface AnalyzeArgs {
@@ -130,10 +154,13 @@ function computeFearGreedSeries(snapshot: PsychologyInputSnapshot): number[] {
 
 function buildUserPrompt(args: AnalyzeArgs, fearGreed: number[]): string {
   const { ticker, market, triggerKind, triggerDetail, snapshot, asOf } = args
+  // 모든 ts 를 KST 로 통일해 LLM 에 전달 — 본문에서도 KST 시각을 사용하게 됨.
   const candleLines = snapshot.candles.map((c, i) => {
+    const kst = toKstParts(c.ts)
+    const tsStr = kst?.iso ?? c.ts
     const fg = fearGreed[i]
     const fgStr = (typeof fg === 'number' && !Number.isNaN(fg)) ? ` F=${Math.round(fg)}` : ''
-    return `[${i}] ${c.ts} O=${c.open} H=${c.high} L=${c.low} C=${c.close} V=${c.volume}${fgStr}`
+    return `[${i}] ${tsStr} O=${c.open} H=${c.high} L=${c.low} C=${c.close} V=${c.volume}${fgStr}`
   }).join('\n')
   const orderbookSummary = snapshot.orderbook
     ? `호가 (10단계): 매수총잔량=${snapshot.orderbook.totalBidQty}, 매도총잔량=${snapshot.orderbook.totalAskQty}\n` +
@@ -141,7 +168,7 @@ function buildUserPrompt(args: AnalyzeArgs, fearGreed: number[]): string {
       `매도: ${snapshot.orderbook.asks.map(a => `${a.price}@${a.qty}`).join(', ')}`
     : '호가 데이터 없음 (해외 종목 또는 과거 시점 분석)'
   const asOfLine = asOf
-    ? `분석 시점 (asOf): ${asOf} — 이 시각 기준으로 그 직전 ${snapshot.candles.length}분 동안의 흐름을 분석합니다. 과거 시점이므로 narrative는 과거형으로 작성하세요.`
+    ? `분석 시점 (asOf): ${toKstParts(asOf)?.iso ?? asOf} (KST) — 이 시각 기준으로 그 직전 ${snapshot.candles.length}분 동안의 흐름을 분석합니다. 과거 시점이므로 narrative는 과거형으로 작성하세요.`
     : null
   const fearGreedNote = fearGreed.length > 0
     ? 'F 값은 사전 계산된 공포·탐욕 지수(0~100): 0~20 극공포, 20~40 공포, 40~60 중립, 60~80 탐욕, 80~100 극탐욕. RSI(7)/Bollinger %B(10)/거래량 스파이크(10)/모멘텀(5)의 가중 합성.'
@@ -230,16 +257,15 @@ function enrichNarrativeWithFearGreed(
 ): PsychologyAnalysisOutput {
   if (fearGreed.length === 0) return output
 
-  // HH:MM → 점수/라벨 매핑 (candle ts 형식 그대로 사용 — LLM 도 동일 형식 사용 추정)
+  // HH:MM → 점수/라벨 매핑 (KST 기준 — LLM 본문도 KST 사용)
   const hmToData = new Map<string, { score: number; label: string }>()
   for (let i = 0; i < timestamps.length; i++) {
     const score = fearGreed[i]
     if (typeof score !== 'number' || Number.isNaN(score)) continue
-    const ts = timestamps[i]
-    if (!ts || ts.length < 16) continue
-    const hm = ts.slice(11, 16) // "HH:MM"
-    if (!hmToData.has(hm)) {
-      hmToData.set(hm, { score: Math.round(score), label: fearGreedLabel(score) })
+    const kst = toKstParts(timestamps[i])
+    if (!kst) continue
+    if (!hmToData.has(kst.hm)) {
+      hmToData.set(kst.hm, { score: Math.round(score), label: fearGreedLabel(score) })
     }
   }
 
@@ -259,9 +285,10 @@ function enrichNarrativeWithFearGreed(
   )
 
   // 2) 요약 블록 — markers 중 본문에서 인용되지 않은 시점만 부착 (빠짐 방지)
+  //    시각 매칭은 KST HH:MM 기준 (LLM 본문도 KST 사용 가정)
   const missing = output.markers.filter((m) => {
-    const ts = m.ts || timestamps[m.candle_index] || ''
-    const hm = ts.length >= 16 ? ts.slice(11, 16) : ''
+    const sourceTs = m.ts || timestamps[m.candle_index] || ''
+    const hm = toKstParts(sourceTs)?.hm ?? ''
     return hm && !annotated.includes(hm)
   })
 
@@ -274,8 +301,9 @@ function enrichNarrativeWithFearGreed(
         const score = fearGreed[m.candle_index]
         if (typeof score !== 'number' || Number.isNaN(score)) return null
         const rounded = Math.round(score)
-        const ts = m.ts || timestamps[m.candle_index] || ''
-        const tsLabel = ts ? ts.slice(11, 16) : `idx ${m.candle_index}`
+        const sourceTs = m.ts || timestamps[m.candle_index] || ''
+        const hm = toKstParts(sourceTs)?.hm
+        const tsLabel = hm ?? `idx ${m.candle_index}`
         return `- ${tsLabel} ${m.label}: 공포·탐욕 지수 ${rounded} (${fearGreedLabel(score)})`
       })
       .filter((s): s is string => s !== null)
