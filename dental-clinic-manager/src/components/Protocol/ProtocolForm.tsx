@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { Save, RotateCcw, X as XIcon } from 'lucide-react'
 import ProtocolStepsEditor from './ProtocolStepsEditor'
 import SmartTagInput from './SmartTagInput'
 import ProtocolStepViewer from './ProtocolStepViewer'
 import { dataService } from '@/lib/dataService'
 import { tagSuggestionService } from '@/lib/tagSuggestionService'
+import { useProtocolDraftAutoSave } from '@/hooks/useProtocolDraftAutoSave'
+import { appConfirm } from '@/components/ui/AppDialog'
 import type { ProtocolCategory, ProtocolFormData, ProtocolStep } from '@/types'
 import {
   buildDefaultStep,
@@ -68,6 +71,35 @@ export default function ProtocolForm({
   const [clinicId, setClinicId] = useState<string>('')
   // 폼 초기화 여부 추적 (부모 리렌더로 인한 initialData 참조 변경 시 폼 리셋 방지)
   const formInitializedRef = useRef(false)
+
+  // 임시저장 자동 동기화 — 다른 페이지 갔다 와도 이어서 작성 가능
+  const draftKey = mode === 'create' ? 'new' : `edit-${initialData?.id ?? 'unknown'}`
+  const { lastSaved, restored, clearDraft, dismissRestoredNotice } = useProtocolDraftAutoSave({
+    draftKey,
+    formData,
+    setFormData,
+    enabled: !loading && !reviewLoading,
+  })
+
+  const handleDiscardDraft = async () => {
+    const ok = await appConfirm('임시저장된 내용을 폐기하고 처음부터 다시 작성하시겠습니까?')
+    if (!ok) return
+    clearDraft()
+    // 폼을 초기 상태로 복원
+    setFormData({
+      title: initialData?.title || '',
+      category_id: initialData?.category_id || '',
+      content: serializeStepsToHtml(resolvedInitialSteps),
+      status: initialData?.status || 'draft',
+      tags: initialData?.tags || [],
+      change_summary: initialData?.change_summary || '',
+      change_type: initialData?.change_type || 'minor',
+      steps:
+        initialData?.steps && initialData.steps.length > 0
+          ? initialData.steps
+          : resolvedInitialSteps,
+    })
+  }
 
   useEffect(() => {
     fetchInitialData()
@@ -177,6 +209,8 @@ export default function ProtocolForm({
         content: stepsHtml,
         steps: formData.steps
       })
+      // 제출 성공 시 임시저장 폐기
+      clearDraft()
       shouldClose = mode === 'create'
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
@@ -195,10 +229,18 @@ export default function ProtocolForm({
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
         <form onSubmit={handleSubmit}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-at-border">
-            <h2 className="text-2xl font-bold text-at-text">
-              {mode === 'create' ? '새 프로토콜 작성' : '프로토콜 수정'}
-            </h2>
+          <div className="flex items-center justify-between gap-3 p-6 border-b border-at-border">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <h2 className="text-2xl font-bold text-at-text">
+                {mode === 'create' ? '새 프로토콜 작성' : '프로토콜 수정'}
+              </h2>
+              {lastSaved && !restored && (
+                <span className="inline-flex items-center gap-1 text-xs text-at-text-weak whitespace-nowrap">
+                  <Save className="w-3 h-3" />
+                  임시저장됨 · {formatRelativeTime(lastSaved)}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={onCancel}
@@ -210,6 +252,38 @@ export default function ProtocolForm({
 
           {/* Body */}
           <div className="p-6 space-y-6 max-h-[calc(100vh-250px)] overflow-y-auto">
+            {/* 임시저장 복원 안내 */}
+            {restored && lastSaved && (
+              <div className="flex items-start gap-2 p-3 bg-at-accent-light border border-at-accent/30 rounded-md text-sm">
+                <RotateCcw className="w-4 h-4 text-at-accent flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-at-text font-medium">
+                    이전 작성 내용을 불러왔습니다
+                  </p>
+                  <p className="text-at-text-secondary text-xs mt-0.5">
+                    {formatRelativeTime(lastSaved)}에 자동 저장된 임시 내용입니다. 이어서 작성하거나 새로 시작할 수 있습니다.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handleDiscardDraft}
+                    className="text-xs px-2 py-1 text-at-text-secondary border border-at-border rounded hover:bg-white"
+                  >
+                    새로 시작
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dismissRestoredNotice}
+                    className="p-1 text-at-text-weak hover:text-at-text-secondary"
+                    title="알림 닫기"
+                  >
+                    <XIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="bg-at-error-bg border border-red-200 text-at-error px-4 py-3 rounded-md text-sm">
                 {error}
@@ -384,6 +458,7 @@ export default function ProtocolForm({
                       content: stepsHtml,
                       steps: formData.steps
                     })
+                    clearDraft()
                   } catch (err) {
                     const errorMessage = err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.'
                     setError(errorMessage)
@@ -402,4 +477,16 @@ export default function ProtocolForm({
       </div>
     </div>
   )
+}
+
+function formatRelativeTime(date: Date): string {
+  const diffMs = Date.now() - date.getTime()
+  const sec = Math.max(1, Math.floor(diffMs / 1000))
+  if (sec < 60) return `${sec}초 전`
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min}분 전`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}시간 전`
+  const day = Math.floor(hr / 24)
+  return `${day}일 전`
 }

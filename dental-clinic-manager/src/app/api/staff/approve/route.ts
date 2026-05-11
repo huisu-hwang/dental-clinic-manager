@@ -1,6 +1,8 @@
 // 원장용 직원 승인 API — 인원 상한 가드 포함
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { aligoFetch } from '@/lib/aligoFetch'
 import {
   countActiveEmployees,
   getSubscription,
@@ -9,6 +11,11 @@ import {
 import { findPlanByHeadcount, requiresUpgrade } from '@/lib/subscriptionPlans'
 
 const FREE_LIMIT = 4
+const ALIGO_API_URL = 'https://apis.aligo.in'
+
+function normalizePhone(raw: string | null | undefined): string {
+  return (raw ?? '').replace(/[^0-9]/g, '')
+}
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
@@ -99,6 +106,93 @@ export async function POST(req: Request) {
 
   if (upErr) {
     return NextResponse.json({ error: upErr.message }, { status: 500 })
+  }
+
+  // 승인 안내 SMS — 승인된 owner 에게 가입 승인 완료를 알린다. 실패해도 승인 자체에는 영향 없음.
+  // (현재는 owner 한정. 마스터의 책임 영역이 owner 가입 승인이라 사용자 요청에 맞춰 한정.)
+  try {
+    const admin = getSupabaseAdmin()
+    if (admin) {
+      const { data: approvedUsers } = await admin
+        .from('users')
+        .select('id, name, phone, role, clinic_id, clinic:clinics(name)')
+        .in('id', ids)
+        .eq('status', 'active')
+
+      const targets = (approvedUsers ?? [])
+        .filter((u: any) => u.role === 'owner')
+        .map((u: any) => ({ ...u, phone: normalizePhone(u.phone) }))
+        .filter((u: any) => u.phone.length >= 10)
+
+      if (targets.length > 0) {
+        // 발송용 알리고 설정: 승인자(me) clinic → 시스템 첫 활성 폴백
+        let aligo: { api_key: string; user_id: string; sender_number: string } | null = null
+        if (me.clinic_id) {
+          const { data } = await admin
+            .from('aligo_settings')
+            .select('api_key, user_id, sender_number')
+            .eq('clinic_id', me.clinic_id)
+            .maybeSingle()
+          if (data?.api_key && data?.user_id && data?.sender_number) aligo = data as any
+        }
+        if (!aligo) {
+          const { data } = await admin
+            .from('aligo_settings')
+            .select('api_key, user_id, sender_number')
+            .not('api_key', 'is', null)
+            .not('user_id', 'is', null)
+            .not('sender_number', 'is', null)
+            .limit(1)
+            .maybeSingle()
+          if (data?.api_key && data?.user_id && data?.sender_number) aligo = data as any
+        }
+
+        if (aligo) {
+          const origin =
+            process.env.NEXT_PUBLIC_SITE_URL || req.headers.get('origin') || ''
+          const loginUrl = origin ? `${origin}/` : ''
+
+          await Promise.all(
+            targets.map(async (u: any) => {
+              const clinicName = (u.clinic?.name as string | undefined) ?? ''
+              const message =
+                `[클리닉매니저] 안녕하세요 ${u.name}님,\n` +
+                `${clinicName ? `${clinicName} ` : ''}대표원장 가입이 승인되었습니다.\n` +
+                `지금 로그인하여 서비스를 이용해주세요.` +
+                (loginUrl ? `\n${loginUrl}` : '')
+              const msgBytes = new Blob([message]).size
+              const actualType = msgBytes > 90 ? 'LMS' : 'SMS'
+
+              const params = new URLSearchParams()
+              params.append('key', aligo!.api_key)
+              params.append('user_id', aligo!.user_id)
+              params.append('sender', aligo!.sender_number)
+              params.append('receiver', u.phone)
+              params.append('msg', message)
+              params.append('msg_type', actualType)
+              if (actualType !== 'SMS') params.append('title', '가입 승인 안내')
+              if (process.env.NODE_ENV === 'development') params.append('testmode_yn', 'Y')
+
+              try {
+                const r = await aligoFetch(`${ALIGO_API_URL}/send/`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                  body: params.toString(),
+                })
+                const j = (await r.json().catch(() => ({}))) as { result_code?: string | number; message?: string }
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log('[approve sms]', u.id, j)
+                }
+              } catch (smsErr) {
+                console.warn('[approve] sms send failed (non-blocking):', smsErr)
+              }
+            }),
+          )
+        }
+      }
+    }
+  } catch (notifyErr) {
+    console.warn('[approve] approval-sms flow error (non-blocking):', notifyErr)
   }
 
   return NextResponse.json({ success: true, approvedCount: ids.length })
