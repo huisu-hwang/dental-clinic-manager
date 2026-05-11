@@ -52,20 +52,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   })
 
   // 사용자 상태 체크 - 퇴사자, 승인대기, 거절된 사용자 리다이렉트
+  // 미로그인 사용자는 홈(로그인 화면)으로 리다이렉트하며 원래 URL 을 redirect 파라미터로 전달
+  // (그렇지 않으면 무한 로딩 스피너만 노출됨 — 소모임 초대 링크 같은 진입 경로 차단)
   useEffect(() => {
-    if (!loading && user) {
-      if (user.status === 'resigned') {
-        console.log('[DashboardLayout] User is resigned, redirecting to /resigned')
-        router.replace('/resigned')
-        return
-      }
-      if (user.status === 'pending' || user.status === 'rejected') {
-        console.log('[DashboardLayout] User is pending/rejected, redirecting to /pending-approval')
-        router.replace('/pending-approval')
-        return
-      }
+    if (loading) return
+    if (!user) {
+      const qs = searchParams.toString()
+      const next = qs ? `${pathname}?${qs}` : pathname
+      router.replace(`/?show=login&redirect=${encodeURIComponent(next)}`)
+      return
     }
-  }, [user, loading, router])
+    if (user.status === 'resigned') {
+      console.log('[DashboardLayout] User is resigned, redirecting to /resigned')
+      router.replace('/resigned')
+      return
+    }
+    if (user.status === 'pending' || user.status === 'rejected') {
+      console.log('[DashboardLayout] User is pending/rejected, redirecting to /pending-approval')
+      router.replace('/pending-approval')
+      return
+    }
+  }, [user, loading, router, pathname, searchParams])
 
   // 페이지 변경 시 모바일 메뉴 닫기 및 activeTab 동기화
   useEffect(() => {
