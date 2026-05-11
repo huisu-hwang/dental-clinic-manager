@@ -35,9 +35,16 @@ export default function Watchlist({
             }`}
             onClick={() => onSelect(it)}>
             <div className="flex items-center justify-between gap-2">
-              <span className={`font-semibold text-sm truncate ${isActive ? 'text-at-accent' : 'text-at-text'}`}>
-                {it.ticker}
-              </span>
+              <div className="min-w-0 flex-1">
+                <div className={`font-semibold text-sm truncate ${isActive ? 'text-at-accent' : 'text-at-text'}`}>
+                  {it.name || it.ticker}
+                </div>
+                {it.name && it.name !== it.ticker && (
+                  <div className="text-[11px] font-mono text-at-text-weak truncate">
+                    {it.ticker} · {it.market === 'KR' ? '한국' : '미국'}
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-0.5 flex-shrink-0">
                 <button onClick={e => { e.stopPropagation(); onToggleMonitoring(it) }}
                   className={`p-1 rounded-lg transition-colors ${

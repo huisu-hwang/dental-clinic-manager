@@ -43,6 +43,8 @@ export interface PsychologyWatchlistItem {
   id: string
   user_id: string
   ticker: string
+  /** 종목명 — 한국 종목은 ticker가 숫자라 사용자 식별을 위해 필수 */
+  name: string | null
   market: Market
   monitoring_enabled: boolean
   trigger_price_change_pct: number | null
