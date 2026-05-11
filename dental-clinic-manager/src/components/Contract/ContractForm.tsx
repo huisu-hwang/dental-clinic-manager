@@ -16,7 +16,7 @@ import type { UserProfile } from '@/contexts/AuthContext'
 import { formatResidentNumber, autoFormatResidentNumber, validateResidentNumberWithMessage } from '@/utils/residentNumberUtils'
 import { decryptResidentNumber } from '@/utils/encryptionUtils'
 import type { DaySchedule, WorkSchedule, DayName } from '@/types/workSchedule'
-import { appAlert } from '@/components/ui/AppDialog'
+import { appAlert, appConfirm } from '@/components/ui/AppDialog'
 import { TimePicker } from '@/components/ui/TimePicker'
 
 interface ContractFormProps {
@@ -218,6 +218,14 @@ export default function ContractForm({ currentUser, employees, onSuccess, onCanc
       await appAlert('계약 기간(종료일)을 설정해주세요.')
       return
     }
+
+    // 서명 이후엔 본문 변경이 불가능하므로(계약서 불변성), 세전/세후 선택을 명시적으로 재확인.
+    // 과거 누락으로 잘못 표시된 사고(세전↔세후 표기 변경)를 방지하기 위함.
+    const salaryLabel = salaryType === 'net' ? '세후 (실수령액)' : '세전 (세금 포함)'
+    const ok = await appConfirm(
+      `다음 조건으로 계약서를 생성합니다.\n\n• 급여 기준: ${salaryLabel}\n• 월급여액: ${(formData.salary_base ?? 0).toLocaleString()}원\n\n서명 완료 후에는 본문을 수정할 수 없습니다. 진행하시겠습니까?`,
+    )
+    if (!ok) return
 
     setLoading(true)
 

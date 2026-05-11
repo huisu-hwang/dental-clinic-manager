@@ -587,7 +587,13 @@ export default function ContractDetail({ contractId, currentUser }: ContractDeta
 
           {/* Article 4 - 계약기간 월급여액 */}
           <section className="border-b pb-4">
-            <h2 className="text-lg font-bold mb-3">제4조 (계약기간 월급여액) ({data.salary_base_type === 'net' ? '세후' : '세전'})</h2>
+            {/*
+              주의(불변성): 2026-04-14 a1703141 이전에 서명·완료된 계약서는
+              salary_base_type 필드가 contract_data에 저장되지 않아 NULL 이다.
+              당시 본문 표기는 하드코딩 "(세후)" 였으므로 NULL 은 '세후'로 폴백해야
+              과거 PDF/원본과 동일한 표시를 보장한다. 명시적으로 'gross' 일 때만 '세전'.
+            */}
+            <h2 className="text-lg font-bold mb-3">제4조 (계약기간 월급여액) ({data.salary_base_type === 'gross' ? '세전' : '세후'})</h2>
             <p className="font-bold">월급여액: {formatSalary(data.salary_base)}</p>
           </section>
 
