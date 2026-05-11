@@ -22,20 +22,22 @@ interface Props {
   onToggleSelected: (id: string) => void
 }
 
-const formatPct = (v: number | null | undefined): string => {
-  if (v == null) return '-'
-  const sign = v > 0 ? '+' : ''
-  return `${sign}${(v * 100).toFixed(1)}%`
+const periodDays = (start: string, end: string): number | null => {
+  if (!start || !end) return null
+  const s = Date.parse(start)
+  const e = Date.parse(end)
+  if (Number.isNaN(s) || Number.isNaN(e)) return null
+  return Math.max(0, Math.round((e - s) / 86_400_000))
 }
 
-const formatNum = (v: number | null | undefined, digits = 2): string => {
-  if (v == null) return '-'
-  return v.toFixed(digits)
-}
-
-const colorPnl = (v: number | null | undefined) => {
-  if (v == null) return 'text-slate-500'
-  return v > 0 ? 'text-red-600' : v < 0 ? 'text-blue-600' : 'text-slate-500'
+const formatPeriod = (days: number | null): string => {
+  if (days == null) return '-'
+  if (days >= 365) {
+    const years = days / 365
+    return years % 1 < 0.05 ? `${Math.round(years)}년` : `${years.toFixed(1)}년`
+  }
+  if (days >= 30) return `${Math.round(days / 30)}개월`
+  return `${days}일`
 }
 
 const formatDayHeader = (yyyymmdd: string): string => {
@@ -81,28 +83,36 @@ export default function HistoryDateGroups({ rows, strategies, selectedIds, onTog
         }
         const colKeyOf = (r: BacktestRunRow) => `${r.market}:${r.ticker}`
 
-        // unique 행/열 (가장 좋은 결과 행/열을 위/왼쪽으로)
-        const rowMap = new Map<string, { key: string; label: string; bestReturn: number; isPreset: boolean }>()
+        // unique 행/열 + 셀별 백테스트 목록
+        const rowMap = new Map<string, { key: string; label: string; isPreset: boolean }>()
         const colMap = new Map<string, { key: string; market: 'KR' | 'US'; ticker: string }>()
-        const cellMap = new Map<string, BacktestRunRow>()
+        const cellMap = new Map<string, BacktestRunRow[]>()
 
         for (const r of dayRows) {
           const rk = rowKeyOf(r)
           const rl = rowLabelOf(r)
           const ck = colKeyOf(r)
           const cellKey = `${rk}::${ck}`
-          const tr = Number(r.total_return ?? -Infinity)
-          const existing = rowMap.get(rk)
-          if (!existing || tr > existing.bestReturn) {
-            rowMap.set(rk, { key: rk, label: rl, bestReturn: tr, isPreset: !r.strategy_id })
+          if (!rowMap.has(rk)) {
+            rowMap.set(rk, { key: rk, label: rl, isPreset: !r.strategy_id })
           }
           if (!colMap.has(ck)) colMap.set(ck, { key: ck, market: r.market, ticker: r.ticker })
-          // 같은 cell에 여러 row면 가장 최근(executed_at) 유지
-          const cur = cellMap.get(cellKey)
-          if (!cur || (r.executed_at > cur.executed_at)) cellMap.set(cellKey, r)
+          const list = cellMap.get(cellKey) ?? []
+          list.push(r)
+          cellMap.set(cellKey, list)
         }
 
-        const rowList = Array.from(rowMap.values()).sort((a, b) => b.bestReturn - a.bestReturn)
+        // 셀별로 가장 최근 백테스트가 맨 앞에 오도록 정렬
+        for (const [k, list] of cellMap) {
+          list.sort((a, b) => (a.executed_at > b.executed_at ? -1 : 1))
+          cellMap.set(k, list)
+        }
+
+        // 행: 프리셋 먼저(가나다순) → 사용자 전략(가나다순)
+        const rowList = Array.from(rowMap.values()).sort((a, b) => {
+          if (a.isPreset !== b.isPreset) return a.isPreset ? -1 : 1
+          return a.label.localeCompare(b.label, 'ko')
+        })
         const colList = Array.from(colMap.values()).sort((a, b) => a.ticker.localeCompare(b.ticker))
 
         return { day, dayRows, rowList, colList, cellMap, rowKeyOf, colKeyOf }
@@ -133,10 +143,10 @@ export default function HistoryDateGroups({ rows, strategies, selectedIds, onTog
               onClick={() => toggleCollapse(day)}
               className="w-full flex items-center justify-between px-4 py-3 hover:bg-at-surface-alt transition-colors"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-at-text">{formatDayHeader(day)}</span>
                 <span className="text-xs text-at-text-secondary">
-                  {dayRows.length}건
+                  {colList.length}종목 · {rowList.length}전략 · {dayRows.length}건
                   {selectedCount > 0 && <span className="ml-1 text-at-accent">· {selectedCount} 선택</span>}
                 </span>
               </div>
@@ -171,20 +181,24 @@ export default function HistoryDateGroups({ rows, strategies, selectedIds, onTog
                           </div>
                         </td>
                         {colList.map((col) => {
-                          const cell = cellMap.get(`${row.key}::${col.key}`)
-                          if (!cell) {
+                          const cells = cellMap.get(`${row.key}::${col.key}`)
+                          if (!cells || cells.length === 0) {
                             return (
                               <td key={col.key} className="text-center px-3 py-2 text-at-text-weak">—</td>
                             )
                           }
-                          const isSelected = selectedIds.has(cell.id)
+                          // 가장 최근 백테스트를 선택 대상으로 사용 (정렬 후 첫 번째)
+                          const latest = cells[0]
+                          const days = periodDays(latest.start_date, latest.end_date)
+                          const isSelected = selectedIds.has(latest.id)
                           return (
                             <td
                               key={col.key}
-                              onClick={() => onToggleSelected(cell.id)}
+                              onClick={() => onToggleSelected(latest.id)}
                               className={`text-center px-3 py-2 cursor-pointer transition-colors ${
                                 isSelected ? 'bg-at-accent-light' : 'hover:bg-at-surface-alt'
                               }`}
+                              title={`${latest.start_date} ~ ${latest.end_date}${cells.length > 1 ? ` · ${cells.length}회 실행` : ''}`}
                             >
                               <div className="inline-flex items-center gap-1">
                                 {isSelected ? (
@@ -193,12 +207,14 @@ export default function HistoryDateGroups({ rows, strategies, selectedIds, onTog
                                   <Square className="w-3 h-3 text-at-text-weak flex-shrink-0" />
                                 )}
                                 <div>
-                                  <div className={`font-mono font-semibold ${colorPnl(cell.total_return)}`}>
-                                    {formatPct(cell.total_return)}
+                                  <div className="font-mono font-semibold text-at-text">
+                                    {formatPeriod(days)}
                                   </div>
-                                  <div className="text-[10px] text-at-text-weak font-mono">
-                                    Sh {formatNum(cell.sharpe_ratio)}
-                                  </div>
+                                  {cells.length > 1 && (
+                                    <div className="text-[10px] text-at-text-weak font-mono">
+                                      ×{cells.length}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </td>
