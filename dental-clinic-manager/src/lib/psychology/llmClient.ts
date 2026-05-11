@@ -1,12 +1,22 @@
 // src/lib/psychology/llmClient.ts
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
-import type { Market } from '@/types/investment'
+import type { Market, OHLCV } from '@/types/investment'
 import type {
   PsychologyAnalysisOutput,
   PsychologyInputSnapshot,
   PsychologyTriggerKind,
 } from '@/types/psychology'
+import { calcFearGreed } from '@/lib/indicatorEngine'
+
+/** 공포·탐욕 지수(0~100)를 라벨로 매핑 — narrative 후처리에 사용 */
+function fearGreedLabel(score: number): string {
+  if (score <= 20) return '극공포'
+  if (score <= 40) return '공포'
+  if (score < 60) return '중립'
+  if (score < 80) return '탐욕'
+  return '극탐욕'
+}
 
 const MODEL_ID = 'claude-haiku-4-5-20251001'
 
@@ -103,11 +113,26 @@ export interface AnalyzeResult {
   latencyMs: number
 }
 
-function buildUserPrompt(args: AnalyzeArgs): string {
+/** 캔들 시계열에서 공포·탐욕 지수(0~100) 시리즈를 계산. 캔들 수 부족 시 빈 배열. */
+function computeFearGreedSeries(snapshot: PsychologyInputSnapshot): number[] {
+  if (!snapshot.candles || snapshot.candles.length < 5) return []
+  // MinuteCandle 은 OHLCV 와 호환 (ts + OHLCV 필드). indicatorEngine 은 OHLCV 만 참조.
+  const ohlcv = snapshot.candles as unknown as OHLCV[]
+  try {
+    // 1분봉 기준이라 기본 14/20/20/10 윈도우는 너무 김 → 짧은 윈도우로 조정
+    return calcFearGreed(ohlcv, { rsiPeriod: 7, bbPeriod: 10, volPeriod: 10, momentumPeriod: 5 })
+  } catch {
+    return []
+  }
+}
+
+function buildUserPrompt(args: AnalyzeArgs, fearGreed: number[]): string {
   const { ticker, market, triggerKind, triggerDetail, snapshot, asOf } = args
-  const candleLines = snapshot.candles.map((c, i) =>
-    `[${i}] ${c.ts} O=${c.open} H=${c.high} L=${c.low} C=${c.close} V=${c.volume}`
-  ).join('\n')
+  const candleLines = snapshot.candles.map((c, i) => {
+    const fg = fearGreed[i]
+    const fgStr = (typeof fg === 'number' && !Number.isNaN(fg)) ? ` F=${Math.round(fg)}` : ''
+    return `[${i}] ${c.ts} O=${c.open} H=${c.high} L=${c.low} C=${c.close} V=${c.volume}${fgStr}`
+  }).join('\n')
   const orderbookSummary = snapshot.orderbook
     ? `호가 (10단계): 매수총잔량=${snapshot.orderbook.totalBidQty}, 매도총잔량=${snapshot.orderbook.totalAskQty}\n` +
       `매수: ${snapshot.orderbook.bids.map(b => `${b.price}@${b.qty}`).join(', ')}\n` +
@@ -116,6 +141,9 @@ function buildUserPrompt(args: AnalyzeArgs): string {
   const asOfLine = asOf
     ? `분석 시점 (asOf): ${asOf} — 이 시각 기준으로 그 직전 ${snapshot.candles.length}분 동안의 흐름을 분석합니다. 과거 시점이므로 narrative는 과거형으로 작성하세요.`
     : null
+  const fearGreedNote = fearGreed.length > 0
+    ? 'F 값은 사전 계산된 공포·탐욕 지수(0~100): 0~20 극공포, 20~40 공포, 40~60 중립, 60~80 탐욕, 80~100 극탐욕. RSI(7)/Bollinger %B(10)/거래량 스파이크(10)/모멘텀(5)의 가중 합성.'
+    : null
   return [
     `종목: ${ticker} (${market})`,
     `분석 요청 사유: ${triggerKind}${triggerDetail ? ` - ${triggerDetail}` : ''}`,
@@ -123,9 +151,13 @@ function buildUserPrompt(args: AnalyzeArgs): string {
     `최근 ${snapshot.candles.length}개 1분봉:`,
     candleLines,
     orderbookSummary,
+    fearGreedNote,
     '',
     '위 데이터를 바탕으로 군중심리를 분석하여 submit_psychology_analysis 도구를 호출해주세요.',
     `markers의 candle_index는 위 분봉 배열의 [N] 번호와 정확히 일치해야 합니다. 최대 5개.`,
+    fearGreed.length > 0
+      ? `**narrative 작성 시 필수**: markers 로 표시한 각 특징적 지점의 공포·탐욕 지수(F 값)를 본문에 명시적으로 언급하세요. 예: "13:42 패닉 셀링 시점의 공포·탐욕 지수는 18(극공포)로 …".`
+      : null,
   ].filter((line): line is string => line !== null).join('\n')
 }
 
@@ -134,7 +166,8 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY 환경변수 누락')
   const client = new Anthropic({ apiKey })
 
-  const userPrompt = buildUserPrompt(args)
+  const fearGreedSeries = computeFearGreedSeries(args.snapshot)
+  const userPrompt = buildUserPrompt(args, fearGreedSeries)
   const start = Date.now()
 
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -164,11 +197,56 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
       throw new Error(`LLM 응답 스키마 검증 실패: ${issues}`)
     }
 
+    // 안전망: LLM이 narrative에 공포·탐욕 지수를 빠뜨렸을 경우 markers 기반으로 자동 append.
+    // 이미 narrative 안에 지수 언급이 충분하면(예: "공포·탐욕 지수 18") skip — 중복 표기 방지.
+    const enriched = appendFearGreedToNarrative(
+      parsed.data,
+      fearGreedSeries,
+      args.snapshot.candles.map(c => c.ts),
+    )
+
     return {
-      output: parsed.data,
+      output: enriched,
       model: MODEL_ID,
       latencyMs: Date.now() - start,
     }
   }
   throw new Error('LLM 분석 실패 (재시도 한도 초과)')
+}
+
+/**
+ * narrative에 marker별 공포·탐욕 지수 요약을 보강.
+ *
+ * - LLM이 본문에 이미 "공포·탐욕 지수" 키워드를 충분히 포함했다면 그대로 둠 (중복 방지).
+ * - 그렇지 않으면 본문 끝에 "**주요 지점 공포·탐욕 지수**" 섹션을 append.
+ */
+function appendFearGreedToNarrative(
+  output: PsychologyAnalysisOutput,
+  fearGreed: number[],
+  timestamps: string[],
+): PsychologyAnalysisOutput {
+  if (fearGreed.length === 0 || output.markers.length === 0) return output
+
+  // 본문에 이미 marker 개수만큼(또는 그 이상) "공포" 또는 "F=" 가 들어있으면 LLM 작업으로 충분.
+  const fearKeywordCount = (output.narrative.match(/공포·탐욕 지수|공포 지수|F=\d/g) ?? []).length
+  if (fearKeywordCount >= Math.min(2, output.markers.length)) return output
+
+  const lines = output.markers
+    .slice()
+    .sort((a, b) => a.candle_index - b.candle_index)
+    .map((m) => {
+      const score = fearGreed[m.candle_index]
+      if (typeof score !== 'number' || Number.isNaN(score)) return null
+      const rounded = Math.round(score)
+      // marker.ts 가 비어있으면 candles[index].ts 로 보강 (LLM이 ts 누락 시)
+      const ts = m.ts || timestamps[m.candle_index] || ''
+      const tsLabel = ts ? ts.slice(11, 16) : `idx ${m.candle_index}`
+      return `- ${tsLabel} ${m.label}: 공포·탐욕 지수 ${rounded} (${fearGreedLabel(score)})`
+    })
+    .filter((s): s is string => s !== null)
+
+  if (lines.length === 0) return output
+
+  const appended = `${output.narrative.trim()}\n\n**주요 지점 공포·탐욕 지수**\n${lines.join('\n')}`
+  return { ...output, narrative: appended }
 }
