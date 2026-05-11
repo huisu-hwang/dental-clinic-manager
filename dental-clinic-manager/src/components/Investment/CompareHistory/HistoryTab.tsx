@@ -1,11 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState, useCallback } from 'react'
-import { History as HistoryIcon } from 'lucide-react'
-import HistoryFilters, { type HistoryFilterState } from './HistoryFilters'
-import HistoryTable from './HistoryTable'
-import HistoryCompareView from './HistoryCompareView'
-import HistoryDateGroups from './HistoryDateGroups'
+import { useEffect, useState, useCallback } from 'react'
+import { History as HistoryIcon, RefreshCw } from 'lucide-react'
 import HistoryHierarchy from './HistoryHierarchy'
 
 export interface BacktestRunRow {
@@ -38,94 +34,92 @@ interface StrategyOption {
   strategy_type: 'rule' | 'rl_portfolio' | 'rl_single'
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const today = () => new Date().toISOString().slice(0, 10)
-const daysAgo = (n: number) => {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
-}
+// 한 번 비교에서 N종목 × M전략(예: 10×5=50)이 생성될 수 있어 서버 캡(500)에 가깝게 충분히.
+const FETCH_LIMIT = 500
+// 사용자 보고: "히스토리 조회 실패"가 잦음 → 명시적 타임아웃 + 자동 1회 재시도.
+const FETCH_TIMEOUT_MS = 20_000
+const RETRY_DELAY_MS = 800
 
-const DEFAULT_FILTER: HistoryFilterState = {
-  strategyId: '',     // '전체'
-  ticker: '',
-  preset: 'all',      // 기본은 전체 — 다중 종목·다중 전략 비교 시 한 세션이 50건을 쉽게 넘어
-                      // 좁은 기간 필터 + 작은 limit 조합으로 옛 기록이 가려지던 문제를 막는다.
-}
-
-function presetToSince(preset: HistoryFilterState['preset']): string | null {
-  switch (preset) {
-    case '7d': return daysAgo(7)
-    case '30d': return daysAgo(30)
-    case '90d': return daysAgo(90)
-    case 'all': return null
-    default: return null
+async function fetchHistoryOnce(signal: AbortSignal): Promise<BacktestRunRow[]> {
+  const params = new URLSearchParams()
+  params.set('limit', String(FETCH_LIMIT))
+  // light=1: 큰 jsonb(equity_curve/trades/full_metrics) 제외. 세션 클릭 시 ids=… 로 별도 fetch.
+  params.set('light', '1')
+  const r = await fetch(`/api/investment/backtest?${params.toString()}`, {
+    signal,
+    cache: 'no-store',
+  })
+  if (!r.ok) {
+    const err = (await r.json().catch(() => ({}))) as { error?: string }
+    throw new Error(err.error ?? `HTTP ${r.status}`)
   }
+  const j = (await r.json()) as { data?: BacktestRunRow[] }
+  return j.data ?? []
 }
 
 export default function HistoryTab() {
-  const [filter, setFilter] = useState<HistoryFilterState>(DEFAULT_FILTER)
   const [strategies, setStrategies] = useState<StrategyOption[]>([])
   const [rows, setRows] = useState<BacktestRunRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [showCompare, setShowCompare] = useState(false)
-  // 사용자 보고: "백테스트 히스토리는 원래 처음 백테스트 실행했을 때의 매트릭스 형식으로
-  // 날짜별로 정리해서 볼 수 있게 해야 한다" — 기본 뷰를 'matrix' (날짜별 결과표) 로 설정.
-  // localStorage 에 마지막 선택 저장하여 다음 진입 시 유지.
-  const [viewMode, setViewMode] = useState<'hierarchy' | 'matrix' | 'flat'>(() => {
-    if (typeof window === 'undefined') return 'matrix'
-    const saved = window.localStorage.getItem('compareHistoryViewMode')
-    return (saved === 'hierarchy' || saved === 'matrix' || saved === 'flat') ? saved : 'matrix'
-  })
 
-  // viewMode 변경 시 localStorage 에 저장
+  // 전략 옵션 1회 로드 — 세션 안 행 라벨에 사용
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    try { window.localStorage.setItem('compareHistoryViewMode', viewMode) } catch { /* ignore */ }
-  }, [viewMode])
-
-  // 전략 옵션 1회 로드
-  useEffect(() => {
-    fetch('/api/investment/strategies')
+    const ctrl = new AbortController()
+    fetch('/api/investment/strategies', { signal: ctrl.signal, cache: 'no-store' })
       .then(r => r.json())
       .then((j: { data?: Array<{ id: string; name: string; strategy_type: StrategyOption['strategy_type'] }> }) => {
         setStrategies(j.data ?? [])
       })
       .catch(() => setStrategies([]))
+    return () => ctrl.abort()
   }, [])
 
-  // 필터 변경 시 백테스트 재조회 (debounce 300ms)
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      setLoading(true)
-      setError(null)
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+
+    // AbortController + 명시적 타임아웃 (기본 fetch는 너무 오래 매달림 → 사용자에겐 "조회 실패"로 보임)
+    const tryFetch = async (): Promise<BacktestRunRow[]> => {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
       try {
-        const params = new URLSearchParams()
-        if (filter.strategyId) params.set('strategy_id', filter.strategyId)
-        if (filter.ticker.trim()) params.set('ticker', filter.ticker.trim())
-        const since = presetToSince(filter.preset)
-        if (since) params.set('since', since)
-        // 비교 한 번에 N종목 × M전략(예: 10×5=50) 행이 생성될 수 있어 작은 limit이면
-        // 오늘 세션이 차지하고 옛 기록이 잘려 보인다. 서버 캡(500)에 가깝게 충분히 키운다.
-        params.set('limit', '500')
-        const r = await fetch(`/api/investment/backtest?${params.toString()}`)
-        if (!r.ok) {
-          const err = (await r.json().catch(() => ({}))) as { error?: string }
-          throw new Error(err.error ?? `${r.status}`)
-        }
-        const j = (await r.json()) as { data?: BacktestRunRow[] }
-        setRows(j.data ?? [])
-      } catch (e) {
-        setError((e as Error).message)
-        setRows([])
+        return await fetchHistoryOnce(ctrl.signal)
       } finally {
-        setLoading(false)
+        clearTimeout(timer)
       }
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [filter])
+    }
+
+    try {
+      let data: BacktestRunRow[]
+      try {
+        data = await tryFetch()
+      } catch (e1) {
+        // 일시 네트워크/타임아웃은 1회 자동 재시도
+        await new Promise(res => setTimeout(res, RETRY_DELAY_MS))
+        try {
+          data = await tryFetch()
+        } catch (e2) {
+          const msg1 = e1 instanceof Error ? e1.message : String(e1)
+          const msg2 = e2 instanceof Error ? e2.message : String(e2)
+          throw new Error(msg2.includes('aborted') || msg1.includes('aborted')
+            ? '응답이 너무 오래 걸려요. 잠시 후 다시 시도해주세요.'
+            : msg2)
+        }
+      }
+      setRows(data)
+    } catch (e) {
+      setError((e as Error).message)
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   const toggleSelected = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -136,22 +130,33 @@ export default function HistoryTab() {
     })
   }, [])
 
-  const selectedRows = useMemo(
-    () => rows.filter(r => selectedIds.has(r.id)),
-    [rows, selectedIds],
-  )
-
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      <HistoryFilters
-        value={filter}
-        onChange={setFilter}
-        strategies={strategies}
-      />
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-at-text-secondary">
+          과거 비교 백테스트 세션 목록입니다. 항목을 클릭하면 그때의 매트릭스·비교표가 그대로 다시 열립니다.
+        </p>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-at-border text-xs text-at-text-secondary hover:bg-at-surface-alt"
+          disabled={loading}
+        >
+          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          새로고침
+        </button>
+      </div>
 
       {error && (
-        <div className="p-3 rounded-xl bg-at-error-bg text-at-error text-sm">
-          조회 실패: {error}
+        <div className="p-3 rounded-xl bg-at-error-bg text-at-error text-sm flex items-center justify-between gap-3">
+          <span>조회 실패: {error}</span>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="text-xs underline whitespace-nowrap"
+          >
+            다시 시도
+          </button>
         </div>
       )}
 
@@ -162,77 +167,15 @@ export default function HistoryTab() {
       ) : rows.length === 0 ? (
         <div className="text-center py-12 bg-at-surface-alt rounded-xl space-y-2">
           <HistoryIcon className="w-10 h-10 mx-auto text-at-text-weak" aria-hidden="true" />
-          <p className="text-sm text-at-text-secondary">조건에 맞는 백테스트가 없습니다.</p>
+          <p className="text-sm text-at-text-secondary">아직 실행한 백테스트가 없습니다.</p>
           <p className="text-xs text-at-text-weak">[새로 비교] 탭에서 첫 백테스트를 실행해보세요.</p>
         </div>
       ) : (
-        <>
-          <div className="flex items-center justify-end gap-2 flex-wrap">
-            <div className="inline-flex items-center rounded-xl border border-at-border bg-white text-xs overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setViewMode('matrix')}
-                className={`px-3 py-1.5 ${viewMode === 'matrix' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
-              >
-                날짜별 결과표 (기본)
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('hierarchy')}
-                className={`px-3 py-1.5 ${viewMode === 'hierarchy' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
-              >
-                날짜·세션 트리
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('flat')}
-                className={`px-3 py-1.5 ${viewMode === 'flat' ? 'bg-at-accent text-white' : 'text-at-text-secondary hover:bg-at-surface-alt'}`}
-              >
-                평면 목록
-              </button>
-            </div>
-          </div>
-          {viewMode === 'hierarchy' ? (
-            <HistoryHierarchy
-              rows={rows}
-              strategies={strategies}
-              selectedIds={selectedIds}
-              onToggleSelected={toggleSelected}
-            />
-          ) : viewMode === 'matrix' ? (
-            <HistoryDateGroups
-              rows={rows}
-              strategies={strategies}
-              selectedIds={selectedIds}
-              onToggleSelected={toggleSelected}
-            />
-          ) : (
-            <HistoryTable
-              rows={rows}
-              strategies={strategies}
-              selectedIds={selectedIds}
-              onToggleSelected={toggleSelected}
-            />
-          )}
-        </>
-      )}
-
-      {selectedIds.size >= 2 && !showCompare && (
-        <div className="sticky bottom-4 z-10 flex justify-center">
-          <button
-            onClick={() => setShowCompare(true)}
-            className="px-5 py-2.5 bg-at-accent hover:bg-at-accent-hover text-white rounded-xl text-sm font-medium shadow-lg"
-          >
-            선택 {selectedIds.size}개 비교
-          </button>
-        </div>
-      )}
-
-      {showCompare && selectedRows.length >= 2 && (
-        <HistoryCompareView
-          rows={selectedRows}
+        <HistoryHierarchy
+          rows={rows}
           strategies={strategies}
-          onClose={() => setShowCompare(false)}
+          selectedIds={selectedIds}
+          onToggleSelected={toggleSelected}
         />
       )}
     </div>

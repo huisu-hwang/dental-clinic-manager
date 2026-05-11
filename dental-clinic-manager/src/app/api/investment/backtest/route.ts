@@ -376,10 +376,20 @@ export async function GET(request: NextRequest) {
   }
 
   // 3) 필터 + 최신순 (히스토리 탭)
+  // 큰 jsonb 컬럼(equity_curve / trades / full_metrics)은 리스트 뷰에서는 불필요.
+  // light=1 옵션으로 페이로드를 가볍게 — 사용자 다수 세션 시 500건 × 무거운 jsonb 가
+  // 응답 시간을 늘려 "조회 실패" 로 이어지던 문제 해결.
+  const lightMode = searchParams.get('light') === '1'
+  const lightColumns =
+    'id, strategy_id, preset_id, preset_name, ticker, market, start_date, end_date, ' +
+    'initial_capital, status, total_return, sharpe_ratio, max_drawdown, total_trades, ' +
+    'win_rate, executed_at, investment_strategies(name, automation_level, is_active)'
+  const fullColumns = '*, investment_strategies(name, automation_level, is_active)'
+
   // investment_strategies LEFT JOIN — 삭제된 전략의 백테스트도 strategy=null로 함께 반환
   let query = supabase
     .from('backtest_runs')
-    .select('*, investment_strategies(name, automation_level, is_active)')
+    .select(lightMode ? lightColumns : fullColumns)
     .eq('user_id', userId)
     .eq('status', 'completed')
 
@@ -401,7 +411,12 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query
   if (error) {
-    return NextResponse.json({ error: '조회 실패' }, { status: 500 })
+    // 디버깅: Supabase가 어떤 이유로 실패했는지 서버 로그 + 응답에 포함
+    console.error('[backtest GET] supabase error', error)
+    return NextResponse.json(
+      { error: `조회 실패: ${error.message || error.code || 'unknown'}` },
+      { status: 500 },
+    )
   }
   return NextResponse.json({ data: data ?? [] })
 }
