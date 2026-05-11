@@ -358,6 +358,17 @@ export default function SignupForm({
         }
       }
 
+      // 마스터에게 가입 승인 요청 SMS — fire-and-forget (실패해도 가입 자체에는 영향 없음).
+      // 정책: owner 가입에만 발송. 비-owner 가입은 본인 clinic 의 owner 가 승인하는 흐름.
+      if (formData.role === 'owner') {
+        fetch('/api/admin/notify-master-on-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: newUserId }),
+        })
+          .catch((err) => console.warn('[Signup] notify-master failed (non-blocking):', err));
+      }
+
       // 약관 동의 내역 저장 (SECURITY DEFINER RPC 사용)
       console.log('[Signup] Saving consent records...');
       const consentRecords = (Object.entries(consents) as [ConsentType, boolean][]).map(([type, agreed]) => ({
