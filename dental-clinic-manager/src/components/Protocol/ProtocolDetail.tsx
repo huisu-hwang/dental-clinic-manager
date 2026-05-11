@@ -72,6 +72,8 @@ export default function ProtocolDetail({
   const [hasEditPermission, setHasEditPermission] = useState(false)
   const [hasDeletePermission, setHasDeletePermission] = useState(false)
   const [pendingReview, setPendingReview] = useState<ProtocolReview | null>(null)
+  // 가장 최근에 반려된 검토 — 부원장 등 요청자가 사유를 본문에서 확인할 수 있도록 별도 보관
+  const [latestRejectedReview, setLatestRejectedReview] = useState<ProtocolReview | null>(null)
   const [showReviewRequestModal, setShowReviewRequestModal] = useState(false)
   const [reviewRequestMessage, setReviewRequestMessage] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
@@ -134,8 +136,18 @@ export default function ProtocolDetail({
   const fetchPendingReview = useCallback(async () => {
     const result = await dataService.getProtocolReviews(protocolId)
     if (!result.error && result.data) {
-      const pending = result.data.find((r: ProtocolReview) => r.status === 'pending')
-      setPendingReview(pending || null)
+      const reviews = result.data as ProtocolReview[]
+      const pending = reviews.find(r => r.status === 'pending') || null
+      setPendingReview(pending)
+      // pending 이 없을 때만 최근 반려 사유를 노출 (재요청 진행 중이면 pending 정보가 우선)
+      if (!pending) {
+        const rejected = [...reviews]
+          .filter(r => r.status === 'rejected')
+          .sort((a, b) => new Date(b.reviewed_at || b.updated_at).getTime() - new Date(a.reviewed_at || a.updated_at).getTime())[0] || null
+        setLatestRejectedReview(rejected)
+      } else {
+        setLatestRejectedReview(null)
+      }
     }
   }, [protocolId])
 
@@ -534,6 +546,33 @@ export default function ProtocolDetail({
                 </p>
                 <p className="text-xs text-amber-500 mt-1">
                   {new Date(pendingReview.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 최근 반려 사유 — 부원장 등 요청자가 본문에서 확인할 수 있도록
+            pending 이 없고(=재요청 전), 가장 최근 검토가 rejected 인 경우 노출 */}
+        {!pendingReview && latestRejectedReview && (
+          <div className="mx-6 mt-4 p-3 bg-at-error-bg border border-red-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <XCircleIcon className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">검토 반려됨</p>
+                <p className="text-sm text-red-700 mt-0.5">
+                  {latestRejectedReview.reviewer_user?.name || '대표원장'}님이 검토를 반려했습니다.
+                  {latestRejectedReview.review_message ? (
+                    <span className="block mt-1 whitespace-pre-wrap">사유: {latestRejectedReview.review_message}</span>
+                  ) : (
+                    <span className="block mt-1 text-red-500">(별도 사유가 입력되지 않았습니다)</span>
+                  )}
+                  {latestRejectedReview.request_message && (
+                    <span className="block mt-1 text-red-500 text-xs">원 요청 메시지: {latestRejectedReview.request_message}</span>
+                  )}
+                </p>
+                <p className="text-xs text-red-500 mt-1">
+                  {new Date(latestRejectedReview.reviewed_at || latestRejectedReview.updated_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </div>
