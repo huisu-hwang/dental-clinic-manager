@@ -304,6 +304,13 @@ body {
   white-space: pre-wrap;
 }
 
+/* 빈 단락(엔터 2번으로 생성된 <p></p>)을 빈 줄로 표시
+   — 에디터와 뷰어 모두 일관되게 빈 줄을 보이게 함 */
+.protocol-editor-content p:empty::before,
+.prose p:empty::before {
+  content: '\00a0'; /* non-breaking space — line-height 확보 */
+}
+
 /* Protocol Images */
 .protocol-image {
   max-width: 100%;
