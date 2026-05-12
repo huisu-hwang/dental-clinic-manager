@@ -319,9 +319,19 @@ async function scrapeAndAnalyzePost(page: any, url: string, keyword: string, ran
 
   // 정량 데이터 추출
   const quantitative = await contentFrame.evaluate((kw: string) => {
-    const title = document.querySelector('.se-title-text, .pcol1')?.textContent?.trim() || '';
+    const title = (document.querySelector('.se-title-text, .pcol1')?.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim();
     const bodyEl = document.querySelector('.se-main-container, #postViewArea');
-    const bodyText = bodyEl?.textContent?.trim() || '';
+    // body_length 부풀려짐 방지:
+    //  1) script/style/noscript 자식 제거 (실제 본문이 아님)
+    //  2) 모든 공백/줄바꿈을 단일 공백으로 정규화 (textContent 가 그대로 보존하던 줄바꿈/연속 공백 제거)
+    let bodyText = '';
+    if (bodyEl) {
+      const clone = bodyEl.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('script, style, noscript').forEach((n) => n.remove());
+      bodyText = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    }
     const images = document.querySelectorAll('.se-image-resource, img[id^="img"]');
     const videos = document.querySelectorAll('iframe[src*="youtube"], iframe[src*="tv.naver"], .se-video');
     const headings = document.querySelectorAll('.se-text-paragraph-align- .se-text-paragraph span[style*="font-size: 2"], h2, h3, h4');
