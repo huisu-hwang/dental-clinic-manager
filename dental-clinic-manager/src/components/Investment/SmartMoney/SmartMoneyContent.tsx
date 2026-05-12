@@ -557,6 +557,25 @@ export function SmartMoneyContent() {
             </div>
           </div>
         )}
+
+        {/* KR 종목인데 KIS 미연결로 yahoo 폴백 동작 중일 때 안내 */}
+        {analysis?.limitedDataMode && (
+          <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold">제한 모드 — 일반 시세 데이터 기반 분석</p>
+                <p className="text-xs mt-1 leading-relaxed">
+                  KIS 계좌 미연결 상태입니다. 한국 종목은 일반 시세(약 15분 지연)로 분봉을 받아 분석하며,
+                  호가 10단계와 외국인·기관 매매 동향은 제외됩니다.
+                  실시간/심층 분석은{' '}
+                  <a href="/investment/connect" className="font-semibold underline">KIS 계좌 연결</a>{' '}
+                  후 자동 활성화됩니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* 분석 결과 */}

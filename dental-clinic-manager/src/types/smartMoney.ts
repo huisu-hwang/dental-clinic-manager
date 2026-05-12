@@ -296,6 +296,11 @@ export interface SmartMoneyAnalysis {
   generatedAt: string
   /** 최근 N일치 일자별 분석 (오래된 → 최신 순). 가장 최근 일자(마지막 항목)는 본 객체와 동일. */
   byDay?: DailyAnalysis[]
+  /**
+   * KR 종목인데 KIS 계좌 미연결이라 yahoo-finance2 폴백으로 수집된 데이터 기반 분석.
+   * - 시세 15분 지연 / 호가 분석 없음 / 외인기관 매매 동향 제외
+   */
+  limitedDataMode?: boolean
 }
 
 export interface PerCardComments {

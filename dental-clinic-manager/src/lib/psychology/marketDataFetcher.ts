@@ -1,7 +1,8 @@
 // src/lib/psychology/marketDataFetcher.ts
 //
 // 군중심리 분석용 통합 마켓 데이터 수집 헬퍼
-//   - KR: KIS API (분봉 + 호가 10단계)
+//   - KR (KIS 연결): KIS API (실시간 분봉 + 호가 10단계)
+//   - KR (KIS 미연결): yahoo-finance2 폴백 (15분 지연 분봉, 호가 미제공)
 //   - US: yahoo-finance2 (분봉만, 호가 미지원)
 
 import YahooFinance from 'yahoo-finance2'
@@ -59,7 +60,11 @@ async function fetchKRSnapshot(
   asOf?: Date
 ): Promise<PsychologyInputSnapshot> {
   const cred = await getUserKisCredential(userId)
-  if (!cred) throw new Error('KIS 계좌 연결이 필요합니다')
+
+  // KIS 미연결: yahoo-finance2 폴백 (15분 지연 분봉, 호가 미제공)
+  if (!cred) {
+    return fetchKRYahooFallback(ticker, count, asOf)
+  }
 
   // 모의계좌는 당일 데이터만 조회 가능 — 과거 일자 분석 차단
   if (asOf && cred.isPaperTrading) {
@@ -117,6 +122,61 @@ async function fetchKRSnapshot(
   }
 
   return { candles, orderbook }
+}
+
+/**
+ * KR 1분봉 yahoo-finance2 폴백
+ * - .KS(코스피) → 실패 시 .KQ(코스닥) 순으로 시도
+ * - 호가는 yahoo에서 제공 불가 → orderbook=null
+ * - 시세 15분 지연 — 가장 최근 분봉이 누락될 수 있음 (UI 에서 안내 필요)
+ */
+async function fetchKRYahooFallback(
+  ticker: string,
+  count = 60,
+  asOf?: Date
+): Promise<PsychologyInputSnapshot> {
+  const period2 = asOf ?? new Date()
+  // 정규장 외 시간/휴장일 영향 감안하여 24시간 buffer 추가
+  const period1 = new Date(period2.getTime() - Math.max(count, 60) * 60 * 1000 - 24 * 3600 * 1000)
+
+  type YahooQuote = {
+    date?: Date | string
+    open?: number | null
+    high?: number | null
+    low?: number | null
+    close?: number | null
+    volume?: number | null
+  }
+  type YahooChartResult = { quotes?: YahooQuote[] }
+
+  let result = (await yahooFinance.chart(`${ticker}.KS`, {
+    period1,
+    period2,
+    interval: '1m',
+  })) as YahooChartResult
+
+  if (!result?.quotes?.length) {
+    result = (await yahooFinance.chart(`${ticker}.KQ`, {
+      period1,
+      period2,
+      interval: '1m',
+    })) as YahooChartResult
+  }
+
+  const quotes = result?.quotes ?? []
+  const candles: MinuteCandle[] = quotes
+    .filter((q) => q.open != null && q.close != null && q.high != null && q.low != null)
+    .slice(-count)
+    .map((q) => ({
+      ts: new Date(q.date as Date | string).toISOString(),
+      open: Number(q.open),
+      high: Number(q.high),
+      low: Number(q.low),
+      close: Number(q.close),
+      volume: Number(q.volume ?? 0),
+    }))
+
+  return { candles, orderbook: null }
 }
 
 async function fetchUSSnapshot(
