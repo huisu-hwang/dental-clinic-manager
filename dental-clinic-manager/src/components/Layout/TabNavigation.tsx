@@ -316,8 +316,11 @@ export default function TabNavigation({ activeTab, onTabChange, onItemClick, ski
   const { user } = useAuth()
   const isOwner = user?.role === 'owner'
   const isMasterAdmin = user?.role === 'master_admin'
+  // 대표원장(owner)은 본인 clinic 화이트리스트 여부와 무관하게 항상 노출.
+  // 잠금 상태(미구독)는 메뉴 자체는 보이되 클릭 시 구독 안내가 뜨도록 premiumFeature 흐름이 별도로 처리.
   const canSeeInvestment =
     isMasterAdmin ||
+    isOwner ||
     (!!user?.clinic_id && (INVESTMENT_ALLOWED_CLINIC_IDS as readonly string[]).includes(user.clinic_id))
   const { hasPremiumFeature } = usePremiumFeatures()
 
