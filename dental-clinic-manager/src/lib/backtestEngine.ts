@@ -308,6 +308,13 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
       - (position.entryPrice * position.quantity * commissionRate.buyCommission)
 
     cash += sellAmount - sellFee
+    if (equityCurve.length > 0) {
+      // 마지막 강제 청산 수수료/세금까지 반영된 최종 평가액으로 맞춘다.
+      equityCurve[equityCurve.length - 1] = {
+        date: lastBar.date,
+        value: Math.round(cash),
+      }
+    }
 
     trades.push({
       entryDate: position.entryDate,
@@ -379,7 +386,7 @@ function calculateMetrics(
 
   // 승/패 분류
   const wins = trades.filter(t => t.pnl > 0)
-  const losses = trades.filter(t => t.pnl <= 0)
+  const losses = trades.filter(t => t.pnl < 0)
   const winRate = (wins.length / trades.length) * 100
 
   // Profit Factor
@@ -451,6 +458,7 @@ function calculateSharpeRatio(equityCurve: EquityCurvePoint[]): number {
   // 일별 수익률 계산
   const dailyReturns: number[] = []
   for (let i = 1; i < equityCurve.length; i++) {
+    if (equityCurve[i - 1].value <= 0) continue
     const ret = (equityCurve[i].value - equityCurve[i - 1].value) / equityCurve[i - 1].value
     dailyReturns.push(ret)
   }
@@ -473,7 +481,8 @@ function calculateSharpeRatio(equityCurve: EquityCurvePoint[]): number {
 // ============================================
 
 function round4(n: number): number {
-  if (!isFinite(n)) return 0
+  if (Number.isNaN(n)) return 0
+  if (!isFinite(n)) return n
   return Math.round(n * 10000) / 10000
 }
 
@@ -512,6 +521,10 @@ function calculateBuyHold(
   const sellAmount = quantity * lastPrice
   const sellFee = sellAmount * (commissionRate.sellCommission + commissionRate.sellTax)
   const finalEquity = remainingCash + sellAmount - sellFee
+  equityCurve[equityCurve.length - 1] = {
+    date: prices[prices.length - 1].date,
+    value: Math.round(finalEquity),
+  }
 
   const totalReturn = ((finalEquity - initialCapital) / initialCapital) * 100
   const years = prices.length / 252

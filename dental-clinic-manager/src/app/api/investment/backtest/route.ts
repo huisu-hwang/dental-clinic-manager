@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         }
         const normalizedEquityCurve = rl.equity_curve.map((p) => ({
           date: p.date,
-          equity: p.equity,
+          value: p.equity,
         }))
         // 일반 백테스트의 BacktestTrade shape으로 정규화
         const normalizedTrades = rl.trades.map((t) => ({
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         // Buy & Hold 비교 (일반 백테스트의 buyHold shape에 맞춤)
         const normalizedBuyHold = {
           totalReturn: rl.buy_hold_return * 100,
-          equityCurve: rl.buy_hold_curve.map((p) => ({ date: p.date, equity: p.equity })),
+          equityCurve: rl.buy_hold_curve.map((p) => ({ date: p.date, value: p.equity })),
         }
         const { data: run, error: insertError } = await supabase
           .from('backtest_runs')
@@ -164,9 +164,9 @@ export async function POST(request: NextRequest) {
             annualized_return: annualizedReturnPct,
             max_drawdown: maxDrawdownPct,
             sharpe_ratio: rl.sharpe_ratio,
-            win_rate: 0,
-            total_trades: rl.n_rebalances,
-            profit_factor: 0,
+            win_rate: winRatePct,
+            total_trades: rl.trades.length,
+            profit_factor: profitFactor,
             equity_curve: normalizedEquityCurve as unknown as object,
             trades: normalizedTrades as unknown as object,
             full_metrics: {
