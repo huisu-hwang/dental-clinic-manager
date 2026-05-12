@@ -126,3 +126,7 @@ export function createClient() {
 
   return supabaseInstance
 }
+
+export function resetClient() {
+  supabaseInstance = null
+}
