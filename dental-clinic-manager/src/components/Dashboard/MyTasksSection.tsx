@@ -242,71 +242,63 @@ export default function MyTasksSection() {
 
   return (
     <div>
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-3">
+      {/* 헤더 + 탭 (ScheduleWidget 과 동일한 인라인 구조) */}
+      <div className="flex items-center justify-between mb-3 gap-2">
         <h3 className="text-sm font-semibold text-at-text tracking-[0.08px] flex items-center gap-2">
           <ClipboardList className="w-4 h-4 text-at-accent" />
           내 업무
-          {!loading && (
+          {!loading && !isAdmin && (
             <span className="text-xs text-at-text-weak font-normal ml-0.5">
-              {isAdmin
-                ? `담당 ${assignedToMe.length} · 지시 ${assignedByMe.length}`
-                : `${assignedToMe.length}건`}
+              {assignedToMe.length}건
             </span>
           )}
         </h3>
-        <button
-          type="button"
-          onClick={() => load(false)}
-          disabled={refreshing || loading}
-          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-at-text-secondary hover:text-at-text bg-at-surface-alt hover:bg-at-surface-hover border border-at-border rounded-lg transition-colors disabled:opacity-50"
-          title="새로고침"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-
-      {/* 관리자 탭 */}
-      {isAdmin && (
-        <div className="flex items-center gap-1 mb-2">
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <div
+              role="tablist"
+              aria-label="업무 구분"
+              className="flex items-center gap-0.5 bg-white rounded-xl p-0.5 border border-at-border"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'toMe'}
+                onClick={() => setTab('toMe')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors tracking-[0.07px] ${
+                  tab === 'toMe'
+                    ? 'bg-at-accent text-white'
+                    : 'text-at-text-secondary hover:bg-at-surface-hover'
+                }`}
+              >
+                담당 {assignedToMe.length}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'byMe'}
+                onClick={() => setTab('byMe')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors tracking-[0.07px] ${
+                  tab === 'byMe'
+                    ? 'bg-at-accent text-white'
+                    : 'text-at-text-secondary hover:bg-at-surface-hover'
+                }`}
+              >
+                지시 {assignedByMe.length}
+              </button>
+            </div>
+          )}
           <button
             type="button"
-            onClick={() => setTab('toMe')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors ${
-              tab === 'toMe'
-                ? 'bg-at-accent text-white border-at-accent'
-                : 'bg-white text-at-text-secondary border-at-border hover:bg-at-surface-alt'
-            }`}
+            onClick={() => load(false)}
+            disabled={refreshing || loading}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-at-text-secondary hover:text-at-text bg-at-surface-alt hover:bg-at-surface-hover border border-at-border rounded-lg transition-colors disabled:opacity-50"
+            title="새로고침"
           >
-            내 업무
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                tab === 'toMe' ? 'bg-white/20 text-white' : 'bg-at-surface-alt text-at-text-weak'
-              }`}
-            >
-              {assignedToMe.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('byMe')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors ${
-              tab === 'byMe'
-                ? 'bg-at-accent text-white border-at-accent'
-                : 'bg-white text-at-text-secondary border-at-border hover:bg-at-surface-alt'
-            }`}
-          >
-            내가 지시한 업무
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                tab === 'byMe' ? 'bg-white/20 text-white' : 'bg-at-surface-alt text-at-text-weak'
-              }`}
-            >
-              {assignedByMe.length}
-            </span>
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
-      )}
+      </div>
 
       {/* 본문 */}
       {loading ? (
