@@ -86,6 +86,14 @@ interface NormalizedBar {
 
 interface AnalysisResponse extends SmartMoneyAnalysis {
   triggeredAlerts?: Pick<SmartMoneyAlert, 'id' | 'ticker' | 'market' | 'signal_types'>[]
+  /**
+   * KR 종목인데 KIS 계좌 미연결이라 yahoo-finance2 폴백으로 동작한 경우 true.
+   * - 시세 15분 지연
+   * - 호가 분석 미제공
+   * - 외인기관 매매 동향 제외
+   * UI 가 이 플래그를 보고 안내 배너를 노출한다.
+   */
+  limitedDataMode?: boolean
 }
 
 // ============================================
@@ -134,12 +142,9 @@ export async function POST(request: NextRequest) {
     console.error('[smart-money/analyze] credential 조회 실패:', err)
   }
 
-  if (market === 'KR' && !kisCredential) {
-    return NextResponse.json(
-      { error: 'KIS 계좌 연결이 필요합니다', code: 'KIS_REQUIRED' },
-      { status: 401 }
-    )
-  }
+  // KR + KIS 미연결: yahoo-finance2 폴백으로 동작 — 15분 지연 분봉 + 호가/외인기관 미제공.
+  // 분석 결과에 limitedDataMode=true 를 표기하여 UI 가 안내할 수 있도록 한다.
+  const isKRLimitedMode = market === 'KR' && !kisCredential
 
   // 4. 시장별 데이터 수집
   let bars: NormalizedBar[] = []
@@ -246,19 +251,20 @@ export async function POST(request: NextRequest) {
         investorHistory = []
       }
     } else {
-      // US: yahoo-finance2 사용
-      const quote = await fetchCurrentQuote(ticker, 'US')
+      // US 또는 KR(KIS 미연결): yahoo-finance2 사용
+      const yMarket: 'KR' | 'US' = market === 'KR' ? 'KR' : 'US'
+      const quote = await fetchCurrentQuote(ticker, yMarket)
       currentPrice = quote.price ?? 0
 
       // 1분봉 — yahoo가 주는 6일치 데이터를 모두 사용 (캐시 우회로 fresh 데이터 보장)
-      const usBars: OHLCV[] = await fetchIntradayPrices({
+      // KR 은 yahoo 분봉이 비어있는 종목이 있어 빈 배열일 수 있음 → intraday 분석 비활성으로 처리됨.
+      const intradayBars: OHLCV[] = await fetchIntradayPrices({
         ticker,
-        market: 'US',
+        market: yMarket,
         timeframe: '1m',
         forceRefresh: true,
       })
-      const recent = usBars
-      bars = recent.map((b) => ({
+      bars = intradayBars.map((b) => ({
         datetime: b.date,
         open: b.open,
         high: b.high,
@@ -266,14 +272,18 @@ export async function POST(request: NextRequest) {
         close: b.close,
         volume: b.volume,
       }))
-      // US daily bars (60일치) — fetchPrices(yahoo-finance2)로 실제 일봉 페치
+      if (bars.length === 0 && isKRLimitedMode) {
+        intradayUnavailableReason = 'yahoo-finance2 에서 한국 종목 1분봉 데이터를 받지 못했습니다 (지연 또는 미지원).'
+      }
+
+      // 일봉 (90일치) — fetchPrices(yahoo-finance2) 로 실제 일봉 페치
       try {
-        const todayUS = new Date()
-        const pastUS = new Date()
-        pastUS.setDate(pastUS.getDate() - 90)
-        const usDaily = await fetchPrices(ticker, 'US', toDateString(pastUS), toDateString(todayUS))
-        if (usDaily && usDaily.length > 0) {
-          dailyBars = usDaily.map((b) => ({
+        const todayD = new Date()
+        const pastD = new Date()
+        pastD.setDate(pastD.getDate() - 90)
+        const daily = await fetchPrices(ticker, yMarket, toDateString(pastD), toDateString(todayD))
+        if (daily && daily.length > 0) {
+          dailyBars = daily.map((b) => ({
             datetime: b.date,
             open: b.open,
             high: b.high,
@@ -281,19 +291,25 @@ export async function POST(request: NextRequest) {
             close: b.close,
             volume: b.volume,
           }))
+          const ctx = computeRecentHighLow(daily, 20)
+          recent20DayHigh = ctx.high
+          recent20DayLow = ctx.low
         } else {
           // fallback: 분봉 압축
           dailyBars = aggregateBarsToDaily(bars)
+          const ctx = inferHighLowFromBars(bars)
+          recent20DayHigh = ctx.high
+          recent20DayLow = ctx.low
         }
       } catch (err) {
-        console.warn('[smart-money/analyze] US 일봉 페치 실패, 분봉 압축으로 fallback:', err)
+        console.warn('[smart-money/analyze] 일봉 페치 실패, 분봉 압축으로 fallback:', err)
         dailyBars = aggregateBarsToDaily(bars)
+        const ctx = inferHighLowFromBars(bars)
+        recent20DayHigh = ctx.high
+        recent20DayLow = ctx.low
       }
 
-      // 분봉으로 고저 추정 (US는 일봉 별도 호출 안함)
-      const ctx = inferHighLowFromBars(bars)
-      recent20DayHigh = ctx.high
-      recent20DayLow = ctx.low
+      // KR limited mode: 외인기관 매매 동향은 KIS only 라 빈 배열 (분석 흐름은 진행)
       investorHistory = []
     }
   } catch (err) {
@@ -793,6 +809,7 @@ export async function POST(request: NextRequest) {
   const response: AnalysisResponse = {
     ...analysis,
     triggeredAlerts: triggeredAlerts && triggeredAlerts.length > 0 ? triggeredAlerts : undefined,
+    limitedDataMode: isKRLimitedMode ? true : undefined,
   }
 
   return NextResponse.json({ data: response })
