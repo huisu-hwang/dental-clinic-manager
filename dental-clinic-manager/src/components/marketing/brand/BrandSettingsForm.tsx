@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import type { BrandAssets, MedicalLawPresetKey } from '@/types/brand';
 import { MedicalLawPresetPicker } from './MedicalLawPresetPicker';
+import { BrandColorPresetPicker } from './BrandColorPresetPicker';
 
 export interface BrandFormState {
   name_ko: string;
@@ -101,6 +102,15 @@ export function BrandSettingsForm({ state, onChange, onSave, onLogoUpload, savin
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogo(f); }} />
           </label>
         </div>
+      </Field>
+
+      <Field label="브랜드 컬러 조합 프리셋">
+        <BrandColorPresetPicker
+          primary={state.primary_color}
+          secondary={state.secondary_color}
+          onSelect={(p) => onChange({ ...state, primary_color: p.primary, secondary_color: p.secondary })}
+        />
+        <p className="text-[11px] text-at-text-weak mt-2">프리셋을 선택하면 주/보조 컬러가 함께 설정됩니다. 아래에서 직접 조정도 가능합니다.</p>
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
