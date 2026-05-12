@@ -1,11 +1,13 @@
 /**
- * 주가 데이터 서비스
+ * 주가 데이터 서비스 (일봉)
  *
- * - stock_price_cache 테이블 캐싱
- * - KIS API 일봉 데이터 (국내 단기)
- * - yahoo-finance2 (국내 장기 / 미국)
+ * - 출처: yahoo-finance2 (KR/US 공통). KR 종목은 .KS(코스피) → .KQ(코스닥) 순으로 시도.
+ * - 캐싱: stock_price_cache 테이블.
+ * - 우선순위: DB 캐시 → yahoo-finance2 (재시도 2회) → 실패 시 캐시 폴백.
  *
- * 우선순위: DB 캐시 → KIS API → yahoo-finance2 (fallback)
+ * 비고: 본 함수는 KIS API 를 호출하지 않는다. 따라서 백테스트·스크리너 등 일봉
+ * 기반 분석은 KIS 계좌 연결 없이 동작한다. KIS 호출이 필요한 흐름은 별도이며
+ * 현재가(quote)·실시간 호가·투자자 매매 동향 등의 라우트에서만 사용된다.
  */
 
 import type { OHLCV, Market } from '@/types/investment'
