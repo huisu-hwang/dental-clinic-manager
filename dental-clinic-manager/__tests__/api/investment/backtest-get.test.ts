@@ -63,11 +63,11 @@ describe('GET /api/investment/backtest filters', () => {
     expect(supabaseChain.limit).toHaveBeenCalledWith(50)
   })
 
-  it('caps limit to 200', async () => {
+  it('caps limit to 500', async () => {
     const last = vi.fn().mockResolvedValue({ data: [], error: null })
     supabaseChain.limit = last as any
     await GET(makeReq('limit=999') as any)
-    expect(supabaseChain.limit).toHaveBeenCalledWith(200)
+    expect(supabaseChain.limit).toHaveBeenCalledWith(500)
   })
 
   it('returns specific rows for ids=a,b,c', async () => {
