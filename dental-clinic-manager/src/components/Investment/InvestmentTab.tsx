@@ -376,29 +376,6 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
       }
     } catch { alert('네트워크 오류') } finally { setTogglingId(null) }
   }
-  if (!hasCredential) {
-    return (
-      <div className="max-w-lg mx-auto mt-8">
-        <div className="bg-white rounded-3xl shadow-sm border border-at-border p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-at-accent-light flex items-center justify-center mx-auto mb-4">
-            <Link2 className="w-8 h-8 text-at-accent" />
-          </div>
-          <h2 className="text-xl font-bold text-at-text mb-2">증권 계좌를 연결하세요</h2>
-          <p className="text-sm text-at-text-secondary mb-6">
-            한국투자증권(KIS) 계좌를 연결하면 자동매매, 백테스트, 포트폴리오 분석 기능을 사용할 수 있습니다.
-          </p>
-          <button
-            onClick={() => onNavigate('connect')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-at-accent text-white rounded-xl font-medium hover:bg-at-accent-hover transition-colors"
-          >
-            계좌 연결하기 <ArrowRight className="w-4 h-4" />
-          </button>
-          <p className="mt-4 text-xs text-at-text-weak">모의투자 계좌로 먼저 시작할 수 있습니다</p>
-        </div>
-      </div>
-    )
-  }
-
   const formatCurrency = (n: number) => {
     if (!Number.isFinite(n)) return '--'
     return Math.round(n).toLocaleString('ko-KR')
@@ -412,7 +389,9 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-at-text">투자 대시보드</h2>
-          <p className="text-sm text-at-text-secondary mt-1">포트폴리오 현황과 활성 전략을 확인하세요</p>
+          <p className="text-sm text-at-text-secondary mt-1">
+            전략 작성·백테스트·분석은 계좌 연결 없이 바로 이용할 수 있습니다. 계좌 연결은 실주문(자동매매) 실행 시에만 필요합니다.
+          </p>
         </div>
         {hasCredential && (
           <button
@@ -426,6 +405,25 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
           </button>
         )}
       </div>
+
+      {/* 계좌 미연결 안내 — 차단이 아닌 안내. 다른 기능은 그대로 사용 가능. */}
+      {hasCredential === false && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-at-accent-light border border-at-border">
+          <Link2 className="w-5 h-5 text-at-accent flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm text-at-text font-medium">증권 계좌 미연결 상태</p>
+            <p className="text-xs text-at-text-secondary mt-1">
+              자동매매(실주문)는 KIS 증권 계좌 연결 후 실행됩니다. 전략 관리·백테스트·전략 비교·심리 분석 등은 그대로 이용 가능합니다.
+            </p>
+            <button
+              onClick={() => onNavigate('connect')}
+              className="mt-2 inline-flex items-center gap-1 text-sm text-at-accent font-medium hover:underline"
+            >
+              계좌 연결하러 가기 <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {balanceError && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
@@ -469,7 +467,7 @@ function DashboardSubTab({ hasCredential, strategies, activeStrategies, emergenc
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-at-accent-light text-at-accent text-xs font-bold flex items-center justify-center">1</span>
               <div>
                 <button onClick={() => onNavigate('connect')} className="text-at-accent font-medium hover:underline">계좌 연결</button>
-                <span className="text-at-text-secondary"> - KIS 증권 계좌를 연결 (모의투자부터 권장)</span>
+                <span className="text-at-text-secondary"> - 자동매매(실주문) 실행 시에만 필요 · KIS 증권 (모의투자부터 권장)</span>
               </div>
             </li>
             <li className="flex gap-3">
