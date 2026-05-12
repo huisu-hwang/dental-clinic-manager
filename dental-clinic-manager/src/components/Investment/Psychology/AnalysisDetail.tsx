@@ -1,11 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Loader2, Sparkles, AlertCircle, Brain, Clock, History } from 'lucide-react'
 import ScoreGauge from './ScoreGauge'
 import PsychologyChart from './PsychologyChart'
 import OrderbookPressureBar from './OrderbookPressureBar'
 import type { PsychologyAnalysisRecord } from '@/types/psychology'
-import type { Market } from '@/types/investment'
+import type { Market, OHLCV } from '@/types/investment'
+import { calcFearGreed } from '@/lib/indicatorEngine'
 
 interface Props {
   ticker: string
@@ -84,6 +85,23 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
   const latestSnap = latest?.input_snapshot as { as_of?: string; duration_min?: number } | undefined
   const latestAsOf = latestSnap?.as_of ?? null
   const latestDuration = latestSnap?.duration_min ?? null
+
+  // 분봉 시계열에서 공포·탐욕 지수(0~100) 시리즈 계산 — PsychologyChart 오버레이용.
+  // llmClient(server) 와 동일한 윈도우 파라미터를 사용해 본문 인용 지수와 일치하게 유지.
+  const fearGreedSeries = useMemo<number[]>(() => {
+    const candles = latest?.input_snapshot.candles ?? []
+    if (candles.length < 5) return []
+    try {
+      return calcFearGreed(candles as unknown as OHLCV[], {
+        rsiPeriod: 7,
+        bbPeriod: 10,
+        volPeriod: 10,
+        momentumPeriod: 5,
+      })
+    } catch {
+      return []
+    }
+  }, [latest])
 
   return (
     <div className="space-y-4">
@@ -217,7 +235,11 @@ export default function AnalysisDetail({ ticker, market, latest, onAnalyzed }: P
               {latest.narrative}
             </p>
           </div>
-          <PsychologyChart candles={latest.input_snapshot.candles} markers={latest.markers} />
+          <PsychologyChart
+            candles={latest.input_snapshot.candles}
+            markers={latest.markers}
+            fearGreed={fearGreedSeries}
+          />
           {market === 'KR' && latest.orderbook_pressure && (
             <OrderbookPressureBar data={latest.orderbook_pressure} />
           )}
