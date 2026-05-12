@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
         if (!isOnline) {
           return NextResponse.json({
             ok: false,
-            message: '워커가 오프라인 상태입니다. PC에서 클리닉 매니저 워커 앱을 실행해주세요.',
+            message: '워커가 오프라인 상태입니다. PC에서 하이클리닉 워커 앱을 실행해주세요.',
           });
         }
 

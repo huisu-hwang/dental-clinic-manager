@@ -125,7 +125,7 @@ export default function WorkerStatusBanner() {
               <div className="mt-2 text-xs bg-white/60 rounded-lg p-3 space-y-1.5">
                 <p className="font-semibold">조치 방법</p>
                 <ol className="list-decimal list-inside space-y-1 ml-1">
-                  <li>워커가 설치된 PC에서 <strong>「클리닉 매니저 워커」</strong> 트레이 아이콘을 확인하고 재시작합니다.</li>
+                  <li>워커가 설치된 PC에서 <strong>「하이클리닉 워커」</strong> 트레이 아이콘을 확인하고 재시작합니다.</li>
                   <li>워커가 자동 시작되지 않으면 시작 메뉴에서 다시 실행합니다.</li>
                   <li>그래도 안 되면 PowerShell에서 <code className="bg-white px-1 rounded">npx playwright install chromium</code> 실행 후 워커 재시작.</li>
                 </ol>

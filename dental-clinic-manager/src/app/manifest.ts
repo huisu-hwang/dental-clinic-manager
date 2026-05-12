@@ -4,8 +4,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://hi-clinic.co.kr'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: '클리닉 매니저 - 치과 업무 관리 시스템',
-    short_name: '클리닉 매니저',
+    name: 'Hi Clinic - 치과 업무 관리 시스템',
+    short_name: 'Hi Clinic',
     description: '치과 데스크 업무를 효율적이고 체계적으로 관리하는 스마트 솔루션',
     start_url: '/',
     scope: '/',

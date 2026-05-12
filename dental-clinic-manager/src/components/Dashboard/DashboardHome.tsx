@@ -465,7 +465,7 @@ export default function DashboardHome() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = isWindows ? '클리닉매니저워커-설치.exe' : '클리닉매니저워커-설치.command'
+        a.download = isWindows ? '하이클리닉워커-설치.exe' : '하이클리닉워커-설치.command'
         a.click()
         URL.revokeObjectURL(url)
       }
@@ -517,7 +517,7 @@ export default function DashboardHome() {
             <div className="flex items-center space-x-2">
               <Monitor className="w-4 h-4 text-at-accent flex-shrink-0" />
               <div>
-                <span className="text-sm font-medium text-at-text tracking-[0.08px]">클리닉 매니저 워커가 설치되지 않았습니다</span>
+                <span className="text-sm font-medium text-at-text tracking-[0.08px]">하이클리닉 워커가 설치되지 않았습니다</span>
                 <p className="text-xs text-at-text-secondary mt-0.5 tracking-[0.07px]">
                   블로그 발행, 홈택스 연동, SEO 분석 등의 기능을 사용하려면 워커를 설치해주세요.
                 </p>

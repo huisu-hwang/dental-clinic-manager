@@ -316,7 +316,7 @@ export default function RoleSelector() {
               본인의 직급을 선택해 주세요~
             </h1>
             <p className="fade-up-3 text-lg text-slate-600 max-w-xl mx-auto leading-relaxed">
-              클리닉 매니저는 역할에 맞춰{' '}
+              하이클리닉은 역할에 맞춰{' '}
               <span className="font-semibold text-slate-900">다른 화면</span>을 보여드려요.
             </p>
           </div>

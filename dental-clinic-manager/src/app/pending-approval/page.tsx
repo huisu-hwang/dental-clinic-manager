@@ -146,8 +146,8 @@ export default function PendingApprovalPage() {
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Image src="/icons/icon-192x192.png" alt="클리닉 매니저 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
-            <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
+            <Image src="/icons/icon-192x192.png" alt="Hi Clinic 로고" width={40} height={40} className="w-10 h-10 rounded-xl" />
+            <h1 className="text-2xl font-bold text-at-text">Hi Clinic</h1>
           </div>
         </div>
 

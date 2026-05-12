@@ -3,7 +3,7 @@ export default function SetupGuide() {
     <div className="min-h-screen bg-at-surface-alt flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-xl shadow-lg max-w-2xl w-full">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-at-text mb-2">하얀치과 실시간 업무 대시보드</h1>
+          <h1 className="text-3xl font-bold text-at-text mb-2">Hi Clinic 실시간 업무 대시보드</h1>
           <p className="text-at-text-secondary">Supabase 설정이 필요합니다</p>
         </div>
 

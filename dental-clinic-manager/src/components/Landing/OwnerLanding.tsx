@@ -345,7 +345,7 @@ export default function OwnerLanding() {
             <div className="text-center mb-12">
               <span className="inline-flex items-center gap-2 px-4 py-2 bg-at-tag text-at-accent rounded-full text-sm font-semibold mb-6">
                 <SparklesIcon className="w-4 h-4" />
-                Why Clinic Manager?
+                Why Hi Clinic?
               </span>
               <h2 className="text-3xl sm:text-4xl font-bold text-at-text leading-tight">
                 현장의 필요를 느낀{' '}

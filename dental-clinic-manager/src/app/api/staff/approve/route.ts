@@ -156,7 +156,7 @@ export async function POST(req: Request) {
             targets.map(async (u: any) => {
               const clinicName = (u.clinic?.name as string | undefined) ?? ''
               const message =
-                `[클리닉매니저] 안녕하세요 ${u.name}님,\n` +
+                `[하이클리닉] 안녕하세요 ${u.name}님,\n` +
                 `${clinicName ? `${clinicName} ` : ''}대표원장 가입이 승인되었습니다.\n` +
                 `지금 로그인하여 서비스를 이용해주세요.` +
                 (loginUrl ? `\n${loginUrl}` : '')

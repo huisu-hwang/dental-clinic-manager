@@ -107,7 +107,7 @@ export default function StaffLanding() {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const url = `${origin}/owner`
     const shareData = {
-      title: '클리닉 매니저 · 원장용 소개',
+      title: 'Hi Clinic · 원장용 소개',
       text: '원장님, 실장·직원 업무를 자동화해주는 치과 관리 서비스예요. 한번 보시겠어요?',
       url,
     }
