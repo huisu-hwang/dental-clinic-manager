@@ -52,10 +52,12 @@ export default function AuthFlow({ children }: AuthFlowProps) {
         router.push('/pending-approval')
         return
       }
-      const redirect = searchParams.get('redirect')
-      router.push(redirect || '/dashboard')
+      // 정책: 로그인 후에는 ?redirect= 파라미터가 있어도 무시하고 항상 대시보드로 이동.
+      // 사용자 요청 — 소모임 등 URL 이 redirect 로 박혀 있어 의도치 않게 그곳으로 가는 사례 차단.
+      // 신규 가입자의 초대 링크 후속 진입은 /auth/callback 의 next 파라미터로 별도 처리됨.
+      router.push('/dashboard')
     }
-  }, [isAuthenticated, user, router, searchParams])
+  }, [isAuthenticated, user, router])
 
   if (loading) {
     return (

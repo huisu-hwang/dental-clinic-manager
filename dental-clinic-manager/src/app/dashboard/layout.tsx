@@ -59,14 +59,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     pathname.replace('/dashboard/community/telegram/', '').length > 0
 
   // 사용자 상태 체크 - 퇴사자, 승인대기, 거절된 사용자 리다이렉트
-  // 미로그인 사용자는 홈(로그인 화면)으로 리다이렉트하며 원래 URL 을 redirect 파라미터로 전달
-  // (그렇지 않으면 무한 로딩 스피너만 노출됨 — 소모임 초대 링크 같은 진입 경로 차단)
+  // 미로그인 사용자는 홈(로그인 화면)으로 리다이렉트한다.
+  // 정책: redirect 파라미터를 운반하지 않는다 — 로그인 후 항상 대시보드로 이동시키기로 결정됐기 때문.
+  // (초대 링크의 신규 가입 후속 진입은 /auth/callback 의 next 파라미터로 별도 처리됨)
   useEffect(() => {
     if (loading) return
     if (!user) {
-      const qs = searchParams.toString()
-      const next = qs ? `${pathname}?${qs}` : pathname
-      router.replace(`/?show=login&redirect=${encodeURIComponent(next)}`)
+      router.replace('/?show=login')
       return
     }
     if (user.status === 'resigned') {
