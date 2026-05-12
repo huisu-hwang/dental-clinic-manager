@@ -44,28 +44,53 @@ const MODEL_ID = 'claude-haiku-4-5-20251001'
 
 const VALID_MARKER_KINDS = ['panic_sell','fomo_entry','accumulation','distribution','capitulation','indecision'] as const
 
+const VALID_SCORE_LABELS = ['극공포','공포','중립','탐욕','극탐욕'] as const
+type ScoreLabel = typeof VALID_SCORE_LABELS[number]
+
+function deriveScoreLabel(score: number): ScoreLabel {
+  if (score <= 20) return '극공포'
+  if (score <= 40) return '공포'
+  if (score < 60) return '중립'
+  if (score < 80) return '탐욕'
+  return '극탐욕'
+}
+
+// Marker 단위 — 한 marker가 일부 필드 실패해도 전체 분석은 보존되도록 필드별 fallback.
+const ZMarker = z.object({
+  ts: z.string().catch(''),
+  // 비표준 kind 는 'indecision' 으로 흡수
+  kind: z.string().catch('indecision').transform(v => (VALID_MARKER_KINDS as readonly string[]).includes(v) ? v as typeof VALID_MARKER_KINDS[number] : 'indecision'),
+  // 빈/누락 label 은 일반 라벨로 보강 (전체 marker 폐기 방지)
+  label: z.string().catch('').transform(v => v.trim() || '관찰 지점'),
+  candle_index: z.coerce.number().int().min(0).catch(0),
+})
+
+// 전체 분석 — 각 필드에 .catch() 로 fallback 두어 부분 응답도 수용.
+// 사유: Haiku 가 가끔 narrative/score_label/markers[].label 을 빈 문자열로 반환하면서
+// 전체 분석이 폐기되는 사례를 줄이기 위함. 후처리 단계에서 score_label/narrative 는 추가 보강.
 const ZAnalysis = z.object({
-  // 모델이 점수를 문자열/소수로 반환할 수 있어 coerce 처리 + clamp
-  psychology_score: z.coerce.number().transform(n => Math.max(0, Math.min(100, Math.round(n)))),
-  score_label: z.string().min(1),
-  tags: z.array(z.string()).max(8).default([]),
-  narrative: z.string().min(1),
-  markers: z.array(z.object({
-    ts: z.string().default(''),
-    // 알 수 없는 kind는 'indecision'으로 fallback (전체 분석 폐기 방지)
-    kind: z.string().transform(v => (VALID_MARKER_KINDS as readonly string[]).includes(v) ? v as typeof VALID_MARKER_KINDS[number] : 'indecision'),
-    label: z.string().min(1),
-    candle_index: z.coerce.number().int().min(0),
-  })).max(5).default([]),
-  // null 또는 객체 모두 허용 — 모델이 누락 시 null로 정규화
+  psychology_score: z.coerce.number().catch(50).transform(n => Math.max(0, Math.min(100, Math.round(n)))),
+  score_label: z.string().catch(''),
+  // 8개 초과 시 잘라서 유지 (.max() 로 폐기하지 않음)
+  tags: z.array(z.string()).catch([]).transform(arr => arr.slice(0, 8)),
+  narrative: z.string().catch(''),
+  // 일부 marker 가 schema 위반이어도 valid 한 것만 남기고 최대 5개로 제한
+  markers: z.array(z.unknown()).catch([]).transform(items =>
+    items
+      .map(item => ZMarker.safeParse(item))
+      .filter((r): r is { success: true; data: z.infer<typeof ZMarker> } => r.success)
+      .map(r => r.data)
+      .slice(0, 5)
+  ),
+  // null/object 모두 허용 + 필드 누락/범위 초과는 흡수
   orderbook_pressure: z.union([
     z.null(),
     z.object({
-      bid_pct: z.coerce.number().min(0).max(100),
-      ask_pct: z.coerce.number().min(0).max(100),
-      interpretation: z.string(),
+      bid_pct: z.coerce.number().min(0).max(100).catch(50),
+      ask_pct: z.coerce.number().min(0).max(100).catch(50),
+      interpretation: z.string().catch(''),
     }),
-  ]).nullable().default(null),
+  ]).nullable().catch(null),
 })
 
 const TOOL_DEFINITION = {
@@ -220,17 +245,32 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
 
     const parsed = ZAnalysis.safeParse(toolUse.input)
     if (!parsed.success) {
-      if (attempt === 0) continue
-      console.error('[psychology llm] schema fail. raw:', JSON.stringify(toolUse.input))
+      if (attempt === 0) {
+        console.warn('[psychology llm] schema fail (retry). raw:', JSON.stringify(toolUse.input))
+        continue
+      }
+      console.error('[psychology llm] schema fail (final). raw:', JSON.stringify(toolUse.input))
       const issues = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(' / ')
       throw new Error(`LLM 응답 스키마 검증 실패: ${issues}`)
     }
+
+    // 후처리 보강:
+    //  - score_label 이 빈/비표준이면 점수에서 파생
+    //  - narrative 가 비면 점수 기반 기본 문장 생성
+    //  - markers 의 candle_index 가 캔들 범위를 벗어나면 제거
+    const candleCount = args.snapshot.candles.length
+    const cleanMarkers = parsed.data.markers.filter(m => m.candle_index < candleCount)
+    const validLabel: ScoreLabel = (VALID_SCORE_LABELS as readonly string[]).includes(parsed.data.score_label)
+      ? parsed.data.score_label as ScoreLabel
+      : deriveScoreLabel(parsed.data.psychology_score)
+    const baseNarrative = parsed.data.narrative.trim() ||
+      `심리 점수 ${parsed.data.psychology_score} (${validLabel}). 모델이 상세 해설을 생성하지 못해 기본 정보만 표시합니다.`
 
     // 안전망 (2단):
     //  1) 본문에 등장한 모든 HH:MM 시각 옆에 (공포·탐욕 지수 NN, 라벨) inline 자동 보강
     //  2) markers 중 본문에 인용되지 않은 항목은 끝에 요약 블록으로 부착 (빠짐 방지)
     const enriched = enrichNarrativeWithFearGreed(
-      parsed.data,
+      { ...parsed.data, score_label: validLabel, narrative: baseNarrative, markers: cleanMarkers },
       fearGreedSeries,
       args.snapshot.candles.map(c => c.ts),
     )
