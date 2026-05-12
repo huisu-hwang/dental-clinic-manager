@@ -44,6 +44,21 @@ import type { BrandImageOptions } from '@/types/brand'
 
 const DRAFT_KEY = 'marketing-newpost-tab-draft-v1'
 
+function extractNaverBlogId(url: string): string {
+  if (!url) return ''
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('blog.naver.com')) {
+      const seg = u.pathname.split('/').filter(Boolean)
+      const id = seg[0] || ''
+      if (id && !id.endsWith('.naver')) return `@${id}`
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return ''
+}
+
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 
 // ── 섹션 헤더 (연차관리 페이지와 동일한 패턴) ──
@@ -660,6 +675,65 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                           </span>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {seoResult.referencedPosts && seoResult.referencedPosts.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-medium text-at-text-secondary mb-1.5">
+                        분석에 참고한 글 ({seoResult.referencedPosts.length}개) — 네이버 상위 노출 결과
+                      </p>
+                      <ul className="space-y-1.5">
+                        {seoResult.referencedPosts.map((p) => {
+                          const isAnalyzed = p.bodyLength > 0
+                          const fallbackBlogId = extractNaverBlogId(p.postUrl)
+                          const displayTitle = p.title?.trim() || (isAnalyzed ? p.postUrl : '(제목 없음 — 본문 추출 실패)')
+                          const displayBlog = p.blogName || fallbackBlogId
+                          return (
+                            <li
+                              key={`${p.rank}-${p.postUrl}`}
+                              className={`rounded-lg border px-2.5 py-2 text-[11px] ${
+                                isAnalyzed ? 'bg-white border-at-border' : 'bg-at-surface-alt border-dashed border-at-border'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] h-5 px-1.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-bold">
+                                  {p.rank}위
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {p.postUrl ? (
+                                      <a
+                                        href={p.postUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`font-medium hover:underline break-all ${isAnalyzed ? 'text-indigo-700' : 'text-at-text-weak'}`}
+                                      >
+                                        {displayTitle}
+                                      </a>
+                                    ) : (
+                                      <span className="font-medium text-at-text-weak">{displayTitle}</span>
+                                    )}
+                                    {!isAnalyzed && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-medium">
+                                        분석 제외
+                                      </span>
+                                    )}
+                                  </div>
+                                  {displayBlog && (
+                                    <p className="mt-0.5 text-[10.5px] text-at-text-weak">📝 {displayBlog}</p>
+                                  )}
+                                  {isAnalyzed && (
+                                    <p className="mt-0.5 text-[10.5px] text-at-text-weak">
+                                      글자수 {p.bodyLength.toLocaleString()}자 · 이미지 {p.imageCount}장 · 소제목 {p.headingCount}개
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
                     </div>
                   )}
 
