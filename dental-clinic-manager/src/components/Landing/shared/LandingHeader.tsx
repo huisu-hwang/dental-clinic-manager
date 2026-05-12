@@ -30,12 +30,12 @@ export default function LandingHeader({ variant, onShowLogin, onShowSignup }: La
           <div className="flex items-center gap-3">
             <Image
               src="/icons/icon-192x192.png"
-              alt="클리닉 매니저 로고"
+              alt="Hi Clinic 로고"
               width={40}
               height={40}
               className="w-10 h-10 rounded-xl shadow-at-card"
             />
-            <span className={`text-xl font-bold ${logoTextClass}`}>클리닉 매니저</span>
+            <span className={`text-xl font-bold ${logoTextClass}`}>Hi Clinic</span>
           </div>
           <div className="flex items-center gap-3">
             <button

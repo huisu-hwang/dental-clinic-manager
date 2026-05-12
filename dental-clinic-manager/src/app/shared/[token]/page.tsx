@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!title) throw new Error('게시글 없음')
 
     const sourceLabel = SOURCE_TYPE_LABELS[link.source_type as keyof typeof SOURCE_TYPE_LABELS] || '게시물'
-    const fullTitle = `${title} - 하얀치과 ${sourceLabel}`
+    const fullTitle = `${title} - Hi Clinic ${sourceLabel}`
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://hi-clinic.co.kr'
     const canonicalUrl = `${siteUrl}/shared/${token}`
 
@@ -81,7 +81,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description,
         url: canonicalUrl,
         type: 'article',
-        siteName: '클리닉 매니저',
+        siteName: 'Hi Clinic',
         locale: 'ko_KR',
       },
       twitter: {
@@ -101,8 +101,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   } catch {
     return {
-      title: '공유된 게시물 | 클리닉 매니저',
-      description: '하얀치과 대시보드에서 공유한 게시글입니다.',
+      title: '공유된 게시물 | Hi Clinic',
+      description: 'Hi Clinic에서 공유한 게시글입니다.',
     }
   }
 }
@@ -233,7 +233,7 @@ export default async function SharedPage({ params }: PageProps) {
     },
     publisher: {
       '@type': 'Organization',
-      name: '클리닉 매니저',
+      name: 'Hi Clinic',
       url: siteUrl,
     },
     datePublished: postData.created_at,

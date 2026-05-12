@@ -115,7 +115,7 @@ export default function SharedPostView({ loginRequired, postData }: SharedPostVi
               <div className="w-8 h-8 bg-at-accent rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">H</span>
               </div>
-              <span className="font-bold text-at-text hidden sm:inline">하얀치과 대시보드</span>
+              <span className="font-bold text-at-text hidden sm:inline">Hi Clinic</span>
             </div>
             <button
               onClick={() => router.push('/')}
@@ -171,7 +171,7 @@ export default function SharedPostView({ loginRequired, postData }: SharedPostVi
               <div className="w-8 h-8 bg-at-accent rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">H</span>
               </div>
-              <span className="font-bold text-at-text hidden sm:inline">하얀치과 대시보드</span>
+              <span className="font-bold text-at-text hidden sm:inline">Hi Clinic</span>
             </div>
             <span className="text-at-text-weak hidden sm:inline">|</span>
             <span className="text-xs text-at-text-weak hidden sm:inline">
@@ -421,7 +421,7 @@ export default function SharedPostView({ loginRequired, postData }: SharedPostVi
                 {/* 하단 CTA 배너 */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-at-border rounded-xl p-4 sm:p-6 text-center">
                   <p className="text-at-text-secondary font-medium mb-2">
-                    하얀치과 대시보드에서 더 많은 소식을 확인하세요
+                    하이클리닉에서 더 많은 소식을 확인하세요
                   </p>
                   <p className="text-at-text-weak text-sm mb-4">
                     근태관리, 게시판, 업무 체크리스트 등 다양한 기능을 이용할 수 있습니다.
@@ -459,7 +459,7 @@ export default function SharedPostView({ loginRequired, postData }: SharedPostVi
             </div>
             <div className="px-6 py-5 space-y-3">
               <p className="text-sm text-at-text-weak text-center">
-                하얀치과 대시보드에서 더 많은 기능을 이용하세요.
+                하이클리닉에서 더 많은 기능을 이용하세요.
               </p>
               <a
                 href={`/?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`}

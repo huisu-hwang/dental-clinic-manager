@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     const dashboardUrl = `${origin}/master`
     const clinicName = ((newUser as any).clinic?.name as string | undefined) ?? '신규 치과'
     const message =
-      `[클리닉매니저] 신규 대표원장 가입 승인 요청\n` +
+      `[하이클리닉] 신규 대표원장 가입 승인 요청\n` +
       `· ${newUser.name} (${newUser.email})\n` +
       `· ${clinicName}\n` +
       `승인하기: ${dashboardUrl}`

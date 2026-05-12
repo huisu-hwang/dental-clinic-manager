@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     const joinUrl = `${appUrl}/community/telegram/join/${inviteLink.invite_code}?autoJoin=1`
 
     await resend.emails.send({
-      from: 'ClinicManager <noreply@hi-clinic.co.kr>',
+      from: 'Hi Clinic <noreply@hi-clinic.co.kr>',
       to: [email],
       subject: `[${group.board_title}] 소모임 초대`,
       html: `
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
           </div>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           <p style="color: #9ca3af; font-size: 12px;">
-            이 이메일은 클리닉 매니저에서 발송되었습니다.
+            이 이메일은 하이클리닉에서 발송되었습니다.
             본인이 요청하지 않은 초대라면 이 이메일을 무시해주세요.
           </p>
         </div>

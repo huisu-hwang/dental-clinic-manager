@@ -286,12 +286,12 @@ export default function LoginForm({ onBackToLanding, onShowSignup, onShowForgotP
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Image
               src="/icons/icon-192x192.png"
-              alt="클리닉 매니저 로고"
+              alt="Hi Clinic 로고"
               width={40}
               height={40}
               className="w-10 h-10 rounded-xl"
             />
-            <h1 className="text-2xl font-bold text-at-text">클리닉 매니저</h1>
+            <h1 className="text-2xl font-bold text-at-text">Hi Clinic</h1>
           </div>
           <h2 className="text-3xl font-bold text-at-text mb-2">로그인</h2>
           <p className="text-at-text-secondary">계정에 로그인하여 업무를 시작하세요</p>

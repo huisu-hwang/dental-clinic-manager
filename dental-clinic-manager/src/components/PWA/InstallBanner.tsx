@@ -30,7 +30,7 @@ export default function InstallBanner() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-at-text">설치 완료!</p>
             <p className="text-xs text-at-text-weak">
-              홈 화면에 아이콘이 없으면 앱 서랍에서 &quot;클리닉 매니저&quot;를 길게 눌러 홈 화면에
+              홈 화면에 아이콘이 없으면 앱 서랍에서 &quot;Hi Clinic&quot;을 길게 눌러 홈 화면에
               추가하세요
             </p>
           </div>
