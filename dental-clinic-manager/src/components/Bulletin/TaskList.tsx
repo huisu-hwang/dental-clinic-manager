@@ -410,47 +410,6 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
         </div>
       </div>
 
-      {/* 선택된 업무가 있을 때만 액션바 노출 */}
-      {canBulkReassign && activeTab !== 'recurring' && selectedIds.size > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-at-accent-light border border-at-accent rounded-xl">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-at-accent">
-              {selectedIds.size}건 선택됨
-            </span>
-            <button
-              type="button"
-              onClick={toggleSelectAll}
-              className="text-sm font-medium text-at-accent hover:underline"
-            >
-              {selectedIds.size === displayedTasks.length && displayedTasks.length > 0
-                ? '전체 해제'
-                : '현재 보이는 업무 전체 선택'}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              onClick={() => setShowBulkAssigneeModal(true)}
-              className="flex items-center gap-2"
-            >
-              <Users className="w-4 h-4" />
-              담당자 일괄 변경
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleBulkDelete}
-              className="flex items-center gap-2 text-at-error hover:text-at-error hover:bg-at-error-bg border-red-200"
-            >
-              <Trash2 className="w-4 h-4" />
-              일괄 삭제
-            </Button>
-            <Button variant="outline" onClick={clearSelection} className="flex items-center gap-2">
-              <X className="w-4 h-4" />
-              선택 해제
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* 통계 (클릭하면 해당 상태 필터링) */}
       {stats && (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
@@ -745,6 +704,47 @@ export default function TaskList({ canCreate = false, showMyTasksOnly = false }:
           onToggleSelect={toggleSelect}
         />
       ))}
+
+      {/* 선택된 업무가 있을 때만 액션바 노출 — 리스트 하단에 위치 */}
+      {canBulkReassign && activeTab !== 'recurring' && selectedIds.size > 0 && (
+        <div className="sticky bottom-2 sm:bottom-4 z-20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 bg-at-accent-light border border-at-accent rounded-xl shadow-at-card">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-at-accent">
+              {selectedIds.size}건 선택됨
+            </span>
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="text-sm font-medium text-at-accent hover:underline"
+            >
+              {selectedIds.size === displayedTasks.length && displayedTasks.length > 0
+                ? '전체 해제'
+                : '현재 보이는 업무 전체 선택'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={() => setShowBulkAssigneeModal(true)}
+              className="flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              담당자 일괄 변경
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 text-at-error hover:text-at-error hover:bg-at-error-bg border-red-200"
+            >
+              <Trash2 className="w-4 h-4" />
+              일괄 삭제
+            </Button>
+            <Button variant="outline" onClick={clearSelection} className="flex items-center gap-2">
+              <X className="w-4 h-4" />
+              선택 해제
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 담당자 일괄 변경 모달 */}
       {showBulkAssigneeModal && (
