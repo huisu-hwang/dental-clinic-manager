@@ -5,6 +5,9 @@
  *   investorFlow 25 / wyckoffPhase 20 / marketStructure 15 / liquidity 10
  *   VSA 10 / algoFootprint 10 / 단일봉 Wyckoff 5 / VWAP 5
  *
+ * ※ investorFlow 가중치는 미국 종목 / KR KIS 미연결 시 자동으로 나머지 7개 컴포넌트에
+ *   비례 재분배되어 ±100 범위 유지.
+ *
  * 트랩 모디파이어:
  *   bull-trap + score>0 → score *= 0.7
  *   bear-trap + score<0 → score *= 0.7
@@ -419,6 +422,9 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
     }
   }
 
+  // NOTE: newsContext 기반 signalDetail 은 현재 동작하지 않는다 —
+  // route.ts 에서 newsEvents: [] 로 호출하므로 analyzeNewsContext 가 항상 null pattern을 반환.
+  // 뉴스 데이터 통합(getNewsEventsForTicker) 구현 후 활성화 예정. 로직은 그대로 유지.
   if (newsContext && newsContext.pattern) {
     signalDetails.push({
       type: newsContext.pattern,
@@ -453,15 +459,22 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
   // ============================================
   // 종합 점수
   // ============================================
-  let rawScore =
-    flowComponent
-    + wyckoffPhaseComponent
+  const otherComponents =
+    wyckoffPhaseComponent
     + structureComponent
     + liquidityComponent
     + vsaComponent
     + algoComponent
     + wyckoffComponent
     + vwapComponent
+
+  // investorFlow가 null(미국 종목/KR limited-mode)이면 나머지 75 가중치를 100으로 정규화 — 만점 범위 동일하게 유지
+  const FLOW_WEIGHT = 25
+  const TOTAL_WEIGHT = 100
+  const rebalanceFactor = investorFlow === null
+    ? TOTAL_WEIGHT / (TOTAL_WEIGHT - FLOW_WEIGHT)
+    : 1
+  let rawScore = (flowComponent + otherComponents) * rebalanceFactor
 
   // 트랩 모디파이어
   if (traps?.bullTrapDetected && rawScore > 0) {
@@ -486,6 +499,7 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
   let manipRisk = 0
   if (traps?.bullTrapDetected) manipRisk += 40
   if (traps?.bearTrapDetected) manipRisk += 40
+  // TODO: 활성화는 뉴스 데이터 통합(getNewsEventsForTicker) 구현 후 — 현재 newsEvents 가 빈 배열이라 항상 null pattern.
   if (newsContext?.pattern === 'news-fade') manipRisk += 30
   if (newsContext?.pattern === 'sell-the-news') manipRisk += 20
   if (vsa?.signals.some((s) => s.type === 'buying-climax' || s.type === 'selling-climax')) manipRisk += 20

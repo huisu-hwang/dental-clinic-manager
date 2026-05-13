@@ -7,15 +7,19 @@
  *   - closePosition : (close - low) / spread (0=하단, 1=상단)
  *   - volRatio      : volume / avg(직전 20봉)
  *
- * 시그널 (최근 5봉만 actionable):
- *   - No Demand       : 양봉 / 좁은 spread / volRatio < 0.7
- *   - No Supply       : 음봉 / 좁은 spread / volRatio < 0.7
- *   - Buying Climax   : volRatio > 2.5 / wide spread / closePosition < 0.5 / 직전 추세 상승
- *   - Selling Climax  : volRatio > 2.5 / wide spread / closePosition > 0.5 / 직전 추세 하락
- *   - Stopping Volume : 음봉 / 매우 큰 거래량 / closePosition > 0.66 / 작은 body
+ * 시그널 (최근 10봉만 actionable):
+ *   - No Demand       : 양봉 / 좁은 spread(<0.85x avg10) / volRatio < 0.85 / 직전 추세 상승
+ *   - No Supply       : 음봉 / 좁은 spread(<0.85x avg10) / volRatio < 0.85 / 직전 추세 하락
+ *   - Buying Climax   : volRatio > 1.8 / wide spread(>1.3x avg10) / closePosition < 0.34 / 직전 추세 상승
+ *   - Selling Climax  : volRatio > 1.8 / wide spread(>1.3x avg10) / closePosition > 0.66 / 직전 추세 하락
+ *   - Stopping Volume : 음봉 / volRatio > 1.8 / closePosition > 0.66 / 작은 body(<0.4x spread)
+ *
+ * 주의:
+ *   - No-demand/No-supply 는 정통 VSA 정의대로 trend 컨텍스트(uptrend/downtrend)가 있어야만 발화
+ *   - Climax close-position 은 상/하 1/3 영역(0.66/0.34)으로 강화됨 (기존 0.5 → 너무 관대)
  *
  * effortVsResult:
- *   - bullish : Selling Climax / Stopping Volume / No Supply 중 하나라도 최근 5봉 내 발견
+ *   - bullish : Selling Climax / Stopping Volume / No Supply 중 하나라도 최근 10봉 내 발견
  *   - bearish : Buying Climax / No Demand 발견
  *   - neutral : 그 외
  */
@@ -38,6 +42,8 @@ const NARROW_SPREAD_MULT = 0.85 // 0.7→0.85 완화 (No Demand/Supply 더 잘 �
 const WIDE_SPREAD_MULT = 1.3    // 1.5→1.3 완화 (Climax wide-spread 인정 범위 넓힘)
 const LOW_VOL_RATIO = 0.85      // 0.7→0.85 완화 (No Demand/Supply 검출)
 const CLIMAX_VOL_RATIO = 1.8    // 2.5→1.8 완화 (climax 검출)
+const CLIMAX_CLOSE_POS_UPPER = 0.66   // 상단 1/3 (selling climax: 강한 lower-wick → close 상단)
+const CLIMAX_CLOSE_POS_LOWER = 0.34   // 하단 1/3 (buying climax: 강한 upper-wick → close 하단)
 const STOPPING_CLOSE_POS = 0.66
 const STOPPING_BODY_TO_SPREAD = 0.4   // 작은 body 기준
 const MAX_SIGNALS = 10
@@ -165,31 +171,41 @@ export function analyzeVSA(bars: Bar[]): VSAResult {
     const isWide = m.spread > avgSpread * WIDE_SPREAD_MULT
     const trend = priorTrend(bars, i)
 
-    // No Demand
-    if (m.bodyDirection === 'up' && isNarrow && m.volRatio < LOW_VOL_RATIO) {
+    // No Demand — 상승 추세 중 약한 양봉 (정통 VSA: uptrend 컨텍스트 필수)
+    if (
+      m.bodyDirection === 'up' &&
+      isNarrow &&
+      m.volRatio < LOW_VOL_RATIO &&
+      trend === 'up'
+    ) {
       signals.push(buildSignal('no-demand', i, m, '수요 부재 — 상승 동력 소진'))
     }
 
-    // No Supply
-    if (m.bodyDirection === 'down' && isNarrow && m.volRatio < LOW_VOL_RATIO) {
+    // No Supply — 하락 추세 중 약한 음봉 (정통 VSA: downtrend 컨텍스트 필수)
+    if (
+      m.bodyDirection === 'down' &&
+      isNarrow &&
+      m.volRatio < LOW_VOL_RATIO &&
+      trend === 'down'
+    ) {
       signals.push(buildSignal('no-supply', i, m, '공급 부재 — 매도 압력 고갈'))
     }
 
-    // Buying Climax
+    // Buying Climax — close 가 하단 1/3 (강한 upper-wick = 매수 소진)
     if (
       m.volRatio > CLIMAX_VOL_RATIO &&
       isWide &&
-      m.closePosition < 0.5 &&
+      m.closePosition < CLIMAX_CLOSE_POS_LOWER &&
       trend === 'up'
     ) {
       signals.push(buildSignal('buying-climax', i, m, '매수 클라이맥스 — 분배 가능성'))
     }
 
-    // Selling Climax
+    // Selling Climax — close 가 상단 1/3 (강한 lower-wick = 매도 흡수)
     if (
       m.volRatio > CLIMAX_VOL_RATIO &&
       isWide &&
-      m.closePosition > 0.5 &&
+      m.closePosition > CLIMAX_CLOSE_POS_UPPER &&
       trend === 'down'
     ) {
       signals.push(buildSignal('selling-climax', i, m, '매도 클라이맥스 — 매집 흡수 가능성'))

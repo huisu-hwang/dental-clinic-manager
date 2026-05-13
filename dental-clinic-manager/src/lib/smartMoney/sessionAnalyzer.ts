@@ -61,8 +61,10 @@ function parseDateTime(raw: string, market: 'KR' | 'US'): ParsedDateTime | null 
       Number.isFinite(hour) && Number.isFinite(min)
     ) {
       // 시장 로컬타임으로 가정. UTC epoch는 시장 오프셋 보정.
-      // KR=+9, US ET=-4 (DST 단순화: 4월~10월 EDT, 그 외 EST -5).
-      const offsetHr = market === 'KR' ? 9 : (mon >= 3 && mon <= 11 ? -4 : -5)
+      // KR=+9, US ET=정확한 DST 계산 (3월 둘째 일요일 ~ 11월 첫째 일요일 EDT -4, 그 외 EST -5).
+      // tentative 한 UTC date 를 만들어 isUsDst 로 정확한 offset 판정 — DST 전환 시각 ±1h 윈도우 외에는 정확.
+      const tentative = new Date(Date.UTC(year, mon - 1, day, hour, min))
+      const offsetHr = market === 'KR' ? 9 : (isUsDst(tentative) ? -4 : -5)
       const utcMs = Date.UTC(year, mon - 1, day, hour - offsetHr, min)
       return {
         epochMs: utcMs,
@@ -94,10 +96,29 @@ function toParsedFromDate(d: Date, market: 'KR' | 'US'): ParsedDateTime {
   }
 }
 
-/** 단순 미국 DST 추정: 3월~10월 EDT, 11월~2월 EST */
+/**
+ * 정확한 미국 DST 계산 — DST는 3월 둘째 일요일 02:00 ET ~ 11월 첫째 일요일 02:00 ET.
+ * Returns true if the given UTC date falls in EDT period.
+ */
 function isUsDst(d: Date): boolean {
-  const m = d.getUTCMonth() + 1
-  return m >= 3 && m <= 10
+  const year = d.getUTCFullYear()
+  // Second Sunday of March
+  const marStart = new Date(Date.UTC(year, 2, 1)) // March 1 UTC
+  const marDow = marStart.getUTCDay() // 0=Sun
+  // First Sunday: if March 1 is Sunday (dow=0) → first Sunday is March 1, second is March 8
+  // Else first Sunday is March (8 - marDow), second is March (15 - marDow)
+  const secondSunMar = marDow === 0 ? 8 : 15 - marDow
+  // 02:00 ET on that day → 07:00 UTC (still EST before transition)
+  const dstStart = Date.UTC(year, 2, secondSunMar, 7, 0, 0)
+
+  const novStart = new Date(Date.UTC(year, 10, 1)) // November 1 UTC
+  const novDow = novStart.getUTCDay()
+  const firstSunNov = novDow === 0 ? 1 : 8 - novDow
+  // 02:00 ET = 06:00 UTC (EDT before transition)
+  const dstEnd = Date.UTC(year, 10, firstSunNov, 6, 0, 0)
+
+  const t = d.getTime()
+  return t >= dstStart && t < dstEnd
 }
 
 // ============================================

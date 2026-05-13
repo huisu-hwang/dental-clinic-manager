@@ -62,6 +62,10 @@ export const dynamic = 'force-dynamic'
 // 기본 10초로는 KR 종목 분석 시 KIS 60 req 페이지네이션이 timeout
 export const maxDuration = 60
 
+// 뉴스 데이터 통합은 아직 미구현 — 통합 후 getNewsEventsForTicker(ticker, market, asOfDate) 반환값 사용
+// (현재는 빈 배열이라 newsContextEngine 은 항상 null 패턴 반환)
+const NEWS_EVENTS_PLACEHOLDER: never[] = []
+
 // ============================================
 // 내부 타입
 // ============================================
@@ -423,7 +427,7 @@ export async function POST(request: NextRequest) {
     newsContext = analyzeNewsContext({
       bars: newsBars,
       signalDetails: [],
-      newsEvents: [],
+      newsEvents: NEWS_EVENTS_PLACEHOLDER,
     })
 
     // ===== 외인/기관 (KR 일별 매매 동향) =====
@@ -543,7 +547,7 @@ export async function POST(request: NextRequest) {
       const dNewsContext = analyzeNewsContext({
         bars: dNewsBars,
         signalDetails: [],
-        newsEvents: [],
+        newsEvents: NEWS_EVENTS_PLACEHOLDER,
       })
 
       const dScore = computeSmartMoneyScore({
@@ -629,7 +633,7 @@ export async function POST(request: NextRequest) {
           const dSession = analyzeSession(dSessionBars, market)
 
           const dNewsBars: NewsBar[] = preBars.map((b) => ({ ...b }))
-          const dNewsContext = analyzeNewsContext({ bars: dNewsBars, signalDetails: [], newsEvents: [] })
+          const dNewsContext = analyzeNewsContext({ bars: dNewsBars, signalDetails: [], newsEvents: NEWS_EVENTS_PLACEHOLDER })
 
           const dScore = computeSmartMoneyScore({
             vwap: dVwap,

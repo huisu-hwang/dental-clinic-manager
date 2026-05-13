@@ -1,13 +1,13 @@
 /**
  * 트랩 엔진 — Bull Trap / Bear Trap (실패한 돌파)
  *
- * - 저항선/지지선: 최근 5봉 윈도우를 제외한 직전 30봉의 최고가/최저가
- * - Bull Trap : 최근 5봉 내에서 저항선을 +0.1% 초과 돌파했으나
- *               이후 ≤3봉 안에 종가가 저항선 아래로 회귀
- *               + (돌파 봉 거래량이 평균 대비 1.2배 이하 OR 돌파 폭만큼 추가 하락)
- * - Bear Trap : 최근 5봉 내에서 지지선을 -0.1% 초과 이탈했으나
- *               이후 ≤3봉 안에 종가가 지지선 위로 회귀
- *               + (이탈 봉 거래량이 평균 대비 1.2배 이하 OR V자 반등)
+ * - 저항선/지지선: 최근 10봉 윈도우를 제외한 직전 30봉의 최고가/최저가
+ * - Bull Trap : 최근 10봉 내에서 저항선을 +0.1% 초과 돌파했으나
+ *               이후 ≤5봉 안에 종가가 저항선 아래로 회귀
+ *               + (돌파 봉 거래량이 평균 대비 1.5배 이하 OR 돌파 폭만큼 추가 하락)
+ * - Bear Trap : 최근 10봉 내에서 지지선을 -0.1% 초과 이탈했으나
+ *               이후 ≤5봉 안에 종가가 지지선 위로 회귀
+ *               + (이탈 봉 거래량이 평균 대비 1.5배 이하 OR V자 반등)
  * - volumeDivergence : 돌파/이탈 봉의 거래량이 평균 미만이면 true
  */
 
@@ -80,7 +80,7 @@ export function detectTraps(bars: Bar[]): TrapResult {
 
   const details: TrapDetail[] = []
 
-  // 최근 5봉을 순회하며 트랩 후보 검사
+  // 최근 10봉을 순회하며 트랩 후보 검사
   for (let i = recentStart; i <= lastIdx; i++) {
     const breakBar = bars[i]
     const avgVol = avgVolumeBefore(bars, i)

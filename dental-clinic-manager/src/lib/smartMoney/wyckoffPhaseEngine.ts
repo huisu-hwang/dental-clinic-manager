@@ -6,7 +6,7 @@
  *
  * 매집(Accumulation) 이벤트:
  *   - PS    : 거래량이 평균 1.5배 이상으로 처음 증가하나 가격은 소폭 하락
- *   - SC    : 거래량 2.5배 + 음봉 + 하단 wick > 50% + 구간 저점 부근
+ *   - SC    : 거래량 1.8배 + 음봉 + 하단 wick > 35% + 구간 저점 부근
  *   - AR    : SC 이후 10봉 내 최고가 (자동 반등)
  *   - ST    : SC 저점을 1% 이내로 재테스트 + SC 대비 거래량 감소
  *   - Spring: SC/ST 저점을 0.3~2% 침범 후 회복 마감 + 거래량 1.5배
@@ -15,19 +15,19 @@
  *
  * 분배(Distribution) 이벤트:
  *   - PSY  : 거래량 증가하는 양봉 (예비 공급)
- *   - BC   : 거래량 2.5배 + 양봉 + 상단 wick > 50% + 구간 고점 부근
+ *   - BC   : 거래량 1.8배 + 양봉 + 상단 wick > 35% + 구간 고점 부근
  *   - AR   : BC 이후 10봉 내 최저가
  *   - ST   : BC 고점 1% 이내 재테스트 + BC 대비 거래량 감소
  *   - UTAD : BC/ST 고점 0.3~2% 돌파 후 종가가 다시 아래로 마감 + 거래량 증가
  *   - SOW  : AR 저점 하향 돌파 음봉 + 거래량 증가
  *   - LPSY : SOW 이후 직전 지지대 아래서 반등 실패
  *
- * 페이즈 결정:
- *   - A : SC+AR+ST (또는 PSY+BC+AR) 모두 탐지
- *   - B : A + ST가 2개 이상 (장기 횡보)
- *   - C : A/B + Spring (또는 UTAD)
- *   - D : C + SOS (또는 SOW)
- *   - E : D + LPS (또는 LPSY)
+ * 페이즈 결정 (prerequisite 시퀀스 강제):
+ *   - A : SC+AR (또는 PSY+BC+AR) 탐지
+ *   - B : A + ST가 1개 이상 (장기 횡보)
+ *   - C : A 충족 후 Spring 발견 시 (또는 UTAD)
+ *   - D : B 또는 C 후 SOS 발견 시 (또는 SOW)
+ *   - E : D 후 LPS 발견 시 (또는 LPSY)
  *
  * - cycle  : accumulation/distribution 이벤트 카운트 비교 (≥2개 우세 쪽)
  * - confidence : clamp(eventsCount * 15 + (phase ? 25 : 0), 0, 100)
@@ -506,26 +506,26 @@ export function detectWyckoffPhase(
     events = accEvents.length >= distEvents.length ? accEvents : distEvents
   }
 
-  // phase 결정 — 핵심 마커가 발견되면 더 관대하게 인정
-  // (이전: hasA가 SC+AR+ST 모두, hasC가 hasA && spring 필수 → 너무 빡빡)
+  // phase 결정 — prerequisite 시퀀스 강제 (Spring/SOS/LPS 단독 발견만으로는
+  // 후기 단계 인정 안 함). 이전 markers 가 없으면 false-positive 후기 phase 가 나옴.
   let phase: WyckoffPhaseResult['phase'] = null
   if (cycle === 'accumulation') {
-    const hasA = !!(acc.sc && acc.ar)              // SC + AR 만 있으면 A
-    const hasB = hasA && acc.sts.length >= 1       // ST 1개 이상 → B
-    const hasC = !!acc.spring                       // Spring 단독으로도 Phase C 인정
-    const hasD = !!acc.sos                          // SOS 단독으로도 Phase D 인정
-    const hasE = !!acc.lps                          // LPS 단독으로도 Phase E 인정
+    const hasA = !!(acc.sc && acc.ar)
+    const hasB = hasA && acc.sts.length >= 1
+    const hasC = hasA && !!acc.spring                    // Spring은 A 이후라야 의미
+    const hasD = (hasB || hasC) && !!acc.sos             // SOS는 B 또는 C 이후
+    const hasE = hasD && !!acc.lps                       // LPS는 D 이후
     if (hasE) phase = 'E'
     else if (hasD) phase = 'D'
     else if (hasC) phase = 'C'
     else if (hasB) phase = 'B'
     else if (hasA) phase = 'A'
   } else if (cycle === 'distribution') {
-    const hasA = !!(dist.bc && dist.ar)            // BC + AR 만 있으면 A (PSY 필수 제거)
+    const hasA = !!(dist.bc && dist.ar)
     const hasB = hasA && dist.sts.length >= 1
-    const hasC = !!dist.utad
-    const hasD = !!dist.sow
-    const hasE = !!dist.lpsy
+    const hasC = hasA && !!dist.utad
+    const hasD = (hasB || hasC) && !!dist.sow
+    const hasE = hasD && !!dist.lpsy
     if (hasE) phase = 'E'
     else if (hasD) phase = 'D'
     else if (hasC) phase = 'C'
