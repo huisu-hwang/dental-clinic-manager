@@ -189,9 +189,9 @@ export default function UserNotificationDropdown() {
         )}
       </button>
 
-      {/* 드롭다운 */}
+      {/* 드롭다운 — 모바일에서는 viewport 폭을 넘지 않도록 너비를 viewport에 맞춤 */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-at-surface rounded-xl shadow-at-card border border-at-border overflow-hidden z-50">
+        <div className="absolute right-0 mt-2 w-[min(calc(100vw-1rem),24rem)] sm:w-96 max-h-[calc(100vh-5rem)] bg-at-surface rounded-xl shadow-at-card border border-at-border overflow-hidden z-50 flex flex-col">
           {/* 헤더 */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-at-border bg-at-surface-alt">
             <h3 className="font-semibold text-at-text">알림</h3>
@@ -206,8 +206,8 @@ export default function UserNotificationDropdown() {
             )}
           </div>
 
-          {/* 알림 목록 */}
-          <div className="max-h-[400px] overflow-y-auto">
+          {/* 알림 목록 — 부모(max-h-[calc(100vh-5rem)]) 안에서 남은 공간을 채움 */}
+          <div className="flex-1 min-h-0 overflow-y-auto sm:max-h-[400px]">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-6 h-6 border-2 border-at-accent border-t-transparent rounded-full animate-spin" />
