@@ -177,6 +177,13 @@ function computeFearGreedSeries(snapshot: PsychologyInputSnapshot): number[] {
   }
 }
 
+/** 큰 거래량(US 대형주는 분당 수백만)을 K/M 단위로 압축해 프롬프트 토큰을 절약 */
+function fmtVolume(v: number): string {
+  if (!Number.isFinite(v) || v < 1000) return String(v)
+  if (v < 1_000_000) return `${Math.round(v / 100) / 10}K`
+  return `${Math.round(v / 100_000) / 10}M`
+}
+
 function buildUserPrompt(args: AnalyzeArgs, fearGreed: number[]): string {
   const { ticker, market, triggerKind, triggerDetail, snapshot, asOf } = args
   // 모든 ts 를 KST 로 통일해 LLM 에 전달 — 본문에서도 KST 시각을 사용하게 됨.
@@ -185,7 +192,7 @@ function buildUserPrompt(args: AnalyzeArgs, fearGreed: number[]): string {
     const tsStr = kst?.iso ?? c.ts
     const fg = fearGreed[i]
     const fgStr = (typeof fg === 'number' && !Number.isNaN(fg)) ? ` F=${Math.round(fg)}` : ''
-    return `[${i}] ${tsStr} O=${c.open} H=${c.high} L=${c.low} C=${c.close} V=${c.volume}${fgStr}`
+    return `[${i}] ${tsStr} O=${c.open} H=${c.high} L=${c.low} C=${c.close} V=${fmtVolume(c.volume)}${fgStr}`
   }).join('\n')
   const orderbookSummary = snapshot.orderbook
     ? `호가 (10단계): 매수총잔량=${snapshot.orderbook.totalBidQty}, 매도총잔량=${snapshot.orderbook.totalAskQty}\n` +
@@ -222,12 +229,14 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
 
   const fearGreedSeries = computeFearGreedSeries(args.snapshot)
   const userPrompt = buildUserPrompt(args, fearGreedSeries)
+  // US 종목은 분당 거래량 수백만으로 candleLines 가 길어 narrative 출력 토큰이 부족할 수 있음 → 한도 상향
+  const maxTokens = args.market === 'US' ? 1800 : 1200
   const start = Date.now()
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await client.messages.create({
       model: MODEL_ID,
-      max_tokens: 1200,
+      max_tokens: maxTokens,
       temperature: 0.3,
       system: SYSTEM_PROMPT,
       tools: [TOOL_DEFINITION],
@@ -263,7 +272,21 @@ export async function analyzePsychology(args: AnalyzeArgs): Promise<AnalyzeResul
     const validLabel: ScoreLabel = (VALID_SCORE_LABELS as readonly string[]).includes(parsed.data.score_label)
       ? parsed.data.score_label as ScoreLabel
       : deriveScoreLabel(parsed.data.psychology_score)
-    const baseNarrative = parsed.data.narrative.trim() ||
+    // narrative 비면 진단용 경고 + 점수 기반 기본 문장. attempt=0 일 땐 재시도로 회복 시도.
+    const narrativeTrim = parsed.data.narrative.trim()
+    if (!narrativeTrim && attempt === 0) {
+      console.warn('[psychology llm] empty narrative on first attempt, retrying', {
+        ticker: args.ticker, market: args.market,
+        score: parsed.data.psychology_score, markers: cleanMarkers.length,
+      })
+      continue
+    }
+    if (!narrativeTrim) {
+      console.warn('[psychology llm] empty narrative on final attempt — using fallback', {
+        ticker: args.ticker, market: args.market, score: parsed.data.psychology_score,
+      })
+    }
+    const baseNarrative = narrativeTrim ||
       `심리 점수 ${parsed.data.psychology_score} (${validLabel}). 모델이 상세 해설을 생성하지 못해 기본 정보만 표시합니다.`
 
     // 안전망 (2단):
