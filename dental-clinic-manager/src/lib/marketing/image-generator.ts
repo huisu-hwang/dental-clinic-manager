@@ -60,6 +60,86 @@ function getVisualStyleInstruction(visualStyle?: ImageVisualStyle): string {
   }
 }
 
+// ─── 클리닉 브랜드 가이드라인 + 디자인 패턴 prefix 생성 ───
+
+interface BrandPromptCtx {
+  name_ko?: string | null;
+  name_en?: string | null;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  slogan?: string | null;
+}
+
+async function loadBrandPromptContext(clinicId: string): Promise<BrandPromptCtx | null> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+  const { data } = await (admin as any)
+    .from('clinic_brand_assets')
+    .select('name_ko, name_en, primary_color, secondary_color, slogan')
+    .eq('clinic_id', clinicId)
+    .maybeSingle();
+  return (data as BrandPromptCtx) || null;
+}
+
+/**
+ * 인포그래픽 스타일 카드 이미지의 디자인 패턴(참조: 서울안아프게치과 블로그)을
+ * 클리닉 브랜드 컬러/명칭으로 치환해 프롬프트 prefix 로 생성.
+ * - 정사각형(1:1) 카드 레이아웃
+ * - 상단: 영문 클리닉명을 자간 넓은 작은 헤더로
+ * - 메인: 질문형 굵은 타이틀 + 키워드는 주 브랜드 컬러로 강조
+ * - 중간: 주제 관련 일러스트/사진 영역
+ * - 하단: 주 브랜드 컬러 박스 + 체크리스트(✓) 핵심 포인트
+ * - 푸터: 한글 클리닉명 + 영문 브랜드 자간 텍스트
+ */
+function buildBrandDesignPrefix(ctx: BrandPromptCtx | null, imageStyle?: ImageStyleOption): string {
+  if (!ctx) return '';
+  const nameKo = (ctx.name_ko || '').trim();
+  const nameEn = (ctx.name_en || '').trim();
+  const primary = (ctx.primary_color || '').trim();
+  const secondary = (ctx.secondary_color || '').trim();
+  const slogan = (ctx.slogan || '').trim();
+  if (!nameKo && !nameEn && !primary && !secondary) return '';
+
+  const isInfographic = imageStyle === 'infographic_only';
+
+  const lines: string[] = [];
+  lines.push('## 클리닉 브랜드 가이드라인 (반드시 반영)');
+  if (nameKo) lines.push(`- 클리닉명(한글): ${nameKo}`);
+  if (nameEn) lines.push(`- 클리닉명(영문): ${nameEn}`);
+  if (primary) lines.push(`- 주 브랜드 컬러(메인 강조): ${primary}`);
+  if (secondary) lines.push(`- 보조 브랜드 컬러(보조 강조): ${secondary}`);
+  if (slogan) lines.push(`- 슬로건: ${slogan}`);
+  lines.push('- 모든 색상/타이포는 위 브랜드 톤에 맞춰 일관되게 표현');
+
+  if (isInfographic) {
+    lines.push('');
+    lines.push('## 카드 인포그래픽 디자인 패턴 (네이버 블로그 노출용 정사각형 카드)');
+    lines.push('정사각형(1:1) 카드 한 장. 다음 4단 레이아웃을 따르세요:');
+    if (nameEn) {
+      lines.push(`1) 최상단: 영문 클리닉명 "${nameEn}" 을 작은 글자·넓은 자간(letter-spacing)으로 가로 중앙 정렬`);
+    } else {
+      lines.push('1) 최상단: 작은 글자의 영문 헤더 (자간 넓게)');
+    }
+    lines.push('2) 메인 타이틀: 환자가 궁금해할 질문형 카피 1~2줄. 굵은 산세리프, 키워드는 주 브랜드 컬러로 강조. 보조 부제 1줄.');
+    lines.push('3) 중간: 주제와 관련된 치과 일러스트/도식/모형 이미지 (사람 얼굴 생성 금지, 깔끔한 의료용 비주얼).');
+    if (primary) {
+      lines.push(`4) 하단: 주 브랜드 컬러(${primary}) 배경 박스 안에 화이트 체크마크(✓) + 핵심 포인트 2~3줄 (불릿 리스트).`);
+    } else {
+      lines.push('4) 하단: 진한 브랜드 컬러 박스 + 체크마크(✓) 핵심 포인트 2~3줄.');
+    }
+    if (nameKo) {
+      lines.push(`5) 최하단 푸터: "${nameKo}" 한글 클리닉명 (작은 글씨, 가운데 정렬). 로고가 있으면 함께 배치.`);
+    }
+    lines.push('');
+    lines.push('## 텍스트 렌더링 주의');
+    lines.push('- 한국어 텍스트는 정확한 한글 폰트(고딕 계열)로 렌더링하고, 자모 깨짐/잘못된 글자 절대 금지.');
+    lines.push('- 이미지 안 텍스트는 짧고 명확하게 — 의미 없는 외국어/가짜 글자 사용 금지.');
+  } else {
+    lines.push('- 사용 색상의 주조: 위 브랜드 컬러를 포인트로 사용 (전체 도배는 피하고 자연스러운 색감).');
+  }
+  return lines.join('\n') + '\n\n';
+}
+
 // ─── 마스터가 설정한 이미지 프롬프트 로딩 (전역 적용) ───
 
 async function loadImagePromptTemplate(clinicId: string, promptKey: string = 'image.blog'): Promise<string | null> {
@@ -132,6 +212,10 @@ export async function generateBlogImage(
   // clinicId 우선순위: 기존 파라미터 > 새 파라미터
   const resolvedClinicId = clinicId || generationClinicId;
 
+  // 클리닉 브랜드 가이드 prefix (주/보조 컬러, 클리닉명, 카드 디자인 패턴)
+  const brandCtx = resolvedClinicId ? await loadBrandPromptContext(resolvedClinicId) : null;
+  const brandPrefix = buildBrandDesignPrefix(brandCtx, imageStyle);
+
   // 마스터 이미지 프롬프트 템플릿 적용
   let fullPrompt: string;
 
@@ -149,6 +233,9 @@ export async function generateBlogImage(
   } else {
     fullPrompt = buildDefaultImagePrompt(prompt);
   }
+
+  // 브랜드 가이드라인은 항상 최상단에 prepend (마스터 템플릿/폴백 둘 다 적용)
+  if (brandPrefix) fullPrompt = brandPrefix + fullPrompt;
 
   // 이미지 스타일 지침 추가
   fullPrompt += getImageStyleInstruction(imageStyle);
@@ -209,6 +296,10 @@ export async function generatePlatformImage(
   const styleInstruction = getImageStyleInstruction(imageStyle);
   const visualInstruction = getVisualStyleInstruction(imageVisualStyle);
 
+  // 클리닉 브랜드 가이드 prefix
+  const brandCtx = generationClinicId ? await loadBrandPromptContext(generationClinicId) : null;
+  const brandPrefix = buildBrandDesignPrefix(brandCtx, imageStyle);
+
   // 마스터 프롬프트 템플릿 적용 (플랫폼 이미지에도 마스터 스타일 가이드 반영)
   let fullPrompt: string;
   if (generationClinicId) {
@@ -222,6 +313,7 @@ export async function generatePlatformImage(
   } else {
     fullPrompt = `${platformStyle}\n\n치과 블로그 주제: ${prompt}`;
   }
+  if (brandPrefix) fullPrompt = brandPrefix + fullPrompt;
   fullPrompt += styleInstruction + visualInstruction;
 
   const provider = await getImageProvider();

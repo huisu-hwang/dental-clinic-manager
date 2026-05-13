@@ -628,23 +628,30 @@ export default function NewMarketingPostPage() {
                 <span className="ml-2 text-[11px] text-at-text-weak">(경쟁 평균 {seoResult.avgImageCount.toFixed(1)}장)</span>
               )}
             </label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {[0, 1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setImageCount(n)}
-                  className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
-                    imageCount === n
-                      ? 'bg-at-accent text-white'
-                      : 'bg-at-surface-alt text-at-text-secondary border border-at-border hover:bg-at-border'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-              <span className="text-xs text-at-text-weak ml-1">
-                {imageCount === 0 ? '이미지 없이 글만 생성' : `최대 ${imageCount}개`}
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                type="number"
+                min={0}
+                max={20}
+                value={imageCount}
+                onChange={(e) => {
+                  const v = Number(e.target.value)
+                  if (Number.isNaN(v)) return setImageCount(0)
+                  setImageCount(Math.min(20, Math.max(0, Math.floor(v))))
+                }}
+                className="w-20 h-9 px-2 rounded-lg border border-at-border bg-white text-sm font-semibold text-at-text text-center focus:outline-none focus:ring-2 focus:ring-at-accent"
+              />
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={imageCount}
+                onChange={(e) => setImageCount(Number(e.target.value))}
+                className="flex-1 min-w-[160px] max-w-[320px] accent-at-accent cursor-pointer"
+              />
+              <span className="text-xs text-at-text-weak">
+                {imageCount === 0 ? '이미지 없이 글만 생성' : `${imageCount}개 생성 (0~20)`}
               </span>
             </div>
           </div>
