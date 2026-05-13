@@ -5,15 +5,17 @@
  *   investorFlow 25 / wyckoffPhase 20 / marketStructure 15 / liquidity 10
  *   VSA 10 / algoFootprint 10 / 단일봉 Wyckoff 5 / VWAP 5
  *
- * ※ investorFlow 가중치는 미국 종목 / KR KIS 미연결 시 자동으로 나머지 7개 컴포넌트에
- *   비례 재분배되어 ±100 범위 유지.
+ * ※ investorFlow 가중치는 미국 종목 / KR KIS 미연결 시 0 으로 잡혀 사실상 ±75 만점.
+ *   시장 간 라벨(strong/mild) 임계값을 일관되게 유지하기 위해 의도된 한계 — UI 가
+ *   investorFlow=null 일 때 "수급 데이터 없음 (±25 가중)" 안내를 노출해야 함.
  *
  * 트랩 모디파이어:
  *   bull-trap + score>0 → score *= 0.7
  *   bear-trap + score<0 → score *= 0.7
  *
  * manipulationRiskScore (0~100):
- *   trap 감지 +40, news pattern +30, climax 신호 +20, no-demand/supply +10 (clamp)
+ *   trap 감지 +40, climax 신호 +20, no-demand/supply +10 (clamp)
+ *   ※ news pattern (+30/+20) 은 NEWS_INTEGRATION_ACTIVE=false 동안 비활성화.
  */
 
 import type {
@@ -58,6 +60,13 @@ export interface ScorerOutput {
   /** 0~100 — 시장 조작 위험도 (UI 노출용) */
   manipulationRiskScore: number
 }
+
+/**
+ * 뉴스 데이터 통합(getNewsEventsForTicker) 활성화 플래그.
+ * 현재는 false 라 news pattern 가중치/시그널이 모두 비활성화. 통합 후 true 로 켜면
+ * 기존 로직이 그대로 활성화되고 응답 메타에 newsSignalIntegration='active' 노출.
+ */
+export const NEWS_INTEGRATION_ACTIVE = false
 
 const WEIGHTS = {
   investorFlow: 25,
@@ -422,10 +431,9 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
     }
   }
 
-  // NOTE: newsContext 기반 signalDetail 은 현재 동작하지 않는다 —
-  // route.ts 에서 newsEvents: [] 로 호출하므로 analyzeNewsContext 가 항상 null pattern을 반환.
-  // 뉴스 데이터 통합(getNewsEventsForTicker) 구현 후 활성화 예정. 로직은 그대로 유지.
-  if (newsContext && newsContext.pattern) {
+  // newsContext signalDetail 은 NEWS_INTEGRATION_ACTIVE=false 면 push 자체를 차단.
+  // 향후 뉴스 통합 시 플래그만 켜면 활성화되도록 로직은 그대로 유지.
+  if (NEWS_INTEGRATION_ACTIVE && newsContext && newsContext.pattern) {
     signalDetails.push({
       type: newsContext.pattern,
       confidence: 70,
@@ -459,22 +467,19 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
   // ============================================
   // 종합 점수
   // ============================================
-  const otherComponents =
-    wyckoffPhaseComponent
+  // investorFlow=null (US 종목/KR limited-mode) 시 flowComponent=0 이라 ±75 만점이 된다.
+  // 종전엔 rebalanceFactor=100/75 로 ±100 까지 스케일업했으나, 그렇게 하면 trap modifier(0.7)
+  // 와 interpretation threshold(±30/±60) 가 시장 간 비대칭으로 작동해 같은 라벨이
+  // 다른 기준으로 부여되는 문제가 있었음. → Codex review 권고에 따라 동등 라벨 기준 우선.
+  let rawScore =
+    flowComponent
+    + wyckoffPhaseComponent
     + structureComponent
     + liquidityComponent
     + vsaComponent
     + algoComponent
     + wyckoffComponent
     + vwapComponent
-
-  // investorFlow가 null(미국 종목/KR limited-mode)이면 나머지 75 가중치를 100으로 정규화 — 만점 범위 동일하게 유지
-  const FLOW_WEIGHT = 25
-  const TOTAL_WEIGHT = 100
-  const rebalanceFactor = investorFlow === null
-    ? TOTAL_WEIGHT / (TOTAL_WEIGHT - FLOW_WEIGHT)
-    : 1
-  let rawScore = (flowComponent + otherComponents) * rebalanceFactor
 
   // 트랩 모디파이어
   if (traps?.bullTrapDetected && rawScore > 0) {
@@ -496,12 +501,12 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
   // ============================================
   // 조작 위험도 점수 (manipulationRiskScore)
   // ============================================
+  // 뉴스 데이터 통합 전까지 news pattern 가중치 비활성화 (모듈 레벨 NEWS_INTEGRATION_ACTIVE 참조).
   let manipRisk = 0
   if (traps?.bullTrapDetected) manipRisk += 40
   if (traps?.bearTrapDetected) manipRisk += 40
-  // TODO: 활성화는 뉴스 데이터 통합(getNewsEventsForTicker) 구현 후 — 현재 newsEvents 가 빈 배열이라 항상 null pattern.
-  if (newsContext?.pattern === 'news-fade') manipRisk += 30
-  if (newsContext?.pattern === 'sell-the-news') manipRisk += 20
+  if (NEWS_INTEGRATION_ACTIVE && newsContext?.pattern === 'news-fade') manipRisk += 30
+  if (NEWS_INTEGRATION_ACTIVE && newsContext?.pattern === 'sell-the-news') manipRisk += 20
   if (vsa?.signals.some((s) => s.type === 'buying-climax' || s.type === 'selling-climax')) manipRisk += 20
   if (vsa?.signals.some((s) => s.type === 'no-demand' || s.type === 'no-supply')) manipRisk += 10
   if (session?.judasSwingDetected) manipRisk += 15

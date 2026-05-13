@@ -62,9 +62,19 @@ function parseDateTime(raw: string, market: 'KR' | 'US'): ParsedDateTime | null 
     ) {
       // 시장 로컬타임으로 가정. UTC epoch는 시장 오프셋 보정.
       // KR=+9, US ET=정확한 DST 계산 (3월 둘째 일요일 ~ 11월 첫째 일요일 EDT -4, 그 외 EST -5).
-      // tentative 한 UTC date 를 만들어 isUsDst 로 정확한 offset 판정 — DST 전환 시각 ±1h 윈도우 외에는 정확.
-      const tentative = new Date(Date.UTC(year, mon - 1, day, hour, min))
-      const offsetHr = market === 'KR' ? 9 : (isUsDst(tentative) ? -4 : -5)
+      //
+      // DST 경계 보정: ET wall-clock 를 무작정 UTC 로 간주해 isUsDst() 에 넣으면
+      // DST 시작일 03:00~07:59 ET (= UTC 같은 숫자) 가 dstStart(07:00 UTC) 미만이라
+      // EST 로 잘못 판정됨. EDT/EST 두 후보 UTC 를 각각 만들어 어느 쪽이 자기 일관성을 갖는지로 결정.
+      let offsetHr: number
+      if (market === 'KR') {
+        offsetHr = 9
+      } else {
+        // EDT 가정 — local hour + 4 가 UTC 시각
+        const utcIfEdt = Date.UTC(year, mon - 1, day, hour + 4, min)
+        // 그 UTC 시각이 실제로 DST 기간 안인지 확인 (자기 일관성)
+        offsetHr = isUsDst(new Date(utcIfEdt)) ? -4 : -5
+      }
       const utcMs = Date.UTC(year, mon - 1, day, hour - offsetHr, min)
       return {
         epochMs: utcMs,
