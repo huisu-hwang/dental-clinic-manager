@@ -189,9 +189,9 @@ export default function UserNotificationDropdown() {
         )}
       </button>
 
-      {/* 드롭다운 — 모바일에서는 viewport 폭을 넘지 않도록 너비를 viewport에 맞춤 */}
+      {/* 드롭다운 — 모바일에서는 viewport 기준으로 고정해 잘림을 방지하고, 데스크탑은 버튼 기준 정렬 유지 */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[min(calc(100vw-1rem),24rem)] sm:w-96 max-h-[calc(100vh-5rem)] bg-at-surface rounded-xl shadow-at-card border border-at-border overflow-hidden z-50 flex flex-col">
+        <div className="fixed top-16 left-2 right-2 w-auto max-h-[calc(100dvh-5rem)] bg-at-surface rounded-xl shadow-at-card border border-at-border overflow-hidden z-50 flex flex-col sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-96 sm:max-h-[calc(100dvh-5rem)]">
           {/* 헤더 */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-at-border bg-at-surface-alt">
             <h3 className="font-semibold text-at-text">알림</h3>
