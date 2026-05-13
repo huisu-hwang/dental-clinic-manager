@@ -8,8 +8,9 @@
  *   avgWinRate, avgSharpe, profitFactor, avgMDD (낮은 순),
  *   totalTrades (안정성 — 거래 많은 순), cloneCount (인기)
  *
- * 통계 출처: backtest_runs (status=completed) — 원본 작성자의 모든 백테스트 기록 집계.
- *           최소 3회 이상 백테스트 기록이 있는 전략만 노출 (의미있는 통계 확보).
+ * 통계 출처: strategy_ranking_stats — backtest_runs 변경 시 trigger 로 사전 집계된 테이블.
+ *           backtest_runs 70k+ rows 를 매 요청마다 JS 로 aggregate 하던 종전 방식 대비
+ *           수 초 → 100ms 미만으로 단축. 최소 3회 이상 백테스트 기록만 노출.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -56,6 +57,23 @@ interface RankingItem {
 
 const MIN_RUNS_FOR_RANKING = 3
 
+interface StatRow {
+  entry_type: 'shared' | 'preset'
+  entry_id: string
+  market: 'KR' | 'US'
+  runs: number
+  ticker_count: number
+  avg_return: number | null
+  best_return: number | null
+  worst_return: number | null
+  avg_win_rate: number | null
+  avg_sharpe: number | null
+  avg_mdd: number | null
+  avg_pf: number | null
+  total_trades: number
+  last_run_at: string | null
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireAuth()
   if (auth.error || !auth.user) {
@@ -75,148 +93,59 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 
-  // 1. 공유된 전략 + 작성자 정보 조회
-  let q = supabase
-    .from('investment_strategies')
-    .select('id, user_id, name, description, target_market, indicators, shared_at, share_alias, clone_count')
-    .eq('is_shared', true)
+  // 1. 사전 집계 테이블에서 stats 조회 — runs >= 3 인 행만
+  let statsQ = supabase
+    .from('strategy_ranking_stats')
+    .select('entry_type, entry_id, market, runs, ticker_count, avg_return, best_return, worst_return, avg_win_rate, avg_sharpe, avg_mdd, avg_pf, total_trades, last_run_at')
+    .gte('runs', MIN_RUNS_FOR_RANKING)
   if (market === 'KR' || market === 'US') {
-    q = q.eq('target_market', market)
+    statsQ = statsQ.eq('market', market)
   }
-  const { data: sharedRaw, error: shareErr } = await q.limit(500)
-  if (shareErr) {
-    return NextResponse.json({ error: shareErr.message }, { status: 500 })
+  const { data: statsRaw, error: statsErr } = await statsQ.limit(500)
+  if (statsErr) {
+    return NextResponse.json({ error: statsErr.message }, { status: 500 })
   }
-  const shared = (sharedRaw ?? []) as Array<{
+  const stats = (statsRaw ?? []) as StatRow[]
+
+  // 2. shared 항목용 메타 (investment_strategies + users) 일괄 조회
+  const sharedIds = Array.from(new Set(
+    stats.filter(s => s.entry_type === 'shared').map(s => s.entry_id),
+  ))
+  type StratRow = {
     id: string
     user_id: string
     name: string
     description: string | null
     target_market: 'KR' | 'US'
-    indicators: unknown
     shared_at: string | null
     share_alias: string | null
     clone_count: number | null
-  }>
-
-  // 2. 작성자 이름 매핑 (users.name)
-  const userIds = Array.from(new Set(shared.map(s => s.user_id)))
-  const { data: usersRaw } = await supabase
-    .from('users')
-    .select('id, name, hospital_name')
-    .in('id', userIds)
-  const userMap = new Map<string, { name: string | null; hospital_name: string | null }>()
-  for (const u of (usersRaw ?? []) as Array<{ id: string; name: string | null; hospital_name: string | null }>) {
-    userMap.set(u.id, { name: u.name, hospital_name: u.hospital_name })
+    is_shared: boolean
   }
-
-  // 3. 백테스트 통계 집계 — strategy_id 가 공유 전략 ID 인 모든 run
-  const strategyIds = shared.map(s => s.id)
-  type RunRow = {
-    strategy_id: string | null
-    preset_id?: string | null
-    market?: string | null
-    ticker: string
-    total_return: number | null
-    win_rate: number | null
-    max_drawdown: number | null
-    sharpe_ratio: number | null
-    profit_factor: number | null
-    total_trades: number | null
-    executed_at: string | null
+  let sharedStrats: StratRow[] = []
+  if (sharedIds.length > 0) {
+    const { data: stratsRaw } = await supabase
+      .from('investment_strategies')
+      .select('id, user_id, name, description, target_market, shared_at, share_alias, clone_count, is_shared')
+      .in('id', sharedIds)
+      .eq('is_shared', true)
+    sharedStrats = (stratsRaw ?? []) as StratRow[]
   }
+  const stratMap = new Map(sharedStrats.map(s => [s.id, s]))
 
-  const runs: RunRow[] = []
-  if (strategyIds.length > 0) {
-    const { data: sharedRunsRaw } = await supabase
-      .from('backtest_runs')
-      .select('strategy_id, ticker, total_return, win_rate, max_drawdown, sharpe_ratio, profit_factor, total_trades, executed_at')
-      .in('strategy_id', strategyIds)
-      .eq('status', 'completed')
-      .limit(20000)
-    for (const r of (sharedRunsRaw ?? []) as RunRow[]) runs.push(r)
+  const userIds = Array.from(new Set(sharedStrats.map(s => s.user_id)))
+  type UserRow = { id: string; name: string | null; hospital_name: string | null }
+  let userRows: UserRow[] = []
+  if (userIds.length > 0) {
+    const { data: usersRaw } = await supabase
+      .from('users')
+      .select('id, name, hospital_name')
+      .in('id', userIds)
+    userRows = (usersRaw ?? []) as UserRow[]
   }
+  const userMap = new Map(userRows.map(u => [u.id, u]))
 
-  const byStrategy = new Map<string, RunRow[]>()
-  for (const r of runs) {
-    if (!r.strategy_id) continue
-    const arr = byStrategy.get(r.strategy_id) ?? []
-    arr.push(r)
-    byStrategy.set(r.strategy_id, arr)
-  }
-
-  // 4. 랭킹 항목 빌드 — 우선 공유 user 전략
-  const items: RankingItem[] = []
-  for (const s of shared) {
-    const sRuns = byStrategy.get(s.id) ?? []
-    if (sRuns.length < MIN_RUNS_FOR_RANKING) continue
-
-    const returns = sRuns.map(r => Number(r.total_return ?? 0))
-    const winRates = sRuns.map(r => Number(r.win_rate ?? 0))
-    const sharpes = sRuns.map(r => Number(r.sharpe_ratio ?? 0))
-    const mdds = sRuns.map(r => Number(r.max_drawdown ?? 0))
-    const pfs = sRuns.map(r => Number(r.profit_factor ?? 0)).filter(v => isFinite(v) && v > 0)
-    const trades = sRuns.reduce((sum, r) => sum + Number(r.total_trades ?? 0), 0)
-    const tickers = new Set(sRuns.map(r => r.ticker))
-    const lastRunAt = sRuns
-      .map(r => r.executed_at)
-      .filter((x): x is string => Boolean(x))
-      .sort()
-      .pop() ?? null
-
-    const userInfo = userMap.get(s.user_id)
-    const authorAlias = anonymize(s.share_alias, userInfo?.name, userInfo?.hospital_name)
-
-    items.push({
-      type: 'shared',
-      strategyId: s.id,
-      name: s.name,
-      description: s.description,
-      targetMarket: s.target_market,
-      authorAlias,
-      sharedAt: s.shared_at,
-      cloneCount: Number(s.clone_count ?? 0),
-      isMine: s.user_id === auth.user.id,
-      runs: sRuns.length,
-      tickerCount: tickers.size,
-      avgReturn: avg(returns),
-      bestReturn: returns.length > 0 ? Math.max(...returns) : 0,
-      worstReturn: returns.length > 0 ? Math.min(...returns) : 0,
-      avgWinRate: avg(winRates),
-      avgSharpe: avg(sharpes),
-      avgMDD: avg(mdds),
-      avgPF: avg(pfs),
-      totalTrades: trades,
-      lastRunAt,
-    })
-  }
-
-  // 4b. 프리셋 전략 백테스트 집계 (시스템 프리셋, 모든 사용자 공통)
-  // backtest_runs.preset_id 로 식별. (preset_id, market) 별로 별도 항목 (시장에 따라 성과 다름).
-  const presetIdSet = new Set(PRESET_STRATEGIES.map(p => p.id))
-  let presetRunsQuery = supabase
-    .from('backtest_runs')
-    .select('preset_id, market, ticker, total_return, win_rate, max_drawdown, sharpe_ratio, profit_factor, total_trades, executed_at')
-    .not('preset_id', 'is', null)
-    .eq('status', 'completed')
-  if (market === 'KR' || market === 'US') {
-    presetRunsQuery = presetRunsQuery.eq('market', market)
-  }
-  const { data: presetRunsRaw } = await presetRunsQuery.limit(50000)
-
-  // (preset_id, market) → runs
-  const byPresetMarket = new Map<string, RunRow[]>()
-  for (const r of (presetRunsRaw ?? []) as RunRow[]) {
-    if (!r.preset_id || !presetIdSet.has(r.preset_id)) continue
-    const m = (r.market === 'KR' || r.market === 'US') ? r.market : null
-    if (!m) continue
-    const key = `${r.preset_id}|${m}`
-    const arr = byPresetMarket.get(key) ?? []
-    arr.push(r)
-    byPresetMarket.set(key, arr)
-  }
-
-  // 프리셋 클론 횟수 (user strategies 중 source_preset_id 카운트)
+  // 3. preset clone count 일괄 조회
   const { data: clonesRaw } = await supabase
     .from('investment_strategies')
     .select('source_preset_id')
@@ -227,47 +156,54 @@ export async function GET(req: NextRequest) {
     cloneCountByPreset.set(c.source_preset_id, (cloneCountByPreset.get(c.source_preset_id) ?? 0) + 1)
   }
 
-  for (const [key, pRuns] of byPresetMarket) {
-    if (pRuns.length < MIN_RUNS_FOR_RANKING) continue
-    const [presetId, mk] = key.split('|')
-    const preset = PRESET_STRATEGIES.find(p => p.id === presetId)
-    if (!preset) continue
-
-    const returns = pRuns.map(r => Number(r.total_return ?? 0))
-    const winRates = pRuns.map(r => Number(r.win_rate ?? 0))
-    const sharpes = pRuns.map(r => Number(r.sharpe_ratio ?? 0))
-    const mdds = pRuns.map(r => Number(r.max_drawdown ?? 0))
-    const pfs = pRuns.map(r => Number(r.profit_factor ?? 0)).filter(v => isFinite(v) && v > 0)
-    const trades = pRuns.reduce((sum, r) => sum + Number(r.total_trades ?? 0), 0)
-    const tickers = new Set(pRuns.map(r => r.ticker))
-    const lastRunAt = pRuns
-      .map(r => r.executed_at)
-      .filter((x): x is string => Boolean(x))
-      .sort()
-      .pop() ?? null
-
-    items.push({
-      type: 'preset',
-      presetId,
-      name: preset.name,
-      description: preset.description,
-      targetMarket: mk as 'KR' | 'US',
-      authorAlias: '공식 프리셋',
-      sharedAt: null,
-      cloneCount: cloneCountByPreset.get(presetId) ?? 0,
-      isMine: false,
-      runs: pRuns.length,
-      tickerCount: tickers.size,
-      avgReturn: avg(returns),
-      bestReturn: returns.length > 0 ? Math.max(...returns) : 0,
-      worstReturn: returns.length > 0 ? Math.min(...returns) : 0,
-      avgWinRate: avg(winRates),
-      avgSharpe: avg(sharpes),
-      avgMDD: avg(mdds),
-      avgPF: avg(pfs),
-      totalTrades: trades,
-      lastRunAt,
-    })
+  // 4. stats + 메타 머지 → RankingItem
+  const items: RankingItem[] = []
+  for (const s of stats) {
+    const base = {
+      runs: s.runs,
+      tickerCount: s.ticker_count,
+      avgReturn: numOr0(s.avg_return),
+      bestReturn: numOr0(s.best_return),
+      worstReturn: numOr0(s.worst_return),
+      avgWinRate: numOr0(s.avg_win_rate),
+      avgSharpe: numOr0(s.avg_sharpe),
+      avgMDD: numOr0(s.avg_mdd),
+      avgPF: numOr0(s.avg_pf),
+      totalTrades: s.total_trades,
+      lastRunAt: s.last_run_at,
+    }
+    if (s.entry_type === 'shared') {
+      const strat = stratMap.get(s.entry_id)
+      if (!strat) continue   // 공유 해제됐거나 삭제된 전략
+      const user = userMap.get(strat.user_id)
+      items.push({
+        type: 'shared',
+        strategyId: strat.id,
+        name: strat.name,
+        description: strat.description,
+        targetMarket: strat.target_market,
+        authorAlias: anonymize(strat.share_alias, user?.name, user?.hospital_name),
+        sharedAt: strat.shared_at,
+        cloneCount: Number(strat.clone_count ?? 0),
+        isMine: strat.user_id === auth.user.id,
+        ...base,
+      })
+    } else {
+      const preset = PRESET_STRATEGIES.find(p => p.id === s.entry_id)
+      if (!preset) continue
+      items.push({
+        type: 'preset',
+        presetId: preset.id,
+        name: preset.name,
+        description: preset.description,
+        targetMarket: s.market,
+        authorAlias: '공식 프리셋',
+        sharedAt: null,
+        cloneCount: cloneCountByPreset.get(preset.id) ?? 0,
+        isMine: false,
+        ...base,
+      })
+    }
   }
 
   // 5. 정렬 (sortBy 기준 내림차순. avgMDD 만 오름차순(낮을수록 좋음))
@@ -283,7 +219,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     data: items.slice(0, limit),
-    totalShared: shared.length,
+    totalShared: sharedStrats.length,
     totalPresets: PRESET_STRATEGIES.length,
     rankedCount: items.length,
     sharedItemsCount,
@@ -295,9 +231,10 @@ export async function GET(req: NextRequest) {
 // 유틸
 // ============================================
 
-function avg(nums: number[]): number {
-  if (nums.length === 0) return 0
-  return nums.reduce((s, v) => s + v, 0) / nums.length
+function numOr0(v: number | null | undefined): number {
+  if (v === null || v === undefined) return 0
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
 }
 
 /** 작성자 이름 익명화. share_alias 우선, 없으면 users.name → 마스킹, 없으면 hospital_name → 마스킹, 없으면 '익명'. */

@@ -37,7 +37,7 @@ import { calculateVWAP, type VWAPInputBar } from '@/lib/smartMoney/vwapEngine'
 import { detectWyckoff, type WyckoffBar } from '@/lib/smartMoney/wyckoffEngine'
 import { analyzeAlgoFootprint, type AlgoBar } from '@/lib/smartMoney/algoFootprintEngine'
 import { analyzeInvestorFlow } from '@/lib/smartMoney/investorFlowAnalyzer'
-import { computeSmartMoneyScore } from '@/lib/smartMoney/smartMoneyScorer'
+import { computeSmartMoneyScore, NEWS_INTEGRATION_ACTIVE } from '@/lib/smartMoney/smartMoneyScorer'
 import { generateLLMComment } from '@/lib/smartMoney/llmAnalyzer'
 // ===== 정교화 엔진 =====
 import { detectWyckoffPhase, type PhaseBar } from '@/lib/smartMoney/wyckoffPhaseEngine'
@@ -98,6 +98,8 @@ interface AnalysisResponse extends SmartMoneyAnalysis {
    * UI 가 이 플래그를 보고 안내 배너를 노출한다.
    */
   limitedDataMode?: boolean
+  /** 'inactive' = 뉴스 데이터 통합 전 (news-fade/sell-the-news 가중치 미적용). UI 디버그/안내용. */
+  newsSignalIntegration?: 'active' | 'inactive'
 }
 
 // ============================================
@@ -814,6 +816,7 @@ export async function POST(request: NextRequest) {
     ...analysis,
     triggeredAlerts: triggeredAlerts && triggeredAlerts.length > 0 ? triggeredAlerts : undefined,
     limitedDataMode: isKRLimitedMode ? true : undefined,
+    newsSignalIntegration: NEWS_INTEGRATION_ACTIVE ? 'active' : 'inactive',
   }
 
   return NextResponse.json({ data: response })

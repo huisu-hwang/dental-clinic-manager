@@ -251,6 +251,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // 초고가 종목(BRK.A ~$700k 등) 사전 검증 — 1주 매수도 불가능하면 backtest 가 빈 결과로 끝나 사용자가 원인을 알기 어려움.
+    const firstPrice = prices[0].open
+    if (firstPrice > 0 && firstPrice > capital) {
+      return NextResponse.json({
+        error: `${ticker} 1주 가격(${firstPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}) 이 초기 자본(${capital.toLocaleString()}) 보다 큽니다. 자본을 ${Math.ceil(firstPrice * 1.2).toLocaleString()} 이상으로 설정하거나 다른 종목을 선택해 주세요.`
+      }, { status: 400 })
+    }
+
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 55_000)
 
