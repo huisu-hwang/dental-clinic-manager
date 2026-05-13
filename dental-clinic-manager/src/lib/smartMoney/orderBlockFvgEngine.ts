@@ -5,12 +5,12 @@
  *
  * - Bullish Order Block (강세 OB):
  *     강한 상승 임펄스 직전의 마지막 음봉(close < open).
- *     "직후 1~3봉이 합쳐서 ≥ 1.0% 상승" + "직전 swing high 돌파" 조건을 만족하면 채택.
+ *     "직후 1~3봉이 합쳐서 ≥ 0.5% 상승" + "직전 swing high 돌파" 조건을 만족하면 채택.
  *     해당 음봉의 high/low 가 OB 존(zone)이 된다.
  *
  * - Bearish Order Block (약세 OB):
  *     강한 하락 임펄스 직전의 마지막 양봉(close > open).
- *     "직후 1~3봉이 합쳐서 ≥ 1.0% 하락" + "직전 swing low 이탈" 조건을 만족하면 채택.
+ *     "직후 1~3봉이 합쳐서 ≥ 0.5% 하락" + "직전 swing low 이탈" 조건을 만족하면 채택.
  *
  * - Mitigated 플래그:
  *     이후 봉이 OB 존에 재진입(Re-entry)했는지 여부.
@@ -19,7 +19,7 @@
  * - Fair Value Gap (3봉 불균형):
  *     · Bullish FVG: candle1.high < candle3.low → gap zone = [candle1.high, candle3.low]
  *     · Bearish FVG: candle1.low  > candle3.high → gap zone = [candle3.high, candle1.low]
- *     · filled: 이후 봉의 가격 범위가 gap을 일부라도 덮으면 true
+ *     · filled: 이후 봉의 가격 범위가 gap을 일부라도 덮으면 true (부분/완전 미구분)
  *
  * - 결과는 최신순으로 OB 10개 / FVG 10개까지만 유지.
  */

@@ -1,17 +1,18 @@
 /**
  * 유동성 풀 / 스윕 검출 (SMC) — Equal-Highs / Equal-Lows / PDH / PDL
  *
- * - 스윙 하이/로우는 5봉 프랙탈(±2 이웃 대비 국부극값)로 검출
- * - 0.2% 이내로 모이는 스윙 하이 클러스터 → equal-highs 풀 (level = 평균)
- * - 0.2% 이내로 모이는 스윙 로우 클러스터 → equal-lows 풀
+ * - 스윙 하이/로우는 3봉 프랙탈(±1 이웃 대비 국부극값)로 검출
+ * - 0.5% 이내로 모이는 스윙 하이 클러스터 → equal-highs 풀 (level = 평균)
+ * - 0.5% 이내로 모이는 스윙 로우 클러스터 → equal-lows 풀
  * - dailyBars ≥ 2 이면 second-to-last day 의 high/low → PDH/PDL 풀
  * - 단독 스윙은 swing-high / swing-low 풀
  *
  * - 스윕 검출(최근 20봉 스캔):
- *   bullish-sweep: bar.low < pool.level*0.999 AND bar.close > pool.level
- *                  AND lower-wick > 50% range AND volume > 1.3x avg(20)
- *   bearish-sweep: bar.high > pool.level*1.001 AND bar.close < pool.level
- *                  AND upper-wick > 50% range AND volume > 1.3x avg(20)
+ *   bullish-sweep: bar.low < pool.level*0.999 AND bar.close > pool.level*1.002
+ *                  AND lower-wick > 50% range AND volume > 1.15x avg(20)
+ *   bearish-sweep: bar.high > pool.level*1.001 AND bar.close < pool.level*0.998
+ *                  AND upper-wick > 50% range AND volume > 1.15x avg(20)
+ *   (recoveredInside 는 close 가 0.2% 마진을 두고 회복했는지 여부 — 약한 회복은 false)
  * - 풀이 한번 hit 되면 swept=true, recentSweeps 에 newest-first 로 누적 (max 5)
  *
  * - bars.length < 20 이면 안전 기본값 반환
@@ -44,7 +45,7 @@ interface SwingPoint {
 
 function findSwingHighs(bars: LiquidityBar[]): SwingPoint[] {
   const out: SwingPoint[] = []
-  // 3봉 프랙탈 (좌우 1봉씩): 좌 2봉 + 우 2봉(5봉)에서 완화 — 일봉 60일치에서 더 많은 swing 포착
+  // 3봉 프랙탈 (좌우 1봉씩) — 60일 일봉에서 swing 더 많이 포착하도록 완화
   for (let i = 1; i < bars.length - 1; i++) {
     const h = bars[i].high
     if (h > bars[i - 1].high && h > bars[i + 1].high) {
@@ -202,7 +203,7 @@ function detectSweeps(
         barIndex: i,
         wickRatio: lowerWick,
         volumeSpike: volSpike,
-        recoveredInside: b.close > pool.level,
+        recoveredInside: b.close > pool.level * 1.002,
         description: `Bullish sweep of ${pool.type} @ ${pool.level.toFixed(2)}`,
       })
     }
@@ -221,7 +222,7 @@ function detectSweeps(
         barIndex: i,
         wickRatio: upperWick,
         volumeSpike: volSpike,
-        recoveredInside: b.close < pool.level,
+        recoveredInside: b.close < pool.level * 0.998,
         description: `Bearish sweep of ${pool.type} @ ${pool.level.toFixed(2)}`,
       })
     }

@@ -1,13 +1,18 @@
 /**
  * 알고리즘 풋프린트 엔진 — TWAP / VWAP / Iceberg / Sniper / MOO / MOC
  *
- * - TWAP score   : 1분봉 거래량의 변동계수 역수 (균등할수록 높음)
- * - VWAP score   : 시간대별 거래량 분포와 U-shape 표준곡선 코사인 유사도
+ * - TWAP score   : 가운데 시간대 거래량의 robust CV(IQR/median) 역수
+ *                  iqrRatio ≤ 0.2 → 100점, iqrRatio ≥ 1.0 → 0점으로 임계 강화
+ *                  (자연 인트라데이도 0.5~0.8 범위라 종전 매핑은 변별력 낮았음)
+ * - VWAP score   : 5구간 거래량 분포(ratio-of-mean)와 U-shape 기준 Pearson 상관계수
+ *                  r ≤ 0.3 → 0점, r ≥ 0.9 → 100점 (cosine은 모든 양수 벡터에서
+ *                  항상 > 0 이라 변별력이 없었음 → 중심화한 Pearson으로 교체)
  * - Iceberg score: ±5% 가격대 클러스터에서 동일 크기 체결이 반복되는 횟수
  * - Sniper score : 상위 5% 거래량 봉 직후의 가격 변화율 / 평균 가격 변화율
  * - MOO score    : 첫 봉(시가 동시호가) 거래량이 일중 중앙값 대비 얼마나 큰가
  * - MOC score    : 마지막 봉(종가 동시호가) 거래량이 일중 중앙값 대비 얼마나 큰가
  *
+ * - dominantAlgo     : 최고 점수가 60점 이상일 때만 부여 (종전 40 → 60으로 상향)
  * - direction        : 양봉/음봉 비율(과 close-OHLC 위치)로 매집/분배 추정
  * - auctionDirection : MOO/MOC 발생 시 시·종가 봉의 양봉/음봉 방향
  */
@@ -46,14 +51,23 @@ function scoreTwap(bars: AlgoBar[]): number {
   const median = sorted[Math.floor(sorted.length * 0.5)]
   if (median <= 0) return 0
   const iqrRatio = (q3 - q1) / median // robust CV (1차 분산/중심)
-  // iqrRatio = 0 → 완전 균등 (TWAP 100점), iqrRatio = 2 → 자연 거래 (0점)
-  // 실제 TWAP 알고가 일부 시간대 매매하면 iqrRatio 0.3~0.8 정도로 줄어듦
-  return Math.max(0, Math.min(100, ((2 - iqrRatio) / 2) * 100))
+  // 자연 인트라데이도 iqrRatio 0.5~0.8 범위라 종전 (2→0) 매핑은 대부분의 날에서
+  // 60점 이상을 만들어 변별력이 없었음. 진짜 TWAP 알고리즘 시그니처는 매우 평탄한
+  // 분포(< 0.3)를 만들어야 하므로 임계를 다음과 같이 강화:
+  // iqrRatio ≤ 0.2 → 100점, iqrRatio ≥ 1.0 → 0점
+  if (iqrRatio <= 0.2) return 100
+  if (iqrRatio >= 1.0) return 0
+  return Math.round(((1.0 - iqrRatio) / 0.8) * 100)
 }
 
 // ============================================
-// VWAP — U-shape 표준곡선 코사인 유사도
+// VWAP — U-shape 표준곡선 Pearson 상관계수
 // (장 시작/종료 부근에 거래량 집중되는 자연스러운 패턴 ≈ VWAP 알고)
+//
+// 종전 코사인 유사도는 두 벡터 모두 양수이므로 항상 > 0 → 어떤 정상 거래일도
+// 80~95점이 나와 변별력이 없었음. 평균 중심화한 Pearson 상관계수로 교체하면
+// 형상(shape)만을 비교하여 진짜 U-shape에서만 높은 점수를 부여한다.
+// r ≤ 0.3 → 0점, r ≥ 0.9 → 100점 (그 사이 선형 보간).
 // ============================================
 function scoreVwap(bars: AlgoBar[]): number {
   if (bars.length < 5) return 0
@@ -65,20 +79,30 @@ function scoreVwap(bars: AlgoBar[]): number {
     const idx = Math.min(buckets - 1, Math.floor((i / n) * buckets))
     bucket[idx] += bars[i].volume
   }
+  const totalVol = bucket.reduce((s, v) => s + v, 0)
+  if (totalVol <= 0) return 0
+  // ratio-of-mean 정규화: 각 버킷 / 평균
+  const mean = totalVol / buckets
+  const normBucket = bucket.map(v => v / mean)
   // U-shape 표준 (양 끝 강 / 가운데 약)
   const uShape = [1.5, 0.7, 0.5, 0.7, 1.5]
-  // 코사인 유사도
-  let dot = 0
-  let normA = 0
-  let normB = 0
+  // Pearson 상관계수 (normBucket vs uShape)
+  const meanX = normBucket.reduce((s, v) => s + v, 0) / buckets
+  const meanY = uShape.reduce((s, v) => s + v, 0) / buckets
+  let num = 0, denX = 0, denY = 0
   for (let i = 0; i < buckets; i++) {
-    dot += bucket[i] * uShape[i]
-    normA += bucket[i] ** 2
-    normB += uShape[i] ** 2
+    const dx = normBucket[i] - meanX
+    const dy = uShape[i] - meanY
+    num += dx * dy
+    denX += dx * dx
+    denY += dy * dy
   }
-  if (normA === 0 || normB === 0) return 0
-  const cos = dot / (Math.sqrt(normA) * Math.sqrt(normB))
-  return Math.max(0, Math.min(100, cos * 100))
+  if (denX === 0 || denY === 0) return 0
+  const r = num / Math.sqrt(denX * denY)
+  // r ≤ 0.3 → 0점, r ≥ 0.9 → 100점
+  if (r <= 0.3) return 0
+  if (r >= 0.9) return 100
+  return Math.round(((r - 0.3) / 0.6) * 100)
 }
 
 // ============================================
@@ -375,7 +399,7 @@ export function analyzeAlgoFootprint(
     { algo: 'MOC', score: mocScore },
   ]
   scores.sort((a, b) => b.score - a.score)
-  const dominantAlgo = scores[0].score >= 40 ? scores[0].algo : null
+  const dominantAlgo = scores[0].score >= 60 ? scores[0].algo : null
 
   const direction = detectDirection(bars)
 
