@@ -246,8 +246,8 @@ export async function POST(request: NextRequest) {
           credentialId: kisCredential.credentialId,
           credential: krCredential,
           ticker,
-          startDate: toKisDateString(past),
-          endDate: toKisDateString(today),
+          startDate: toKisDateString(past, 'KR'),
+          endDate: toKisDateString(today, 'KR'),
         })
         dailyBars = krDailyBars.map((b) => ({
           datetime: b.date,
@@ -311,7 +311,12 @@ export async function POST(request: NextRequest) {
         const todayD = new Date()
         const pastD = new Date()
         pastD.setDate(pastD.getDate() - 90)
-        const daily = await fetchPrices(ticker, yMarket, toDateString(pastD), toDateString(todayD))
+        const daily = await fetchPrices(
+          ticker,
+          yMarket,
+          marketDateString(pastD, market),
+          marketDateString(todayD, market),
+        )
         if (daily && daily.length > 0) {
           dailyBars = daily.map((b) => ({
             datetime: b.date,
@@ -1106,7 +1111,24 @@ async function processAlerts(
 // 헬퍼: 날짜 포맷
 // ============================================
 
-function toDateString(d: Date): string {
+function formatDateInTimeZone(d: Date, timeZone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(d)
+    const year = parts.find((part) => part.type === 'year')?.value
+    const month = parts.find((part) => part.type === 'month')?.value
+    const day = parts.find((part) => part.type === 'day')?.value
+    if (year && month && day) {
+      return `${year}-${month}-${day}`
+    }
+  } catch {
+    // fall through to local date formatting
+  }
+
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -1116,15 +1138,9 @@ function toDateString(d: Date): string {
 function marketDateString(d: Date, market: Market): string {
   const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
   try {
-    const fmt = new Intl.DateTimeFormat('en-CA', {
-      timeZone: tz,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    return fmt.format(d)
+    return formatDateInTimeZone(d, tz)
   } catch {
-    return market === 'KR' ? toKstDateString(d) : toDateString(d)
+    return market === 'KR' ? toKstDateString(d) : formatDateInTimeZone(d, 'UTC')
   }
 }
 
@@ -1137,9 +1153,9 @@ function toKstDateString(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-function toKisDateString(d: Date): string {
+function toKisDateString(d: Date, market: Extract<Market, 'KR'> = 'KR'): string {
   // KIS는 YYYYMMDD 포맷
-  return toDateString(d).replace(/-/g, '')
+  return marketDateString(d, market).replace(/-/g, '')
 }
 
 /**

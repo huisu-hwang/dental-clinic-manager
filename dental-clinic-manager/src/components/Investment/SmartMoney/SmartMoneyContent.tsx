@@ -116,23 +116,41 @@ const INTERPRETATION_COLOR: Record<Interpretation, string> = {
   'strong-distribution': 'bg-rose-500 text-white',
 }
 
-/** KST 기준 'YYYY-MM-DD' — Vercel UTC 또는 사용자 로컬 timezone에 영향 받지 않음 */
-function todayKey() {
-  const kst = new Date(Date.now() + 9 * 3600_000)
+function formatDateInTimeZone(date: Date, timeZone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date)
+    const year = parts.find((part) => part.type === 'year')?.value
+    const month = parts.find((part) => part.type === 'month')?.value
+    const day = parts.find((part) => part.type === 'day')?.value
+    if (year && month && day) {
+      return `${year}-${month}-${day}`
+    }
+  } catch {
+    // fall through to fixed-offset fallback for KST only
+  }
+
+  const kst = new Date(date.getTime() + 9 * 3600_000)
   const y = kst.getUTCFullYear()
   const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
   const d = String(kst.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
 
+/** KST 기준 'YYYY-MM-DD' — 브라우저 로컬 timezone에 영향 받지 않음 */
+function todayKey() {
+  return formatDateInTimeZone(new Date(), 'Asia/Seoul')
+}
+
 /** 시장 timezone 기준 'YYYY-MM-DD' — '오늘' 라벨 기준일 */
 function marketTodayKey(market: Market): string {
   const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
   try {
-    const fmt = new Intl.DateTimeFormat('en-CA', {
-      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
-    })
-    return fmt.format(new Date())
+    return formatDateInTimeZone(new Date(), tz)
   } catch {
     return todayKey()
   }
