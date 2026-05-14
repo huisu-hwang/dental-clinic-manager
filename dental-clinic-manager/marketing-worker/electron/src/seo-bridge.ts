@@ -153,7 +153,42 @@ async function processKeywordAnalysis(job: SeoJob, page: any): Promise<void> {
   await page.waitForTimeout(2500);
 
   // 3. 상위 5개 블로그 URL 수집 — selector 후보 확장 (네이버 UI 변동 대응)
-  const collected: { urls: string[]; selectorHits: Record<string, number> } = await page.evaluate(() => {
+  //    + 본문 글 URL 만 허용하는 필터로 nav/사이드바/블로그 홈 등 비-본문 페이지 제외
+  const collected: { urls: string[]; selectorHits: Record<string, number>; rejected: number } = await page.evaluate(() => {
+    /**
+     * 네이버 블로그 "본문 글" URL 여부 판별.
+     * 허용:
+     *   - https://blog.naver.com/{blogId}/{postId(숫자)}
+     *   - https://m.blog.naver.com/{blogId}/{postId(숫자)}
+     *   - https://blog.naver.com/PostView.naver?blogId=...&logNo=...
+     * 제외:
+     *   - https://blog.naver.com/MyBlog.naver        (블로그 홈 인덱스)
+     *   - https://section.blog.naver.com/...         (검색/섹션 페이지)
+     *   - https://blog.naver.com/{blogId}            (블로그 메인, post 없음)
+     *   - 그 외 비-본문 URL
+     */
+    const isValidPostUrl = (href: string): boolean => {
+      try {
+        const u = new URL(href);
+        if (!u.hostname.endsWith('blog.naver.com')) return false;
+        // section.blog.naver.com 제외 (모든 경로 비-본문)
+        if (u.hostname === 'section.blog.naver.com') return false;
+        // PostView.naver?blogId=...&logNo=... 패턴
+        if (u.pathname.includes('PostView.naver')) {
+          return !!(u.searchParams.get('blogId') && u.searchParams.get('logNo'));
+        }
+        // /{blogId}/{postId(숫자)} 패턴
+        const seg = u.pathname.split('/').filter(Boolean);
+        if (seg.length < 2) return false;
+        const [blogId, postId] = seg;
+        if (!blogId || blogId.endsWith('.naver')) return false; // MyBlog.naver 등 제외
+        if (!/^\d+$/.test(postId)) return false; // postId 는 숫자
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
     const candidates = [
       '.title_area a',
       '.api_txt_lines.total_tit',
@@ -165,27 +200,31 @@ async function processKeywordAnalysis(job: SeoJob, page: any): Promise<void> {
     const seen = new Set<string>();
     const urls: string[] = [];
     const selectorHits: Record<string, number> = {};
+    let rejected = 0;
     for (const sel of candidates) {
       const items = document.querySelectorAll(sel);
       let hit = 0;
       items.forEach((el: Element) => {
         const href = (el as HTMLAnchorElement).href;
-        if (href && href.includes('blog.naver.com') && !seen.has(href) && urls.length < 5) {
-          seen.add(href);
-          urls.push(href);
-          hit++;
+        if (!href || !href.includes('blog.naver.com') || seen.has(href) || urls.length >= 5) return;
+        if (!isValidPostUrl(href)) {
+          rejected++;
+          return;
         }
+        seen.add(href);
+        urls.push(href);
+        hit++;
       });
       if (hit > 0) selectorHits[sel] = hit;
       if (urls.length >= 5) break;
     }
-    return { urls, selectorHits };
+    return { urls, selectorHits, rejected };
   });
 
   const postUrls = collected.urls;
   log(
     'info',
-    `[SEO] "${keyword}" 검색 결과: ${postUrls.length}개 블로그 발견 ` +
+    `[SEO] "${keyword}" 검색 결과: ${postUrls.length}개 본문 글 수집, ${collected.rejected}개 비-본문 URL 필터링 ` +
       `(selector hits: ${JSON.stringify(collected.selectorHits)})`
   );
 
