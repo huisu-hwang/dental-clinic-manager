@@ -38,6 +38,8 @@ import type {
   Interpretation,
   SignalType,
   SmartMoneyAnalysis,
+  SmartMoneyAnalyzeErrorResponse,
+  SmartMoneyAnalyzeResponse,
 } from '@/types/smartMoney'
 
 interface Selected {
@@ -114,23 +116,110 @@ const INTERPRETATION_COLOR: Record<Interpretation, string> = {
   'strong-distribution': 'bg-rose-500 text-white',
 }
 
-/** KST 기준 'YYYY-MM-DD' — Vercel UTC 또는 사용자 로컬 timezone에 영향 받지 않음 */
-function todayKey() {
-  const kst = new Date(Date.now() + 9 * 3600_000)
+const BULLISH_SIGNAL_TYPES = new Set<SignalType>([
+  'spring',
+  'iceberg-buy',
+  'sniper-buy',
+  'twap-accumulation',
+  'vwap-accumulation',
+  'moo-accumulation',
+  'moc-accumulation',
+  'foreigner-accumulation',
+  'institution-accumulation',
+  'liquidity-sweep-bullish',
+  'choch-bullish',
+  'bos-bullish',
+  'order-block-bullish',
+  'fvg-bullish',
+  'bear-trap',
+  'no-supply',
+  'selling-climax',
+  'stopping-volume',
+  'po3-accumulation',
+  'bad-news-accumulation',
+  'wyckoff-phase-c',
+  'wyckoff-sos',
+  'wyckoff-lps',
+])
+
+const BEARISH_SIGNAL_TYPES = new Set<SignalType>([
+  'upthrust',
+  'iceberg-sell',
+  'sniper-sell',
+  'twap-distribution',
+  'vwap-distribution',
+  'moo-distribution',
+  'moc-distribution',
+  'foreigner-distribution',
+  'institution-distribution',
+  'liquidity-sweep-bearish',
+  'choch-bearish',
+  'bos-bearish',
+  'order-block-bearish',
+  'fvg-bearish',
+  'bull-trap',
+  'no-demand',
+  'buying-climax',
+  'po3-distribution',
+  'news-fade',
+  'sell-the-news',
+  'wyckoff-utad',
+  'wyckoff-sow',
+  'wyckoff-lpsy',
+])
+
+function getWyckoffMajorCycleLabel(
+  majorCycle?: 'accumulation' | 'markup' | 'distribution' | 'markdown' | null
+): string {
+  switch (majorCycle) {
+    case 'accumulation':
+      return '축적'
+    case 'markup':
+      return '상승'
+    case 'distribution':
+      return '분배'
+    case 'markdown':
+      return '하락'
+    default:
+      return '판단 보류'
+  }
+}
+
+function formatDateInTimeZone(date: Date, timeZone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date)
+    const year = parts.find((part) => part.type === 'year')?.value
+    const month = parts.find((part) => part.type === 'month')?.value
+    const day = parts.find((part) => part.type === 'day')?.value
+    if (year && month && day) {
+      return `${year}-${month}-${day}`
+    }
+  } catch {
+    // fall through to fixed-offset fallback for KST only
+  }
+
+  const kst = new Date(date.getTime() + 9 * 3600_000)
   const y = kst.getUTCFullYear()
   const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
   const d = String(kst.getUTCDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
 
+/** KST 기준 'YYYY-MM-DD' — 브라우저 로컬 timezone에 영향 받지 않음 */
+function todayKey() {
+  return formatDateInTimeZone(new Date(), 'Asia/Seoul')
+}
+
 /** 시장 timezone 기준 'YYYY-MM-DD' — '오늘' 라벨 기준일 */
 function marketTodayKey(market: Market): string {
   const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
   try {
-    const fmt = new Intl.DateTimeFormat('en-CA', {
-      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
-    })
-    return fmt.format(new Date())
+    return formatDateInTimeZone(new Date(), tz)
   } catch {
     return todayKey()
   }
@@ -238,7 +327,11 @@ export function SmartMoneyContent() {
   // 메모리 캐시 (ticker:market:date → analysis)
   const cacheRef = useRef<Map<string, SmartMoneyAnalysis>>(new Map())
 
-  const cacheKey = (s: Selected) => `${s.market}:${s.ticker}:${todayKey()}`
+  const cacheKey = useCallback(
+    (s: Selected, withPreMarket: boolean) =>
+      `${s.market}:${s.ticker}:${marketTodayKey(s.market)}:${withPreMarket && s.market === 'US' ? 'pre' : 'regular'}`,
+    [],
+  )
 
   const { add: rememberTicker } = useRecentTickers()
 
@@ -251,13 +344,46 @@ export function SmartMoneyContent() {
     setActiveDayIdx(null)
     rememberTicker(ticker, name || ticker, market)
     // 캐시에 있으면 즉시 표시
-    const cached = cacheRef.current.get(`${next.market}:${next.ticker}:${todayKey()}`)
+    const cached = cacheRef.current.get(cacheKey(next, includePreMarket))
     if (cached) setAnalysis(cached)
     else setAnalysis(null)
-  }, [rememberTicker])
+  }, [cacheKey, includePreMarket, rememberTicker])
+
+  const fetchLlmComment = useCallback(async (
+    base: SmartMoneyAnalysis,
+    targetSelection: Selected,
+    targetPreMarket: boolean,
+  ) => {
+    setLlmLoading(true)
+    try {
+      const res = await fetch('/api/investment/smart-money/llm-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysis: base }),
+      })
+      const json = await res.json().catch(() => ({} as { data?: { comment?: string; perCard?: SmartMoneyAnalysis['perCardComments'] } }))
+      const comment = json.data?.comment
+      const perCard = json.data?.perCard
+      if (comment) {
+        const updated: SmartMoneyAnalysis = { ...base, naturalLanguageComment: comment, perCardComments: perCard }
+        setAnalysis((prev) => (
+          prev && prev.ticker === base.ticker && prev.market === base.market
+            ? updated
+            : prev
+        ))
+        cacheRef.current.set(cacheKey(targetSelection, targetPreMarket), updated)
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setLlmLoading(false)
+    }
+  }, [cacheKey])
 
   const runAnalyze = useCallback(async () => {
     if (!selected) return
+    const requestSelection = selected
+    const requestPreMarket = includePreMarket && requestSelection.market === 'US'
     setLoading(true)
     setError(null)
     setErrorCode(null)
@@ -267,31 +393,31 @@ export function SmartMoneyContent() {
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
         body: JSON.stringify({
-          ticker: selected.ticker,
-          market: selected.market,
+          ticker: requestSelection.ticker,
+          market: requestSelection.market,
           includeLLM: true,
-          includePreMarket: includePreMarket && selected.market === 'US',
+          includePreMarket: requestPreMarket,
         }),
       })
-      const json = await res.json().catch(() => ({}))
+      const json: SmartMoneyAnalyzeResponse | SmartMoneyAnalyzeErrorResponse =
+        await res.json().catch(() => ({ error: '응답을 해석하지 못했습니다.' }))
       if (!res.ok) {
-        setError(json?.error || '분석 요청에 실패했습니다.')
-        setErrorCode(typeof json?.code === 'string' ? json.code : null)
+        setError('error' in json ? json.error : '분석 요청에 실패했습니다.')
+        setErrorCode('error' in json && typeof json.code === 'string' ? json.code : null)
         setAnalysis(null)
         return
       }
-      const data: SmartMoneyAnalysis | undefined = json?.data
+      const data = 'data' in json ? json.data : undefined
       if (!data) {
         setError('분석 결과를 받지 못했습니다.')
         return
       }
       setAnalysis(data)
       setActiveDayIdx(null) // 가장 최근 일자 default
-      cacheRef.current.set(cacheKey(selected), data)
+      cacheRef.current.set(cacheKey(requestSelection, requestPreMarket), data)
 
-      // LLM 코멘트가 비어 있으면 별도 호출
       if (!data.naturalLanguageComment) {
-        fetchLlmComment(data)
+        fetchLlmComment(data, requestSelection, requestPreMarket)
       }
     } catch {
       setError('네트워크 오류가 발생했습니다.')
@@ -299,12 +425,14 @@ export function SmartMoneyContent() {
     } finally {
       setLoading(false)
     }
-  }, [selected, includePreMarket])
+  }, [cacheKey, fetchLlmComment, includePreMarket, selected])
 
   /** 백그라운드 재분석 — 자동 갱신 시 사용. LLM 스킵, 큰 로딩 UI 없이 조용히 갱신.
    *  실패는 silent (기존 분석 유지). 기존 LLM 코멘트는 보존. */
   const runAnalyzeBackground = useCallback(async () => {
     if (!selected) return
+    const requestSelection = selected
+    const requestPreMarket = includePreMarket && requestSelection.market === 'US'
     setRefreshing(true)
     try {
       const res = await fetch('/api/investment/smart-money/analyze', {
@@ -312,62 +440,39 @@ export function SmartMoneyContent() {
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
         body: JSON.stringify({
-          ticker: selected.ticker,
-          market: selected.market,
+          ticker: requestSelection.ticker,
+          market: requestSelection.market,
           includeLLM: false,
-          includePreMarket: includePreMarket && selected.market === 'US',
+          includePreMarket: requestPreMarket,
         }),
       })
       if (!res.ok) return
-      const json = await res.json().catch(() => null)
-      const data: SmartMoneyAnalysis | undefined = json?.data
+      const json: SmartMoneyAnalyzeResponse | null = await res.json().catch(() => null)
+      const data = json?.data
       if (!data) return
-      setAnalysis(prev => {
+      let nextAnalysis: SmartMoneyAnalysis | null = null
+      setAnalysis((prev) => {
         if (!prev || prev.ticker !== data.ticker || prev.market !== data.market) return data
-        // LLM 코멘트 보존 — 폴링은 includeLLM=false라서 새로 안 옴
-        return {
+        nextAnalysis = {
           ...data,
           naturalLanguageComment: prev.naturalLanguageComment ?? data.naturalLanguageComment,
           perCardComments: prev.perCardComments ?? data.perCardComments,
-          // byDay 각 일자의 LLM 코멘트도 보존
-          byDay: data.byDay?.map(d => {
-            const prevDay = prev.byDay?.find(p => p.asOfDate === d.asOfDate)
+          byDay: data.byDay?.map((d) => {
+            const prevDay = prev.byDay?.find((p) => p.asOfDate === d.asOfDate)
             return prevDay?.naturalLanguageComment
               ? { ...d, naturalLanguageComment: prevDay.naturalLanguageComment }
               : d
           }),
         }
+        return nextAnalysis
       })
-      cacheRef.current.set(cacheKey(selected), data)
+      cacheRef.current.set(cacheKey(requestSelection, requestPreMarket), nextAnalysis ?? data)
     } catch {
       /* silent — 폴링 실패는 사용자 차단 안 함 */
     } finally {
       setRefreshing(false)
     }
-  }, [selected, includePreMarket])
-
-  const fetchLlmComment = useCallback(async (base: SmartMoneyAnalysis) => {
-    setLlmLoading(true)
-    try {
-      const res = await fetch('/api/investment/smart-money/llm-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis: base }),
-      })
-      const json = await res.json().catch(() => ({}))
-      const comment: string | undefined = json?.data?.comment
-      const perCard = json?.data?.perCard as SmartMoneyAnalysis['perCardComments']
-      if (comment) {
-        const updated: SmartMoneyAnalysis = { ...base, naturalLanguageComment: comment, perCardComments: perCard }
-        setAnalysis(prev => (prev && prev.ticker === base.ticker ? updated : prev))
-        if (selected) cacheRef.current.set(cacheKey(selected), updated)
-      }
-    } catch {
-      /* ignore */
-    } finally {
-      setLlmLoading(false)
-    }
-  }, [selected])
+  }, [cacheKey, includePreMarket, selected])
 
   // 활성 일자 분석 객체 — byDay에서 선택된 일자가 있으면 그 항목으로 SmartMoneyAnalysis를 합성.
   // 일자별 탭이 클릭됐을 때 표시 데이터(점수/시그널/패널/LLM)가 모두 그 일자 기준으로 전환됨.
@@ -406,6 +511,11 @@ export function SmartMoneyContent() {
     }
   }, [analysis, activeDayIdx])
 
+  const defaultDayIdx = useMemo(() => {
+    if (!analysis?.byDay?.length) return 0
+    return findDefaultDayIndex(analysis.byDay, analysis.asOfDate)
+  }, [analysis])
+
   const topSignals = useMemo(() => {
     if (!viewAnalysis) return []
     return [...viewAnalysis.signalDetails]
@@ -421,6 +531,11 @@ export function SmartMoneyContent() {
   const scorePct = Math.max(0, Math.min(100, (overallScore + 100) / 2))
   const scoreColor =
     overallScore > 30 ? 'bg-emerald-500' : overallScore < -30 ? 'bg-rose-500' : 'bg-slate-400'
+  const wyckoffPhaseSummary = viewAnalysis?.wyckoffPhase
+  const wyckoffMajorLabel = getWyckoffMajorCycleLabel(wyckoffPhaseSummary?.majorCycle)
+  const wyckoffPhaseLabel = wyckoffPhaseSummary?.phase ? `Phase ${wyckoffPhaseSummary.phase}` : '페이즈 미확정'
+  const wyckoffPhaseConfidence = Math.round(wyckoffPhaseSummary?.confidence ?? 0)
+  const wyckoffRecentEvents = wyckoffPhaseSummary?.events.slice(-3).map((event) => event.type).join(' · ') ?? ''
 
   const isKisError = errorCode === 'NO_CREDENTIAL' || (error || '').toLowerCase().includes('kis')
 
@@ -587,8 +702,7 @@ export function SmartMoneyContent() {
               <section className="bg-white rounded-2xl border border-slate-200 p-2 shadow-sm">
                 <div role="tablist" className="flex gap-1">
                   {analysis.byDay.map((day, i) => {
-                    const defaultIdx = findDefaultDayIndex(analysis.byDay!, analysis.asOfDate)
-                    const isActive = (activeDayIdx ?? defaultIdx) === i
+                    const isActive = (activeDayIdx ?? defaultDayIdx) === i
                     return (
                       <button
                         key={day.asOfDate}
@@ -728,6 +842,32 @@ export function SmartMoneyContent() {
                 </div>
               </div>
 
+              {wyckoffPhaseSummary && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Wyckoff 사이클</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{wyckoffMajorLabel}</div>
+                    <div className="text-[11px] text-slate-500">
+                      {wyckoffPhaseSummary.cycle === 'accumulation'
+                        ? 'Accumulation 계열'
+                        : wyckoffPhaseSummary.cycle === 'distribution'
+                          ? 'Distribution 계열'
+                          : '판단 보류'}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">현재 페이즈</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{wyckoffPhaseLabel}</div>
+                    <div className="text-[11px] text-slate-500">신뢰도 {wyckoffPhaseConfidence}/100</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">핵심 이벤트</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{wyckoffRecentEvents || '없음'}</div>
+                    <div className="text-[11px] text-slate-500">최근 3개 이벤트 기준</div>
+                  </div>
+                </div>
+              )}
+
               {/* 점수 게이지 + 해석 */}
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-1.5">
@@ -788,7 +928,11 @@ export function SmartMoneyContent() {
                   ) : viewAnalysis.asOfDate === analysis.asOfDate ? (
                     <button
                       type="button"
-                      onClick={() => analysis && fetchLlmComment(analysis)}
+                      onClick={() => analysis && fetchLlmComment(
+                        analysis,
+                        { ticker: analysis.ticker, market: analysis.market, name: analysis.name },
+                        includePreMarket && analysis.market === 'US',
+                      )}
                       className="text-xs text-purple-700 hover:underline"
                     >
                       AI 코멘트 생성하기
@@ -818,10 +962,8 @@ export function SmartMoneyContent() {
               ) : (
                 <ul className="space-y-2">
                   {topSignals.map((sig, i) => {
-                    const isAccum =
-                      sig.type.includes('accumulation') || sig.type === 'spring' || sig.type === 'iceberg-buy' || sig.type === 'sniper-buy'
-                    const isDist =
-                      sig.type.includes('distribution') || sig.type === 'upthrust' || sig.type === 'iceberg-sell' || sig.type === 'sniper-sell'
+                    const isAccum = BULLISH_SIGNAL_TYPES.has(sig.type)
+                    const isDist = BEARISH_SIGNAL_TYPES.has(sig.type)
                     const tone = isAccum
                       ? 'bg-emerald-50 border-emerald-200'
                       : isDist

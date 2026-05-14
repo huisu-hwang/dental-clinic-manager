@@ -9,7 +9,8 @@
  *   - SC    : 거래량 1.8배 + 음봉 + 하단 wick > 35% + 구간 저점 부근
  *   - AR    : SC 이후 10봉 내 최고가 (자동 반등)
  *   - ST    : SC 저점을 1% 이내로 재테스트 + SC 대비 거래량 감소
- *   - Spring: SC/ST 저점을 0.3~2% 침범 후 회복 마감 + 거래량 1.5배
+ *   - Spring: SC/ST 저점을 0.3~2% 침범 후 회복 마감
+ *   - Test  : Spring 이후 더 높은 저점 + 더 낮은 거래량으로 공급 고갈 확인
  *   - SOS   : AR 고점 돌파 양봉 + 거래량 1.5배
  *   - LPS   : SOS 이후 직전 저항대 위에서 거래량 감소하며 눌림
  *
@@ -18,7 +19,8 @@
  *   - BC   : 거래량 1.8배 + 양봉 + 상단 wick > 35% + 구간 고점 부근
  *   - AR   : BC 이후 10봉 내 최저가
  *   - ST   : BC 고점 1% 이내 재테스트 + BC 대비 거래량 감소
- *   - UTAD : BC/ST 고점 0.3~2% 돌파 후 종가가 다시 아래로 마감 + 거래량 증가
+ *   - UTAD : BC/ST 고점 0.3~2% 돌파 후 종가가 다시 아래로 마감
+ *   - Test : UTAD 이후 더 낮은 고점 + 더 낮은 거래량으로 수요 실패 확인
  *   - SOW  : AR 저점 하향 돌파 음봉 + 거래량 증가
  *   - LPSY : SOW 이후 직전 지지대 아래서 반등 실패
  *
@@ -29,8 +31,9 @@
  *   - D : B 또는 C 후 SOS 발견 시 (또는 SOW)
  *   - E : D 후 LPS 발견 시 (또는 LPSY)
  *
- * - cycle  : accumulation/distribution 이벤트 카운트 비교 (≥2개 우세 쪽)
- * - confidence : clamp(eventsCount * 15 + (phase ? 25 : 0), 0, 100)
+ * - cycle  : 단순 이벤트 개수 대신 품질 가중 점수(score) 비교
+ * - majorCycle : 4단계 사이클(Accumulation/Markup/Distribution/Markdown)으로 재매핑
+ * - confidence : 이벤트 다양성 + 시퀀스 완성도 + 반대편 점수 대비 우위 반영
  */
 
 import type { WyckoffPhaseResult, WyckoffPhaseEvent } from '@/types/smartMoney'
@@ -83,6 +86,20 @@ function upperWickRatio(bar: PhaseBar): number {
   return (bar.high - bodyHigh) / range
 }
 
+function avgRangeBefore(bars: PhaseBar[], endExclusive: number, window: number): number {
+  const start = Math.max(0, endExclusive - window)
+  let sum = 0
+  let count = 0
+  for (let i = start; i < endExclusive; i++) {
+    const currentRange = rangeOf(bars[i])
+    if (currentRange > 0) {
+      sum += currentRange
+      count++
+    }
+  }
+  return count > 0 ? sum / count : 0
+}
+
 // ============================================
 // 매집 사이클 이벤트 스캔
 // ============================================
@@ -92,13 +109,14 @@ interface AccumulationEvents {
   ar: WyckoffPhaseEvent | null
   sts: WyckoffPhaseEvent[]
   spring: WyckoffPhaseEvent | null
+  test: WyckoffPhaseEvent | null
   sos: WyckoffPhaseEvent | null
   lps: WyckoffPhaseEvent | null
 }
 
 function detectAccumulation(bars: PhaseBar[]): AccumulationEvents {
   const result: AccumulationEvents = {
-    ps: null, sc: null, ar: null, sts: [], spring: null, sos: null, lps: null,
+    ps: null, sc: null, ar: null, sts: [], spring: null, test: null, sos: null, lps: null,
   }
 
   const n = bars.length
@@ -190,7 +208,8 @@ function detectAccumulation(bars: PhaseBar[]): AccumulationEvents {
       })
     }
 
-    // Spring: SC/ST 저가를 0.3~2% 이탈 후 종가가 그 위에서 마감, vol > 1.5x avg
+    // Spring: SC/ST 저가를 0.3~2% 이탈 후 종가가 그 위에서 마감.
+    // 정통 Wyckoff에서는 '범위 하단 이탈 후 재진입'이 핵심이며 고거래량은 필수 조건이 아니다.
     const refLow = scLow
     const springStart = scIdx + 1
     for (let i = springStart; i < n; i++) {
@@ -199,9 +218,6 @@ function detectAccumulation(bars: PhaseBar[]): AccumulationEvents {
       const piercePct = (refLow - b.low) / refLow
       if (piercePct < 0.003 || piercePct > 0.02) continue
       if (b.close <= refLow) continue
-      const avg = avgVolume(bars, i, VOL_WINDOW)
-      if (avg <= 0) continue
-      if (b.volume / avg <= 1.5) continue
       result.spring = {
         type: 'Spring',
         barIndex: i,
@@ -211,17 +227,40 @@ function detectAccumulation(bars: PhaseBar[]): AccumulationEvents {
       break
     }
 
+    if (result.spring) {
+      const springBar = bars[result.spring.barIndex]
+      for (let i = result.spring.barIndex + 1; i < n; i++) {
+        const b = bars[i]
+        if (b.low < springBar.low) continue
+        if (b.close < refLow) continue
+        if (b.volume >= springBar.volume) continue
+        result.test = {
+          type: 'Test',
+          barIndex: i,
+          price: b.low,
+          description: 'Successful Test after Spring',
+        }
+        break
+      }
+    }
+
     // SOS: 양봉, vol > 1.5x avg, close > AR high
     if (result.ar) {
       const arHighRef = result.ar.price
-      const sosStart = result.spring ? result.spring.barIndex + 1 : result.ar.barIndex + 1
+      const sosStart = result.test
+        ? result.test.barIndex + 1
+        : result.spring
+          ? result.spring.barIndex + 1
+          : result.ar.barIndex + 1
       for (let i = sosStart; i < n; i++) {
         const b = bars[i]
         if (b.close <= b.open) continue
         const avg = avgVolume(bars, i, VOL_WINDOW)
         if (avg <= 0) continue
         if (b.volume / avg <= 1.5) continue
-        if (b.close <= arHighRef) continue
+        const avgSpread = avgRangeBefore(bars, i, 10)
+        if (b.close <= arHighRef && b.high <= arHighRef) continue
+        if (avgSpread > 0 && rangeOf(b) < avgSpread * 1.1) continue
         result.sos = {
           type: 'SOS',
           barIndex: i,
@@ -264,13 +303,14 @@ interface DistributionEvents {
   ar: WyckoffPhaseEvent | null
   sts: WyckoffPhaseEvent[]
   utad: WyckoffPhaseEvent | null
+  test: WyckoffPhaseEvent | null
   sow: WyckoffPhaseEvent | null
   lpsy: WyckoffPhaseEvent | null
 }
 
 function detectDistribution(bars: PhaseBar[]): DistributionEvents {
   const result: DistributionEvents = {
-    psy: null, bc: null, ar: null, sts: [], utad: null, sow: null, lpsy: null,
+    psy: null, bc: null, ar: null, sts: [], utad: null, test: null, sow: null, lpsy: null,
   }
 
   const n = bars.length
@@ -360,7 +400,8 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
       })
     }
 
-    // UTAD: BC/ST 고가 0.3~2% 돌파 후 종가가 그 아래에서 마감, vol 큰 봉
+    // UTAD: BC/ST 고가 0.3~2% 돌파 후 종가가 그 아래에서 마감.
+    // 핵심은 범위 상단 돌파 실패이며 초고거래량은 보조 증거로만 본다.
     const refHigh = bcHigh
     for (let i = bcIdx + 1; i < n; i++) {
       const b = bars[i]
@@ -368,9 +409,6 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
       const piercePct = (b.high - refHigh) / refHigh
       if (piercePct < 0.003 || piercePct > 0.02) continue
       if (b.close >= refHigh) continue
-      const avg = avgVolume(bars, i, VOL_WINDOW)
-      if (avg <= 0) continue
-      if (b.volume / avg <= 1.5) continue
       result.utad = {
         type: 'UTAD',
         barIndex: i,
@@ -380,17 +418,40 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
       break
     }
 
+    if (result.utad) {
+      const utadBar = bars[result.utad.barIndex]
+      for (let i = result.utad.barIndex + 1; i < n; i++) {
+        const b = bars[i]
+        if (b.high > utadBar.high) continue
+        if (b.close > refHigh) continue
+        if (b.volume >= utadBar.volume) continue
+        result.test = {
+          type: 'Test',
+          barIndex: i,
+          price: b.high,
+          description: 'Failed Test after UTAD',
+        }
+        break
+      }
+    }
+
     // SOW: AR 저가 하향 돌파, 음봉, 거래량 증가
     if (result.ar) {
       const arLowRef = result.ar.price
-      const sowStart = result.utad ? result.utad.barIndex + 1 : result.ar.barIndex + 1
+      const sowStart = result.test
+        ? result.test.barIndex + 1
+        : result.utad
+          ? result.utad.barIndex + 1
+          : result.ar.barIndex + 1
       for (let i = sowStart; i < n; i++) {
         const b = bars[i]
         if (b.close >= b.open) continue
         const avg = avgVolume(bars, i, VOL_WINDOW)
         if (avg <= 0) continue
         if (b.volume / avg <= 1.5) continue
-        if (b.close >= arLowRef) continue
+        const avgSpread = avgRangeBefore(bars, i, 10)
+        if (b.close >= arLowRef && b.low >= arLowRef) continue
+        if (avgSpread > 0 && rangeOf(b) < avgSpread * 1.1) continue
         result.sow = {
           type: 'SOW',
           barIndex: i,
@@ -424,6 +485,49 @@ function detectDistribution(bars: PhaseBar[]): DistributionEvents {
   return result
 }
 
+function computeEventScore(events: {
+  ps?: WyckoffPhaseEvent | null
+  sc?: WyckoffPhaseEvent | null
+  ar?: WyckoffPhaseEvent | null
+  sts?: WyckoffPhaseEvent[]
+  spring?: WyckoffPhaseEvent | null
+  test?: WyckoffPhaseEvent | null
+  sos?: WyckoffPhaseEvent | null
+  lps?: WyckoffPhaseEvent | null
+  psy?: WyckoffPhaseEvent | null
+  bc?: WyckoffPhaseEvent | null
+  utad?: WyckoffPhaseEvent | null
+  sow?: WyckoffPhaseEvent | null
+  lpsy?: WyckoffPhaseEvent | null
+}): number {
+  return (
+    (events.ps ? 0.8 : 0) +
+    (events.sc ? 2.0 : 0) +
+    (events.ar ? 1.2 : 0) +
+    Math.min((events.sts?.length ?? 0) * 0.5, 1.5) +
+    (events.spring ? 1.8 : 0) +
+    (events.test ? 1.0 : 0) +
+    (events.sos ? 2.2 : 0) +
+    (events.lps ? 1.6 : 0) +
+    (events.psy ? 0.8 : 0) +
+    (events.bc ? 2.0 : 0) +
+    (events.utad ? 1.8 : 0) +
+    (events.sow ? 2.2 : 0) +
+    (events.lpsy ? 1.6 : 0)
+  )
+}
+
+function inferMajorCycle(
+  cycle: WyckoffPhaseResult['cycle'],
+  phase: WyckoffPhaseResult['phase'],
+): WyckoffPhaseResult['majorCycle'] {
+  if (!cycle) return null
+  if (cycle === 'accumulation') {
+    return phase === 'D' || phase === 'E' ? 'markup' : 'accumulation'
+  }
+  return phase === 'D' || phase === 'E' ? 'markdown' : 'distribution'
+}
+
 // ============================================
 // 메인 엔트리
 // ============================================
@@ -435,7 +539,16 @@ export function detectWyckoffPhase(
   // 일봉이 충분히 제공되면 일봉을 우선 사용한다 (분봉은 fallback).
   const sourceBars = dailyBars && dailyBars.length >= MIN_BARS ? dailyBars : bars
   if (!sourceBars || sourceBars.length < MIN_BARS) {
-    return { cycle: null, phase: null, events: [], confidence: 0, description: '데이터 부족' }
+    return {
+      cycle: null,
+      phase: null,
+      events: [],
+      confidence: 0,
+      description: '데이터 부족',
+      majorCycle: null,
+      rangeHigh: null,
+      rangeLow: null,
+    }
   }
 
   const acc = detectAccumulation(sourceBars)
@@ -447,6 +560,7 @@ export function detectWyckoffPhase(
   if (acc.ar) accEvents.push(acc.ar)
   for (const st of acc.sts) accEvents.push(st)
   if (acc.spring) accEvents.push(acc.spring)
+  if (acc.test) accEvents.push(acc.test)
   if (acc.sos) accEvents.push(acc.sos)
   if (acc.lps) accEvents.push(acc.lps)
 
@@ -456,16 +570,20 @@ export function detectWyckoffPhase(
   if (dist.ar) distEvents.push(dist.ar)
   for (const st of dist.sts) distEvents.push(st)
   if (dist.utad) distEvents.push(dist.utad)
+  if (dist.test) distEvents.push(dist.test)
   if (dist.sow) distEvents.push(dist.sow)
   if (dist.lpsy) distEvents.push(dist.lpsy)
+
+  const accScore = computeEventScore(acc)
+  const distScore = computeEventScore(dist)
 
   // cycle 결정
   let cycle: WyckoffPhaseResult['cycle'] = null
   let events: WyckoffPhaseEvent[] = []
-  if (accEvents.length > distEvents.length && accEvents.length >= 2) {
+  if (accScore >= distScore + 1.25 && accScore >= 3) {
     cycle = 'accumulation'
     events = accEvents
-  } else if (distEvents.length > accEvents.length && distEvents.length >= 2) {
+  } else if (distScore >= accScore + 1.25 && distScore >= 3) {
     cycle = 'distribution'
     events = distEvents
   } else if (accEvents.length === 0 && distEvents.length === 0) {
@@ -492,6 +610,9 @@ export function detectWyckoffPhase(
         events: [],
         confidence: 0,
         description: trendDesc,
+        majorCycle: trendPct >= 0.03 ? 'markup' : trendPct <= -0.03 ? 'markdown' : null,
+        rangeHigh: null,
+        rangeLow: null,
         trendHeuristic: {
           cycle,
           lookbackDays: 30,
@@ -500,10 +621,19 @@ export function detectWyckoffPhase(
         },
       }
     }
-    return { cycle: null, phase: null, events: [], confidence: 0, description: '이벤트 없음 — 횡보' }
+    return {
+      cycle: null,
+      phase: null,
+      events: [],
+      confidence: 0,
+      description: '이벤트 없음 — 횡보',
+      majorCycle: null,
+      rangeHigh: null,
+      rangeLow: null,
+    }
   } else {
-    // 동률 또는 2개 미만 — 더 많은 쪽만 노출, cycle 미정
-    events = accEvents.length >= distEvents.length ? accEvents : distEvents
+    // 근소한 접전이면 우세한 쪽 이벤트만 보여주고 cycle은 보류
+    events = accScore >= distScore ? accEvents : distEvents
   }
 
   // phase 결정 — prerequisite 시퀀스 강제 (Spring/SOS/LPS 단독 발견만으로는
@@ -534,12 +664,48 @@ export function detectWyckoffPhase(
   }
 
   events.sort((a, b) => a.barIndex - b.barIndex)
-  const confidence = Math.max(0, Math.min(100, events.length * 15 + (phase ? 25 : 0)))
+  const majorCycle = inferMajorCycle(cycle, phase)
+  const dominantScore = cycle === 'accumulation'
+    ? accScore
+    : cycle === 'distribution'
+      ? distScore
+      : Math.max(accScore, distScore)
+  const opposingScore = cycle === 'accumulation'
+    ? distScore
+    : cycle === 'distribution'
+      ? accScore
+      : Math.min(accScore, distScore)
+  const phaseBonus =
+    phase === 'E' ? 24
+      : phase === 'D' ? 20
+        : phase === 'C' ? 15
+          : phase === 'B' ? 10
+            : phase === 'A' ? 6
+              : 0
+  const confidence = Math.round(Math.max(
+    0,
+    Math.min(100, dominantScore * 10 + phaseBonus + Math.max(0, (dominantScore - opposingScore) * 4)),
+  ))
 
   const eventLabels = events.map(e => e.type).join(', ')
   const cycleLabel = cycle === 'accumulation' ? '매집' : cycle === 'distribution' ? '분배' : '중립'
+  const majorLabel =
+    majorCycle === 'accumulation' ? '축적'
+      : majorCycle === 'markup' ? '상승'
+        : majorCycle === 'distribution' ? '분배'
+          : majorCycle === 'markdown' ? '하락'
+            : '판단 보류'
   const phaseLabel = phase ? `Phase ${phase}` : '페이즈 미확정'
-  const description = `${cycleLabel} 사이클 / ${phaseLabel} — 이벤트: ${eventLabels || '없음'}`
+  const description = `${majorLabel} 단계 / ${cycleLabel} 사이클 / ${phaseLabel} — 이벤트: ${eventLabels || '없음'}`
 
-  return { cycle, phase, events, confidence, description }
+  return {
+    cycle,
+    phase,
+    events,
+    confidence,
+    description,
+    majorCycle,
+    rangeHigh: acc.ar?.price ?? dist.bc?.price ?? null,
+    rangeLow: acc.sc?.price ?? dist.ar?.price ?? null,
+  }
 }

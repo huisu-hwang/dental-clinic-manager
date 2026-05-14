@@ -84,6 +84,12 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
   const recentEvents = [...phase.events].slice(-5).reverse()
 
   const cycleLabel = isAccumulation ? '매집 사이클' : isDistribution ? '분배 사이클' : '판단 보류'
+  const majorCycleLabel =
+    phase.majorCycle === 'accumulation' ? '4단계: 축적'
+      : phase.majorCycle === 'markup' ? '4단계: 상승'
+        : phase.majorCycle === 'distribution' ? '4단계: 분배'
+          : phase.majorCycle === 'markdown' ? '4단계: 하락'
+            : '4단계: 판단 보류'
   const cycleBadge = isAccumulation
     ? 'bg-emerald-100 text-emerald-700'
     : isDistribution
@@ -96,6 +102,7 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
         <h3 className="text-sm font-semibold text-slate-900">와이코프 페이즈</h3>
         <div className="flex items-center gap-1">
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${cycleBadge}`}>{cycleLabel}</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600">{majorCycleLabel}</span>
           <button
             type="button"
             onClick={() => setHelpOpen((o) => !o)}
@@ -225,6 +232,21 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
               </p>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+              <div className="text-[10px] text-slate-500">신뢰도</div>
+              <div className="text-sm font-bold text-slate-900">{Math.round(phase.confidence)}/100</div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+              <div className="text-[10px] text-slate-500">TR 범위</div>
+              <div className="text-[11px] font-mono font-bold text-slate-900">
+                {phase.rangeLow && phase.rangeHigh
+                  ? `${phase.rangeLow.toFixed(2)} - ${phase.rangeHigh.toFixed(2)}`
+                  : '미확정'}
+              </div>
+            </div>
+          </div>
 
           {/* Events */}
           {recentEvents.length > 0 && (

@@ -709,6 +709,435 @@ function calcIntradayPulse(prices: OHLCV[], params: Record<string, number>): num
 }
 
 // ============================================
+// 엘리어트 파동 자동 감지
+//
+// 5파 충격(impulse) + 3파 조정(corrective) 자동 인식 휴리스틱.
+// 1) ZigZag swing 추출 (deviation 임계 기반)
+// 2) 최근 swing 시퀀스가 1-2-3-4-5 패턴 + Wave 규칙 + 피보나치 비율 만족하는지 평가
+//    - Wave 2 retracement: Wave 1 의 38.2~78.6%
+//    - Wave 3 길이 ≥ Wave 1 길이 (보통 161.8%) 이고 Wave 3 은 1·3·5 중 가장 짧지 않음
+//    - Wave 4 retracement: Wave 3 의 23.6~50%, Wave 1 끝점과 비중첩
+//    - Wave 5 길이: Wave 1 의 61.8%~161.8%
+// 3) 현재 추정 단계를 wave_number 로 노출:
+//    1~5 = 충격파 진행, 6/7/8 = 조정 A/B/C, 0 = 미확정
+//
+// 한계: 엘리어트 파동의 정확한 자동 라벨링은 학술적으로 어려운 문제.
+//       본 구현은 ZigZag 기반 휴리스틱으로 high-confidence 케이스만 매칭한다.
+//       사용자 매매 전략에서 단독 시그널보다 다른 지표(RSI/MACD 등)와 조합 권장.
+// ============================================
+
+interface ZigZagPoint {
+  index: number
+  price: number
+  type: 'high' | 'low'
+}
+
+/**
+ * ZigZag 알고리즘 — deviation 임계(%) 이상 가격이 반전하면 swing 점 확정.
+ *
+ * 마지막 잠정 extreme 은 미확정 상태 그대로 마지막 swing 으로 포함 (실시간 추적용).
+ */
+function extractZigZagSwings(prices: OHLCV[], deviationPct: number): ZigZagPoint[] {
+  if (!prices || prices.length < 3) return []
+  const threshold = deviationPct / 100
+  if (threshold <= 0) return []
+
+  const swings: ZigZagPoint[] = []
+  let pivot: ZigZagPoint = { index: 0, price: prices[0].close, type: 'low' }
+  let extreme: ZigZagPoint = pivot
+  let direction: 'up' | 'down' | null = null
+
+  for (let i = 1; i < prices.length; i++) {
+    const high = prices[i].high
+    const low = prices[i].low
+    if (direction === null) {
+      if (pivot.price > 0 && (high - pivot.price) / pivot.price >= threshold) {
+        direction = 'up'
+        extreme = { index: i, price: high, type: 'high' }
+      } else if (pivot.price > 0 && (pivot.price - low) / pivot.price >= threshold) {
+        direction = 'down'
+        extreme = { index: i, price: low, type: 'low' }
+      }
+      continue
+    }
+    if (direction === 'up') {
+      if (high > extreme.price) {
+        extreme = { index: i, price: high, type: 'high' }
+      } else if (extreme.price > 0 && (extreme.price - low) / extreme.price >= threshold) {
+        swings.push(pivot)
+        pivot = extreme
+        direction = 'down'
+        extreme = { index: i, price: low, type: 'low' }
+      }
+    } else {
+      if (low < extreme.price) {
+        extreme = { index: i, price: low, type: 'low' }
+      } else if (extreme.price > 0 && (high - extreme.price) / extreme.price >= threshold) {
+        swings.push(pivot)
+        pivot = extreme
+        direction = 'up'
+        extreme = { index: i, price: high, type: 'high' }
+      }
+    }
+  }
+  swings.push(pivot)
+  if (extreme.index !== pivot.index) swings.push(extreme)
+  return swings
+}
+
+/** 두 swing 사이 가격 변화량 (절댓값). */
+function swingDist(a: ZigZagPoint, b: ZigZagPoint): number {
+  return Math.abs(b.price - a.price)
+}
+
+function roundTo(value: number, digits: number): number {
+  const scale = 10 ** digits
+  return Math.round(value * scale) / scale
+}
+
+function hasAlternatingSwingTypes(points: ZigZagPoint[]): boolean {
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].type === points[i - 1].type) return false
+    if (points[i].index <= points[i - 1].index) return false
+  }
+  return true
+}
+
+function isTrendMove(a: ZigZagPoint, b: ZigZagPoint, trend: 'up' | 'down'): boolean {
+  return trend === 'up' ? b.price > a.price : b.price < a.price
+}
+
+function isCounterTrendMove(a: ZigZagPoint, b: ZigZagPoint, trend: 'up' | 'down'): boolean {
+  return trend === 'up' ? b.price < a.price : b.price > a.price
+}
+
+/**
+ * 5파 충격 패턴 검증.
+ *
+ * @param points 5 swing 점 (시간순)
+ * @param trend 'up' = 1·3·5 상승, 'down' = 1·3·5 하락 가정
+ * @returns 통과 시 1.0 (high confidence), 부분 통과 0~1, 실패 0
+ */
+function scoreImpulse(points: ZigZagPoint[], trend: 'up' | 'down'): number {
+  if (points.length < 5) return 0
+  if (!hasAlternatingSwingTypes(points)) return 0
+  const [p0, p1, p2, p3, p4] = points
+  // extractZigZagSwings 는 마지막 잠정 extreme 도 포함하므로
+  // p0→p1 = Wave 1, p1→p2 = Wave 2, p2→p3 = Wave 3, p3→p4 = Wave 4 진행/완료 상태를 뜻한다.
+  const w1 = swingDist(p0, p1)
+  const w2 = swingDist(p1, p2)
+  const w3 = swingDist(p2, p3)
+  const w4 = swingDist(p3, p4)
+  if (w1 <= 0 || w3 <= 0) return 0
+
+  // 방향 확인 (1·3 추세 방향)
+  if (trend === 'up') {
+    if (p1.price <= p0.price || p3.price <= p2.price) return 0
+    if (p2.price <= p0.price) return 0           // Wave 2 가 Wave 1 시작점 아래로 못 감
+    if (p3.price <= p1.price) return 0           // Wave 3 끝이 Wave 1 끝보다 위 (추세 지속)
+    if (p4.price <= p1.price) return 0           // Wave 4 가 Wave 1 끝점 아래로 못 감 (impulse 규칙)
+  } else {
+    if (p1.price >= p0.price || p3.price >= p2.price) return 0
+    if (p2.price >= p0.price) return 0
+    if (p3.price >= p1.price) return 0
+    if (p4.price >= p1.price) return 0
+  }
+
+  let score = 0.4   // 기본 통과 점수
+  // Wave 2 retracement: 38.2%~78.6% 이면 +
+  const w2Ret = w2 / w1
+  if (w2Ret >= 0.382 && w2Ret <= 0.786) score += 0.2
+  // Wave 3 길이: Wave 1 이상 이면 +, 161.8% 이상이면 추가 +
+  if (w3 >= w1 * 1.0) score += 0.15
+  if (w3 >= w1 * 1.618) score += 0.1
+  // Wave 4 retracement: 23.6%~50% 이면 +
+  const w4Ret = w4 / w3
+  if (w4Ret >= 0.236 && w4Ret <= 0.5) score += 0.15
+  return Math.min(1.0, score)
+}
+
+function scoreCompletedImpulse(points: ZigZagPoint[], trend: 'up' | 'down'): number {
+  if (points.length < 6) return 0
+  if (!hasAlternatingSwingTypes(points)) return 0
+
+  const baseScore = scoreImpulse(points.slice(0, 5), trend)
+  if (baseScore < 0.55) return 0
+
+  const [p0, p1, p2, p3, p4, p5] = points
+  const w1 = swingDist(p0, p1)
+  const w3 = swingDist(p2, p3)
+  const w5 = swingDist(p4, p5)
+  if (w1 <= 0 || w3 <= 0 || w5 <= 0) return 0
+
+  if (trend === 'up') {
+    if (!isTrendMove(p4, p5, trend) || p5.price <= p3.price) return 0
+  } else {
+    if (!isTrendMove(p4, p5, trend) || p5.price >= p3.price) return 0
+  }
+
+  let score = Math.max(baseScore, 0.6)
+  if (w5 >= w1 * 0.618 && w5 <= w1 * 1.618) score += 0.15
+  if (w3 >= Math.min(w1, w5)) score += 0.1
+  if (w3 > w1 && w3 > w5) score += 0.05
+  return Math.min(1, score)
+}
+
+function scoreCorrectiveA(points: ZigZagPoint[], trend: 'up' | 'down'): number {
+  if (points.length < 7) return 0
+  const impulseScore = scoreCompletedImpulse(points.slice(0, 6), trend)
+  if (impulseScore < 0.6) return 0
+
+  const [p0, , , , p4, p5, p6] = points
+  if (!isCounterTrendMove(p5, p6, trend)) return 0
+
+  const impulseLength = swingDist(p0, p5)
+  const waveALength = swingDist(p5, p6)
+  if (impulseLength <= 0 || waveALength <= 0) return 0
+
+  let score = 0.55
+  const retracement = waveALength / impulseLength
+  if (retracement >= 0.236 && retracement <= 0.786) score += 0.2
+  if (trend === 'up' ? p6.price > p4.price : p6.price < p4.price) score += 0.1
+  score += Math.min(0.15, impulseScore * 0.15)
+  return Math.min(1, score)
+}
+
+function scoreCorrectiveB(points: ZigZagPoint[], trend: 'up' | 'down'): number {
+  if (points.length < 8) return 0
+  const waveAScore = scoreCorrectiveA(points.slice(0, 7), trend)
+  if (waveAScore < 0.6) return 0
+
+  const [, , , , , p5, p6, p7] = points
+  if (!isTrendMove(p6, p7, trend)) return 0
+
+  const waveA = swingDist(p5, p6)
+  const waveB = swingDist(p6, p7)
+  if (waveA <= 0 || waveB <= 0) return 0
+
+  let score = 0.55
+  const retracement = waveB / waveA
+  if (retracement >= 0.236 && retracement <= 0.886) score += 0.2
+  if (trend === 'up' ? p7.price < p5.price : p7.price > p5.price) score += 0.1
+  score += Math.min(0.15, waveAScore * 0.15)
+  return Math.min(1, score)
+}
+
+function scoreCorrectiveC(points: ZigZagPoint[], trend: 'up' | 'down'): number {
+  if (points.length < 9) return 0
+  const waveBScore = scoreCorrectiveB(points.slice(0, 8), trend)
+  if (waveBScore < 0.6) return 0
+
+  const [, , , , , , p6, p7, p8] = points
+  if (!isCounterTrendMove(p7, p8, trend)) return 0
+
+  const waveA = swingDist(points[5], p6)
+  const waveC = swingDist(p7, p8)
+  if (waveA <= 0 || waveC <= 0) return 0
+
+  let score = 0.6
+  const extension = waveC / waveA
+  if (extension >= 0.618 && extension <= 1.618) score += 0.2
+  if (trend === 'up' ? p8.price < p6.price : p8.price > p6.price) score += 0.1
+  score += Math.min(0.1, waveBScore * 0.1)
+  return Math.min(1, score)
+}
+
+/**
+ * 현재 시점 엘리어트 파동 위치 추정.
+ *
+ * extractZigZagSwings 가 마지막 잠정 extreme 도 포함하므로
+ * 2~9 swing 을 각각 Wave 1 진행, 2, 3, 4, 5, A, B, C 단계 후보로 본다.
+ * 가장 긴(더 완성된) 패턴부터 검사해 매칭이 강한 후보를 채택한다.
+ */
+function analyzeElliottPosition(swings: ZigZagPoint[]): {
+  waveNumber: number
+  direction: number
+  confidence: number
+  retracement: number
+} {
+  if (swings.length < 2) {
+    return { waveNumber: 0, direction: 0, confidence: 0, retracement: 0 }
+  }
+
+  const candidates = swings.slice(-9)
+  if (!hasAlternatingSwingTypes(candidates)) {
+    return { waveNumber: 0, direction: 0, confidence: 0, retracement: 0 }
+  }
+
+  const trend: 'up' | 'down' = candidates[1].price > candidates[0].price ? 'up' : 'down'
+  const direction = trend === 'up' ? 1 : -1
+  const n = candidates.length
+
+  if (n >= 9) {
+    const recent = candidates.slice(-9)
+    const score = scoreCorrectiveC(recent, trend)
+    if (score >= 0.6) {
+      const ratio = swingDist(recent[7], recent[8]) / Math.max(1e-9, swingDist(recent[5], recent[6]))
+      return {
+        waveNumber: 8,
+        direction,
+        confidence: Math.round(score * 100),
+        retracement: roundTo(ratio, 3),
+      }
+    }
+  }
+
+  if (n >= 8) {
+    const recent = candidates.slice(-8)
+    const score = scoreCorrectiveB(recent, trend)
+    if (score >= 0.6) {
+      const ratio = swingDist(recent[6], recent[7]) / Math.max(1e-9, swingDist(recent[5], recent[6]))
+      return {
+        waveNumber: 7,
+        direction,
+        confidence: Math.round(score * 100),
+        retracement: roundTo(ratio, 3),
+      }
+    }
+  }
+
+  if (n >= 7) {
+    const recent = candidates.slice(-7)
+    const score = scoreCorrectiveA(recent, trend)
+    if (score >= 0.6) {
+      const ratio = swingDist(recent[5], recent[6]) / Math.max(1e-9, swingDist(recent[0], recent[5]))
+      return {
+        waveNumber: 6,
+        direction,
+        confidence: Math.round(score * 100),
+        retracement: roundTo(ratio, 3),
+      }
+    }
+  }
+
+  if (n >= 6) {
+    const recent = candidates.slice(-6)
+    const score = scoreCompletedImpulse(recent, trend)
+    if (score >= 0.6) {
+      const ratio = swingDist(recent[4], recent[5]) / Math.max(1e-9, swingDist(recent[0], recent[1]))
+      return {
+        waveNumber: 5,
+        direction,
+        confidence: Math.round(score * 100),
+        retracement: roundTo(ratio, 3),
+      }
+    }
+  }
+
+  if (n >= 5) {
+    const recent = candidates.slice(-5)
+    const score = scoreImpulse(recent, trend)
+    if (score >= 0.55) {
+      const ratio = swingDist(recent[3], recent[4]) / Math.max(1e-9, swingDist(recent[2], recent[3]))
+      return {
+        waveNumber: 4,
+        direction,
+        confidence: Math.round(score * 100),
+        retracement: roundTo(ratio, 3),
+      }
+    }
+  }
+
+  if (n >= 4) {
+    const recent = candidates.slice(-4)
+    const [p0, p1, p2, p3] = recent
+    const w1 = swingDist(p0, p1)
+    const w2 = swingDist(p1, p2)
+    const w3 = swingDist(p2, p3)
+    if (w1 > 0 && w2 > 0 && w3 > 0 && isTrendMove(p0, p1, trend) && isCounterTrendMove(p1, p2, trend) && isTrendMove(p2, p3, trend)) {
+      const w2Ret = w2 / w1
+      const validRetracement = w2Ret >= 0.236 && w2Ret <= 0.886
+      const wave3Breakout = trend === 'up' ? p3.price > p1.price : p3.price < p1.price
+      if (validRetracement && wave3Breakout) {
+        let score = 0.45
+        if (w3 >= w1) score += 0.15
+        if (w3 >= w1 * 1.618) score += 0.15
+        if (w2Ret >= 0.382 && w2Ret <= 0.786) score += 0.15
+        return {
+          waveNumber: 3,
+          direction,
+          confidence: Math.round(Math.min(0.95, score) * 100),
+          retracement: roundTo(w2Ret, 3),
+        }
+      }
+    }
+  }
+
+  if (n >= 3) {
+    const recent = candidates.slice(-3)
+    const [p0, p1, p2] = recent
+    const w1 = swingDist(p0, p1)
+    const w2 = swingDist(p1, p2)
+    if (w1 > 0 && w2 > 0 && isTrendMove(p0, p1, trend) && isCounterTrendMove(p1, p2, trend)) {
+      const w2Ret = w2 / w1
+      const wave2Valid = (trend === 'up' ? p2.price > p0.price : p2.price < p0.price) && w2Ret <= 0.886
+      if (wave2Valid) {
+        const score = w2Ret >= 0.382 && w2Ret <= 0.786 ? 0.7 : 0.5
+        return {
+          waveNumber: 2,
+          direction,
+          confidence: Math.round(score * 100),
+          retracement: roundTo(w2Ret, 3),
+        }
+      }
+    }
+  }
+
+  if (n >= 2) {
+    const [p0, p1] = candidates.slice(-2)
+    if (p1.price !== p0.price) {
+      return {
+        waveNumber: 1,
+        direction,
+        confidence: 35,
+        retracement: 0,
+      }
+    }
+  }
+
+  return { waveNumber: 0, direction: 0, confidence: 0, retracement: 0 }
+}
+
+/**
+ * 엘리어트 파동 지표 계산.
+ *
+ * 출력 (각 봉마다):
+ *   - wave_number: 0=미확정, 1~5=충격파 진행 단계, 6=Wave A, 7=Wave B, 8=Wave C
+ *   - direction: 1=상승(impulse up), -1=하락(impulse down), 0=미확정
+ *   - confidence: 0~100 패턴 신뢰도
+ *   - retracement: 마지막 조정파의 retracement 비율 (없으면 0)
+ *
+ * 매매 활용 예시:
+ *   - Wave 3 진입 매수: wave_number == 3 AND direction == 1 AND confidence >= 60
+ *   - Wave 4 종료 후 Wave 5 매수: wave_number == 4 AND direction == 1
+ *   - Wave 5 종료 매도: wave_number == 5 AND direction == 1
+ */
+function calcElliott(prices: OHLCV[], params: Record<string, number>): Record<string, number>[] {
+  const deviationPct = Math.max(0.5, Math.min(15, params.deviationPct ?? 3))
+  const lookback = Math.max(20, Math.min(300, Math.floor(params.lookback ?? 80)))
+  const n = prices.length
+  const result: Record<string, number>[] = []
+
+  for (let i = 0; i < n; i++) {
+    if (i < 10) {
+      result.push({ wave_number: 0, direction: 0, confidence: 0, retracement: 0 })
+      continue
+    }
+    const start = Math.max(0, i - lookback + 1)
+    const window = prices.slice(start, i + 1)
+    const swings = extractZigZagSwings(window, deviationPct)
+    const analysis = analyzeElliottPosition(swings)
+    result.push({
+      wave_number: analysis.waveNumber,
+      direction: analysis.direction,
+      confidence: analysis.confidence,
+      retracement: analysis.retracement,
+    })
+  }
+  return result
+}
+
+// ============================================
 // 지표 계산기 매핑
 // ============================================
 
@@ -733,6 +1162,7 @@ const INDICATOR_CALCULATORS: Record<IndicatorType, (prices: OHLCV[], params: Rec
   LARGE_BLOCK: calcLargeBlock,
   CLOSING_PRESSURE: calcClosingPressure,
   INTRADAY_PULSE: calcIntradayPulse,
+  ELLIOTT: calcElliott,
 }
 
 // ============================================

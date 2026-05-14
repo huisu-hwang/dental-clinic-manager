@@ -72,6 +72,8 @@ export type IndicatorType =
   | 'LARGE_BLOCK'       // 대형 거래 감지 (현재 봉 거래량 / 최근 N봉 평균 비율)
   | 'CLOSING_PRESSURE'  // 장 마감 압박 (마감 N봉 거래량 점유율 %)
   | 'INTRADAY_PULSE'    // 분봉판 일일 펄스 (-100~+100)
+  // ===== 파동 이론 (Wave Theory) =====
+  | 'ELLIOTT'           // 엘리어트 파동 자동 감지 (현재 추정 wave_number / direction / confidence)
 
 /** 전략 모드: swing(일봉/스윙) vs daytrading(분봉/단타) */
 export type StrategyMode = 'swing' | 'daytrading'

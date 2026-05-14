@@ -29,6 +29,7 @@ const INDICATOR_PROPERTIES: Record<string, string[]> = {
   BB: ['upper', 'middle', 'lower'],
   STOCH: ['k', 'd'],
   ADX: ['adx', 'pdi', 'mdi'],
+  ELLIOTT: ['wave_number', 'direction', 'confidence', 'retracement'],
 }
 
 function getAvailableRefs(indicators: IndicatorConfig[]): { value: string; label: string; ref: IndicatorRef }[] {

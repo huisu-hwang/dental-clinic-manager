@@ -7,12 +7,14 @@
  *
  * 패턴:
  * - Spring   : 직전 LOOKBACK 봉의 저점을 (RANGE_MIN ~ RANGE_MAX) 비율로 깨고
- *              같은/다음 봉에서 close가 직전저점 위로 회복 + 거래량 평균 대비 N배↑
- * - Upthrust : 직전 LOOKBACK 봉의 고점을 같은 비율로 돌파 후 즉시 회복 실패
- *              (close < 직전고점) + 거래량 평균 대비 N배↑
+ *              같은/다음 봉에서 close가 직전저점 위로 회복
+ * - Upthrust : 직전 LOOKBACK 봉의 고점을 같은 비율로 돌파 후
+ *              같은/다음 봉에서 close가 직전고점 아래로 복귀
  * - Absorption: 거래량 z-score ≥ VOL_Z, 가격 변화율 절댓값 < PRICE_THRESHOLD
  *
- * 검사 방식: 최근 SCAN_WINDOW 봉을 슬라이딩하며 Spring/Upthrust는 OR, Absorption은 best score.
+ * 검사 방식: 최근 SCAN_WINDOW 봉을 슬라이딩하며 Spring/Upthrust는
+ *            '범위 이탈 + 즉시 복귀'를 우선 보고, 거래량 증가는 보조 증거로만 사용한다.
+ *            Absorption은 best score.
  */
 
 import type { WyckoffResult } from '@/types/smartMoney'
@@ -117,24 +119,31 @@ export function detectWyckoff(
     const stdVol = window.length > 0 ? Math.sqrt(varSum / window.length) : 0
 
     const isVolSpike = avgVol > 0 && target.volume >= avgVol * base.volumeSpikeMult
+    const nextBar = i + 1 < bars.length ? bars[i + 1] : null
 
-    if (!springDetected && prevLow > 0 && isVolSpike) {
+    if (!springDetected && prevLow > 0) {
       const breakRatio = (prevLow - target.low) / prevLow
+      const reclaimedSameBar = target.close > prevLow
+      const reclaimedNextBar = nextBar ? nextBar.close > prevLow : false
       if (
         breakRatio >= base.springRangeMin &&
         breakRatio <= base.springRangeMax &&
-        target.close > prevLow
+        (reclaimedSameBar || reclaimedNextBar) &&
+        (isVolSpike || reclaimedNextBar)
       ) {
         springDetected = true
       }
     }
 
-    if (!upthrustDetected && prevHigh > 0 && isVolSpike) {
+    if (!upthrustDetected && prevHigh > 0) {
       const breakoutRatio = (target.high - prevHigh) / prevHigh
+      const failedSameBar = target.close < prevHigh
+      const failedNextBar = nextBar ? nextBar.close < prevHigh : false
       if (
         breakoutRatio >= base.springRangeMin &&
         breakoutRatio <= base.springRangeMax &&
-        target.close < prevHigh
+        (failedSameBar || failedNextBar) &&
+        (isVolSpike || failedNextBar)
       ) {
         upthrustDetected = true
       }

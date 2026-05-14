@@ -50,11 +50,23 @@ import { analyzeSession, type SessionBar } from '@/lib/smartMoney/sessionAnalyze
 import { analyzeNewsContext, type NewsBar } from '@/lib/smartMoney/newsContextEngine'
 import type { Market, OHLCV } from '@/types/investment'
 import type {
+  AlgoFootprintResult,
   SmartMoneyAnalysis,
   SmartMoneyAlert,
   InvestorTrendRow,
   InvestorFlowResult,
   DailyAnalysis,
+  LiquidityResult,
+  MarketStructureResult,
+  NewsContextResult,
+  OrderBlockFvgResult,
+  SessionResult,
+  SmartMoneyAnalyzeErrorResponse,
+  TrapResult,
+  VSAResult,
+  VWAPResult,
+  WyckoffPhaseResult,
+  WyckoffResult,
 } from '@/types/smartMoney'
 
 export const dynamic = 'force-dynamic'
@@ -102,6 +114,18 @@ interface AnalysisResponse extends SmartMoneyAnalysis {
   newsSignalIntegration?: 'active' | 'inactive'
 }
 
+function errorResponse(
+  status: number,
+  error: string,
+  code: string,
+  reason?: string
+) {
+  const payload: SmartMoneyAnalyzeErrorResponse = reason
+    ? { error, code, reason }
+    : { error, code }
+  return NextResponse.json(payload, { status })
+}
+
 // ============================================
 // 메인 핸들러
 // ============================================
@@ -110,7 +134,7 @@ export async function POST(request: NextRequest) {
   // 1. 인증
   const auth = await requireAuth()
   if (auth.error || !auth.user) {
-    return NextResponse.json({ error: auth.error ?? '인증 실패' }, { status: auth.status })
+    return errorResponse(auth.status, auth.error ?? '인증 실패', 'AUTH_REQUIRED')
   }
   const userId = auth.user.id
 
@@ -119,7 +143,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: '요청 본문이 올바르지 않습니다.' }, { status: 400 })
+    return errorResponse(400, '요청 본문이 올바르지 않습니다.', 'INVALID_JSON')
   }
 
   const ticker = typeof body.ticker === 'string' ? body.ticker.trim().toUpperCase() : ''
@@ -129,15 +153,15 @@ export async function POST(request: NextRequest) {
   const includePreMarket = Boolean(body.includePreMarket) && market === 'US'
 
   if (!ticker) {
-    return NextResponse.json({ error: 'ticker는 필수입니다.' }, { status: 400 })
+    return errorResponse(400, 'ticker는 필수입니다.', 'INVALID_TICKER')
   }
   if (!market) {
-    return NextResponse.json({ error: 'market은 KR 또는 US여야 합니다.' }, { status: 400 })
+    return errorResponse(400, 'market은 KR 또는 US여야 합니다.', 'INVALID_MARKET')
   }
 
   const supabase = getSupabaseAdmin()
   if (!supabase) {
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    return errorResponse(500, 'Server configuration error', 'SERVER_CONFIG_ERROR')
   }
 
   // 3. KIS credential (KR엔 필수, US엔 옵션)
@@ -222,8 +246,8 @@ export async function POST(request: NextRequest) {
           credentialId: kisCredential.credentialId,
           credential: krCredential,
           ticker,
-          startDate: toKisDateString(past),
-          endDate: toKisDateString(today),
+          startDate: toKisDateString(past, 'KR'),
+          endDate: toKisDateString(today, 'KR'),
         })
         dailyBars = krDailyBars.map((b) => ({
           datetime: b.date,
@@ -287,7 +311,12 @@ export async function POST(request: NextRequest) {
         const todayD = new Date()
         const pastD = new Date()
         pastD.setDate(pastD.getDate() - 90)
-        const daily = await fetchPrices(ticker, yMarket, toDateString(pastD), toDateString(todayD))
+        const daily = await fetchPrices(
+          ticker,
+          yMarket,
+          marketDateString(pastD, market),
+          marketDateString(todayD, market),
+        )
         if (daily && daily.length > 0) {
           dailyBars = daily.map((b) => ({
             datetime: b.date,
@@ -321,16 +350,14 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : '시장 데이터 조회 실패'
     console.error('[smart-money/analyze] 데이터 수집 실패:', err)
-    return NextResponse.json(
-      { error: `시장 데이터 조회 실패: ${message}`, reason: message },
-      { status: 502 }
-    )
+    return errorResponse(502, `시장 데이터 조회 실패: ${message}`, 'MARKET_DATA_FETCH_FAILED', message)
   }
 
   if (bars.length === 0 && dailyBars.length === 0) {
-    return NextResponse.json(
-      { error: '분봉/일봉 데이터를 모두 받지 못했습니다. 종목 코드를 확인해주세요.' },
-      { status: 422 }
+    return errorResponse(
+      422,
+      '분봉/일봉 데이터를 모두 받지 못했습니다. 종목 코드를 확인해주세요.',
+      'NO_MARKET_DATA'
     )
   }
   const regularBars = bars.filter((b) => isRegularTradingHours(b.datetime, market))
@@ -340,8 +367,25 @@ export async function POST(request: NextRequest) {
       : []
 
   // 5. 엔진 호출
-  let vwap, wyckoff, wyckoffIntraday, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
-  let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
+  let vwap: VWAPResult
+  let wyckoff: WyckoffResult
+  let wyckoffIntraday: WyckoffResult | undefined
+  let algoFootprint: AlgoFootprintResult
+  let investorFlow: InvestorFlowResult | null
+  let scoreResult: {
+    overallScore: number
+    interpretation: SmartMoneyAnalysis['interpretation']
+    signalDetails: SmartMoneyAnalysis['signalDetails']
+    manipulationRiskScore: number
+  }
+  let wyckoffPhase: WyckoffPhaseResult | undefined
+  let liquidity: LiquidityResult | undefined
+  let marketStructure: MarketStructureResult | undefined
+  let orderBlocksFvg: OrderBlockFvgResult | undefined
+  let traps: TrapResult | undefined
+  let vsa: VSAResult | undefined
+  let session: SessionResult | undefined
+  let newsContext: NewsContextResult | undefined
   let byDay: DailyAnalysis[] = []
   try {
     // ================================================================
@@ -680,7 +724,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : '분석 엔진 실패'
     console.error('[smart-money/analyze] 엔진 실행 실패:', err)
-    return NextResponse.json({ error: `분석 실패: ${message}` }, { status: 500 })
+    return errorResponse(500, `분석 실패: ${message}`, 'ANALYSIS_ENGINE_FAILED', message)
   }
 
   // recent20DayHigh/Low — UI display용 (현재는 noop, 향후 사용 가능)
@@ -711,7 +755,7 @@ export async function POST(request: NextRequest) {
     newsContext = preferredByDay.newsContext
     scoreResult = {
       ...scoreResult,
-      manipulationRiskScore: preferredByDay.manipulationRiskScore,
+      manipulationRiskScore: preferredByDay.manipulationRiskScore ?? scoreResult.manipulationRiskScore,
       overallScore: preferredByDay.overallScore,
       interpretation: preferredByDay.interpretation,
       signalDetails: preferredByDay.signalDetails,
@@ -1067,7 +1111,24 @@ async function processAlerts(
 // 헬퍼: 날짜 포맷
 // ============================================
 
-function toDateString(d: Date): string {
+function formatDateInTimeZone(d: Date, timeZone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(d)
+    const year = parts.find((part) => part.type === 'year')?.value
+    const month = parts.find((part) => part.type === 'month')?.value
+    const day = parts.find((part) => part.type === 'day')?.value
+    if (year && month && day) {
+      return `${year}-${month}-${day}`
+    }
+  } catch {
+    // fall through to local date formatting
+  }
+
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -1077,15 +1138,9 @@ function toDateString(d: Date): string {
 function marketDateString(d: Date, market: Market): string {
   const tz = market === 'US' ? 'America/New_York' : 'Asia/Seoul'
   try {
-    const fmt = new Intl.DateTimeFormat('en-CA', {
-      timeZone: tz,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    return fmt.format(d)
+    return formatDateInTimeZone(d, tz)
   } catch {
-    return market === 'KR' ? toKstDateString(d) : toDateString(d)
+    return market === 'KR' ? toKstDateString(d) : formatDateInTimeZone(d, 'UTC')
   }
 }
 
@@ -1098,9 +1153,9 @@ function toKstDateString(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-function toKisDateString(d: Date): string {
+function toKisDateString(d: Date, market: Extract<Market, 'KR'> = 'KR'): string {
   // KIS는 YYYYMMDD 포맷
-  return toDateString(d).replace(/-/g, '')
+  return marketDateString(d, market).replace(/-/g, '')
 }
 
 /**

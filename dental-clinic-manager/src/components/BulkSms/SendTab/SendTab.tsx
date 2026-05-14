@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import PatientFilterPanel from './PatientFilterPanel'
 import PatientSelectionList from './PatientSelectionList'
 import RecallExcludeToggle from './RecallExcludeToggle'
@@ -9,11 +9,12 @@ import SendActionBar from './SendActionBar'
 import SendConfirmDialog from './SendConfirmDialog'
 import type { BulkSmsFilter, BulkSmsEligiblePatient } from '@/types/bulkSms'
 
+// 진입 시 기본값: "오늘 생일자" 자동 조회 — 데스크의 주요 use case
 const INITIAL_FILTER: BulkSmsFilter = {
   gender: 'all', ageMin: null, ageMax: null,
   lastVisitFrom: null, lastVisitTo: null,
   lastTreatmentTypes: [], hasNextAppointment: null,
-  birthMonths: [], searchKeyword: '', activeOnly: true,
+  birthMonths: [], birthToday: true, searchKeyword: '', activeOnly: true,
 }
 
 export default function SendTab() {
@@ -31,7 +32,7 @@ export default function SendTab() {
   const [pendingScheduledAt, setPendingScheduledAt] = useState<string | undefined>()
   const [sending, setSending] = useState(false)
 
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch('/api/bulk-sms/patients', {
@@ -51,7 +52,15 @@ export default function SendTab() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter, excludeRecall])
+
+  // 진입 시 1회 자동 조회 (기본 필터 = 오늘 생일자)
+  const didAutoLoadRef = useRef(false)
+  useEffect(() => {
+    if (didAutoLoadRef.current) return
+    didAutoLoadRef.current = true
+    fetchPatients()
+  }, [fetchPatients])
 
   const toggleOne = (id: string) => {
     const next = new Set(selectedIds)
