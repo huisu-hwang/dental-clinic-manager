@@ -355,4 +355,40 @@ export const PRESET_METADATA: Record<string, PresetMetadata> = {
     ],
     source: 'Constance Brown (1999, "Technical Analysis for the Trading Professional")',
   },
+  'elliott-wave3-entry': {
+    longDescription:
+      'Ralph Nelson Elliott (1938) 의 파동 이론 — 가격은 5파 충격(impulse) + 3파 조정(corrective) 사이클로 움직인다는 가정. 본 전략은 ZigZag(3%) 기반으로 1·2파를 자동 인식한 뒤 2파 조정 종료를 RSI 회복(>50)과 결합해 3파 시작 시점에 진입한다. 3파는 통상 가장 길고 강한 상승파(Wave 1 의 1.618배 내외)이므로 추세 추종 전략의 핵심 진입점이다. 5파 완료(엘리어트 패턴 매칭 신뢰도) 또는 RSI 과매수(>75) 시 매도.',
+    bestFor: ['추세 종목 (성장주·테크 대형주)', '시장 전반 강세 국면', '거래량 풍부한 우량주'],
+    marketConditions: ['weak-uptrend', 'strong-uptrend'],
+    typicalHolding: '2주~2개월',
+    pros: [
+      '추세 초입에서 진입 가능 (3파 = 최강 상승)',
+      '피보나치 비율 검증으로 false signal 감소',
+      '엘리어트 규칙(Wave 2 ≤ 86%, Wave 3 ≥ Wave 1)으로 명확한 진입 기준',
+    ],
+    cons: [
+      '엘리어트 파동 자동 인식 자체가 휴리스틱 — 학술적으로 어려운 문제',
+      '횡보장에서는 swing 패턴이 모호해 false positive',
+      '5파 완료 판정이 늦어 차익 일부 반납 가능',
+    ],
+    source: 'Ralph Nelson Elliott (1938, "The Wave Principle"), Robert Prechter (1978, "Elliott Wave Principle")',
+  },
+  'elliott-wave4-pullback': {
+    longDescription:
+      '엘리어트 3파 상승 후 4파 조정이 진행되는 동안 RSI 둔화(<50) + 4파 인식 + 상승 방향 일치를 만족하면 5파 상승을 노리고 매수. 보수적 엘리어트 전략 — 3파 진입을 놓쳤거나 더 안전한 진입을 원할 때 사용. 5파 인식 또는 RSI 과매수(>70) 시 매도. 4파는 보통 Wave 3 의 23.6~50% 되돌림 구간.',
+    bestFor: ['이미 명확한 상승 추세에 있는 종목', '대형주·우량주', '거래량 안정적인 종목'],
+    marketConditions: ['weak-uptrend', 'strong-uptrend'],
+    typicalHolding: '2주~1.5개월',
+    pros: [
+      '3파 추격 매수 대비 진입가가 낮음 (조정 활용)',
+      '엘리어트 비중첩 규칙(Wave 4 vs Wave 1) 으로 손절 폭 명확',
+      'RSI 둔화 조건으로 가격 안정성 확보',
+    ],
+    cons: [
+      '4파 조정이 깊어지면 손절 발생 위험',
+      '5파가 짧거나 truncation(미완성) 시 수익률 제한적',
+      '엘리어트 패턴이 일찍 무효화되면 손실 누적',
+    ],
+    source: 'Ralph Nelson Elliott (1938, "The Wave Principle"), A.J. Frost & Robert Prechter (1978)',
+  },
 }

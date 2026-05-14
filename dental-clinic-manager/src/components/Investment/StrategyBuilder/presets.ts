@@ -1623,4 +1623,126 @@ export const PRESET_STRATEGIES: PresetStrategy[] = [
       maxHoldingDays: 30,
     },
   },
+  // ============================================
+  // 엘리어트 파동 (Elliott Wave Theory) 기반
+  // ============================================
+  {
+    id: 'elliott-wave3-entry',
+    name: '엘리어트 3파 진입',
+    description: '엘리어트 파동에서 2파 조정 후 3파 시작 시점에 매수. 3파는 가장 길고 강한 상승 — 추세 추종의 핵심 진입점. 5파 완료 추정 시 매도.',
+    indicators: [
+      { id: 'ELLIOTT_3_80', type: 'ELLIOTT', params: { deviationPct: 3, lookback: 80 } },
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'ELLIOTT_3_80', property: 'wave_number' },
+          operator: '==',
+          right: { type: 'constant', value: 3 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'ELLIOTT_3_80', property: 'direction' },
+          operator: '==',
+          right: { type: 'constant', value: 1 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'ELLIOTT_3_80', property: 'confidence' },
+          operator: '>=',
+          right: { type: 'constant', value: 60 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 50 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'ELLIOTT_3_80', property: 'wave_number' },
+          operator: '==',
+          right: { type: 'constant', value: 5 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 75 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 6,
+      takeProfitPercent: 18,
+      maxHoldingDays: 60,
+    },
+  },
+  {
+    id: 'elliott-wave4-pullback',
+    name: '엘리어트 4파 눌림목 매수',
+    description: '엘리어트 3파 후 4파 조정이 완료되는 지점에서 5파 상승을 노리고 매수. 보수적 추세 동참 — 4파 매수 후 5파 종료(또는 조정파 A 진입) 시 매도.',
+    indicators: [
+      { id: 'ELLIOTT_3_80', type: 'ELLIOTT', params: { deviationPct: 3, lookback: 80 } },
+      { id: 'RSI_14', type: 'RSI', params: { period: 14 } },
+      { id: 'EMA_20', type: 'EMA', params: { period: 20 } },
+    ],
+    buyConditions: {
+      type: 'group',
+      operator: 'AND',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'ELLIOTT_3_80', property: 'wave_number' },
+          operator: '==',
+          right: { type: 'constant', value: 4 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'ELLIOTT_3_80', property: 'direction' },
+          operator: '==',
+          right: { type: 'constant', value: 1 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '<',
+          right: { type: 'constant', value: 50 },
+        },
+      ],
+    },
+    sellConditions: {
+      type: 'group',
+      operator: 'OR',
+      conditions: [
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'ELLIOTT_3_80', property: 'wave_number' },
+          operator: '==',
+          right: { type: 'constant', value: 5 },
+        },
+        {
+          type: 'leaf',
+          left: { type: 'indicator', id: 'RSI_14' },
+          operator: '>',
+          right: { type: 'constant', value: 70 },
+        },
+      ],
+    },
+    riskSettings: {
+      stopLossPercent: 5,
+      takeProfitPercent: 14,
+      maxHoldingDays: 45,
+    },
+  },
 ]

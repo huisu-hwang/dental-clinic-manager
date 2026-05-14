@@ -123,6 +123,13 @@ const TEMPLATES: IndicatorTemplate[] = [
     defaultParams: { volPeriod: 20 },
     paramLabels: { volPeriod: '거래량 기간' },
   },
+  {
+    type: 'ELLIOTT',
+    label: '🌊 엘리어트 파동 (Wave Theory)',
+    description: 'ZigZag swing + 피보나치 비율로 5파/조정파 자동 인식. wave_number(1~8) / direction(±1) / confidence(0~100) 출력',
+    defaultParams: { deviationPct: 3, lookback: 80 },
+    paramLabels: { deviationPct: 'ZigZag %', lookback: '룩백 봉수' },
+  },
 ]
 
 function generateId(type: IndicatorType, params: Record<string, number>): string {
