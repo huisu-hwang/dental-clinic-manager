@@ -40,7 +40,7 @@
     },
     {
       "path": "/api/cron/bulk-sms",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
