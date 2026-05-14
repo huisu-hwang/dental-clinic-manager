@@ -234,4 +234,107 @@ export async function sendBatch(params: {
   }
 }
 
+// 캠페인 발송 실행 (즉시 + Cron 공용)
+// 전제: 호출 전에 bulk_sms_campaigns.status='sending'으로 점유되어 있어야 함
+export async function sendCampaign(
+  supabase: SupabaseClient,
+  campaignId: string
+): Promise<{ success: number; fail: number }> {
+  // 캠페인 + 수신자 + aligo 설정 로드
+  const { data: campaign, error: cErr } = await supabase
+    .from('bulk_sms_campaigns')
+    .select('id, clinic_id, message, msg_type, title')
+    .eq('id', campaignId)
+    .single()
+  if (cErr || !campaign) throw new Error('캠페인을 찾을 수 없습니다')
+
+  const { data: aligo } = await supabase
+    .from('aligo_settings')
+    .select('api_key, user_id, sender_number')
+    .eq('clinic_id', campaign.clinic_id)
+    .single()
+  if (!aligo?.api_key || !aligo.user_id || !aligo.sender_number) {
+    await supabase.from('bulk_sms_campaigns')
+      .update({ status: 'failed', completed_at: new Date().toISOString() })
+      .eq('id', campaignId)
+    throw new Error('알리고 설정이 없습니다')
+  }
+
+  const { data: recipients, error: rErr } = await supabase
+    .from('bulk_sms_recipients')
+    .select('id, phone_number, personalized_message')
+    .eq('campaign_id', campaignId)
+    .eq('status', 'pending')
+  if (rErr) throw new Error(rErr.message)
+  if (!recipients || recipients.length === 0) {
+    await supabase.from('bulk_sms_campaigns')
+      .update({ status: 'sent', completed_at: new Date().toISOString() })
+      .eq('id', campaignId)
+    return { success: 0, fail: 0 }
+  }
+
+  // 본문이 동일한 그룹(변수 미사용)은 1회 호출, 그 외는 개별 호출
+  // 동일 메시지 그룹화
+  const byMessage = new Map<string, Array<{ id: string; phone: string }>>()
+  const recipientRows = recipients as Array<{ id: string; phone_number: string; personalized_message: string }>
+  for (let idx = 0; idx < recipientRows.length; idx++) {
+    const r = recipientRows[idx]
+    const arr = byMessage.get(r.personalized_message) ?? []
+    arr.push({ id: r.id, phone: r.phone_number })
+    byMessage.set(r.personalized_message, arr)
+  }
+
+  let totalSuccess = 0
+  let totalFail = 0
+  const nowIso = new Date().toISOString()
+
+  const msgType = campaign.msg_type as 'SMS' | 'LMS'
+  byMessage.forEach((group, message) => {
+    // 1,000명 단위 분할 처리는 Promise.all로 병렬 처리를 위해 async 지연
+  })
+
+  // 메시지별 처리
+  for (const messageKey of Array.from(byMessage.keys())) {
+    const group = byMessage.get(messageKey)!
+    // 1,000명 단위 분할
+    for (let i = 0; i < group.length; i += ALIGO_BATCH_SIZE) {
+      const batch = group.slice(i, i + ALIGO_BATCH_SIZE)
+      const result = await sendBatch({
+        apiKey: aligo.api_key,
+        userId: aligo.user_id,
+        sender: aligo.sender_number,
+        receivers: batch.map(b => normalizePhone(b.phone)),
+        message: messageKey,
+        msgType,
+        title: campaign.title || undefined,
+      })
+
+      if (result.ok) {
+        // 알리고는 batch 단위로 결과를 주므로 전부 success 로 표시
+        await supabase.from('bulk_sms_recipients')
+          .update({ status: 'success', aligo_msg_id: result.msg_id ?? null, sent_at: nowIso })
+          .in('id', batch.map(b => b.id))
+        totalSuccess += batch.length
+      } else {
+        await supabase.from('bulk_sms_recipients')
+          .update({ status: 'failed', error_message: result.error ?? 'unknown', sent_at: nowIso })
+          .in('id', batch.map(b => b.id))
+        totalFail += batch.length
+      }
+    }
+  }
+
+  const finalStatus = totalFail > 0 && totalSuccess === 0 ? 'failed' : 'sent'
+  await supabase.from('bulk_sms_campaigns')
+    .update({
+      status: finalStatus,
+      success_count: totalSuccess,
+      fail_count: totalFail,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', campaignId)
+
+  return { success: totalSuccess, fail: totalFail }
+}
+
 export { ALIGO_BATCH_SIZE, SMS_BYTE_LIMIT }
