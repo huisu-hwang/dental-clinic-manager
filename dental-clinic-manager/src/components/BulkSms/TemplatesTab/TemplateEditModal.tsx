@@ -59,14 +59,14 @@ export default function TemplateEditModal({ open, template, onClose, onSaved }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--at-border)]">
           <h2 className="text-lg font-semibold">
             {template ? '템플릿 수정' : '템플릿 추가'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-[var(--at-text-weak)] hover:text-[var(--at-text-secondary)]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -74,19 +74,19 @@ export default function TemplateEditModal({ open, template, onClose, onSaved }: 
 
         <div className="p-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-[var(--at-text-primary)] mb-1">
               이름
             </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: 정기 검진 안내"
-              className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-1.5 border border-[var(--at-border)] rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-[var(--at-text-primary)] mb-1">
               내용 (변수: {'{환자명}'}, {'{병원명}'}, {'{전화번호}'})
             </label>
             <textarea
@@ -94,7 +94,7 @@ export default function TemplateEditModal({ open, template, onClose, onSaved }: 
               onChange={(e) => setContent(e.target.value)}
               placeholder="예: {환자명}님, 안녕하세요. {병원명}입니다."
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 border border-[var(--at-border)] rounded-lg text-sm font-mono focus:outline-none focus:border-blue-500"
             />
             <div className="mt-1 flex justify-end">
               <MessageByteCounter text={content} />
@@ -106,24 +106,24 @@ export default function TemplateEditModal({ open, template, onClose, onSaved }: 
               type="checkbox"
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
-              className="w-4 h-4 border-gray-300 rounded"
+              className="w-4 h-4 border-[var(--at-border)] rounded"
             />
             <span>기본 템플릿으로 설정</span>
           </label>
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+        <div className="px-4 py-3 border-t border-[var(--at-border)] flex justify-end gap-2">
           <button
             onClick={onClose}
             disabled={saving}
-            className="px-3 py-1.5 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+            className="px-3 py-1.5 text-sm rounded-lg border border-[var(--at-border)] hover:bg-[var(--at-surface-alt)] disabled:opacity-50"
           >
             취소
           </button>
           <button
             onClick={save}
             disabled={saving}
-            className="px-4 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-1.5 text-sm rounded-lg bg-[var(--at-accent)] text-white hover:opacity-90 disabled:opacity-50"
           >
             {saving ? '저장 중...' : '저장'}
           </button>

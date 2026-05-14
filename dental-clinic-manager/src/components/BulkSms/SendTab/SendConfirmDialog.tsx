@@ -35,34 +35,34 @@ export default function SendConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">발송 확인</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--at-border)]">
+          <h2 className="text-lg font-semibold text-[var(--at-text-primary)]">발송 확인</h2>
+          <button onClick={onClose} className="text-[var(--at-text-weak)] hover:text-[var(--at-text-secondary)]">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="px-4 py-4 space-y-3 text-sm">
           <div>
-            <span className="text-gray-500">발송 대상:</span>
-            <span className="ml-2 font-semibold text-gray-900">{selectedCount}명</span>
+            <span className="text-[var(--at-text-secondary)]">발송 대상:</span>
+            <span className="ml-2 font-semibold text-[var(--at-text-primary)]">{selectedCount}명</span>
           </div>
           {preview && (
             <>
               <div>
-                <span className="text-gray-500">메시지 유형:</span>
+                <span className="text-[var(--at-text-secondary)]">메시지 유형:</span>
                 <span className="ml-2 font-medium">{preview.msg_type}</span>
-                <span className="ml-2 text-xs text-gray-400">({preview.bytes} 바이트)</span>
+                <span className="ml-2 text-xs text-[var(--at-text-weak)]">({preview.bytes} 바이트)</span>
               </div>
               <div>
-                <p className="text-gray-500 mb-1">미리보기 ({sampleName || '홍길동'} 기준)</p>
-                <div className="bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap text-gray-800 text-xs">{preview.preview}</div>
+                <p className="text-[var(--at-text-secondary)] mb-1">미리보기 ({sampleName || '홍길동'} 기준)</p>
+                <div className="bg-[var(--at-surface-alt)] border border-[var(--at-border)] rounded p-3 whitespace-pre-wrap text-[var(--at-text-primary)] text-xs">{preview.preview}</div>
               </div>
             </>
           )}
           <div>
-            <span className="text-gray-500">발송 방식:</span>
+            <span className="text-[var(--at-text-secondary)]">발송 방식:</span>
             <span className="ml-2 font-medium">
               {mode === 'immediate' ? '즉시 발송' : `예약 발송 (${scheduledAt ? new Date(scheduledAt).toLocaleString('ko-KR') : '-'})`}
             </span>
@@ -75,12 +75,12 @@ export default function SendConfirmDialog({
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
-          <button onClick={onClose} disabled={sending} className="px-3 py-1.5 text-sm rounded-md border border-gray-300 hover:bg-gray-50">취소</button>
+        <div className="px-4 py-3 border-t border-[var(--at-border)] flex justify-end gap-2">
+          <button onClick={onClose} disabled={sending} className="px-3 py-1.5 text-sm rounded-lg border border-[var(--at-border)] hover:bg-[var(--at-surface-alt)]">취소</button>
           <button
             onClick={onConfirm}
             disabled={sending}
-            className="px-4 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-1.5 text-sm rounded-lg bg-[var(--at-accent)] text-white hover:opacity-90 disabled:opacity-50"
           >
             {sending ? '발송 중...' : `${selectedCount}명에게 발송`}
           </button>

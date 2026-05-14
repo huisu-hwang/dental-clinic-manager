@@ -20,32 +20,40 @@ export default function BulkSmsManagement() {
   const [tab, setTab] = useState<TabKey>('send')
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">단체 문자</h1>
-        <p className="mt-1 text-sm text-gray-500">환자들에게 단체 문자를 발송합니다. 리콜 제외 환자는 기본적으로 발송 대상에서 빠집니다.</p>
-      </header>
-
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex gap-2 overflow-x-auto" aria-label="Tabs">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`whitespace-nowrap py-3 px-4 border-b-2 text-sm font-medium flex items-center gap-2 transition-colors ${
-                tab === key
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
-        </nav>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--at-accent-tag)] text-[var(--at-accent)]">
+            <MessageSquare className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-lg font-semibold text-[var(--at-text-primary)]">단체 문자</h1>
+            <p className="text-xs text-[var(--at-text-secondary)]">환자들에게 단체 문자를 발송합니다. 리콜 제외 환자는 기본적으로 발송 대상에서 빠집니다.</p>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-6">
+      <div className="flex items-center gap-1 border-b border-[var(--at-border)] overflow-x-auto">
+        {TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`relative px-4 py-2.5 text-sm font-medium transition flex items-center gap-1.5 whitespace-nowrap ${
+              tab === key
+                ? 'text-[var(--at-accent)]'
+                : 'text-[var(--at-text-secondary)] hover:text-[var(--at-text-primary)]'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+            {tab === key && (
+              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[var(--at-accent)]" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div>
         {tab === 'send' && <SendTab />}
         {tab === 'history' && <HistoryTab />}
         {tab === 'scheduled' && <ScheduledTab />}
