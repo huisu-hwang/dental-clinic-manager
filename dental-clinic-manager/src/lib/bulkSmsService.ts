@@ -276,9 +276,7 @@ export async function sendCampaign(
   // 본문이 동일한 그룹(변수 미사용)은 1회 호출, 그 외는 개별 호출
   // 동일 메시지 그룹화
   const byMessage = new Map<string, Array<{ id: string; phone: string }>>()
-  const recipientRows = recipients as Array<{ id: string; phone_number: string; personalized_message: string }>
-  for (let idx = 0; idx < recipientRows.length; idx++) {
-    const r = recipientRows[idx]
+  for (const r of recipients as Array<{ id: string; phone_number: string; personalized_message: string }>) {
     const arr = byMessage.get(r.personalized_message) ?? []
     arr.push({ id: r.id, phone: r.phone_number })
     byMessage.set(r.personalized_message, arr)
@@ -288,14 +286,9 @@ export async function sendCampaign(
   let totalFail = 0
   const nowIso = new Date().toISOString()
 
-  const msgType = campaign.msg_type as 'SMS' | 'LMS'
-  byMessage.forEach((group, message) => {
-    // 1,000명 단위 분할 처리는 Promise.all로 병렬 처리를 위해 async 지연
-  })
-
   // 메시지별 처리
-  for (const messageKey of Array.from(byMessage.keys())) {
-    const group = byMessage.get(messageKey)!
+  for (const [message, group] of byMessage.entries()) {
+    const msgType = campaign.msg_type as 'SMS' | 'LMS'
     // 1,000명 단위 분할
     for (let i = 0; i < group.length; i += ALIGO_BATCH_SIZE) {
       const batch = group.slice(i, i + ALIGO_BATCH_SIZE)
@@ -304,7 +297,7 @@ export async function sendCampaign(
         userId: aligo.user_id,
         sender: aligo.sender_number,
         receivers: batch.map(b => normalizePhone(b.phone)),
-        message: messageKey,
+        message,
         msgType,
         title: campaign.title || undefined,
       })
