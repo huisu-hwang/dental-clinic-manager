@@ -41,9 +41,9 @@ export default function SendActionBar({ canSend, onTestSend, onSubmitImmediate, 
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+    <div className="bg-[var(--at-surface)] border border-[var(--at-border)] rounded-xl p-4 space-y-3">
       <div>
-        <label className="block text-xs text-gray-500 mb-1.5 flex items-center gap-1">
+        <label className="block text-xs text-[var(--at-text-secondary)] mb-1.5 flex items-center gap-1">
           <FlaskConical className="w-3.5 h-3.5" /> 테스트 발송 (본인 번호)
         </label>
         <div className="flex gap-2">
@@ -52,24 +52,24 @@ export default function SendActionBar({ canSend, onTestSend, onSubmitImmediate, 
             value={testPhone}
             onChange={e => setTestPhone(e.target.value)}
             placeholder="010-0000-0000"
-            className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+            className="flex-1 px-3 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
           />
           <button
             type="button"
             onClick={handleTest}
             disabled={testing || !testPhone}
-            className="px-3 py-1.5 text-sm rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+            className="px-3 py-1.5 text-sm rounded-lg border border-[var(--at-border)] hover:bg-[var(--at-surface-alt)] disabled:opacity-50"
           >
             {testing ? '발송 중' : '테스트'}
           </button>
         </div>
-        {testMsg && <p className="mt-1 text-xs text-gray-600">{testMsg}</p>}
+        {testMsg && <p className="mt-1 text-xs text-[var(--at-text-secondary)]">{testMsg}</p>}
       </div>
 
-      <hr className="border-gray-200" />
+      <hr className="border-[var(--at-border)]" />
 
       <div>
-        <label className="block text-xs text-gray-500 mb-1.5">발송 방식</label>
+        <label className="block text-xs text-[var(--at-text-secondary)] mb-1.5">발송 방식</label>
         <div className="flex gap-2">
           {[
             { v: 'immediate', label: '즉시 발송', icon: Send },
@@ -79,8 +79,8 @@ export default function SendActionBar({ canSend, onTestSend, onSubmitImmediate, 
               key={opt.v}
               type="button"
               onClick={() => setMode(opt.v as 'immediate' | 'scheduled')}
-              className={`flex-1 py-2 text-sm rounded-md border flex items-center justify-center gap-1.5 ${
-                mode === opt.v ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-300 text-gray-700'
+              className={`flex-1 py-2 text-sm rounded-lg border flex items-center justify-center gap-1.5 ${
+                mode === opt.v ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]' : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)]'
               }`}
             >
               <opt.icon className="w-4 h-4" />
@@ -95,7 +95,7 @@ export default function SendActionBar({ canSend, onTestSend, onSubmitImmediate, 
           type="datetime-local"
           value={scheduledLocal}
           onChange={e => setScheduledLocal(e.target.value)}
-          className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+          className="w-full px-3 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
         />
       )}
 
@@ -103,7 +103,7 @@ export default function SendActionBar({ canSend, onTestSend, onSubmitImmediate, 
         type="button"
         onClick={handleSubmit}
         disabled={!canSend || (mode === 'scheduled' && !scheduledLocal)}
-        className="w-full py-2.5 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+        className="w-full py-2.5 bg-[var(--at-accent)] text-white rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50"
       >
         {mode === 'immediate' ? '발송하기' : '예약하기'}
       </button>

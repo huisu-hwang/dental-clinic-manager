@@ -49,26 +49,26 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="bg-[var(--at-surface)] border border-[var(--at-border)] rounded-xl p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Filter className="w-4 h-4 text-gray-500" />
-        <h3 className="font-medium text-gray-900">환자 필터</h3>
+        <Filter className="w-4 h-4 text-[var(--at-text-secondary)]" />
+        <h3 className="font-medium text-[var(--at-text-primary)]">환자 필터</h3>
       </div>
 
       <div className="space-y-4">
         {/* 성별 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">성별</label>
+          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">성별</label>
           <div className="flex gap-2">
             {(['all', 'male', 'female'] as const).map(g => (
               <button
                 key={g}
                 type="button"
                 onClick={() => update({ gender: g })}
-                className={`px-3 py-1.5 text-sm rounded-md border ${
+                className={`px-3 py-1.5 text-sm rounded-lg border ${
                   (value.gender ?? 'all') === g
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]'
+                    : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]'
                 }`}
               >
                 {g === 'all' ? '전체' : g === 'male' ? '남' : '여'}
@@ -79,35 +79,35 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
 
         {/* 연령 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">연령</label>
+          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">연령</label>
           <div className="flex items-center gap-2">
             <input
               type="number" min={0} max={120} placeholder="최소"
-              className="w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="w-20 px-2 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
               value={value.ageMin ?? ''}
               onChange={e => update({ ageMin: e.target.value ? Number(e.target.value) : null })}
             />
-            <span className="text-gray-400">~</span>
+            <span className="text-[var(--at-text-weak)]">~</span>
             <input
               type="number" min={0} max={120} placeholder="최대"
-              className="w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="w-20 px-2 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
               value={value.ageMax ?? ''}
               onChange={e => update({ ageMax: e.target.value ? Number(e.target.value) : null })}
             />
-            <span className="text-sm text-gray-500">세</span>
+            <span className="text-sm text-[var(--at-text-secondary)]">세</span>
           </div>
         </div>
 
         {/* 최종 내원일 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">최종 내원일</label>
+          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">최종 내원일</label>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {LAST_VISIT_PRESETS.map(p => (
               <button
                 key={p.label}
                 type="button"
                 onClick={() => applyPreset(p)}
-                className="px-2.5 py-1 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="px-2.5 py-1 text-xs rounded border border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]"
               >
                 {p.label}
               </button>
@@ -116,14 +116,14 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
           <div className="flex items-center gap-2">
             <input
               type="date"
-              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="px-2 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
               value={value.lastVisitFrom ?? ''}
               onChange={e => update({ lastVisitFrom: e.target.value || null })}
             />
-            <span className="text-gray-400">~</span>
+            <span className="text-[var(--at-text-weak)]">~</span>
             <input
               type="date"
-              className="px-2 py-1.5 border border-gray-300 rounded-md text-sm"
+              className="px-2 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
               value={value.lastVisitTo ?? ''}
               onChange={e => update({ lastVisitTo: e.target.value || null })}
             />
@@ -132,7 +132,7 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
 
         {/* 다음 예약 유무 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">다음 예약</label>
+          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">다음 예약</label>
           <div className="flex gap-2">
             {[
               { label: '전체', value: null },
@@ -143,10 +143,10 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
                 key={String(opt.value)}
                 type="button"
                 onClick={() => update({ hasNextAppointment: opt.value })}
-                className={`px-3 py-1.5 text-sm rounded-md border ${
+                className={`px-3 py-1.5 text-sm rounded-lg border ${
                   (value.hasNextAppointment ?? null) === opt.value
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]'
+                    : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]'
                 }`}
               >
                 {opt.label}
@@ -157,7 +157,7 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
 
         {/* 생일 월 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">생일 월</label>
+          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">생일 월</label>
           <div className="grid grid-cols-6 gap-1.5">
             {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
               const active = (value.birthMonths ?? []).includes(m)
@@ -168,8 +168,8 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
                   onClick={() => toggleBirthMonth(m)}
                   className={`py-1 text-xs rounded border ${
                     active
-                      ? 'bg-blue-50 border-blue-300 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]'
+                      : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]'
                   }`}
                 >
                   {m}월
@@ -181,11 +181,11 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
 
         {/* 이름/차트번호 검색 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">이름·차트번호 검색</label>
+          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">이름·차트번호 검색</label>
           <input
             type="text"
             placeholder="이름 또는 차트번호 입력"
-            className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+            className="w-full px-3 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
             value={keyword}
             onChange={e => setKeyword(e.target.value)}
             onBlur={() => update({ searchKeyword: keyword })}
@@ -197,7 +197,7 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
         type="button"
         onClick={onApply}
         disabled={loading}
-        className="mt-4 w-full py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+        className="mt-4 w-full py-2 bg-[var(--at-accent)] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50"
       >
         {loading ? '조회 중...' : '필터 적용'}
       </button>

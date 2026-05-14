@@ -54,7 +54,7 @@ export default function TemplatesTab() {
             setEditing(null)
             setModalOpen(true)
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--at-accent)] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
         >
           <Plus className="w-4 h-4" />
           템플릿 추가
@@ -62,9 +62,9 @@ export default function TemplatesTab() {
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-sm text-gray-400">불러오는 중...</div>
+        <div className="p-8 text-center text-sm text-[var(--at-text-weak)]">불러오는 중...</div>
       ) : templates.length === 0 ? (
-        <div className="p-8 text-center text-sm text-gray-400">
+        <div className="p-8 text-center text-sm text-[var(--at-text-weak)]">
           등록된 템플릿이 없습니다.
         </div>
       ) : (
@@ -72,13 +72,13 @@ export default function TemplatesTab() {
           {templates.map((t) => (
             <div
               key={t.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+              className="bg-[var(--at-surface)] border border-[var(--at-border)] rounded-xl p-4 hover:border-[var(--at-border)] transition-colors"
             >
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1">
-                  <h4 className="font-medium text-gray-900 text-sm">{t.name}</h4>
+                  <h4 className="font-medium text-[var(--at-text-primary)] text-sm">{t.name}</h4>
                   {t.is_default && (
-                    <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                    <span className="inline-block mt-1 text-xs px-2 py-0.5 bg-blue-100 text-[var(--at-accent)] rounded">
                       기본 템플릿
                     </span>
                   )}
@@ -89,21 +89,21 @@ export default function TemplatesTab() {
                       setEditing(t)
                       setModalOpen(true)
                     }}
-                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    className="p-1.5 text-[var(--at-text-secondary)] hover:text-[var(--at-accent)] hover:bg-[var(--at-accent-tag)] rounded transition-colors"
                     title="편집"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => remove(t.id)}
-                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="p-1.5 text-[var(--at-text-secondary)] hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                     title="삭제"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-              <pre className="text-xs text-gray-600 whitespace-pre-wrap font-sans line-clamp-4 break-words">
+              <pre className="text-xs text-[var(--at-text-secondary)] whitespace-pre-wrap font-sans line-clamp-4 break-words">
                 {t.content}
               </pre>
             </div>

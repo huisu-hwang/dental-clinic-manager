@@ -9,7 +9,7 @@ interface Props {
 
 export default function RecallExcludeToggle({ enabled, onChange }: Props) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 flex items-start gap-3">
+    <div className="bg-[var(--at-surface)] border border-[var(--at-border)] rounded-xl p-3 flex items-start gap-3">
       <button
         type="button"
         role="switch"
@@ -30,8 +30,8 @@ export default function RecallExcludeToggle({ enabled, onChange }: Props) {
           <div className="text-sm flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-green-600 mt-0.5" />
             <div>
-              <p className="text-gray-900 font-medium">리콜 제외 환자 자동 제외</p>
-              <p className="text-gray-500 text-xs">친인척·비우호 환자가 발송 대상에서 빠집니다.</p>
+              <p className="text-[var(--at-text-primary)] font-medium">리콜 제외 환자 자동 제외</p>
+              <p className="text-[var(--at-text-secondary)] text-xs">친인척·비우호 환자가 발송 대상에서 빠집니다.</p>
             </div>
           </div>
         ) : (

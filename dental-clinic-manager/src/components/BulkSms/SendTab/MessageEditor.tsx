@@ -41,30 +41,30 @@ export default function MessageEditor({ message, onMessageChange, title, onTitle
   const insertVariable = (v: string) => onMessageChange(message + v)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="bg-[var(--at-surface)] border border-[var(--at-border)] rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <FileText className="w-4 h-4 text-gray-500" />
-        <h3 className="font-medium text-gray-900">메시지 작성</h3>
+        <FileText className="w-4 h-4 text-[var(--at-text-secondary)]" />
+        <h3 className="font-medium text-[var(--at-text-primary)]">메시지 작성</h3>
       </div>
 
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">제목 (LMS만 표시)</label>
+          <label className="block text-xs text-[var(--at-text-secondary)] mb-1">제목 (LMS만 표시)</label>
           <input
             type="text"
             value={title}
             onChange={e => onTitleChange(e.target.value)}
             placeholder="예: 5월 가정의달 안내"
-            className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+            className="w-full px-3 py-1.5 border border-[var(--at-border)] rounded-lg text-sm"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">템플릿 불러오기</label>
+          <label className="block text-xs text-[var(--at-text-secondary)] mb-1">템플릿 불러오기</label>
           <select
             value={selectedId}
             onChange={e => selectTemplate(e.target.value)}
-            className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm bg-white"
+            className="w-full px-3 py-1.5 border border-[var(--at-border)] rounded-lg text-sm bg-white"
           >
             <option value="">템플릿 선택…</option>
             {templates.map(t => (
@@ -75,14 +75,14 @@ export default function MessageEditor({ message, onMessageChange, title, onTitle
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs text-gray-500">본문</label>
+            <label className="block text-xs text-[var(--at-text-secondary)]">본문</label>
             <div className="flex gap-1">
               {['{환자명}', '{병원명}', '{전화번호}'].map(v => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => insertVariable(v)}
-                  className="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="text-xs px-2 py-0.5 rounded border border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]"
                 >
                   {v}
                 </button>
@@ -94,7 +94,7 @@ export default function MessageEditor({ message, onMessageChange, title, onTitle
             onChange={e => onMessageChange(e.target.value)}
             rows={6}
             placeholder="안녕하세요 {환자명}님, {병원명}입니다."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+            className="w-full px-3 py-2 border border-[var(--at-border)] rounded-lg text-sm font-mono"
           />
           <div className="mt-1 flex justify-end">
             <MessageByteCounter text={message} />
