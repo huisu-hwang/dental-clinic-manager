@@ -185,13 +185,43 @@ export default function NewMarketingPostPage() {
     seoPreview.start(keyword)
   }, [keyword, seoPreview])
 
+  // 분석 결과 기반: 이미지 개수 입력의 동적 최대값 — 경쟁 평균 + 여유 5장, 5의 배수로 올림, 최소 20장
+  const dynamicImageMax = (() => {
+    const avg = seoResult?.avgImageCount ?? 0
+    if (!avg || avg <= 0) return 20
+    return Math.max(20, Math.ceil(avg / 5) * 5 + 5)
+  })()
+  const clampImageCount = (n: number) => Math.min(dynamicImageMax, Math.max(0, Math.floor(n)))
+
+  // 글자수 입력의 동적 최대값 — 경쟁 평균이 max 를 넘기면 평균 + 1,000자, 100의 배수로 올림, 기본 5,000자
+  const dynamicWordMax = (() => {
+    const base = 5000
+    const avg = seoResult?.avgBodyLength ?? 0
+    if (!avg || avg <= base) return base
+    return Math.max(base, Math.ceil((avg + 1000) / 100) * 100)
+  })()
+
+  const recommendedImages = seoResult ? Math.max(0, Math.round(seoResult.avgImageCount)) : 0
+  const recommendedLength = seoResult ? Math.max(1000, Math.round(seoResult.avgBodyLength / 100) * 100) : 1500
+
   const applySeoRecommendations = () => {
     if (!seoResult) return
-    const recommendedImages = Math.min(5, Math.max(0, Math.round(seoResult.avgImageCount)))
-    const recommendedLength = Math.max(1000, Math.round(seoResult.avgBodyLength / 100) * 100)
-    setImageCount(recommendedImages)
+    setImageCount(clampImageCount(recommendedImages))
     setTargetWordCount(recommendedLength)
   }
+
+  // 분석 완료 시 자동으로 권장값(평균 글자수/이미지 수) 을 입력값에 반영.
+  // appliedKeyword 가 바뀔 때마다 1회만 적용 (사용자가 이후 수동 조정한 값은 보존).
+  const lastAutoApplyKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    const k = seoPreview.appliedKeyword
+    if (!seoResult || !k) return
+    if (lastAutoApplyKeyRef.current === k) return
+    lastAutoApplyKeyRef.current = k
+    setImageCount(clampImageCount(recommendedImages))
+    setTargetWordCount(recommendedLength)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seoPreview.appliedKeyword, seoResult])
 
   const handleResult = useCallback(async (result: GeneratedResultType) => {
     setGeneratedResult(result)
@@ -566,7 +596,7 @@ export default function NewMarketingPostPage() {
                     권장값을 글 길이/이미지에 적용
                   </button>
                   <span className="text-[11px] text-at-text-weak">
-                    → 글자수 {Math.max(1000, Math.round(seoResult.avgBodyLength / 100) * 100).toLocaleString()}자, 이미지 {Math.min(5, Math.max(0, Math.round(seoResult.avgImageCount)))}장
+                    → 글자수 {recommendedLength.toLocaleString()}자, 이미지 {clampImageCount(recommendedImages)}장 (자동 반영됨)
                   </span>
                 </div>
               </div>
@@ -587,7 +617,7 @@ export default function NewMarketingPostPage() {
               <input
                 type="range"
                 min={1000}
-                max={3500}
+                max={dynamicWordMax}
                 step={100}
                 value={targetWordCount}
                 onChange={(e) => setTargetWordCount(Number(e.target.value))}
@@ -597,12 +627,12 @@ export default function NewMarketingPostPage() {
               <input
                 type="number"
                 min={1000}
-                max={5000}
+                max={dynamicWordMax}
                 step={100}
                 value={targetWordCount}
                 onChange={(e) => {
                   const v = Number(e.target.value)
-                  if (Number.isFinite(v)) setTargetWordCount(Math.max(500, Math.min(5000, v)))
+                  if (Number.isFinite(v)) setTargetWordCount(Math.max(500, Math.min(dynamicWordMax, v)))
                 }}
                 disabled={isFormDisabled}
                 className="w-24 px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent disabled:bg-at-surface-alt"
@@ -632,26 +662,26 @@ export default function NewMarketingPostPage() {
               <input
                 type="number"
                 min={0}
-                max={20}
+                max={dynamicImageMax}
                 value={imageCount}
                 onChange={(e) => {
                   const v = Number(e.target.value)
                   if (Number.isNaN(v)) return setImageCount(0)
-                  setImageCount(Math.min(20, Math.max(0, Math.floor(v))))
+                  setImageCount(clampImageCount(v))
                 }}
                 className="w-20 h-9 px-2 rounded-lg border border-at-border bg-white text-sm font-semibold text-at-text text-center focus:outline-none focus:ring-2 focus:ring-at-accent"
               />
               <input
                 type="range"
                 min={0}
-                max={20}
+                max={dynamicImageMax}
                 step={1}
                 value={imageCount}
                 onChange={(e) => setImageCount(Number(e.target.value))}
                 className="flex-1 min-w-[160px] max-w-[320px] accent-at-accent cursor-pointer"
               />
               <span className="text-xs text-at-text-weak">
-                {imageCount === 0 ? '이미지 없이 글만 생성' : `${imageCount}개 생성 (0~20)`}
+                {imageCount === 0 ? '이미지 없이 글만 생성' : `${imageCount}개 생성 (0~${dynamicImageMax})`}
               </span>
             </div>
           </div>
