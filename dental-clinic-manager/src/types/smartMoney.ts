@@ -130,6 +130,9 @@ export interface WyckoffPhaseResult {
   events: WyckoffPhaseEvent[]
   confidence: number
   description: string
+  majorCycle?: 'accumulation' | 'markup' | 'distribution' | 'markdown' | null
+  rangeHigh?: number | null
+  rangeLow?: number | null
   trendHeuristic?: {
     cycle: NonNullable<WyckoffCycle>
     lookbackDays: number

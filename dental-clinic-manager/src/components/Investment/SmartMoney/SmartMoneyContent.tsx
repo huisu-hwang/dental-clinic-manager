@@ -116,6 +116,75 @@ const INTERPRETATION_COLOR: Record<Interpretation, string> = {
   'strong-distribution': 'bg-rose-500 text-white',
 }
 
+const BULLISH_SIGNAL_TYPES = new Set<SignalType>([
+  'spring',
+  'iceberg-buy',
+  'sniper-buy',
+  'twap-accumulation',
+  'vwap-accumulation',
+  'moo-accumulation',
+  'moc-accumulation',
+  'foreigner-accumulation',
+  'institution-accumulation',
+  'liquidity-sweep-bullish',
+  'choch-bullish',
+  'bos-bullish',
+  'order-block-bullish',
+  'fvg-bullish',
+  'bear-trap',
+  'no-supply',
+  'selling-climax',
+  'stopping-volume',
+  'po3-accumulation',
+  'bad-news-accumulation',
+  'wyckoff-phase-c',
+  'wyckoff-sos',
+  'wyckoff-lps',
+])
+
+const BEARISH_SIGNAL_TYPES = new Set<SignalType>([
+  'upthrust',
+  'iceberg-sell',
+  'sniper-sell',
+  'twap-distribution',
+  'vwap-distribution',
+  'moo-distribution',
+  'moc-distribution',
+  'foreigner-distribution',
+  'institution-distribution',
+  'liquidity-sweep-bearish',
+  'choch-bearish',
+  'bos-bearish',
+  'order-block-bearish',
+  'fvg-bearish',
+  'bull-trap',
+  'no-demand',
+  'buying-climax',
+  'po3-distribution',
+  'news-fade',
+  'sell-the-news',
+  'wyckoff-utad',
+  'wyckoff-sow',
+  'wyckoff-lpsy',
+])
+
+function getWyckoffMajorCycleLabel(
+  majorCycle?: 'accumulation' | 'markup' | 'distribution' | 'markdown' | null
+): string {
+  switch (majorCycle) {
+    case 'accumulation':
+      return '축적'
+    case 'markup':
+      return '상승'
+    case 'distribution':
+      return '분배'
+    case 'markdown':
+      return '하락'
+    default:
+      return '판단 보류'
+  }
+}
+
 function formatDateInTimeZone(date: Date, timeZone: string): string {
   try {
     const parts = new Intl.DateTimeFormat('en', {
@@ -462,6 +531,11 @@ export function SmartMoneyContent() {
   const scorePct = Math.max(0, Math.min(100, (overallScore + 100) / 2))
   const scoreColor =
     overallScore > 30 ? 'bg-emerald-500' : overallScore < -30 ? 'bg-rose-500' : 'bg-slate-400'
+  const wyckoffPhaseSummary = viewAnalysis?.wyckoffPhase
+  const wyckoffMajorLabel = getWyckoffMajorCycleLabel(wyckoffPhaseSummary?.majorCycle)
+  const wyckoffPhaseLabel = wyckoffPhaseSummary?.phase ? `Phase ${wyckoffPhaseSummary.phase}` : '페이즈 미확정'
+  const wyckoffPhaseConfidence = Math.round(wyckoffPhaseSummary?.confidence ?? 0)
+  const wyckoffRecentEvents = wyckoffPhaseSummary?.events.slice(-3).map((event) => event.type).join(' · ') ?? ''
 
   const isKisError = errorCode === 'NO_CREDENTIAL' || (error || '').toLowerCase().includes('kis')
 
@@ -768,6 +842,32 @@ export function SmartMoneyContent() {
                 </div>
               </div>
 
+              {wyckoffPhaseSummary && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Wyckoff 사이클</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{wyckoffMajorLabel}</div>
+                    <div className="text-[11px] text-slate-500">
+                      {wyckoffPhaseSummary.cycle === 'accumulation'
+                        ? 'Accumulation 계열'
+                        : wyckoffPhaseSummary.cycle === 'distribution'
+                          ? 'Distribution 계열'
+                          : '판단 보류'}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">현재 페이즈</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{wyckoffPhaseLabel}</div>
+                    <div className="text-[11px] text-slate-500">신뢰도 {wyckoffPhaseConfidence}/100</div>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">핵심 이벤트</div>
+                    <div className="mt-1 text-sm font-bold text-slate-900">{wyckoffRecentEvents || '없음'}</div>
+                    <div className="text-[11px] text-slate-500">최근 3개 이벤트 기준</div>
+                  </div>
+                </div>
+              )}
+
               {/* 점수 게이지 + 해석 */}
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-1.5">
@@ -862,10 +962,8 @@ export function SmartMoneyContent() {
               ) : (
                 <ul className="space-y-2">
                   {topSignals.map((sig, i) => {
-                    const isAccum =
-                      sig.type.includes('accumulation') || sig.type === 'spring' || sig.type === 'iceberg-buy' || sig.type === 'sniper-buy'
-                    const isDist =
-                      sig.type.includes('distribution') || sig.type === 'upthrust' || sig.type === 'iceberg-sell' || sig.type === 'sniper-sell'
+                    const isAccum = BULLISH_SIGNAL_TYPES.has(sig.type)
+                    const isDist = BEARISH_SIGNAL_TYPES.has(sig.type)
                     const tone = isAccum
                       ? 'bg-emerald-50 border-emerald-200'
                       : isDist

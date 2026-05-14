@@ -155,9 +155,12 @@ export function computeSmartMoneyScore(input: ScorerInput): ScorerOutput {
       wyckoffPhase.phase === 'E' ? 1.0
         : wyckoffPhase.phase === 'D' ? 0.85
           : wyckoffPhase.phase === 'C' ? 0.7
-            : wyckoffPhase.phase === 'B' ? 0.5
+        : wyckoffPhase.phase === 'B' ? 0.5
               : 0.35
-    wyckoffPhaseComponent = cycleSign * phaseWeight * (wyckoffPhase.confidence / 100) * WEIGHTS.wyckoffPhase
+    const eventDiversity = new Set(wyckoffPhase.events.map((e) => e.type)).size
+    const qualityMultiplier = clamp(0.65 + eventDiversity * 0.06, 0.65, 1)
+    wyckoffPhaseComponent =
+      cycleSign * phaseWeight * qualityMultiplier * (wyckoffPhase.confidence / 100) * WEIGHTS.wyckoffPhase
 
     // Phase C/D/E 핵심 이벤트는 별도 SignalDetail
     const eventTypes = wyckoffPhase.events.map((e) => e.type)
