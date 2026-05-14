@@ -16,6 +16,7 @@ import AdminCategoryManager from '@/components/Community/AdminCategoryManager'
 import AdminTelegramManager from '@/components/Telegram/AdminTelegramManager'
 import { appConfirm, appAlert, appPrompt } from '@/components/ui/AppDialog'
 import PremiumFeatureModal from '@/components/Master/PremiumFeatureModal'
+import AuctionWorkerSetupCard from '@/components/Master/AuctionWorkerSetupCard'
 
 type TabType = 'overview' | 'clinics' | 'users' | 'pending' | 'statistics' | 'community' | 'worker' | 'scraping' | 'prompts' | 'api-costs' | 'seo-analysis'
 type CommunitySubTab = 'categories' | 'telegram'
@@ -1121,7 +1122,12 @@ export default function MasterAdminPage() {
 
         {activeTab === 'worker' && <WorkerPanel />}
 
-        {activeTab === 'scraping' && <ScrapingWorkerPanel />}
+        {activeTab === 'scraping' && (
+          <>
+            <ScrapingWorkerPanel />
+            <AuctionWorkerSetupCard />
+          </>
+        )}
 
         {activeTab === 'prompts' && <PromptsPage />}
 
