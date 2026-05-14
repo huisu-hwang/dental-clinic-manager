@@ -38,7 +38,7 @@ import ClinicalForm, { type ClinicalFormData } from '@/components/marketing/clin
 import ClinicalPhotoEditor from '@/components/marketing/clinical/ClinicalPhotoEditor'
 import { useAIGeneration, type GeneratedResultType } from '@/contexts/AIGenerationContext'
 import { useSeoPreview } from '@/hooks/useSeoPreview'
-import { useFormDraft } from '@/hooks/useFormDraft'
+import { useFormDraft, clearFormDraft } from '@/hooks/useFormDraft'
 import { BrandImageSection } from '@/components/marketing/brand/BrandImageSection'
 import type { BrandImageOptions } from '@/types/brand'
 
@@ -100,10 +100,10 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [topic, setTopic] = useState('')
   const [keyword, setKeyword] = useState('')
   const [postType, setPostType] = useState<PostType>('informational')
-  const [tone, setTone] = useState<ToneType>('friendly')
-  const [useResearch, setUseResearch] = useState(false)
-  const [factCheck, setFactCheck] = useState(false)
-  const [useSeoAnalysis, setUseSeoAnalysis] = useState(false)
+  const [tone, setTone] = useState<ToneType>('polite')
+  const [useResearch, setUseResearch] = useState(true)
+  const [factCheck, setFactCheck] = useState(true)
+  const [useSeoAnalysis, setUseSeoAnalysis] = useState(true)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
   const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
   const [imageVisualStyle, setImageVisualStyle] = useState<ImageVisualStyle>('realistic')
@@ -111,7 +111,12 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [targetWordCount, setTargetWordCount] = useState<number>(1500)
   // ── SEO 분석 미리보기 ──
   const seoPreview = useSeoPreview()
-  const seoResult = seoPreview.result
+  // 키워드 mismatch 가드: 입력 키워드와 분석된 키워드가 일치할 때만 결과 표시 (이전 분석 잔존 방지)
+  const seoResult = (
+    seoPreview.appliedKeyword &&
+    seoPreview.appliedKeyword === keyword.trim() &&
+    seoPreview.status === 'completed'
+  ) ? seoPreview.result : null
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
   const [clinicalData, setClinicalData] = useState<ClinicalFormData | null>(null)
@@ -239,6 +244,30 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seoPreview.appliedKeyword, seoResult])
 
+  // 글 생성이 끝나면 입력 필드를 기본값으로 초기화 (결과 카드는 유지)
+  const resetInputsToDefaults = useCallback(() => {
+    setTopic('')
+    setKeyword('')
+    setPostType('informational')
+    setTone('polite')
+    setUseResearch(true)
+    setFactCheck(true)
+    setUseSeoAnalysis(true)
+    setPlatforms(DEFAULT_PLATFORM_PRESETS.informational)
+    setImageStyle('infographic_only')
+    setImageVisualStyle('realistic')
+    setImageCount(3)
+    setTargetWordCount(1500)
+    setBrandImageOptions({
+      medicalLaw: { enabled: true, positions: ['top'] },
+      title: { enabled: true, positions: ['middle'], copy: '' },
+      photo: { enabled: true, positions: ['bottom'], mode: 'random' },
+    })
+    setReferenceImageBase64('')
+    setReferenceImagePreview('')
+    clearFormDraft(DRAFT_KEY)
+  }, [])
+
   // 컨텍스트에서 결과가 오면 로컬 상태에 반영
   const handleResult = useCallback((result: GeneratedResultType) => {
     setGeneratedResult(result)
@@ -249,7 +278,9 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
       setSavedItemId(result.savedItemId)
     }
     setSaveMessage({ type: 'success', text: '자동 저장되었습니다.' })
-  }, [])
+    // 입력 필드 초기화 (결과 카드는 유지)
+    resetInputsToDefaults()
+  }, [resetInputsToDefaults])
 
   // 결과 콜백 등록
   useEffect(() => {
@@ -876,7 +907,12 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                     ([value, { label, description }]) => (
                       <label key={value} className="flex items-start gap-3 cursor-pointer">
                         <input type="radio" name="imageStyle" value={value} checked={imageStyle === value}
-                          onChange={() => { setImageStyle(value); if (value !== 'use_own_image') { setReferenceImageBase64(''); setReferenceImagePreview('') } }}
+                          onChange={() => {
+                            setImageStyle(value)
+                            if (value !== 'use_own_image') { setReferenceImageBase64(''); setReferenceImagePreview('') }
+                            // 인포그래픽 선택 시 시각 스타일을 사실적 사진으로 자동 동기화
+                            if (value === 'infographic_only') setImageVisualStyle('realistic')
+                          }}
                           className="mt-0.5 w-4 h-4 text-at-accent border-at-border focus:ring-at-accent" />
                         <div>
                           <span className="text-sm font-medium text-at-text">{label}</span>

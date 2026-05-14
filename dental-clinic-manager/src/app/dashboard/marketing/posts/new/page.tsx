@@ -98,22 +98,27 @@ export default function NewMarketingPostPage() {
   const [topic, setTopic] = useState('')
   const [keyword, setKeyword] = useState('')
   const [postType, setPostType] = useState<PostType>('informational')
-  const [tone, setTone] = useState<ToneType>('friendly')
-  const [useResearch, setUseResearch] = useState(false)
-  const [factCheck, setFactCheck] = useState(false)
+  const [tone, setTone] = useState<ToneType>('polite')
+  const [useResearch, setUseResearch] = useState(true)
+  const [factCheck, setFactCheck] = useState(true)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
   const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
   const [imageVisualStyle, setImageVisualStyle] = useState<ImageVisualStyle>('realistic')
   const [imageCount, setImageCount] = useState(3)
   const [targetWordCount, setTargetWordCount] = useState<number>(1500)
-  const [useSeoAnalysis, setUseSeoAnalysis] = useState(false)
+  const [useSeoAnalysis, setUseSeoAnalysis] = useState(true)
   const [brandImageOptions, setBrandImageOptions] = useState<BrandImageOptions>({
     medicalLaw: { enabled: true, positions: ['top'] },
     title:      { enabled: true, positions: ['middle'], copy: '' },
     photo:      { enabled: true, positions: ['bottom'], mode: 'random' },
   })
   const seoPreview = useSeoPreview()
-  const seoResult = seoPreview.result
+  // 키워드 mismatch 가드: 입력 키워드와 분석된 키워드가 일치할 때만 결과 표시 (이전 분석 잔존 방지)
+  const seoResult = (
+    seoPreview.appliedKeyword &&
+    seoPreview.appliedKeyword === keyword.trim() &&
+    seoPreview.status === 'completed'
+  ) ? seoPreview.result : null
   const [referenceImageBase64, setReferenceImageBase64] = useState<string>('')
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
 
@@ -223,6 +228,30 @@ export default function NewMarketingPostPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seoPreview.appliedKeyword, seoResult])
 
+  // 글 생성이 끝나면 입력 필드를 기본값으로 초기화 (결과 카드는 유지)
+  const resetInputsToDefaults = useCallback(() => {
+    setTopic('')
+    setKeyword('')
+    setPostType('informational')
+    setTone('polite')
+    setUseResearch(true)
+    setFactCheck(true)
+    setUseSeoAnalysis(true)
+    setPlatforms(DEFAULT_PLATFORM_PRESETS.informational)
+    setImageStyle('infographic_only')
+    setImageVisualStyle('realistic')
+    setImageCount(3)
+    setTargetWordCount(1500)
+    setBrandImageOptions({
+      medicalLaw: { enabled: true, positions: ['top'] },
+      title: { enabled: true, positions: ['middle'], copy: '' },
+      photo: { enabled: true, positions: ['bottom'], mode: 'random' },
+    })
+    setReferenceImageBase64('')
+    setReferenceImagePreview('')
+    clearFormDraft(DRAFT_KEY)
+  }, [])
+
   const handleResult = useCallback(async (result: GeneratedResultType) => {
     setGeneratedResult(result)
     setEditedTitle(result.title)
@@ -251,8 +280,10 @@ export default function NewMarketingPostPage() {
     } catch (saveErr) {
       console.error('자동 저장 실패:', saveErr)
     }
+    // 입력 필드 초기화 (결과 카드는 유지 — 사용자가 결과 확인 후 다음 글 입력 가능)
+    resetInputsToDefaults()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedItemId, topic, keyword, postType, tone, useResearch, factCheck, platforms])
+  }, [savedItemId, topic, keyword, postType, tone, useResearch, factCheck, platforms, resetInputsToDefaults])
 
   useEffect(() => {
     aiGen.onResultCallback.current = handleResult
@@ -702,6 +733,8 @@ export default function NewMarketingPostPage() {
                         onChange={() => {
                           setImageStyle(value)
                           if (value !== 'use_own_image') { setReferenceImageBase64(''); setReferenceImagePreview('') }
+                          // 인포그래픽 선택 시 시각 스타일을 사실적 사진으로 자동 동기화
+                          if (value === 'infographic_only') setImageVisualStyle('realistic')
                         }}
                         className="mt-0.5 w-4 h-4 text-at-accent border-at-border focus:ring-at-accent"
                       />
