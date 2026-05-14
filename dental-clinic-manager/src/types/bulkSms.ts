@@ -52,10 +52,10 @@ export interface BulkSmsTemplate {
 }
 
 // 필터
-export type Gender = 'male' | 'female' | 'all'
+export type BulkSmsGender = 'male' | 'female' | 'all'
 
 export interface BulkSmsFilter {
-  gender?: Gender                    // 'all' 또는 미지정 = 전체
+  gender?: BulkSmsGender                    // 'all' 또는 미지정 = 전체
   ageMin?: number | null
   ageMax?: number | null
   lastVisitFrom?: string | null      // ISO date 'YYYY-MM-DD'
