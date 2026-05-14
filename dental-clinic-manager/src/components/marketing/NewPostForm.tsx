@@ -106,6 +106,12 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [useSeoAnalysis, setUseSeoAnalysis] = useState(true)
   const [platforms, setPlatforms] = useState<PlatformOptions>(DEFAULT_PLATFORM_PRESETS.informational)
   const [imageStyle, setImageStyle] = useState<ImageStyleOption>('infographic_only')
+  // 스타일별 카운트 분배 (multi-select). 합계 = imageCount, dominant = imageStyle 로 자동 sync
+  const [imageStyleAllocation, setImageStyleAllocation] = useState<Record<ImageStyleOption, number>>({
+    infographic_only: 3,
+    allow_person: 0,
+    use_own_image: 0,
+  })
   const [imageVisualStyle, setImageVisualStyle] = useState<ImageVisualStyle>('realistic')
   const [imageCount, setImageCount] = useState(3)
   const [targetWordCount, setTargetWordCount] = useState<number>(1500)
@@ -180,7 +186,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     DRAFT_KEY,
     {
       topic, keyword, postType, tone, useResearch, factCheck,
-      platforms, imageStyle, imageVisualStyle, imageCount, targetWordCount, useSeoAnalysis,
+      platforms, imageStyle, imageStyleAllocation, imageVisualStyle, imageCount, targetWordCount, useSeoAnalysis,
     },
     (restored) => {
       if (typeof restored.topic === 'string') setTopic(restored.topic)
@@ -191,6 +197,14 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
       if (typeof restored.factCheck === 'boolean') setFactCheck(restored.factCheck)
       if (restored.platforms && typeof restored.platforms === 'object') setPlatforms(restored.platforms as PlatformOptions)
       if (typeof restored.imageStyle === 'string') setImageStyle(restored.imageStyle as ImageStyleOption)
+      if (restored.imageStyleAllocation && typeof restored.imageStyleAllocation === 'object') {
+        const r = restored.imageStyleAllocation as Record<string, number>
+        setImageStyleAllocation({
+          infographic_only: Number(r.infographic_only ?? 0),
+          allow_person: Number(r.allow_person ?? 0),
+          use_own_image: Number(r.use_own_image ?? 0),
+        })
+      }
       if (typeof restored.imageVisualStyle === 'string') setImageVisualStyle(restored.imageVisualStyle as ImageVisualStyle)
       if (typeof restored.imageCount === 'number') setImageCount(restored.imageCount)
       if (typeof restored.targetWordCount === 'number') setTargetWordCount(restored.targetWordCount)
@@ -212,6 +226,35 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     return Math.max(20, Math.ceil(avg / 5) * 5 + 5)
   })()
   const clampImageCount = (n: number) => Math.min(dynamicImageMax, Math.max(0, Math.floor(n)))
+
+  // 스타일별 카운트 변경: 합계가 dynamicImageMax 를 넘지 않게 클램프
+  const setStyleCount = (style: ImageStyleOption, value: number) => {
+    setImageStyleAllocation(prev => {
+      const v = Math.max(0, Math.floor(Number.isFinite(value) ? value : 0))
+      const otherSum = (Object.entries(prev) as [ImageStyleOption, number][])
+        .filter(([k]) => k !== style)
+        .reduce((s, [, n]) => s + n, 0)
+      const allowed = Math.max(0, dynamicImageMax - otherSum)
+      return { ...prev, [style]: Math.min(v, allowed) }
+    })
+  }
+
+  // 스타일 체크박스 토글: 비활성 시 0, 활성 시 최소 1 (다른 스타일과 합쳐 max 초과 금지)
+  const toggleStyleActive = (style: ImageStyleOption, active: boolean) => {
+    if (!active) setStyleCount(style, 0)
+    else if ((imageStyleAllocation[style] ?? 0) === 0) setStyleCount(style, 1)
+  }
+
+  // allocation → imageCount(합), imageStyle(dominant) 자동 sync — 하위 호환 + 단일 필드 사용처 보호
+  useEffect(() => {
+    const total = (Object.values(imageStyleAllocation) as number[]).reduce((s, n) => s + n, 0)
+    setImageCount(total)
+    if (total > 0) {
+      const dominant = (Object.entries(imageStyleAllocation) as [ImageStyleOption, number][])
+        .reduce((acc, cur) => (cur[1] > acc[1] ? cur : acc), ['infographic_only', 0] as [ImageStyleOption, number])
+      if (dominant[1] > 0) setImageStyle(dominant[0])
+    }
+  }, [imageStyleAllocation])
 
   // 글자수 입력의 동적 최대값 — 경쟁 평균이 max 를 넘기면 평균 + 1,000자, 100의 배수로 올림, 기본 5,000자
   const dynamicWordMax = (() => {
@@ -255,6 +298,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     setUseSeoAnalysis(true)
     setPlatforms(DEFAULT_PLATFORM_PRESETS.informational)
     setImageStyle('infographic_only')
+    setImageStyleAllocation({ infographic_only: 3, allow_person: 0, use_own_image: 0 })
     setImageVisualStyle('realistic')
     setImageCount(3)
     setTargetWordCount(1500)
@@ -382,8 +426,8 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     } else {
       aiGen.startGeneration({
         topic, keyword, postType, tone, useResearch, factCheck, useSeoAnalysis, platforms,
-        imageStyle, imageVisualStyle, imageCount, targetWordCount,
-        referenceImageBase64: imageStyle === 'use_own_image' ? referenceImageBase64 : undefined,
+        imageStyle, imageStyleAllocation, imageVisualStyle, imageCount, targetWordCount,
+        referenceImageBase64: (imageStyleAllocation.use_own_image ?? 0) > 0 ? referenceImageBase64 : undefined,
         brandImageOptions,
       })
     }
@@ -861,71 +905,68 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
         <section>
           <SectionHeader number={3} title="이미지 옵션" icon={PaintBrushIcon} iconColor="text-emerald-600" iconBg="bg-emerald-50" />
           <fieldset disabled={isGenerating} className={`space-y-5 transition-opacity ${isGenerating ? 'opacity-60' : ''}`}>
+            {/* 이미지 스타일 + 개수 분배 (multi-select). 합계 = 총 이미지 개수 */}
             <div>
               <label className="block text-sm font-medium text-at-text-secondary mb-2">
-                이미지 개수
+                이미지 스타일 및 개수 분배
                 {seoResult && (
-                  <span className="ml-2 text-[11px] text-at-text-weak">
-                    (경쟁 평균 {seoResult.avgImageCount.toFixed(1)}장)
-                  </span>
+                  <span className="ml-2 text-[11px] text-at-text-weak">(경쟁 평균 {seoResult.avgImageCount.toFixed(1)}장)</span>
                 )}
               </label>
-              <div className="flex items-center gap-3 flex-wrap">
-                <input
-                  type="number"
-                  min={0}
-                  max={dynamicImageMax}
-                  value={imageCount}
-                  onChange={(e) => {
-                    const v = Number(e.target.value)
-                    if (Number.isNaN(v)) return setImageCount(0)
-                    setImageCount(clampImageCount(v))
-                  }}
-                  className="w-20 h-9 px-2 rounded-lg border border-at-border bg-white text-sm font-semibold text-at-text text-center focus:outline-none focus:ring-2 focus:ring-at-accent"
-                />
-                <input
-                  type="range"
-                  min={0}
-                  max={dynamicImageMax}
-                  step={1}
-                  value={imageCount}
-                  onChange={(e) => setImageCount(Number(e.target.value))}
-                  className="flex-1 min-w-[160px] max-w-[320px] accent-at-accent cursor-pointer"
-                />
-                <span className="text-xs text-at-text-weak">
-                  {imageCount === 0 ? '이미지 없이 글만 생성' : `${imageCount}개 생성 (0~${dynamicImageMax})`}
-                </span>
+              <p className="text-[11px] text-at-text-weak mb-2">
+                생성할 스타일에 체크하고 각각 몇 장씩 만들지 입력하세요. 합계가 총 이미지 개수입니다 (최대 {dynamicImageMax}장).
+              </p>
+              <div className="space-y-2">
+                {(Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
+                  ([value, { label, description }]) => {
+                    const count = imageStyleAllocation[value] ?? 0
+                    const active = count > 0
+                    return (
+                      <div key={value} className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${active ? 'border-at-accent bg-emerald-50/40' : 'border-at-border bg-white'}`}>
+                        <input
+                          type="checkbox"
+                          checked={active}
+                          onChange={(e) => {
+                            toggleStyleActive(value, e.target.checked)
+                            if (e.target.checked && value === 'infographic_only') setImageVisualStyle('realistic')
+                            if (!e.target.checked && value === 'use_own_image') { setReferenceImageBase64(''); setReferenceImagePreview('') }
+                          }}
+                          className="w-4 h-4 text-at-accent border-at-border focus:ring-at-accent"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-at-text">{label}</span>
+                          <span className="text-[11px] text-at-text-weak ml-2">{description}</span>
+                        </div>
+                        <input
+                          type="number"
+                          min={0}
+                          max={dynamicImageMax}
+                          value={count}
+                          onChange={(e) => {
+                            const v = Number(e.target.value)
+                            setStyleCount(value, Number.isFinite(v) ? v : 0)
+                            if (v > 0 && value === 'infographic_only') setImageVisualStyle('realistic')
+                            if (v === 0 && value === 'use_own_image') { setReferenceImageBase64(''); setReferenceImagePreview('') }
+                          }}
+                          className="w-16 h-8 px-2 rounded-md border border-at-border bg-white text-sm font-semibold text-at-text text-center focus:outline-none focus:ring-2 focus:ring-at-accent"
+                        />
+                        <span className="text-[11px] text-at-text-weak w-5 text-left">장</span>
+                      </div>
+                    )
+                  }
+                )}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-at-text-weak">총 이미지 개수: <span className="font-semibold text-at-text">{imageCount}</span>장 (최대 {dynamicImageMax}장)</span>
+                {imageCount === 0 && <span className="text-amber-600">스타일을 1개 이상 체크해주세요 (또는 이미지 없이 글만 생성)</span>}
               </div>
             </div>
 
             {imageCount > 0 && (
               <>
-                <div className="border-t border-at-border" />
-                <div className="space-y-2.5">
-                  <label className="block text-sm font-medium text-at-text-secondary">이미지 스타일</label>
-                  {(Object.entries(IMAGE_STYLE_LABELS) as [ImageStyleOption, { label: string; description: string }][]).map(
-                    ([value, { label, description }]) => (
-                      <label key={value} className="flex items-start gap-3 cursor-pointer">
-                        <input type="radio" name="imageStyle" value={value} checked={imageStyle === value}
-                          onChange={() => {
-                            setImageStyle(value)
-                            if (value !== 'use_own_image') { setReferenceImageBase64(''); setReferenceImagePreview('') }
-                            // 인포그래픽 선택 시 시각 스타일을 사실적 사진으로 자동 동기화
-                            if (value === 'infographic_only') setImageVisualStyle('realistic')
-                          }}
-                          className="mt-0.5 w-4 h-4 text-at-accent border-at-border focus:ring-at-accent" />
-                        <div>
-                          <span className="text-sm font-medium text-at-text">{label}</span>
-                          <span className="text-xs text-at-text-weak ml-2">{description}</span>
-                        </div>
-                      </label>
-                    )
-                  )}
-                </div>
-
-                {imageStyle === 'use_own_image' && (
+                {(imageStyleAllocation.use_own_image ?? 0) > 0 && (
                   <div className="ml-7 p-4 bg-at-surface-alt rounded-xl border border-at-border space-y-2">
-                    <label className="block text-xs font-medium text-at-text-secondary">참조 이미지 업로드</label>
+                    <label className="block text-xs font-medium text-at-text-secondary">참조 이미지 업로드 (본인 이미지 활용 {imageStyleAllocation.use_own_image}장용)</label>
                     <div className="flex items-center gap-3">
                       <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 border border-at-border text-at-text-secondary rounded-lg hover:bg-white transition-colors text-xs font-medium">
                         <PhotoIcon className="h-4 w-4" />
