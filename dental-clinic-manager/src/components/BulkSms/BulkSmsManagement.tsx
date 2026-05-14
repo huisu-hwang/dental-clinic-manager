@@ -5,6 +5,7 @@ import { MessageSquare, History, Clock, FileText } from 'lucide-react'
 import SendTab from './SendTab/SendTab'
 import HistoryTab from './HistoryTab/HistoryTab'
 import ScheduledTab from './ScheduledTab/ScheduledTab'
+import TemplatesTab from './TemplatesTab/TemplatesTab'
 
 type TabKey = 'send' | 'history' | 'scheduled' | 'templates'
 
@@ -48,7 +49,7 @@ export default function BulkSmsManagement() {
         {tab === 'send' && <SendTab />}
         {tab === 'history' && <HistoryTab />}
         {tab === 'scheduled' && <ScheduledTab />}
-        {tab === 'templates' && <div className="text-gray-400 text-sm">템플릿 관리 (Task 19에서 구현)</div>}
+        {tab === 'templates' && <TemplatesTab />}
       </div>
     </div>
   )
