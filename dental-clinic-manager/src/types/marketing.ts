@@ -235,6 +235,10 @@ export interface ContentGenerateOptions {
   useSeoAnalysis?: boolean;
   platforms: PlatformOptions;
   imageStyle?: ImageStyleOption;
+  /** 스타일별 이미지 개수 분배. 사용자가 multi-select 로 스타일을 고르고 각 스타일별 카운트를 지정.
+   *  이 필드가 있으면 imageStyle/imageCount 보다 우선 적용 (스타일 합계 = 총 이미지 개수).
+   *  생략 시 기존 imageStyle/imageCount 단일 스타일 로직으로 동작 (하위 호환). */
+  imageStyleAllocation?: Partial<Record<ImageStyleOption, number>>;
   imageVisualStyle?: ImageVisualStyle;
   imageCount?: number;
   /** 사용자가 SEO 분석 결과를 보고 직접 정한 목표 본문 길이(자). 미지정 시 기본 1500자. */
