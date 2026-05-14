@@ -182,11 +182,16 @@ export default function ProtocolDetail({
           }))
         )
       }
+      const wasRejection = !!latestRejectedReview
       setShowReviewRequestModal(false)
       setReviewRequestMessage('')
       await fetchProtocol()
       await fetchPendingReview()
-      await appAlert('검토 요청이 전송되었습니다.')
+      await appAlert(
+        wasRejection
+          ? '수정 내용이 저장되고 재검토 요청이 대표원장에게 전송되었습니다.'
+          : '검토 요청이 전송되었습니다.'
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : '검토 요청 중 오류가 발생했습니다.')
     } finally {
@@ -574,6 +579,27 @@ export default function ProtocolDetail({
                 <p className="text-xs text-red-500 mt-1">
                   {new Date(latestRejectedReview.reviewed_at || latestRejectedReview.updated_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
+                {/* 후속 액션: 본문을 수정하거나 곧바로 재검토 요청 (요청 시 대표원장에게 알림 자동 발송) */}
+                {canEdit && !isOwner && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => onEdit(protocol)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-at-text-secondary bg-white hover:bg-at-surface-alt rounded-xl border border-at-border transition-colors"
+                      title="본문 수정"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                      수정하기
+                    </button>
+                    <button
+                      onClick={() => setShowReviewRequestModal(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+                      title="수정한 내용으로 재검토 요청 (대표원장에게 알림 전송)"
+                    >
+                      <PaperAirplaneIcon className="h-4 w-4" />
+                      수정 후 재검토 요청
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -645,25 +671,30 @@ export default function ProtocolDetail({
         />
       )}
 
-      {/* 검토 요청 모달 */}
+      {/* 검토 요청 모달 — 반려 이력이 있으면 "재검토 요청" 컨텍스트로 안내 */}
       {showReviewRequestModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-at-text mb-4">프로토콜 검토 요청</h3>
+            <h3 className="text-lg font-bold text-at-text mb-4">
+              {latestRejectedReview ? '프로토콜 재검토 요청' : '프로토콜 검토 요청'}
+            </h3>
             <p className="text-sm text-at-text-secondary mb-4">
-              대표원장에게 &quot;{protocol.title}&quot; 프로토콜의 검토를 요청합니다.
-              승인되면 프로토콜이 활성화됩니다.
+              {latestRejectedReview
+                ? <>수정한 &quot;{protocol.title}&quot; 프로토콜을 대표원장에게 재검토 요청합니다. 요청과 함께 즉시 저장되며, 대표원장에게 알림이 발송됩니다.</>
+                : <>대표원장에게 &quot;{protocol.title}&quot; 프로토콜의 검토를 요청합니다. 승인되면 프로토콜이 활성화됩니다.</>}
             </p>
             <div className="mb-4">
               <label className="block text-sm font-medium text-at-text-secondary mb-1">
-                요청 메시지 (선택)
+                {latestRejectedReview ? '수정 사항 메시지 (선택)' : '요청 메시지 (선택)'}
               </label>
               <textarea
                 value={reviewRequestMessage}
                 onChange={(e) => setReviewRequestMessage(e.target.value)}
                 className="w-full px-3 py-2 border border-at-border rounded-xl text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 rows={3}
-                placeholder="검토 시 참고할 내용을 작성해주세요..."
+                placeholder={latestRejectedReview
+                  ? '반려 사유에 따라 어떤 부분을 수정했는지 적어주세요...'
+                  : '검토 시 참고할 내용을 작성해주세요...'}
               />
             </div>
             <div className="flex justify-end gap-3">
@@ -683,7 +714,7 @@ export default function ProtocolDetail({
                 ) : (
                   <PaperAirplaneIcon className="h-4 w-4" />
                 )}
-                검토 요청
+                {latestRejectedReview ? '재검토 요청' : '검토 요청'}
               </button>
             </div>
           </div>
