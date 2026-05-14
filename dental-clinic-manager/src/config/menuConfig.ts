@@ -361,6 +361,16 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     premiumFeature: true,
   },
   {
+    id: 'bulk-sms',
+    label: '단체 문자',
+    icon: 'MessageSquare',
+    route: '/dashboard/bulk-sms',
+    permissions: ['bulk_sms_view'],
+    categoryId: 'operations',
+    order: 15.8,
+    visible: true,
+  },
+  {
     id: 'marketing',
     label: '마케팅 자동화',
     icon: 'Sparkles',
