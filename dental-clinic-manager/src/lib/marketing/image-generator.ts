@@ -113,7 +113,7 @@ function buildBrandDesignPrefix(ctx: BrandPromptCtx | null, imageStyle?: ImageSt
 
   if (isInfographic) {
     lines.push('');
-    lines.push('## 카드 인포그래픽 디자인 패턴 (네이버 블로그 노출용 정사각형 카드)');
+    lines.push('## 카드 인포그래픽 디자인 패턴 (네이버 블로그 노출용 정사각형 카드, 텍스트 위주)');
     lines.push('정사각형(1:1) 카드 한 장. 다음 4단 레이아웃을 따르세요:');
     if (nameEn) {
       lines.push(`1) 최상단: 영문 클리닉명 "${nameEn}" 을 작은 글자·넓은 자간(letter-spacing)으로 가로 중앙 정렬`);
@@ -121,7 +121,7 @@ function buildBrandDesignPrefix(ctx: BrandPromptCtx | null, imageStyle?: ImageSt
       lines.push('1) 최상단: 작은 글자의 영문 헤더 (자간 넓게)');
     }
     lines.push('2) 메인 타이틀: 환자가 궁금해할 질문형 카피 짧은 한 줄. 굵은 산세리프, 핵심 키워드는 주 브랜드 컬러로 강조.');
-    lines.push('3) 중간: 주제와 관련된 치과 일러스트/도식/모형 이미지 (사람 얼굴 생성 금지, 깔끔한 의료용 비주얼).');
+    lines.push('3) 중간: 핵심 포인트를 보조하는 단순 도식/아이콘/일러스트 (사람 얼굴 생성 금지). 텍스트 가독성을 해치지 않도록 단순·여백 위주.');
     if (primary) {
       lines.push(`4) 하단: 주 브랜드 컬러(${primary}) 배경 박스 안에 화이트 체크마크(✓) + 핵심 포인트 한 줄 (불릿 1개).`);
     } else {
@@ -131,18 +131,27 @@ function buildBrandDesignPrefix(ctx: BrandPromptCtx | null, imageStyle?: ImageSt
       lines.push(`5) 최하단 푸터: "${nameKo}" 한글 클리닉명 (작은 글씨, 가운데 정렬). 로고가 있으면 함께 배치.`);
     }
     lines.push('');
+    lines.push('## 프롬프트 → 카드 텍스트 매핑 (매우 중요)');
+    lines.push('아래 "이미지 설명" 이 `TITLE=...| CHECK=...` 형식이면 다음과 같이 그대로 카드 텍스트로 사용하세요:');
+    lines.push('- `TITLE=` 뒤의 한글 문구 → 카드 메인 타이틀(2단)에 그대로 렌더링.');
+    lines.push('- `CHECK=` 뒤의 한글 문구 → 카드 하단 체크리스트(4단) 박스 안에 "✓ {문구}" 형태로 그대로 렌더링.');
+    lines.push('- 형식이 자유 문장이면 핵심 의미를 메인 타이틀로 압축하고, 하단 박스는 한 줄 요약으로 작성.');
+    lines.push('- **임의로 새 문구 만들지 말 것**. 가능하면 입력 그대로 사용 (오탈자/의역 금지).');
+    lines.push('');
     lines.push('## 텍스트 분량 (필수 준수)');
     lines.push('- 이미지 한 장 안에 들어가는 한글 텍스트 **총 글자수는 20자 내외** (최대 25자) 로 제한.');
     lines.push('  · 영문 헤더(클리닉명)·한글 푸터(클리닉명)는 위 글자수에서 제외 — 헤더/푸터는 항상 짧게 유지.');
-    lines.push('  · 메인 타이틀 + 하단 체크리스트 한 줄 합쳐 약 20자 안에서 분배 (예: 타이틀 12자 + 체크 8자).');
-    lines.push('- 긴 문장 금지. 키워드와 짧은 동사구 위주로 압축. 마침표/물음표 외 군더더기 문장부호 최소화.');
+    lines.push('  · 메인 타이틀(TITLE) + 하단 체크리스트(CHECK) 합쳐 약 20자 안에서 분배.');
+    lines.push('- 텍스트가 카드 시각 면적의 60% 이상 차지하도록 큼직하게 배치 (텍스트 위주 카드).');
+    lines.push('- 긴 문장 금지. 키워드와 짧은 동사구 위주로 압축.');
     lines.push('');
     lines.push('## 텍스트 렌더링 주의');
     lines.push('- 한국어 텍스트는 정확한 한글 폰트(고딕 계열)로 렌더링하고, 자모 깨짐/잘못된 글자 절대 금지.');
     lines.push('- 의미 없는 외국어/가짜 글자/장식용 라틴 문자(lorem ipsum 등) 사용 금지.');
   } else {
     lines.push('- 사용 색상의 주조: 위 브랜드 컬러를 포인트로 사용 (전체 도배는 피하고 자연스러운 색감).');
-    lines.push('- 이미지 안에 텍스트가 들어간다면 **한글 총 글자수 20자 내외**로 제한 (긴 문장 금지). 가능하면 텍스트 없는 순수 비주얼 우선.');
+    lines.push('- 이미지 설명이 `TITLE=...| CHECK=...` 형식이면 그 문구를 그대로 카드 텍스트로 사용 (TITLE → 메인, CHECK → 보조). 임의로 새 문구 만들지 말 것.');
+    lines.push('- 이미지 안 한글 텍스트는 **총 글자수 20자 내외**로 제한 (긴 문장 금지). 텍스트가 화면의 50% 이상 차지하는 텍스트 위주 카드 권장.');
   }
   return lines.join('\n') + '\n\n';
 }
