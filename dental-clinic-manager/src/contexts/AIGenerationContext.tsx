@@ -20,6 +20,8 @@ interface GenerationOptions {
   useSeoAnalysis: boolean
   platforms: PlatformOptions
   imageStyle: string
+  /** 스타일별 이미지 개수 분배 (multi-select 시). 합계가 imageCount 와 같아야 함. */
+  imageStyleAllocation?: Partial<Record<'infographic_only' | 'allow_person' | 'use_own_image', number>>
   imageVisualStyle: string
   imageCount: number
   /** 사용자가 정한 목표 본문 길이(자). 미지정 시 서버에서 기본값 사용. */
@@ -111,8 +113,11 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
             imageStyle: options.imageStyle,
             imageVisualStyle: options.imageVisualStyle,
             imageCount: options.imageCount,
+            ...(options.imageStyleAllocation ? { imageStyleAllocation: options.imageStyleAllocation } : {}),
             ...(options.targetWordCount ? { targetWordCount: options.targetWordCount } : {}),
-            ...(options.imageStyle === 'use_own_image' && options.referenceImageBase64
+            ...((options.imageStyleAllocation?.use_own_image ?? 0) > 0 && options.referenceImageBase64
+              ? { referenceImageBase64: options.referenceImageBase64 }
+              : options.imageStyle === 'use_own_image' && options.referenceImageBase64
               ? { referenceImageBase64: options.referenceImageBase64 }
               : {}),
             ...(options.clinical ? { clinical: options.clinical } : {}),

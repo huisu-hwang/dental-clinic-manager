@@ -76,6 +76,9 @@ export async function POST(request: NextRequest) {
             threads: false,
           },
           imageStyle: body.imageStyle || undefined,
+          imageStyleAllocation: body.imageStyleAllocation && typeof body.imageStyleAllocation === 'object'
+            ? body.imageStyleAllocation as Partial<Record<'infographic_only' | 'allow_person' | 'use_own_image', number>>
+            : undefined,
           imageVisualStyle: body.imageVisualStyle || undefined,
           imageCount: body.imageCount !== undefined ? Number(body.imageCount) : 3,
           targetWordCount: body.targetWordCount !== undefined ? Number(body.targetWordCount) : undefined,
@@ -309,13 +312,28 @@ export async function POST(request: NextRequest) {
           let completedCount = 0;
           const progressStart = 60;
           const progressEnd = 90;
+          // 마커 prompt 의 STYLE= 토큰을 파싱해 마커별 스타일 결정 (allocation 모드)
+          const parseMarkerStyle = (raw: string): typeof options.imageStyle | null => {
+            const m = raw.match(/STYLE\s*=\s*(infographic|person|own)\b/i)
+            if (!m) return null
+            const k = m[1].toLowerCase()
+            if (k === 'infographic') return 'infographic_only'
+            if (k === 'person') return 'allow_person'
+            if (k === 'own') return 'use_own_image'
+            return null
+          }
           const imagePromises = imageMarkers.map(async (marker) => {
             try {
               const timeoutPromise = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('이미지 생성 타임아웃 (90s)')), 90000)
               );
+              // 마커별 스타일 분기 (없으면 글로벌 imageStyle 폴백)
+              const markerStyle = parseMarkerStyle(marker.prompt) || options.imageStyle
+              const cleanPrompt = marker.prompt.replace(/\s*\|\s*STYLE\s*=\s*\S+/gi, '').trim()
+              // use_own_image 스타일이지만 referenceImage 가 없으면 인포그래픽으로 폴백
+              const effectiveStyle = (markerStyle === 'use_own_image' && !options.referenceImageBase64) ? 'infographic_only' : markerStyle
               const { imageBase64, fileName } = await Promise.race([
-                generateBlogImage(marker.prompt, options.imageStyle, options.referenceImageBase64, userData.clinic_id, undefined, options.imageVisualStyle, generationSessionId, userData.clinic_id),
+                generateBlogImage(cleanPrompt, effectiveStyle, effectiveStyle === 'use_own_image' ? options.referenceImageBase64 : undefined, userData.clinic_id, undefined, options.imageVisualStyle, generationSessionId, userData.clinic_id),
                 timeoutPromise,
               ]);
 

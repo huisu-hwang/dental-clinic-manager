@@ -162,7 +162,12 @@ export async function generateContent(
 
   // 2. 이미지 개수 및 스타일 지시문 생성
   let imageStyleInstruction = '';
-  const imgCount = options.imageCount ?? 3;
+  // imageStyleAllocation 이 있으면 그 합을 우선, 없으면 imageCount fallback
+  const allocation = options.imageStyleAllocation
+  const allocSum = allocation
+    ? (allocation.infographic_only ?? 0) + (allocation.allow_person ?? 0) + (allocation.use_own_image ?? 0)
+    : 0
+  const imgCount = allocSum > 0 ? allocSum : (options.imageCount ?? 3);
   if (imgCount === 0) {
     imageStyleInstruction = '\n\n## 이미지 마커 지침\n[IMAGE:] 마커를 사용하지 마세요. 텍스트만 작성하세요.';
   } else {
@@ -184,7 +189,22 @@ export async function generateContent(
       `5) **반드시 핵심 키워드를 텍스트에 포함**시켜 환자가 카드만 봐도 메시지를 알 수 있게.\n`;
 
     let styleNote = '';
-    if (options.imageStyle === 'allow_person') {
+    // multi-select allocation 이 지정된 경우 — 각 스타일별 카운트를 명시
+    if (allocation && allocSum > 0) {
+      const distribLines: string[] = []
+      const infoN = allocation.infographic_only ?? 0
+      const personN = allocation.allow_person ?? 0
+      const ownN = allocation.use_own_image ?? 0
+      if (infoN > 0) distribLines.push(`- 인포그래픽 카드: ${infoN}장 (사람 얼굴 금지, 텍스트가 화면의 60% 이상)`)
+      if (personN > 0) distribLines.push(`- 인물 포함 카드: ${personN}장 (환자/치과의사 등장 가능, 텍스트는 그대로 메인)`)
+      if (ownN > 0) distribLines.push(`- 본인 이미지 카드: ${ownN}장 (참조된 치과 원장/직원 등장, 텍스트는 그대로 메인)`)
+      styleNote =
+        `\n### 시각 스타일 분배 (사용자 지정)\n` +
+        `${imgCount}장의 이미지를 다음 스타일로 분배해주세요. 모든 카드 텍스트는 위 형식(TITLE/CHECK)을 유지:\n` +
+        distribLines.join('\n') + '\n' +
+        `각 [IMAGE: ...] 마커 끝에 \`| STYLE=infographic\` / \`| STYLE=person\` / \`| STYLE=own\` 을 명시해 어떤 스타일로 생성할지 표기하세요 (예: \`[IMAGE: TITLE=... | CHECK=... | STYLE=infographic]\`). ` +
+        `STYLE 미표기 시 인포그래픽으로 처리됩니다.`;
+    } else if (options.imageStyle === 'allow_person') {
       styleNote =
         `\n### 시각 스타일 보조\n` +
         `위 텍스트가 메인이며, 카드 배경/중간 영역에는 사람(환자·치과의사 등)이 자연스럽게 등장하는 ` +

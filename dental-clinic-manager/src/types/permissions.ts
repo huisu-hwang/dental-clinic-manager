@@ -110,6 +110,10 @@ export type Permission =
   | 'auction_view'             // 부동산 경매 물건 조회
   | 'auction_favorite'         // 관심물건 저장 및 시뮬레이션
   | 'auction_ai'               // AI 권리분석 코멘트 생성
+  // 단체 문자 발송 권한
+  | 'bulk_sms_view'             // 단체 문자 조회
+  | 'bulk_sms_send'             // 단체 문자 발송
+  | 'bulk_sms_manage'           // 단체 문자 템플릿 관리
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -167,7 +171,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 소개환자 관리 (모든 권한)
     'referral_view', 'referral_manage', 'referral_sms_send', 'referral_points_adjust',
     // 부동산 경매 관리 (모든 권한)
-    'auction_view', 'auction_favorite', 'auction_ai'
+    'auction_view', 'auction_favorite', 'auction_ai',
+    // 단체 문자 (모든 권한)
+    'bulk_sms_view', 'bulk_sms_send', 'bulk_sms_manage'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -234,7 +240,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 병원 게시판 (조회/관리)
     'bulletin_view', 'bulletin_manage',
     // 커뮤니티 (조회/작성)
-    'community_view', 'community_post'
+    'community_view', 'community_post',
+    // 단체 문자 (조회/발송/관리)
+    'bulk_sms_view', 'bulk_sms_send', 'bulk_sms_manage'
   ],
   team_leader: [
     // 팀장은 프로토콜 조회와 히스토리만 가능, 자신의 계약서 조회 및 서명만 가능
@@ -316,6 +324,7 @@ export const NEW_FEATURE_PREFIXES = [
   'monthly_report_',
   'referral_',
   'auction_',
+  'bulk_sms_',
 ] as const
 
 // 기존 그룹에 추가된 단독 신규 권한 (prefix 보충 대상이 아니라 직접 보충)
@@ -462,6 +471,11 @@ export const PERMISSION_GROUPS = {
     { key: 'auction_favorite', label: '관심물건 저장 및 시뮬레이션' },
     { key: 'auction_ai', label: 'AI 권리분석 코멘트' }
   ],
+  '단체 문자': [
+    { key: 'bulk_sms_view', label: '단체 문자 조회' },
+    { key: 'bulk_sms_send', label: '단체 문자 발송' },
+    { key: 'bulk_sms_manage', label: '템플릿 관리' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -579,4 +593,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'auction_view': '부동산 경매 물건 목록과 상세를 조회할 수 있습니다.',
   'auction_favorite': '관심물건을 저장하고 입찰 시뮬레이션을 사용할 수 있습니다.',
   'auction_ai': 'AI 권리분석 코멘트를 생성할 수 있습니다 (Claude Haiku 4.5 호출).',
+  // 단체 문자 발송 권한 설명
+  'bulk_sms_view': '단체 문자 메뉴와 발송 이력을 조회할 수 있습니다.',
+  'bulk_sms_send': '환자들에게 단체 문자를 발송할 수 있습니다.',
+  'bulk_sms_manage': '단체 문자 템플릿을 생성·수정·삭제할 수 있습니다.',
 }
