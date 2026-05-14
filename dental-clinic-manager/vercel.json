@@ -37,6 +37,10 @@
     {
       "path": "/api/cron/billing-retry",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/bulk-sms",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
