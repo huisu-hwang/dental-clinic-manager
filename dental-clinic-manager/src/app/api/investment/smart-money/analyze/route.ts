@@ -50,11 +50,23 @@ import { analyzeSession, type SessionBar } from '@/lib/smartMoney/sessionAnalyze
 import { analyzeNewsContext, type NewsBar } from '@/lib/smartMoney/newsContextEngine'
 import type { Market, OHLCV } from '@/types/investment'
 import type {
+  AlgoFootprintResult,
   SmartMoneyAnalysis,
   SmartMoneyAlert,
   InvestorTrendRow,
   InvestorFlowResult,
   DailyAnalysis,
+  LiquidityResult,
+  MarketStructureResult,
+  NewsContextResult,
+  OrderBlockFvgResult,
+  SessionResult,
+  SmartMoneyAnalyzeErrorResponse,
+  TrapResult,
+  VSAResult,
+  VWAPResult,
+  WyckoffPhaseResult,
+  WyckoffResult,
 } from '@/types/smartMoney'
 
 export const dynamic = 'force-dynamic'
@@ -102,6 +114,18 @@ interface AnalysisResponse extends SmartMoneyAnalysis {
   newsSignalIntegration?: 'active' | 'inactive'
 }
 
+function errorResponse(
+  status: number,
+  error: string,
+  code: string,
+  reason?: string
+) {
+  const payload: SmartMoneyAnalyzeErrorResponse = reason
+    ? { error, code, reason }
+    : { error, code }
+  return NextResponse.json(payload, { status })
+}
+
 // ============================================
 // 메인 핸들러
 // ============================================
@@ -110,7 +134,7 @@ export async function POST(request: NextRequest) {
   // 1. 인증
   const auth = await requireAuth()
   if (auth.error || !auth.user) {
-    return NextResponse.json({ error: auth.error ?? '인증 실패' }, { status: auth.status })
+    return errorResponse(auth.status, auth.error ?? '인증 실패', 'AUTH_REQUIRED')
   }
   const userId = auth.user.id
 
@@ -119,7 +143,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: '요청 본문이 올바르지 않습니다.' }, { status: 400 })
+    return errorResponse(400, '요청 본문이 올바르지 않습니다.', 'INVALID_JSON')
   }
 
   const ticker = typeof body.ticker === 'string' ? body.ticker.trim().toUpperCase() : ''
@@ -129,15 +153,15 @@ export async function POST(request: NextRequest) {
   const includePreMarket = Boolean(body.includePreMarket) && market === 'US'
 
   if (!ticker) {
-    return NextResponse.json({ error: 'ticker는 필수입니다.' }, { status: 400 })
+    return errorResponse(400, 'ticker는 필수입니다.', 'INVALID_TICKER')
   }
   if (!market) {
-    return NextResponse.json({ error: 'market은 KR 또는 US여야 합니다.' }, { status: 400 })
+    return errorResponse(400, 'market은 KR 또는 US여야 합니다.', 'INVALID_MARKET')
   }
 
   const supabase = getSupabaseAdmin()
   if (!supabase) {
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    return errorResponse(500, 'Server configuration error', 'SERVER_CONFIG_ERROR')
   }
 
   // 3. KIS credential (KR엔 필수, US엔 옵션)
@@ -321,16 +345,14 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : '시장 데이터 조회 실패'
     console.error('[smart-money/analyze] 데이터 수집 실패:', err)
-    return NextResponse.json(
-      { error: `시장 데이터 조회 실패: ${message}`, reason: message },
-      { status: 502 }
-    )
+    return errorResponse(502, `시장 데이터 조회 실패: ${message}`, 'MARKET_DATA_FETCH_FAILED', message)
   }
 
   if (bars.length === 0 && dailyBars.length === 0) {
-    return NextResponse.json(
-      { error: '분봉/일봉 데이터를 모두 받지 못했습니다. 종목 코드를 확인해주세요.' },
-      { status: 422 }
+    return errorResponse(
+      422,
+      '분봉/일봉 데이터를 모두 받지 못했습니다. 종목 코드를 확인해주세요.',
+      'NO_MARKET_DATA'
     )
   }
   const regularBars = bars.filter((b) => isRegularTradingHours(b.datetime, market))
@@ -340,8 +362,25 @@ export async function POST(request: NextRequest) {
       : []
 
   // 5. 엔진 호출
-  let vwap, wyckoff, wyckoffIntraday, algoFootprint, investorFlow: InvestorFlowResult | null, scoreResult
-  let wyckoffPhase, liquidity, marketStructure, orderBlocksFvg, traps, vsa, session, newsContext
+  let vwap: VWAPResult
+  let wyckoff: WyckoffResult
+  let wyckoffIntraday: WyckoffResult | undefined
+  let algoFootprint: AlgoFootprintResult
+  let investorFlow: InvestorFlowResult | null
+  let scoreResult: {
+    overallScore: number
+    interpretation: SmartMoneyAnalysis['interpretation']
+    signalDetails: SmartMoneyAnalysis['signalDetails']
+    manipulationRiskScore: number
+  }
+  let wyckoffPhase: WyckoffPhaseResult | undefined
+  let liquidity: LiquidityResult | undefined
+  let marketStructure: MarketStructureResult | undefined
+  let orderBlocksFvg: OrderBlockFvgResult | undefined
+  let traps: TrapResult | undefined
+  let vsa: VSAResult | undefined
+  let session: SessionResult | undefined
+  let newsContext: NewsContextResult | undefined
   let byDay: DailyAnalysis[] = []
   try {
     // ================================================================
@@ -680,7 +719,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : '분석 엔진 실패'
     console.error('[smart-money/analyze] 엔진 실행 실패:', err)
-    return NextResponse.json({ error: `분석 실패: ${message}` }, { status: 500 })
+    return errorResponse(500, `분석 실패: ${message}`, 'ANALYSIS_ENGINE_FAILED', message)
   }
 
   // recent20DayHigh/Low — UI display용 (현재는 noop, 향후 사용 가능)
@@ -711,7 +750,7 @@ export async function POST(request: NextRequest) {
     newsContext = preferredByDay.newsContext
     scoreResult = {
       ...scoreResult,
-      manipulationRiskScore: preferredByDay.manipulationRiskScore,
+      manipulationRiskScore: preferredByDay.manipulationRiskScore ?? scoreResult.manipulationRiskScore,
       overallScore: preferredByDay.overallScore,
       interpretation: preferredByDay.interpretation,
       signalDetails: preferredByDay.signalDetails,

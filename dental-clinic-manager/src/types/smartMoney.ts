@@ -408,3 +408,27 @@ export interface InvestorTrendRow {
   total_value: number | null
   fetched_at: string
 }
+
+// ============================================
+// Smart Money Analyze API
+// ============================================
+
+export interface TriggeredSmartMoneyAlertSummary {
+  id: string
+  ticker: string
+  market: Market
+  signal_types: SignalType[]
+}
+
+export interface SmartMoneyAnalyzeResponse {
+  data: SmartMoneyAnalysis & {
+    triggeredAlerts?: TriggeredSmartMoneyAlertSummary[]
+    newsSignalIntegration?: 'active' | 'inactive'
+  }
+}
+
+export interface SmartMoneyAnalyzeErrorResponse {
+  error: string
+  code?: string
+  reason?: string
+}

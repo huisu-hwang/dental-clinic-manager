@@ -38,6 +38,8 @@ import type {
   Interpretation,
   SignalType,
   SmartMoneyAnalysis,
+  SmartMoneyAnalyzeErrorResponse,
+  SmartMoneyAnalyzeResponse,
 } from '@/types/smartMoney'
 
 interface Selected {
@@ -238,7 +240,11 @@ export function SmartMoneyContent() {
   // 메모리 캐시 (ticker:market:date → analysis)
   const cacheRef = useRef<Map<string, SmartMoneyAnalysis>>(new Map())
 
-  const cacheKey = (s: Selected) => `${s.market}:${s.ticker}:${todayKey()}`
+  const cacheKey = useCallback(
+    (s: Selected, withPreMarket: boolean) =>
+      `${s.market}:${s.ticker}:${marketTodayKey(s.market)}:${withPreMarket && s.market === 'US' ? 'pre' : 'regular'}`,
+    [],
+  )
 
   const { add: rememberTicker } = useRecentTickers()
 
@@ -251,13 +257,46 @@ export function SmartMoneyContent() {
     setActiveDayIdx(null)
     rememberTicker(ticker, name || ticker, market)
     // 캐시에 있으면 즉시 표시
-    const cached = cacheRef.current.get(`${next.market}:${next.ticker}:${todayKey()}`)
+    const cached = cacheRef.current.get(cacheKey(next, includePreMarket))
     if (cached) setAnalysis(cached)
     else setAnalysis(null)
-  }, [rememberTicker])
+  }, [cacheKey, includePreMarket, rememberTicker])
+
+  const fetchLlmComment = useCallback(async (
+    base: SmartMoneyAnalysis,
+    targetSelection: Selected,
+    targetPreMarket: boolean,
+  ) => {
+    setLlmLoading(true)
+    try {
+      const res = await fetch('/api/investment/smart-money/llm-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysis: base }),
+      })
+      const json = await res.json().catch(() => ({} as { data?: { comment?: string; perCard?: SmartMoneyAnalysis['perCardComments'] } }))
+      const comment = json.data?.comment
+      const perCard = json.data?.perCard
+      if (comment) {
+        const updated: SmartMoneyAnalysis = { ...base, naturalLanguageComment: comment, perCardComments: perCard }
+        setAnalysis((prev) => (
+          prev && prev.ticker === base.ticker && prev.market === base.market
+            ? updated
+            : prev
+        ))
+        cacheRef.current.set(cacheKey(targetSelection, targetPreMarket), updated)
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setLlmLoading(false)
+    }
+  }, [cacheKey])
 
   const runAnalyze = useCallback(async () => {
     if (!selected) return
+    const requestSelection = selected
+    const requestPreMarket = includePreMarket && requestSelection.market === 'US'
     setLoading(true)
     setError(null)
     setErrorCode(null)
@@ -267,31 +306,31 @@ export function SmartMoneyContent() {
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
         body: JSON.stringify({
-          ticker: selected.ticker,
-          market: selected.market,
+          ticker: requestSelection.ticker,
+          market: requestSelection.market,
           includeLLM: true,
-          includePreMarket: includePreMarket && selected.market === 'US',
+          includePreMarket: requestPreMarket,
         }),
       })
-      const json = await res.json().catch(() => ({}))
+      const json: SmartMoneyAnalyzeResponse | SmartMoneyAnalyzeErrorResponse =
+        await res.json().catch(() => ({ error: '응답을 해석하지 못했습니다.' }))
       if (!res.ok) {
-        setError(json?.error || '분석 요청에 실패했습니다.')
-        setErrorCode(typeof json?.code === 'string' ? json.code : null)
+        setError('error' in json ? json.error : '분석 요청에 실패했습니다.')
+        setErrorCode('error' in json && typeof json.code === 'string' ? json.code : null)
         setAnalysis(null)
         return
       }
-      const data: SmartMoneyAnalysis | undefined = json?.data
+      const data = 'data' in json ? json.data : undefined
       if (!data) {
         setError('분석 결과를 받지 못했습니다.')
         return
       }
       setAnalysis(data)
       setActiveDayIdx(null) // 가장 최근 일자 default
-      cacheRef.current.set(cacheKey(selected), data)
+      cacheRef.current.set(cacheKey(requestSelection, requestPreMarket), data)
 
-      // LLM 코멘트가 비어 있으면 별도 호출
       if (!data.naturalLanguageComment) {
-        fetchLlmComment(data)
+        fetchLlmComment(data, requestSelection, requestPreMarket)
       }
     } catch {
       setError('네트워크 오류가 발생했습니다.')
@@ -299,12 +338,14 @@ export function SmartMoneyContent() {
     } finally {
       setLoading(false)
     }
-  }, [selected, includePreMarket])
+  }, [cacheKey, fetchLlmComment, includePreMarket, selected])
 
   /** 백그라운드 재분석 — 자동 갱신 시 사용. LLM 스킵, 큰 로딩 UI 없이 조용히 갱신.
    *  실패는 silent (기존 분석 유지). 기존 LLM 코멘트는 보존. */
   const runAnalyzeBackground = useCallback(async () => {
     if (!selected) return
+    const requestSelection = selected
+    const requestPreMarket = includePreMarket && requestSelection.market === 'US'
     setRefreshing(true)
     try {
       const res = await fetch('/api/investment/smart-money/analyze', {
@@ -312,62 +353,39 @@ export function SmartMoneyContent() {
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
         body: JSON.stringify({
-          ticker: selected.ticker,
-          market: selected.market,
+          ticker: requestSelection.ticker,
+          market: requestSelection.market,
           includeLLM: false,
-          includePreMarket: includePreMarket && selected.market === 'US',
+          includePreMarket: requestPreMarket,
         }),
       })
       if (!res.ok) return
-      const json = await res.json().catch(() => null)
-      const data: SmartMoneyAnalysis | undefined = json?.data
+      const json: SmartMoneyAnalyzeResponse | null = await res.json().catch(() => null)
+      const data = json?.data
       if (!data) return
-      setAnalysis(prev => {
+      let nextAnalysis: SmartMoneyAnalysis | null = null
+      setAnalysis((prev) => {
         if (!prev || prev.ticker !== data.ticker || prev.market !== data.market) return data
-        // LLM 코멘트 보존 — 폴링은 includeLLM=false라서 새로 안 옴
-        return {
+        nextAnalysis = {
           ...data,
           naturalLanguageComment: prev.naturalLanguageComment ?? data.naturalLanguageComment,
           perCardComments: prev.perCardComments ?? data.perCardComments,
-          // byDay 각 일자의 LLM 코멘트도 보존
-          byDay: data.byDay?.map(d => {
-            const prevDay = prev.byDay?.find(p => p.asOfDate === d.asOfDate)
+          byDay: data.byDay?.map((d) => {
+            const prevDay = prev.byDay?.find((p) => p.asOfDate === d.asOfDate)
             return prevDay?.naturalLanguageComment
               ? { ...d, naturalLanguageComment: prevDay.naturalLanguageComment }
               : d
           }),
         }
+        return nextAnalysis
       })
-      cacheRef.current.set(cacheKey(selected), data)
+      cacheRef.current.set(cacheKey(requestSelection, requestPreMarket), nextAnalysis ?? data)
     } catch {
       /* silent — 폴링 실패는 사용자 차단 안 함 */
     } finally {
       setRefreshing(false)
     }
-  }, [selected, includePreMarket])
-
-  const fetchLlmComment = useCallback(async (base: SmartMoneyAnalysis) => {
-    setLlmLoading(true)
-    try {
-      const res = await fetch('/api/investment/smart-money/llm-comment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ analysis: base }),
-      })
-      const json = await res.json().catch(() => ({}))
-      const comment: string | undefined = json?.data?.comment
-      const perCard = json?.data?.perCard as SmartMoneyAnalysis['perCardComments']
-      if (comment) {
-        const updated: SmartMoneyAnalysis = { ...base, naturalLanguageComment: comment, perCardComments: perCard }
-        setAnalysis(prev => (prev && prev.ticker === base.ticker ? updated : prev))
-        if (selected) cacheRef.current.set(cacheKey(selected), updated)
-      }
-    } catch {
-      /* ignore */
-    } finally {
-      setLlmLoading(false)
-    }
-  }, [selected])
+  }, [cacheKey, includePreMarket, selected])
 
   // 활성 일자 분석 객체 — byDay에서 선택된 일자가 있으면 그 항목으로 SmartMoneyAnalysis를 합성.
   // 일자별 탭이 클릭됐을 때 표시 데이터(점수/시그널/패널/LLM)가 모두 그 일자 기준으로 전환됨.
@@ -405,6 +423,11 @@ export function SmartMoneyContent() {
       perCardComments: day.asOfDate === analysis.asOfDate ? analysis.perCardComments : undefined,
     }
   }, [analysis, activeDayIdx])
+
+  const defaultDayIdx = useMemo(() => {
+    if (!analysis?.byDay?.length) return 0
+    return findDefaultDayIndex(analysis.byDay, analysis.asOfDate)
+  }, [analysis])
 
   const topSignals = useMemo(() => {
     if (!viewAnalysis) return []
@@ -587,8 +610,7 @@ export function SmartMoneyContent() {
               <section className="bg-white rounded-2xl border border-slate-200 p-2 shadow-sm">
                 <div role="tablist" className="flex gap-1">
                   {analysis.byDay.map((day, i) => {
-                    const defaultIdx = findDefaultDayIndex(analysis.byDay!, analysis.asOfDate)
-                    const isActive = (activeDayIdx ?? defaultIdx) === i
+                    const isActive = (activeDayIdx ?? defaultDayIdx) === i
                     return (
                       <button
                         key={day.asOfDate}
@@ -788,7 +810,11 @@ export function SmartMoneyContent() {
                   ) : viewAnalysis.asOfDate === analysis.asOfDate ? (
                     <button
                       type="button"
-                      onClick={() => analysis && fetchLlmComment(analysis)}
+                      onClick={() => analysis && fetchLlmComment(
+                        analysis,
+                        { ticker: analysis.ticker, market: analysis.market, name: analysis.name },
+                        includePreMarket && analysis.market === 'US',
+                      )}
                       className="text-xs text-purple-700 hover:underline"
                     >
                       AI 코멘트 생성하기
