@@ -1,0 +1,341 @@
+## Backtest Verification Report — 2026-05-15
+
+### Summary
+- Total runs checked: 98
+- Passed: 70
+- Mismatched: 28
+- Errors: 0
+
+### ✅ Passed
+- [9d888e33-b4c7-4e92-9383-75947b615078] 볼린저 밴드 하단 반등 — 18 trades matched; total return 112.09%
+- [e223e677-0a2d-40ff-b9e4-ac4b6ed098d1] 😱 패닉 매수 (역행 투자) — 5 trades matched; total return 66.96%
+- [41098b67-06a9-4ac7-8d51-ca48ef3b2a99] 💥 패닉 반등 (밴드 하단) — 14 trades matched; total return 76.71%
+- [00b6cbfc-8ae1-4622-943d-116b528298b3] 🐳 스마트머니 추세 추종 (중기) — 9 trades matched; total return -22.15%
+- [d91dbf4c-769e-476d-9965-d1a260c18c1e] ⚡ 스마트머니 일일 추종 (단타) — 187 trades matched; total return 14.95%
+- [85f92e82-76d1-41b2-a6ae-d1494cea5b5e] 💎 스마트머니 추세+펄스 결합 (정밀) — 10 trades matched; total return 17.13%
+- [e8b6f1ca-a71a-4bf1-8cd5-95255c71c1fb] 🛡️ 공포/탐욕 보수적 진입 — 0 trades matched; total return 0.00%
+- [9a376578-e845-446d-bfb1-276b485f7695] ⚡ Connors 2-Period RSI — 80 trades matched; total return 39.70%
+- [83944e04-b2df-4e95-967b-ab31fa783ae4] 🔭 Elder Triple Screen — 3 trades matched; total return -0.78%
+- [1f5fa0fa-462c-48bb-85f9-2b976992deb2] 오더블록 리테스트 — 52 trades matched; total return 52.08%
+- [b331cc67-adc4-4e93-bafa-eef18c34e263] VSA No Supply 진입 — 20 trades matched; total return 89.66%
+- [98ef6262-a770-48be-9b1a-dd64a94d383f] 볼린저 밴드 하단 반등 — 18 trades matched; total return 112.09%
+- [9cacaabf-6a17-4f04-9c65-f61c08be0f61] 😱 패닉 매수 (역행 투자) — 5 trades matched; total return 66.96%
+- [8912a582-dedc-4b01-9705-1e8fd39b404c] 💥 패닉 반등 (밴드 하단) — 14 trades matched; total return 76.71%
+- [3edaeae1-ee4b-4eb5-a06e-d685a6d20bba] 🐳 스마트머니 추세 추종 (중기) — 9 trades matched; total return -22.15%
+- [5d41acbe-0c1a-471e-a4bd-ce041bea8b3e] ⚡ 스마트머니 일일 추종 (단타) — 187 trades matched; total return 14.95%
+- [9c0d2e5c-b77c-4c17-924e-d37fa2c43cf1] 💎 스마트머니 추세+펄스 결합 (정밀) — 10 trades matched; total return 17.13%
+- [ab25ba53-6295-49bb-8f1a-13c64397fb96] 🛡️ 공포/탐욕 보수적 진입 — 0 trades matched; total return 0.00%
+- [904934dc-4bcd-40ce-94aa-2c42f7d6c8e8] ⚡ Connors 2-Period RSI — 80 trades matched; total return 39.70%
+- [4b32023e-e83d-4c3e-aed6-b45a0d9bb923] 🔭 Elder Triple Screen — 3 trades matched; total return -0.78%
+- [486e66b7-599a-43f1-9788-77a35ae43cb3] 오더블록 리테스트 — 52 trades matched; total return 52.08%
+- [1c7f930e-5900-49bb-9ce4-2bb97df3d3e6] VSA No Supply 진입 — 20 trades matched; total return 89.66%
+- [5e0defd0-2852-4a0e-a1b6-9e8d5e4be6cc] 볼린저 밴드 하단 반등 — 18 trades matched; total return 112.09%
+- [ed80b119-8c02-44fe-b953-c619276ccc7e] 볼린저 밴드 하단 반등 — 18 trades matched; total return 112.09%
+- [982c9519-53fc-471b-8739-bfc9d26382f5] 😱 패닉 매수 (역행 투자) — 5 trades matched; total return 66.96%
+- [48d975f3-0d3d-40df-8698-8999988a3165] 💥 패닉 반등 (밴드 하단) — 14 trades matched; total return 76.71%
+- [fa6bb06d-dfb4-4b61-8702-ac34c37a0e46] 🐳 스마트머니 추세 추종 (중기) — 9 trades matched; total return -22.79%
+- [d56ad2af-d545-45c0-ac31-6d29929fe435] ⚡ 스마트머니 일일 추종 (단타) — 187 trades matched; total return 14.95%
+- [c98a5a8d-3505-4a88-a9c0-bb300eaf9c80] 볼린저 밴드 하단 반등 — 15 trades matched; total return 48.04%
+- [bb4c1151-8bfb-4405-a482-49476ff6dfb4] 😱 패닉 매수 (역행 투자) — 4 trades matched; total return 0.78%
+- [a8a08483-e748-4f29-85a4-3898788e5529] 골든크로스 — 23 trades matched; total return 716.27%
+- [b76f95bd-d187-4fee-ad42-a74374108812] MACD 시그널 크로스 — 96 trades matched; total return 187.96%
+- [06cad08a-cb5b-4f16-add0-2175bc3728b4] 볼린저 밴드 하단 반등 — 18 trades matched; total return 112.09%
+- [92df6153-337c-4690-9a59-b6c5e6511d78] 😱 패닉 매수 (역행 투자) — 5 trades matched; total return 66.96%
+- [6d85078c-8188-42e5-8a61-fe502ae16601] 🐳 스마트머니 추세 추종 (중기) — 14 trades matched; total return 62.30%
+- [ab84d92e-2474-415a-b9a6-90b058685b6f] 💎 스마트머니 추세+펄스 결합 (정밀) — 29 trades matched; total return 15.27%
+- [f0adb845-c02b-4940-9389-553cb096cd90] 💥 패닉 반등 (밴드 하단) — 12 trades matched; total return 8.19%
+- [9ea78e85-b58a-43bd-89ce-23346a482d61] ⚡ 스마트머니 일일 추종 (단타) — 206 trades matched; total return -33.92%
+- [242168e7-53be-4b57-9ca7-e919d6fe6c68] 🐳 스마트머니 추세 추종 (중기) — 9 trades matched; total return -21.14%
+- [91e765da-0680-47d3-8783-d14491bce80a] ⚡ 스마트머니 일일 추종 (단타) — 187 trades matched; total return 14.95%
+- [e635bb38-1942-41b0-a790-82e445c74e92] 💥 패닉 반등 (밴드 하단) — 14 trades matched; total return 76.71%
+- [a27d3763-fcf3-429d-980a-a2fa4c816e1c] 💎 스마트머니 추세+펄스 결합 (정밀) — 10 trades matched; total return 17.13%
+- [a0977279-6f74-4e54-9c25-85c22e2fb245] 📈 시계열 모멘텀 (TSMOM 12M) — 48 trades matched; total return 166.31%
+- [3a7f2af5-f8fc-4a0f-a105-e734d201027e] ⚡ Connors 2-Period RSI — 64 trades matched; total return 78.31%
+- [7e5218d9-8575-4058-a2e4-18fdb194b159] 🛡️ 공포/탐욕 보수적 진입 — 0 trades matched; total return 0.00%
+- [e6120f0a-5382-4f6b-bf06-e44a00cf6d21] 🛡️ 공포/탐욕 보수적 진입 — 0 trades matched; total return 0.00%
+- [8ee51096-865f-4f61-8baf-220065c813b8] ⚡ Connors 2-Period RSI — 80 trades matched; total return 39.70%
+- [f8f366b1-8faf-43e3-8886-24d96487b010] 📊 Faber 10-Month MA Rule — 32 trades matched; total return 330.71%
+- [12b5fa64-4b38-45cd-aa7a-533d77128472] 🔭 Elder Triple Screen — 4 trades matched; total return 6.29%
+- [7e3e96de-74d2-47a0-a575-f318e64d6ea2] 와이코프 Phase C 매집 진입 — 14 trades matched; total return 199.20%
+- [f9f1c0b7-eaac-46c6-a031-9fc1c3f8e8b1] 🔭 Elder Triple Screen — 3 trades matched; total return -0.78%
+- [21544775-0532-4e16-8895-285691720b27] 오더블록 리테스트 — 52 trades matched; total return 52.08%
+- [8731e7f1-9d2d-486e-9f49-158b07d00a35] 와이코프 Phase C 매집 진입 — 11 trades matched; total return 44.11%
+- [21b81aca-a672-4622-b225-6ac28638fe8c] 오더블록 리테스트 — 66 trades matched; total return 442.26%
+- [eec1f8ae-cc89-4eea-8528-475d3dcbf93f] CHoCH 추세전환 진입 — 22 trades matched; total return 24.50%
+- [23854463-725b-46fd-b169-d5708960c50c] VSA No Supply 진입 — 16 trades matched; total return 17.58%
+- [c12a5345-a13b-42cb-a3f4-52c0217f3c5a] VSA No Supply 진입 — 20 trades matched; total return 89.66%
+- [8538522e-f1ca-4269-a56f-0bcf410d9a2c] 🔢 피보나치 크로스 (13/55) — 25 trades matched; total return 586.13%
+- [05b596b6-2bbf-43ca-b42b-5ad4da8fafc5] 🔢 피보나치 EMA 추세 정렬 (8/21/55) — 40 trades matched; total return 315.75%
+- [f52e31d8-712d-4b81-b9d6-3864515d607b] 베어 트랩 V자 반등 — 21 trades matched; total return 78.49%
+- [e1dba61b-c059-4b5c-8706-298d96b753fc] 베어 트랩 V자 반등 — 22 trades matched; total return 28.36%
+- [2d21fe19-a529-48f0-9530-e1ca95e2f3c9] RSI 임계값 반등 매매 (30/70 통과) — 7 trades matched; total return -11.60%
+- [da4fef1f-a498-4c0e-aade-e5929988de8f] 🔢 피보나치 RSI 되돌림 (38.2 / 61.8) — 26 trades matched; total return 112.23%
+- [fd0dd513-1021-494f-abdf-5da77973ccac] 🔢 피보나치 RSI 되돌림 (38.2 / 61.8) — 31 trades matched; total return 234.17%
+- [75bb192e-ad08-4bff-88df-295c3932f299] 🐢 터틀 트레이딩 System 1 (단기 20/10) — 43 trades matched; total return 261.46%
+- [872c0586-0f78-4e36-87d4-88c1eed73fe9] 🐢 터틀 트레이딩 System 2 (장기 55/20) — 26 trades matched; total return 152.90%
+- [9dde8a57-f675-41ce-a1a6-a0b74fd66db7] 엘리어트 3파 진입 — 1 trades matched; total return 39.00%
+- [88b791d6-23e8-468a-b235-61a89b8bd34b] 엘리어트 4파 눌림목 매수 — 5 trades matched; total return 37.48%
+- [bded394b-8c67-4f0b-b234-5507a83b49d7] 엘리어트 4파 눌림목 매수 — 5 trades matched; total return 6.55%
+- [d13a5ea3-6ae8-477c-89e9-3c3327ce7db2] 엘리어트 3파 진입 — 9 trades matched; total return 17.84%
+
+### ⚠️ Mismatched
+- Run ID: 2579c1eb-4918-45a1-81c5-40926b29f470, 골든크로스
+- Stored trades: 28, Rerun trades: 28
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 44967151, Rerun final equity: 44965901
+- Stored total_return: 349.67%, Rerun total_return: 349.66%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 9791df5e-0396-4680-a5e9-746dfc08a93c, MACD 시그널 크로스
+- Stored trades: 92, Rerun trades: 92
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 63962331, Rerun final equity: 63960553
+- Stored total_return: 539.62%, Rerun total_return: 539.61%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: f1513448-231a-4f0d-9f95-8d9f7af92829, 📈 시계열 모멘텀 (TSMOM 12M)
+- Stored trades: 41, Rerun trades: 41
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 36083700, Rerun final equity: 36082697
+- Stored total_return: 260.84%, Rerun total_return: 260.83%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 1377df82-cdf2-4941-bc94-7f733083e1b1, 📊 Faber 10-Month MA Rule
+- Stored trades: 25, Rerun trades: 25
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 41886808, Rerun final equity: 41885643
+- Stored total_return: 318.87%, Rerun total_return: 318.86%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: a2ce2bf2-741b-4b40-8770-3bd570eb5801, 와이코프 Phase C 매집 진입
+- Stored trades: 14, Rerun trades: 14
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 30057984, Rerun final equity: 30057148
+- Stored total_return: 200.58%, Rerun total_return: 200.57%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: daa2ee63-2f51-4d5b-8641-9f145b237437, CHoCH 추세전환 진입
+- Stored trades: 14, Rerun trades: 14
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 12025014, Rerun final equity: 12024680
+- Stored total_return: 20.25%, Rerun total_return: 20.25%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: a14132e5-2e0f-405a-9e36-7b095c38f633, 베어 트랩 V자 반등
+- Stored trades: 21, Rerun trades: 21
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 17931090, Rerun final equity: 17930592
+- Stored total_return: 79.31%, Rerun total_return: 79.31%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 5dd8db3d-92a5-4b38-a61c-8b93dfe550b1, 베어 트랩 V자 반등
+- Stored trades: 21, Rerun trades: 21
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 17931090, Rerun final equity: 17930592
+- Stored total_return: 79.31%, Rerun total_return: 79.31%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 864b2f6f-4381-440c-8b40-b63e551cfa32, 골든크로스
+- Stored trades: 28, Rerun trades: 28
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 44967151, Rerun final equity: 44965901
+- Stored total_return: 349.67%, Rerun total_return: 349.66%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: ba1bb852-cb34-473e-bdf4-a347724179db, MACD 시그널 크로스
+- Stored trades: 92, Rerun trades: 92
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 63962331, Rerun final equity: 63960553
+- Stored total_return: 539.62%, Rerun total_return: 539.61%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 48482e09-41de-4779-babf-0eeddc1e9bb0, 📈 시계열 모멘텀 (TSMOM 12M)
+- Stored trades: 41, Rerun trades: 41
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 36083700, Rerun final equity: 36082697
+- Stored total_return: 260.84%, Rerun total_return: 260.83%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 3b814d5c-a909-4615-a6b8-7e2b0cc17bfa, 📊 Faber 10-Month MA Rule
+- Stored trades: 25, Rerun trades: 25
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 41886808, Rerun final equity: 41885643
+- Stored total_return: 318.87%, Rerun total_return: 318.86%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: a1d820c0-28b7-4acf-9259-abeef4d7a56b, 와이코프 Phase C 매집 진입
+- Stored trades: 14, Rerun trades: 14
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 30057984, Rerun final equity: 30057148
+- Stored total_return: 200.58%, Rerun total_return: 200.57%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 35d71951-c7c8-481e-9ae8-a8bd6b264e7f, CHoCH 추세전환 진입
+- Stored trades: 14, Rerun trades: 14
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 12025014, Rerun final equity: 12024680
+- Stored total_return: 20.25%, Rerun total_return: 20.25%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 2ff6eb57-547d-4b0e-b91a-cef9f6293a73, 베어 트랩 V자 반등
+- Stored trades: 21, Rerun trades: 21
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 17931090, Rerun final equity: 17930592
+- Stored total_return: 79.31%, Rerun total_return: 79.31%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1161.55%
+- Estimated cause: rounding
+- Run ID: 476dce54-04b6-4397-a0f7-f133b6765da2, 골든크로스
+- Stored trades: 28, Rerun trades: 28
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 44967151, Rerun final equity: 44965901
+- Stored total_return: 349.67%, Rerun total_return: 349.66%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1157.09%
+- Estimated cause: rounding
+- Run ID: a136b56a-c009-434c-8c3c-9b122a3dea3d, 골든크로스
+- Stored trades: 28, Rerun trades: 28
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 44967151, Rerun final equity: 44965901
+- Stored total_return: 349.67%, Rerun total_return: 349.66%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1157.09%
+- Estimated cause: rounding
+- Run ID: 2f78db3a-d336-4848-b1d3-ea03fcfca92d, MACD 시그널 크로스
+- Stored trades: 92, Rerun trades: 92
+- First diverging trade index: None
+- Stored: None
+- Rerun: None
+- Stored final equity: 63962331, Rerun final equity: 63960553
+- Stored total_return: 539.62%, Rerun total_return: 539.61%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1157.09%
+- Estimated cause: rounding
+- Run ID: 2085a59d-9dd6-4cdd-acd8-b82bb74bd974, 골든크로스
+- Stored trades: 27, Rerun trades: 27
+- First diverging trade index: 26
+- Stored: {entry_date: 2026-04-24, exit_date: 2026-05-14, entry_price: 272.76, exit_price: 298.03, quantity: 139112, pnl: 3513582.09}
+- Rerun: {entry_date: 2026-04-24, exit_date: 2026-05-14, entry_price: 272.76, exit_price: 297.73, quantity: 139112, pnl: 3472475.39}
+- Stored final equity: 41457837, Rerun final equity: 41416730
+- Stored total_return: 314.58%, Rerun total_return: 314.17%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1188.98%
+- Estimated cause: strategy definition change
+- Run ID: f74aa430-1491-44f5-a0e7-538de15e4c1f, MACD 시그널 크로스
+- Stored trades: 91, Rerun trades: 91
+- First diverging trade index: 90
+- Stored: {entry_date: 2026-04-01, exit_date: 2026-05-14, entry_price: 254.08, exit_price: 298.03, quantity: 219945, pnl: 9663773.12}
+- Rerun: {entry_date: 2026-04-01, exit_date: 2026-05-14, entry_price: 254.08, exit_price: 297.73, quantity: 219945, pnl: 9598780.80}
+- Stored final equity: 65547566, Rerun final equity: 65482573
+- Stored total_return: 555.48%, Rerun total_return: 554.83%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1188.98%
+- Estimated cause: strategy definition change
+- Run ID: 59608500-7e26-4582-890e-6138d4423826, 📈 시계열 모멘텀 (TSMOM 12M)
+- Stored trades: 41, Rerun trades: 41
+- First diverging trade index: 40
+- Stored: {entry_date: 2026-04-06, exit_date: 2026-05-14, entry_price: 256.51, exit_price: 298.17, quantity: 121385, pnl: 5055893.37}
+- Rerun: {entry_date: 2026-04-06, exit_date: 2026-05-14, entry_price: 256.51, exit_price: 297.80, quantity: 121385, pnl: 5010979.06}
+- Stored final equity: 36192420, Rerun final equity: 36147506
+- Stored total_return: 261.92%, Rerun total_return: 261.48%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.28%
+- Estimated cause: strategy definition change
+- Run ID: 00600a0c-1228-4fc2-af1b-a20a0978251d, 📊 Faber 10-Month MA Rule
+- Stored trades: 25, Rerun trades: 25
+- First diverging trade index: 24
+- Stored: {entry_date: 2026-04-01, exit_date: 2026-05-14, entry_price: 254.08, exit_price: 298.17, quantity: 142802, pnl: 6294958.13}
+- Rerun: {entry_date: 2026-04-01, exit_date: 2026-05-14, entry_price: 254.08, exit_price: 297.86, quantity: 142802, pnl: 6250673.66}
+- Stored final equity: 42578214, Rerun final equity: 42533930
+- Stored total_return: 325.78%, Rerun total_return: 325.34%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.54%
+- Estimated cause: strategy definition change
+- Run ID: 731a5fcc-0b26-4400-8c42-5028a76e5957, CHoCH 추세전환 진입
+- Stored trades: 13, Rerun trades: 13
+- First diverging trade index: 12
+- Stored: {entry_date: 2026-04-01, exit_date: 2026-05-14, entry_price: 254.08, exit_price: 298.15, quantity: 38726, pnl: 1706333.53}
+- Rerun: {entry_date: 2026-04-01, exit_date: 2026-05-14, entry_price: 254.08, exit_price: 297.86, quantity: 38726, pnl: 1695099.43}
+- Stored final equity: 11545952, Rerun final equity: 11534718
+- Stored total_return: 15.46%, Rerun total_return: 15.35%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.54%
+- Estimated cause: strategy definition change
+- Run ID: 49ff51ba-839b-46df-9191-f540fb20b49a, 🔢 피보나치 크로스 (13/55)
+- Stored trades: 28, Rerun trades: 28
+- First diverging trade index: 27
+- Stored: {entry_date: 2026-04-22, exit_date: 2026-05-14, entry_price: 267.82, exit_price: 298.22, quantity: 162286, pnl: 4932147.97}
+- Rerun: {entry_date: 2026-04-22, exit_date: 2026-05-14, entry_price: 267.82, exit_price: 297.87, quantity: 162286, pnl: 4875333.61}
+- Stored final equity: 48395777, Rerun final equity: 48338963
+- Stored total_return: 383.96%, Rerun total_return: 383.39%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.58%
+- Estimated cause: strategy definition change
+- Run ID: fc05a050-e77c-4c86-91b2-0972a25bbfb5, 🔢 피보나치 EMA 추세 정렬 (8/21/55)
+- Stored trades: 40, Rerun trades: 40
+- First diverging trade index: 39
+- Stored: {entry_date: 2026-04-21, exit_date: 2026-05-14, entry_price: 271.50, exit_price: 298.22, quantity: 184584, pnl: 4930554.41}
+- Rerun: {entry_date: 2026-04-21, exit_date: 2026-05-14, entry_price: 271.50, exit_price: 297.87, quantity: 184584, pnl: 4865933.78}
+- Stored final equity: 55045204, Rerun final equity: 54980584
+- Stored total_return: 450.45%, Rerun total_return: 449.81%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.58%
+- Estimated cause: strategy definition change
+- Run ID: 3b7e06c8-e1a8-4907-a9ec-2d0db76588f5, 🐢 터틀 트레이딩 System 2 (장기 55/20)
+- Stored trades: 27, Rerun trades: 27
+- First diverging trade index: 26
+- Stored: {entry_date: 2026-05-07, exit_date: 2026-05-14, entry_price: 289.27, exit_price: 298.22, quantity: 80338, pnl: 718360.04}
+- Rerun: {entry_date: 2026-05-07, exit_date: 2026-05-14, entry_price: 289.27, exit_price: 297.88, quantity: 80338, pnl: 691046.17}
+- Stored final equity: 23957947, Rerun final equity: 23930633
+- Stored total_return: 139.58%, Rerun total_return: 139.31%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.63%
+- Estimated cause: strategy definition change
+- Run ID: c57fc0e2-1da9-45be-b17a-88002bcce724, 🐢 터틀 트레이딩 System 1 (단기 20/10)
+- Stored trades: 38, Rerun trades: 38
+- First diverging trade index: 37
+- Stored: {entry_date: 2026-04-16, exit_date: 2026-05-14, entry_price: 266.80, exit_price: 298.22, quantity: 200790, pnl: 6307159.84}
+- Rerun: {entry_date: 2026-04-16, exit_date: 2026-05-14, entry_price: 266.80, exit_price: 297.88, quantity: 200790, pnl: 6238893.88}
+- Stored final equity: 59878127, Rerun final equity: 59809861
+- Stored total_return: 498.78%, Rerun total_return: 498.10%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.63%
+- Estimated cause: strategy definition change
+- Run ID: d86e6da8-87d2-4f34-ba80-9676c535bb59, RSI 임계값 반등 매매 (30/70 통과)
+- Stored trades: 11, Rerun trades: 11
+- First diverging trade index: 10
+- Stored: {entry_date: 2026-01-14, exit_date: 2026-05-14, entry_price: 259.49, exit_price: 298.29, quantity: 97907, pnl: 3797981.50}
+- Rerun: {entry_date: 2026-01-14, exit_date: 2026-05-14, entry_price: 259.49, exit_price: 297.88, quantity: 97907, pnl: 3757840.39}
+- Stored final equity: 29203898, Rerun final equity: 29163757
+- Stored total_return: 192.04%, Rerun total_return: 191.64%
+- Stored buy_and_hold: unavailable in backtest_runs row, Rerun buy_and_hold: 1189.63%
+- Estimated cause: strategy definition change
+
+### 🐛 Errors
+- None
+
+### Recommended Follow-up
+- P1: Re-run the mismatched run IDs through the API path in a controlled environment and snapshot the fetched OHLCV payload used by `fetchPrices`.
+- P2: Compare current preset/strategy definitions against the historical execution date to confirm whether the strategy inputs changed after the original run.
+- P3: If prices and strategy definitions both match, instrument `runBacktest` to dump the first diverging signal/trade and isolate an engine regression.
