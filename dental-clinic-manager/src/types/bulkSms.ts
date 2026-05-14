@@ -62,7 +62,8 @@ export interface BulkSmsFilter {
   lastVisitTo?: string | null
   lastTreatmentTypes?: string[]      // 다중 선택
   hasNextAppointment?: boolean | null  // null=전체, true=있음, false=없음
-  birthMonths?: number[]             // 1..12
+  birthMonths?: number[]             // 1..12 (birthToday=true 면 무시)
+  birthToday?: boolean               // true 면 오늘이 생일인 환자만 (KST 기준 month/day 일치)
   searchKeyword?: string             // 이름/차트번호
   activeOnly?: boolean               // 기본 true
 }

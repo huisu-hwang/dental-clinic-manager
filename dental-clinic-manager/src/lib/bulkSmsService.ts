@@ -123,8 +123,19 @@ export async function getEligiblePatients(
     })
   }
 
-  // 생일 월 필터
-  if (filter.birthMonths && filter.birthMonths.length > 0) {
+  // 생일 필터 — birthToday 우선, 그 다음 birthMonths
+  if (filter.birthToday) {
+    // KST 기준 오늘의 월·일
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const todayMonth = kstNow.getUTCMonth() + 1
+    const todayDay = kstNow.getUTCDate()
+    rows = rows.filter(r => {
+      if (!r.birth_date) return false
+      const b = new Date(r.birth_date)
+      if (isNaN(b.getTime())) return false
+      return (b.getMonth() + 1) === todayMonth && b.getDate() === todayDay
+    })
+  } else if (filter.birthMonths && filter.birthMonths.length > 0) {
     const months = new Set(filter.birthMonths)
     rows = rows.filter(r => {
       if (!r.birth_date) return false

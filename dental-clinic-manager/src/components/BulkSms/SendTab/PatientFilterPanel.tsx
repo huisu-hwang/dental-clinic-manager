@@ -155,28 +155,49 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
           </div>
         </div>
 
-        {/* 생일 월 */}
+        {/* 생일 */}
         <div>
-          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">생일 월</label>
-          <div className="grid grid-cols-6 gap-1.5">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
-              const active = (value.birthMonths ?? []).includes(m)
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => toggleBirthMonth(m)}
-                  className={`py-1 text-xs rounded border ${
-                    active
-                      ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]'
-                      : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]'
-                  }`}
-                >
-                  {m}월
-                </button>
-              )
-            })}
+          <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">생일</label>
+          <div className="flex gap-2 mb-2">
+            {[
+              { label: '🎂 오늘 생일자만', value: true },
+              { label: '월별 선택', value: false },
+            ].map(opt => (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => update({ birthToday: opt.value, ...(opt.value ? { birthMonths: [] } : {}) })}
+                className={`flex-1 px-3 py-1.5 text-sm rounded-lg border ${
+                  (value.birthToday ?? false) === opt.value
+                    ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]'
+                    : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
+          {!value.birthToday && (
+            <div className="grid grid-cols-6 gap-1.5">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                const active = (value.birthMonths ?? []).includes(m)
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => toggleBirthMonth(m)}
+                    className={`py-1 text-xs rounded border ${
+                      active
+                        ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]'
+                        : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]'
+                    }`}
+                  >
+                    {m}월
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* 이름/차트번호 검색 */}
