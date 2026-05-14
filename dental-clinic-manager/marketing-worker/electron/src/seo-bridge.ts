@@ -189,6 +189,25 @@ async function processKeywordAnalysis(job: SeoJob, page: any): Promise<void> {
       }
     };
 
+    const normalizePostUrl = (href: string): string => {
+      try {
+        const u = new URL(href);
+        if (u.pathname.includes('PostView.naver')) {
+          const blogId = u.searchParams.get('blogId');
+          const logNo = u.searchParams.get('logNo');
+          if (blogId && logNo) {
+            return `https://blog.naver.com/${blogId}/${logNo}`;
+          }
+        }
+        if (u.hostname === 'm.blog.naver.com') {
+          u.hostname = 'blog.naver.com';
+        }
+        return u.toString();
+      } catch {
+        return href;
+      }
+    };
+
     const candidates = [
       '.title_area a',
       '.api_txt_lines.total_tit',
@@ -205,8 +224,10 @@ async function processKeywordAnalysis(job: SeoJob, page: any): Promise<void> {
       const items = document.querySelectorAll(sel);
       let hit = 0;
       items.forEach((el: Element) => {
-        const href = (el as HTMLAnchorElement).href;
-        if (!href || !href.includes('blog.naver.com') || seen.has(href) || urls.length >= 5) return;
+        const rawHref = (el as HTMLAnchorElement).href;
+        if (!rawHref || !rawHref.includes('blog.naver.com') || urls.length >= 5) return;
+        const href = normalizePostUrl(rawHref);
+        if (seen.has(href)) return;
         if (!isValidPostUrl(href)) {
           rejected++;
           return;
@@ -294,18 +315,72 @@ async function processCompetitorCompare(job: SeoJob, page: any): Promise<void> {
   if (!myPostUrl) throw new Error('myPostUrl이 필요합니다');
 
   // 1. 경쟁 글 분석
-  const searchUrl = `https://search.naver.com/search.naver?ssc=tab.blog.all&query=${encodeURIComponent(keyword)}`;
+  const searchUrl = `https://search.naver.com/search.naver?ssc=tab.blog.all&where=blog&query=${encodeURIComponent(keyword)}`;
   await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2000);
 
   const postUrls: string[] = await page.evaluate(() => {
-    const links: string[] = [];
-    document.querySelectorAll('.title_area a, .api_txt_lines.total_tit').forEach((el: Element) => {
-      const href = (el as HTMLAnchorElement).href;
-      if (href && href.includes('blog.naver.com') && links.length < 5) {
-        links.push(href);
+    const isValidPostUrl = (href: string): boolean => {
+      try {
+        const u = new URL(href);
+        if (!u.hostname.endsWith('blog.naver.com')) return false;
+        if (u.hostname === 'section.blog.naver.com') return false;
+        if (u.pathname.includes('PostView.naver')) {
+          return !!(u.searchParams.get('blogId') && u.searchParams.get('logNo'));
+        }
+        const seg = u.pathname.split('/').filter(Boolean);
+        if (seg.length < 2) return false;
+        const [blogId, postId] = seg;
+        if (!blogId || blogId.endsWith('.naver')) return false;
+        return /^\d+$/.test(postId);
+      } catch {
+        return false;
       }
-    });
+    };
+
+    const normalizePostUrl = (href: string): string => {
+      try {
+        const u = new URL(href);
+        if (u.pathname.includes('PostView.naver')) {
+          const blogId = u.searchParams.get('blogId');
+          const logNo = u.searchParams.get('logNo');
+          if (blogId && logNo) {
+            return `https://blog.naver.com/${blogId}/${logNo}`;
+          }
+        }
+        if (u.hostname === 'm.blog.naver.com') {
+          u.hostname = 'blog.naver.com';
+        }
+        return u.toString();
+      } catch {
+        return href;
+      }
+    };
+
+    const selectors = [
+      '.title_area a',
+      '.api_txt_lines.total_tit',
+      'a.title_link',
+      '.bx .title_area a',
+      '.lst_total a[href*="blog.naver.com"]',
+      'a[href*="blog.naver.com"]',
+    ];
+    const seen = new Set<string>();
+    const links: string[] = [];
+
+    for (const sel of selectors) {
+      const items = document.querySelectorAll(sel);
+      items.forEach((el: Element) => {
+        const rawHref = (el as HTMLAnchorElement).href;
+        if (!rawHref || !rawHref.includes('blog.naver.com') || links.length >= 5) return;
+        const href = normalizePostUrl(rawHref);
+        if (seen.has(href) || !isValidPostUrl(href)) return;
+        seen.add(href);
+        links.push(href);
+      });
+      if (links.length >= 5) break;
+    }
+
     return links;
   });
 
@@ -371,7 +446,57 @@ async function scrapeAndAnalyzePost(page: any, url: string, keyword: string, ran
       clone.querySelectorAll('script, style, noscript').forEach((n) => n.remove());
       bodyText = (clone.textContent || '').replace(/\s+/g, ' ').trim();
     }
-    const images = document.querySelectorAll('.se-image-resource, img[id^="img"]');
+    const collectContentImageSources = (): string[] => {
+      const bodyEl = document.querySelector('.se-main-container, #postViewArea');
+      if (!bodyEl) return [];
+
+      const candidates = bodyEl.querySelectorAll('img');
+      const sources = new Set<string>();
+
+      candidates.forEach((img) => {
+        const src =
+          img.getAttribute('data-lazy-src') ||
+          img.getAttribute('data-src') ||
+          img.getAttribute('src') ||
+          '';
+        const normalizedSrc = src.trim();
+        if (!normalizedSrc || normalizedSrc.startsWith('data:')) return;
+
+        const widthAttr = Number(img.getAttribute('width') || '0');
+        const heightAttr = Number(img.getAttribute('height') || '0');
+        const naturalWidth = (img as HTMLImageElement).naturalWidth || 0;
+        const naturalHeight = (img as HTMLImageElement).naturalHeight || 0;
+        const width = naturalWidth || widthAttr;
+        const height = naturalHeight || heightAttr;
+        if ((width > 0 && width < 80) || (height > 0 && height < 80)) return;
+
+        const className = (img.getAttribute('class') || '').toLowerCase();
+        const alt = (img.getAttribute('alt') || '').toLowerCase();
+        if (
+          className.includes('emoji') ||
+          className.includes('icon') ||
+          className.includes('sticker') ||
+          alt.includes('emoji') ||
+          alt.includes('icon')
+        ) {
+          return;
+        }
+
+        if (
+          /\/(profile|thumbnail|thumb|icon|emoji|sticker|map|marker)\b/i.test(normalizedSrc) ||
+          normalizedSrc.includes('staticmap') ||
+          normalizedSrc.includes('/MapService/')
+        ) {
+          return;
+        }
+
+        sources.add(normalizedSrc);
+      });
+
+      return [...sources];
+    };
+
+    const images = collectContentImageSources();
     const videos = document.querySelectorAll('iframe[src*="youtube"], iframe[src*="tv.naver"], .se-video');
     const headings = document.querySelectorAll('.se-text-paragraph-align- .se-text-paragraph span[style*="font-size: 2"], h2, h3, h4');
     const paragraphs = document.querySelectorAll('.se-text-paragraph, p');

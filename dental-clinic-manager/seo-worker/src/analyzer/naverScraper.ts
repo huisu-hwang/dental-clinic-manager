@@ -49,59 +49,106 @@ export async function searchNaverBlog(keyword: string): Promise<ScrapedPost[]> {
       const results: { title: string; postUrl: string; blogUrl: string; blogName: string }[] = [];
       const seenUrls = new Set<string>();
 
-      // 모든 blog.naver.com 링크 중 글 URL 패턴(blogid/postnum)인 것을 찾기
-      const allLinks = document.querySelectorAll('a[href*="blog.naver.com"]');
-
-      allLinks.forEach((a) => {
-        const href = a.getAttribute('href') || '';
-        const text = (a.textContent || '').trim();
-
-        // 글 URL 패턴 확인 (blog.naver.com/blogid/숫자)
-        const postMatch = href.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
-        if (!postMatch) return;
-
-        // 제목 텍스트가 충분히 긴 링크만 (5자 이상, 미리보기 텍스트는 보통 더 김)
-        if (text.length < 5 || text.length > 200) return;
-
-        // 이미 수집된 URL 건너뜀
-        if (seenUrls.has(href)) return;
-
-        // 미리보기/본문 스니펫 링크 제외 - 제목 링크만 선택
-        // 제목 링크는 보통 상위 컨테이너에서 첫 번째로 등장하는 짧은 텍스트
-        const parentText = (a.parentElement?.textContent || '').trim();
-        // 본문 미리보기 링크는 텍스트가 매우 길다 (60자 이상)
-        if (text.length > 60) return;
-
-        seenUrls.add(href);
-
-        const blogId = postMatch[1];
-        const blogUrl = `https://blog.naver.com/${blogId}`;
-
-        // 블로그명 찾기 - 상위 요소에서 blogid 링크 중 글이 아닌 것
-        let blogName = blogId;
-        let container = a.parentElement;
-        for (let i = 0; i < 15 && container; i++) {
-          container = container.parentElement;
+      const isValidPostUrl = (href: string): boolean => {
+        try {
+          const u = new URL(href);
+          if (!u.hostname.endsWith('blog.naver.com')) return false;
+          if (u.hostname === 'section.blog.naver.com') return false;
+          if (u.pathname.includes('PostView.naver')) {
+            return !!(u.searchParams.get('blogId') && u.searchParams.get('logNo'));
+          }
+          const seg = u.pathname.split('/').filter(Boolean);
+          if (seg.length < 2) return false;
+          const [blogId, postId] = seg;
+          if (!blogId || blogId.endsWith('.naver')) return false;
+          return /^\d+$/.test(postId);
+        } catch {
+          return false;
         }
-        if (container) {
-          const nameLinks = container.querySelectorAll(`a[href*="blog.naver.com/${blogId}"]`);
-          nameLinks.forEach((nl) => {
-            const nlHref = nl.getAttribute('href') || '';
-            const nlText = (nl.textContent || '').trim();
-            // 글 URL이 아닌 블로그 홈 URL이고 텍스트가 있으면 블로그명
-            if (!nlHref.match(/\/\d+$/) && nlText.length > 0 && nlText.length < 50) {
-              blogName = nlText;
+      };
+
+      const normalizePostUrl = (href: string): string => {
+        try {
+          const u = new URL(href);
+          if (u.pathname.includes('PostView.naver')) {
+            const blogId = u.searchParams.get('blogId');
+            const logNo = u.searchParams.get('logNo');
+            if (blogId && logNo) {
+              return `https://blog.naver.com/${blogId}/${logNo}`;
             }
+          }
+          if (u.hostname === 'm.blog.naver.com') {
+            u.hostname = 'blog.naver.com';
+          }
+          return u.toString();
+        } catch {
+          return href;
+        }
+      };
+
+      const getBlogId = (href: string): string | null => {
+        try {
+          const u = new URL(href);
+          if (u.pathname.includes('PostView.naver')) return u.searchParams.get('blogId');
+          const seg = u.pathname.split('/').filter(Boolean);
+          return seg[0] || null;
+        } catch {
+          return null;
+        }
+      };
+
+      const selectors = [
+        '.title_area a',
+        '.api_txt_lines.total_tit',
+        'a.title_link',
+        '.bx .title_area a',
+        '.lst_total a[href*="blog.naver.com"]',
+        'a[href*="blog.naver.com"]',
+      ];
+
+      for (const selector of selectors) {
+        const links = document.querySelectorAll(selector);
+        for (const link of links) {
+          const rawHref = (link as HTMLAnchorElement).href || '';
+          const text = (link.textContent || '').trim().replace(/\s+/g, ' ');
+          if (!rawHref || !rawHref.includes('blog.naver.com')) continue;
+          if (results.length >= 5) break;
+
+          const postUrl = normalizePostUrl(rawHref);
+          if (seenUrls.has(postUrl) || !isValidPostUrl(postUrl)) continue;
+          if (text.length < 3 || text.length > 200) continue;
+
+          seenUrls.add(postUrl);
+
+          const blogId = getBlogId(postUrl);
+          const blogUrl = blogId ? `https://blog.naver.com/${blogId}` : '';
+          let blogName = blogId || '';
+
+          const resultRoot =
+            link.closest('[class*="bx"], [class*="fds-"], [class*="view_wrap"], li') ||
+            link.parentElement;
+          if (resultRoot && blogId) {
+            const nameCandidates = resultRoot.querySelectorAll('a[href*="blog.naver.com"]');
+            for (const nameLink of nameCandidates) {
+              const nameHref = (nameLink as HTMLAnchorElement).href || '';
+              const nameText = (nameLink.textContent || '').trim();
+              if (!nameText || nameText === text || nameText.length > 50) continue;
+              if (!nameHref.includes(`blog.naver.com/${blogId}`)) continue;
+              if (isValidPostUrl(normalizePostUrl(nameHref))) continue;
+              blogName = nameText;
+              break;
+            }
+          }
+
+          results.push({
+            title: text,
+            postUrl,
+            blogUrl,
+            blogName: blogName || blogId || '',
           });
         }
-
-        results.push({
-          title: text,
-          postUrl: href,
-          blogUrl,
-          blogName,
-        });
-      });
+        if (results.length >= 5) break;
+      }
 
       return results;
     });
@@ -177,11 +224,7 @@ export async function scrapePostDetail(postUrl: string): Promise<PostDetail> {
     ]);
 
     // 이미지 수 (콘텐츠 이미지만 카운트 — 지도 타일, UI 아이콘 제외)
-    const imageCount = await countElements(contentPage, [
-      '.se-main-container img.se-image-resource',
-      '.se-module-image img',
-      '#postViewArea img[src*="postfiles"], #postViewArea img[src*="blogfiles"]',
-    ]);
+    const imageCount = await countContentImages(contentPage);
 
     // 동영상 수
     const videoCount = await countElements(contentPage, [
@@ -346,6 +389,62 @@ async function countElements(page: Page, selectors: string[]): Promise<number> {
     }
   }
   return maxCount;
+}
+
+async function countContentImages(page: Page): Promise<number> {
+  try {
+    return await page.evaluate(() => {
+      const bodyEl = document.querySelector('.se-main-container, #postViewArea, .post-view');
+      if (!bodyEl) return 0;
+
+      const images = bodyEl.querySelectorAll('img');
+      const sources = new Set<string>();
+
+      images.forEach((img) => {
+        const src =
+          img.getAttribute('data-lazy-src') ||
+          img.getAttribute('data-src') ||
+          img.getAttribute('src') ||
+          '';
+        const normalizedSrc = src.trim();
+        if (!normalizedSrc || normalizedSrc.startsWith('data:')) return;
+
+        const widthAttr = Number(img.getAttribute('width') || '0');
+        const heightAttr = Number(img.getAttribute('height') || '0');
+        const naturalWidth = (img as HTMLImageElement).naturalWidth || 0;
+        const naturalHeight = (img as HTMLImageElement).naturalHeight || 0;
+        const width = naturalWidth || widthAttr;
+        const height = naturalHeight || heightAttr;
+        if ((width > 0 && width < 80) || (height > 0 && height < 80)) return;
+
+        const className = (img.getAttribute('class') || '').toLowerCase();
+        const alt = (img.getAttribute('alt') || '').toLowerCase();
+        if (
+          className.includes('emoji') ||
+          className.includes('icon') ||
+          className.includes('sticker') ||
+          alt.includes('emoji') ||
+          alt.includes('icon')
+        ) {
+          return;
+        }
+
+        if (
+          /\/(profile|thumbnail|thumb|icon|emoji|sticker|map|marker)\b/i.test(normalizedSrc) ||
+          normalizedSrc.includes('staticmap') ||
+          normalizedSrc.includes('/MapService/')
+        ) {
+          return;
+        }
+
+        sources.add(normalizedSrc);
+      });
+
+      return sources.size;
+    });
+  } catch {
+    return 0;
+  }
 }
 
 async function countParagraphs(page: Page): Promise<number> {
