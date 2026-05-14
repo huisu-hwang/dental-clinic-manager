@@ -67,9 +67,11 @@ async function main() {
         initialCapital: run.initial_capital,
         market: run.market,
         ticker: run.ticker,
-        // backtest_runs 에 use_full_capital 컬럼이 없으므로 환경변수 override 또는 기본 true 가정.
-        // (UI 가 자본 100% 사용으로 백테스트하는 게 일반적이라 5배 차이를 만들고 있었음)
-        useFullCapital: process.env.BACKTEST_VERIFY_FULL_CAPITAL === '0' ? false : true,
+        // backtest_runs.use_full_capital 컬럼 값을 우선 사용 (2026-05-15 마이그레이션 이후 저장됨).
+        // legacy row (NULL) 는 환경변수 override 또는 기본 true 가정 (종전 UI 동작과 일치).
+        useFullCapital: typeof run.use_full_capital === 'boolean'
+          ? run.use_full_capital
+          : (process.env.BACKTEST_VERIFY_FULL_CAPITAL === '0' ? false : true),
       })
 
       const comparison = compareRun(run, rerun, strategyContext)
@@ -247,7 +249,7 @@ async function resolveUser(email) {
 async function fetchTargetRuns(userId) {
   const { data, error } = await supabase
     .from('backtest_runs')
-    .select('id, strategy_id, preset_id, preset_name, start_date, end_date, initial_capital, full_metrics, trades, equity_curve, ticker, market, status, executed_at')
+    .select('id, strategy_id, preset_id, preset_name, start_date, end_date, initial_capital, full_metrics, trades, equity_curve, ticker, market, status, executed_at, use_full_capital, max_position_size_percent')
     .eq('user_id', userId)
     .in('ticker', TARGET_TICKERS)
     .eq('status', 'completed')
@@ -267,10 +269,14 @@ function dateDiffDays(startDate, endDate) {
 }
 
 async function reconstructStrategyInputs(run, presetMap, strategyCache) {
+  // backtest_runs.max_position_size_percent 가 있으면 그 값으로 재현. legacy row 는 20% 기본.
+  const storedPosPct = typeof run.max_position_size_percent === 'number'
+    ? Number(run.max_position_size_percent)
+    : null
   const defaultRisk = {
     maxDailyLossPercent: 2,
     maxPositions: 5,
-    maxPositionSizePercent: 20,
+    maxPositionSizePercent: storedPosPct ?? 20,
     stopLossPercent: 7,
     takeProfitPercent: 15,
     maxHoldingDays: 30,

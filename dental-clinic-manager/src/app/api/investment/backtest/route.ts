@@ -299,6 +299,9 @@ export async function POST(request: NextRequest) {
         end_date: endDate as string,
         initial_capital: capital,
         status: 'completed',
+        // 재현성 보장 — 백테스트 실행 시 자본 사용 옵션을 함께 저장
+        use_full_capital: useFullCapital === true,
+        max_position_size_percent: (riskSettings ?? DEFAULT_RISK).maxPositionSizePercent ?? 20,
         total_return: result.metrics.totalReturn,
         annualized_return: result.metrics.annualizedReturn,
         max_drawdown: result.metrics.maxDrawdown,
