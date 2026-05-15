@@ -19,8 +19,16 @@ const SEARCH_API = '/pgj/pgjsearch/searchControllerMain.on'
 const COURT_LIST_API = '/pgj/pgj002/selectCortOfcLst.on'
 
 const THROTTLE_MS = Number(process.env.SCRAPE_THROTTLE_MS ?? 500)
-const PAGE_SIZE = 10  // 서버가 더 큰 값은 거부함 (보안/성능 제한)
-const MAX_PAGES = Number(process.env.SCRAPE_MAX_LIST_PAGES ?? 200)
+// 서버가 pageSize 100 이상은 400 에러로 거부. 50 까지는 안정적.
+// pageSize 10 시절에는 서버 페이지네이션이 1법원당 20페이지(=200건)에서 절단되었음 →
+// 50 으로 키우면 같은 20페이지 한도 안에서 최대 1000건을 가져올 수 있다.
+const PAGE_SIZE = 50
+// 안전상 페이지 상한 (서버가 1법원당 20페이지 정도에서 빈 결과를 반환함)
+const MAX_PAGES = Number(process.env.SCRAPE_MAX_LIST_PAGES ?? 40)
+// 매각기일 검색 윈도우 — 1법원·1윈도우당 최대 1000건 한도를 회피하기 위해
+// 60일을 더 작은 윈도우로 쪼개서 여러 번 호출하고 dailyScrape 의 dedupe 에 위임한다.
+const WINDOW_DAYS = Number(process.env.SCRAPE_WINDOW_DAYS ?? 20)
+const TOTAL_DAYS = Number(process.env.SCRAPE_TOTAL_DAYS ?? 60)
 
 interface CortOfc {
   code: string  // e.g. 'B000210'
@@ -126,12 +134,20 @@ function toScrapedListItem(it: ApiItem): ScrapedListItem | null {
   }
 }
 
-function defaultBidRange(): { bgn: string; end: string } {
+const fmtYmd = (d: Date) =>
+  `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+
+// TOTAL_DAYS 를 WINDOW_DAYS 단위로 쪼갠 검색 윈도우들.
+// 사이트가 (법원, 검색조건) 조합당 최대 1000건만 응답하므로 큰 법원을 위해 필요.
+function buildBidWindows(): Array<{ bgn: string; end: string }> {
   const today = new Date()
-  const end = new Date(today)
-  end.setDate(today.getDate() + 60)
-  const fmt = (d: Date) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
-  return { bgn: fmt(today), end: fmt(end) }
+  const windows: Array<{ bgn: string; end: string }> = []
+  for (let off = 0; off < TOTAL_DAYS; off += WINDOW_DAYS) {
+    const bgn = new Date(today); bgn.setDate(today.getDate() + off)
+    const end = new Date(today); end.setDate(today.getDate() + Math.min(off + WINDOW_DAYS - 1, TOTAL_DAYS))
+    windows.push({ bgn: fmtYmd(bgn), end: fmtYmd(end) })
+  }
+  return windows
 }
 
 function buildSearchPayload(opts: { cortOfcCd: string; bidBgngYmd: string; bidEndYmd: string; pageNo: number; pageSize: number }) {
@@ -206,8 +222,8 @@ function extractItems(j: SearchResp): ApiItem[] {
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)) }
 
 export async function scrapeAllLists(): Promise<ScrapedListItem[]> {
-  const range = defaultBidRange()
-  log.info('list_scrape_begin', { bidBgngYmd: range.bgn, bidEndYmd: range.end })
+  const windows = buildBidWindows()
+  log.info('list_scrape_begin', { windowCount: windows.length, windows })
 
   const browser = await chromium.launch({ headless: process.env.PLAYWRIGHT_HEADLESS !== 'false' })
   const ctx = await browser.newContext({
@@ -227,39 +243,43 @@ export async function scrapeAllLists(): Promise<ScrapedListItem[]> {
     log.info('court_list_fetched', { count: courts.length })
 
     for (const c of courts) {
-      let pageNo = 1
       const beforeCount = all.length
-      while (pageNo <= MAX_PAGES) {
-        let resp: SearchResp
-        try {
-          resp = await callApi<SearchResp>(page, SEARCH_API, buildSearchPayload({
-            cortOfcCd: c.code,
-            bidBgngYmd: range.bgn,
-            bidEndYmd: range.end,
-            pageNo,
-            pageSize: PAGE_SIZE,
-          }), SUBMISSION_ID_SEARCH)
-        } catch (e) {
-          log.warn('court_page_failed', { court: c.name, pageNo, error: String(e) })
-          break
+      for (const w of windows) {
+        let pageNo = 1
+        const windowStart = all.length
+        while (pageNo <= MAX_PAGES) {
+          let resp: SearchResp
+          try {
+            resp = await callApi<SearchResp>(page, SEARCH_API, buildSearchPayload({
+              cortOfcCd: c.code,
+              bidBgngYmd: w.bgn,
+              bidEndYmd: w.end,
+              pageNo,
+              pageSize: PAGE_SIZE,
+            }), SUBMISSION_ID_SEARCH)
+          } catch (e) {
+            log.warn('court_page_failed', { court: c.name, window: w, pageNo, error: String(e) })
+            break
+          }
+
+          const items = extractItems(resp)
+          if (items.length === 0) break
+
+          for (const it of items) {
+            const m = toScrapedListItem(it)
+            if (m) all.push(m)
+          }
+
+          const total = Number(resp?.data?.dma_pageInfo?.totalCnt ?? 0)
+          // 이번 윈도우에서 모은 raw item 수 ≥ totalCnt 이거나 한 페이지가 PAGE_SIZE 미만이면 종료
+          if (items.length < PAGE_SIZE || (total > 0 && all.length - windowStart >= total)) break
+
+          pageNo++
+          await sleep(THROTTLE_MS)
         }
-
-        const items = extractItems(resp)
-        if (items.length === 0) break
-
-        for (const it of items) {
-          const m = toScrapedListItem(it)
-          if (m) all.push(m)
-        }
-
-        const total = Number(resp?.data?.dma_pageInfo?.totalCnt ?? 0)
-        if (items.length < PAGE_SIZE || (total > 0 && all.length - beforeCount >= total)) break
-
-        pageNo++
         await sleep(THROTTLE_MS)
       }
       log.info('court_scraped', { court: c.name, count: all.length - beforeCount })
-      await sleep(THROTTLE_MS)
     }
   } finally {
     await browser.close()
