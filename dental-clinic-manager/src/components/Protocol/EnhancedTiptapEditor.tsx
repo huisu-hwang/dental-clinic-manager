@@ -41,6 +41,7 @@ import {
   MinusIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react'
 import { appAlert, appPrompt } from '@/components/ui/AppDialog'
 
 // 커스텀 Video 노드 익스텐션
@@ -553,7 +554,7 @@ export default function EnhancedTiptapEditor({
       }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],
-        alignments: ['left', 'center', 'right'],
+        alignments: ['left', 'center', 'right', 'justify'],
         defaultAlignment: 'left'
       }),
       Image.configure({
@@ -1011,6 +1012,30 @@ export default function EnhancedTiptapEditor({
               title={`제목 ${level}`}
             >
               H{level}
+            </button>
+          ))}
+        </div>
+
+        <div className="w-px h-8 bg-at-border" />
+
+        {/* 정렬 */}
+        <div className="flex gap-1">
+          {([
+            { align: 'left' as const, Icon: AlignLeft, title: '왼쪽 정렬' },
+            { align: 'center' as const, Icon: AlignCenter, title: '가운데 정렬' },
+            { align: 'right' as const, Icon: AlignRight, title: '오른쪽 정렬' },
+            { align: 'justify' as const, Icon: AlignJustify, title: '양쪽 정렬' },
+          ]).map(({ align, Icon, title }) => (
+            <button
+              key={align}
+              type="button"
+              onClick={() => editor.chain().focus().setTextAlign(align).run()}
+              className={`p-2 rounded hover:bg-at-border transition-colors ${
+                editor.isActive({ textAlign: align }) ? 'bg-at-border' : ''
+              }`}
+              title={title}
+            >
+              <Icon className="h-4 w-4" />
             </button>
           ))}
         </div>
