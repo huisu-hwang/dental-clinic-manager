@@ -268,20 +268,65 @@ async function syncPatientsToServer(patients: Record<string, unknown>[], syncTyp
   const cfg = getDentwebConfig();
   const { dashboardUrl } = getConfig();
   const url = `${dashboardUrl}/api/dentweb/sync`;
+  const CHUNK_SIZE = 500;
 
-  const response = await fetchWithRetry(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      clinic_id: cfg.clinicId,
-      api_key: cfg.apiKey,
-      sync_type: syncType,
-      patients,
-      agent_version: '2.0.0-electron',
-    }),
-  });
+  // 작은 페이로드는 기존 한 번에 전송 동작 유지 (호환성 + 단순성)
+  if (patients.length <= CHUNK_SIZE) {
+    const response = await fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinic_id: cfg.clinicId,
+        api_key: cfg.apiKey,
+        sync_type: syncType,
+        patients,
+        agent_version: '2.0.0-electron',
+      }),
+    });
+    return await response.json();
+  }
 
-  return await response.json();
+  // 500명 초과: chunk 분할 전송 (Vercel 함수 타임아웃·payload 크기 방지)
+  let totalNew = 0;
+  let totalUpdated = 0;
+  const totalChunks = Math.ceil(patients.length / CHUNK_SIZE);
+  for (let i = 0; i < patients.length; i += CHUNK_SIZE) {
+    const chunk = patients.slice(i, i + CHUNK_SIZE);
+    const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+    log('info', `[DentWeb] chunk ${chunkNum}/${totalChunks} 전송 (${chunk.length}명)`);
+    const response = await fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinic_id: cfg.clinicId,
+        api_key: cfg.apiKey,
+        // 첫 chunk 만 원래 sync_type — 나머지는 incremental 로 로그 분리 (서버 측 upsert 동작은 동일)
+        sync_type: i === 0 ? syncType : 'incremental',
+        patients: chunk,
+        agent_version: '2.0.0-electron',
+      }),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      log('error', `[DentWeb] chunk ${chunkNum}/${totalChunks} 실패: ${result.error}`);
+      return {
+        success: false,
+        total_records: patients.length,
+        new_records: totalNew,
+        updated_records: totalUpdated,
+        error: result.error || 'chunk sync failed',
+      };
+    }
+    totalNew += result.new_records || 0;
+    totalUpdated += result.updated_records || 0;
+  }
+
+  return {
+    success: true,
+    total_records: patients.length,
+    new_records: totalNew,
+    updated_records: totalUpdated,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1238,10 +1283,18 @@ async function runSync(): Promise<void> {
       log('info', '[DentWeb] SQL Server 연결 성공');
     }
 
+    // Schema migration: 매핑 컬럼 추가 후 한 번 full sync 강제 (next_appointment_memo 등 옛 환자 일괄 갱신)
+    const REQUIRED_DENTWEB_SCHEMA_VERSION = 2;
+    const currentSchemaVersion = (getConfig() as unknown as { dentwebSchemaVersion?: number }).dentwebSchemaVersion ?? 0;
+    const needsSchemaFullSync = currentSchemaVersion < REQUIRED_DENTWEB_SCHEMA_VERSION;
+    if (needsSchemaFullSync) {
+      log('info', `[DentWeb] 스키마 v${currentSchemaVersion} → v${REQUIRED_DENTWEB_SCHEMA_VERSION} 마이그레이션: 전체 동기화 1회 강제`);
+    }
+
     // Determine sync type
     let patients;
     let syncType: 'full' | 'incremental';
-    const lastSync = cfg.lastSyncDate ? new Date(cfg.lastSyncDate) : null;
+    const lastSync = (!needsSchemaFullSync && cfg.lastSyncDate) ? new Date(cfg.lastSyncDate) : null;
 
     if (!lastSync) {
       syncType = 'full';
@@ -1283,6 +1336,8 @@ async function runSync(): Promise<void> {
         dentwebLastSyncDate: new Date().toISOString(),
         dentwebLastSyncStatus: 'success',
         dentwebLastSyncPatientCount: result.total_records || 0,
+        // 마이그레이션 full sync 성공 시 스키마 버전 갱신 (이후엔 incremental 로 돌아감)
+        ...(needsSchemaFullSync ? { dentwebSchemaVersion: REQUIRED_DENTWEB_SCHEMA_VERSION } : {}),
       });
       lastSyncError = null;
 
