@@ -84,8 +84,10 @@ async function main() {
   console.log(`queued: ${queued} new jobs`)
 
   // 5. 워커 처리
+  // 동시성 기본 2 (Supabase Free tier connection pool 보호).
+  // 풀배치 시 4 였을 때 jobs fetch / insert / stock_price_cache 동시 호출이 누적 timeout 유발.
   const limit = args.limit ?? Infinity
-  const concurrency = Number(args.concurrency ?? 4)
+  const concurrency = Number(args.concurrency ?? 2)
   const stats = await processJobs({
     fetchPrices,
     runBacktest,
@@ -249,6 +251,25 @@ async function queueJobs({ entries, universe, windows, engineVersion, requeueFai
   return queued
 }
 
+// supabase 호출 자동 재시도 (timeout / 5xx 등 일시적 오류 대응)
+async function supabaseRetry(label, fn, { maxAttempts = 4, baseDelayMs = 800 } = {}) {
+  let lastErr = null
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fn()
+    if (!res?.error) return res
+    lastErr = res.error
+    const msg = String(res.error?.message ?? res.error).toLowerCase()
+    const transient = msg.includes('timeout') || msg.includes('terminated') || msg.includes('5') && (msg.includes('502') || msg.includes('503') || msg.includes('504')) || msg.includes('fetch')
+    if (!transient || attempt === maxAttempts) {
+      return res
+    }
+    const wait = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 200
+    console.warn(`[retry ${attempt}/${maxAttempts}] ${label}: ${res.error?.message ?? res.error} → ${Math.round(wait)}ms 후 재시도`)
+    await new Promise(r => setTimeout(r, wait))
+  }
+  return { error: lastErr }
+}
+
 async function processJobs({ fetchPrices, runBacktest, engineVersion, limit, concurrency }) {
   const stats = { done: 0, failed: 0, skipped: 0 }
 
@@ -256,24 +277,37 @@ async function processJobs({ fetchPrices, runBacktest, engineVersion, limit, con
   const entryCache = new Map()
   // 가격 데이터 캐시 (ticker → 10Y OHLCV)
   const priceCache = new Map()
+  // 연속 fetch 실패 카운터 — DB가 완전히 죽었을 때만 중단
+  let consecutiveFetchFailures = 0
+  const MAX_CONSECUTIVE_FETCH_FAILURES = 6
 
   while (stats.done + stats.failed < limit) {
     // 다음 처리할 잡 N개 fetch
     const batchSize = Math.min(concurrency * 5, limit - stats.done - stats.failed)
     if (batchSize <= 0) break
 
-    const { data: jobs, error } = await supabase
-      .from('strategy_matrix_jobs')
-      .select('*')
-      .eq('status', 'queued')
-      .lt('attempts', 3)
-      .order('id', { ascending: true })
-      .limit(batchSize)
+    const { data: jobs, error } = await supabaseRetry('jobs fetch', () =>
+      supabase
+        .from('strategy_matrix_jobs')
+        .select('*')
+        .eq('status', 'queued')
+        .lt('attempts', 3)
+        .order('id', { ascending: true })
+        .limit(batchSize)
+    )
 
     if (error) {
-      console.error('jobs fetch error:', error.message)
-      break
+      consecutiveFetchFailures++
+      console.error(`jobs fetch error (#${consecutiveFetchFailures}/${MAX_CONSECUTIVE_FETCH_FAILURES}): ${error.message}`)
+      if (consecutiveFetchFailures >= MAX_CONSECUTIVE_FETCH_FAILURES) {
+        console.error('연속 fetch 실패 한계 도달 → 종료. launchd 다음 사이클에 재시작.')
+        break
+      }
+      // 30초 대기 후 재시도
+      await new Promise(r => setTimeout(r, 30000))
+      continue
     }
+    consecutiveFetchFailures = 0
     if (!jobs || jobs.length === 0) {
       console.log('no more queued jobs')
       break
@@ -294,15 +328,17 @@ async function processJobs({ fetchPrices, runBacktest, engineVersion, limit, con
         } catch (err) {
           stats.failed++
           console.warn(`job ${job.id} failed: ${err?.message ?? err}`)
-          await supabase
-            .from('strategy_matrix_jobs')
-            .update({
-              status: 'failed',
-              attempts: (job.attempts ?? 0) + 1,
-              error: String(err?.message ?? err).slice(0, 500),
-              finished_at: new Date().toISOString(),
-            })
-            .eq('id', job.id)
+          await supabaseRetry('mark failed', () =>
+            supabase
+              .from('strategy_matrix_jobs')
+              .update({
+                status: 'failed',
+                attempts: (job.attempts ?? 0) + 1,
+                error: String(err?.message ?? err).slice(0, 500),
+                finished_at: new Date().toISOString(),
+              })
+              .eq('id', job.id)
+          )
         }
         if (stats.done % 50 === 0 && stats.done > 0) {
           console.log(`  progress: done=${stats.done} failed=${stats.failed} skipped=${stats.skipped}`)
@@ -314,11 +350,13 @@ async function processJobs({ fetchPrices, runBacktest, engineVersion, limit, con
   }
 
   async function processOne(job) {
-    // running 으로 마킹
-    await supabase
-      .from('strategy_matrix_jobs')
-      .update({ status: 'running', started_at: new Date().toISOString(), attempts: (job.attempts ?? 0) + 1 })
-      .eq('id', job.id)
+    // running 으로 마킹 (timeout 발생해도 무시 — 다음 단계에서 어차피 다시 update)
+    await supabaseRetry('mark running', () =>
+      supabase
+        .from('strategy_matrix_jobs')
+        .update({ status: 'running', started_at: new Date().toISOString(), attempts: (job.attempts ?? 0) + 1 })
+        .eq('id', job.id)
+    )
 
     // 전략 정의 로드 (캐시)
     const entryKey = `${job.entry_type}|${job.entry_id}`
@@ -354,10 +392,12 @@ async function processJobs({ fetchPrices, runBacktest, engineVersion, limit, con
     const sliced = prices10Y.slice(-Math.max(years * 252, Math.floor(prices10Y.length * years / 10)))
     if (sliced.length < 20) {
       // 데이터 부족 (신규 상장 등) — failed 가 아니라 skipped 로 처리
-      await supabase
-        .from('strategy_matrix_jobs')
-        .update({ status: 'done', finished_at: new Date().toISOString() })
-        .eq('id', job.id)
+      await supabaseRetry('mark skipped', () =>
+        supabase
+          .from('strategy_matrix_jobs')
+          .update({ status: 'done', finished_at: new Date().toISOString() })
+          .eq('id', job.id)
+      )
       return 'skipped'
     }
 
@@ -377,7 +417,8 @@ async function processJobs({ fetchPrices, runBacktest, engineVersion, limit, con
     const endDate = sliced[sliced.length - 1]?.date
     const equityCurveCompact = downsampleEquityCurve(result.equityCurve)
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseRetry('runs upsert', () =>
+      supabase
       .from('strategy_matrix_runs')
       .upsert({
         entry_type: job.entry_type,
@@ -404,15 +445,18 @@ async function processJobs({ fetchPrices, runBacktest, engineVersion, limit, con
       }, {
         onConflict: 'entry_type,entry_id,market,ticker,period_window,engine_version',
       })
+    )
 
     if (insertError) {
       throw new Error(`insert failed: ${insertError.message}`)
     }
 
-    await supabase
-      .from('strategy_matrix_jobs')
-      .update({ status: 'done', finished_at: new Date().toISOString(), error: null })
-      .eq('id', job.id)
+    await supabaseRetry('mark done', () =>
+      supabase
+        .from('strategy_matrix_jobs')
+        .update({ status: 'done', finished_at: new Date().toISOString(), error: null })
+        .eq('id', job.id)
+    )
 
     return 'done'
   }
