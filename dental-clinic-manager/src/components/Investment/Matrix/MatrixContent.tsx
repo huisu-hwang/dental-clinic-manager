@@ -43,13 +43,13 @@ export default function MatrixContent() {
     return map
   }, [availableStrategies])
 
-  // 공유 전략 목록 로딩
+  // 공유 전략 목록 로딩 (is_shared=true 인 전략들 — share_alias 우선)
   useEffect(() => {
-    fetch('/api/investment/strategies?public=1')
+    fetch('/api/investment/strategies/public')
       .then(r => (r.ok ? r.json() : { data: [] }))
       .then(j => {
-        const list = (j.data ?? []) as Array<{ id: string; name: string }>
-        setSharedStrategies(list)
+        const list = (j.data ?? []) as Array<{ id: string; name: string; share_alias: string | null }>
+        setSharedStrategies(list.map(s => ({ id: s.id, name: s.share_alias || s.name })))
       })
       .catch(() => setSharedStrategies([]))
   }, [])
