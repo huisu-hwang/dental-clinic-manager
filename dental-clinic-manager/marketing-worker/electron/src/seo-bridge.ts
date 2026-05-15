@@ -447,19 +447,31 @@ async function scrapeAndAnalyzePost(page: any, url: string, keyword: string, ran
       bodyText = (clone.textContent || '').replace(/\s+/g, ' ').trim();
     }
     const collectContentImageSources = (): string[] => {
-      const bodyEl = document.querySelector('.se-main-container, #postViewArea');
+      const smartEditor = document.querySelector('.se-main-container');
+      const oldEditor = document.querySelector('#postViewArea');
+      const bodyEl = smartEditor || oldEditor;
       if (!bodyEl) return [];
 
-      const candidates = bodyEl.querySelectorAll('img');
       const sources = new Set<string>();
+      const getSrc = (img: Element) =>
+        (img.getAttribute('data-lazy-src') || img.getAttribute('data-src') || img.getAttribute('src') || '').trim();
 
-      candidates.forEach((img) => {
-        const src =
-          img.getAttribute('data-lazy-src') ||
-          img.getAttribute('data-src') ||
-          img.getAttribute('src') ||
-          '';
-        const normalizedSrc = src.trim();
+      // 스마트에디터(.se-main-container) — 본문 콘텐츠 이미지는 `se-image-resource` 클래스로 명확히 식별됨.
+      // 스티커(se-sticker-image), OG링크 썸네일(se-oglink-thumbnail-resource),
+      // 지도 타일/마커(se-map-image, map.pstatic.net) 등은 본문 이미지가 아니므로 화이트리스트로 명확히 차단.
+      // (사이즈 필터는 적용하지 않음 — 네이버가 모바일/반응형 렌더링 시 본문 이미지를 작은 naturalSize 로 표시할 수 있음)
+      if (smartEditor) {
+        smartEditor.querySelectorAll('img.se-image-resource').forEach((img) => {
+          const src = getSrc(img);
+          if (!src || src.startsWith('data:')) return;
+          sources.add(src);
+        });
+        return [...sources];
+      }
+
+      // 구 에디터(#postViewArea) — 명확한 콘텐츠 이미지 클래스가 없어 기존 블랙리스트 필터 유지.
+      oldEditor!.querySelectorAll('img').forEach((img) => {
+        const normalizedSrc = getSrc(img);
         if (!normalizedSrc || normalizedSrc.startsWith('data:')) return;
 
         const widthAttr = Number(img.getAttribute('width') || '0');
@@ -485,7 +497,9 @@ async function scrapeAndAnalyzePost(page: any, url: string, keyword: string, ran
         if (
           /\/(profile|thumbnail|thumb|icon|emoji|sticker|map|marker)\b/i.test(normalizedSrc) ||
           normalizedSrc.includes('staticmap') ||
-          normalizedSrc.includes('/MapService/')
+          normalizedSrc.includes('/MapService/') ||
+          normalizedSrc.includes('map.pstatic.net') ||
+          normalizedSrc.includes('editor-static.pstatic.net')
         ) {
           return;
         }
