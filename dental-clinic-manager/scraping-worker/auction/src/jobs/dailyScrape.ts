@@ -15,7 +15,8 @@ import { extractRightsFromPdf } from '../parsers/rightsExtractor.js'
 import { fetchTrades, type MolitKind } from '../matchers/molitTradeClient.js'
 import { matchMarketPrice } from '../matchers/marketPriceMatcher.js'
 import { resolveLawdCdFromMap } from '../matchers/lawdCdMap.js'
-import { supabase } from '../lib/supabase.js'
+import { createSupabaseClient } from '../lib/supabase.js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { log } from '../lib/logger.js'
 import { runDdayAlerts } from './ddayAlerts.js'
 import { runFilterMatchAlerts } from './filterMatchAlerts.js'
@@ -27,11 +28,13 @@ const KIND_MAP: Record<string, MolitKind | null> = {
 
 // Supabase 호출이 일시적 네트워크 오류(fetch failed, 502 등)로 throw 하는 경우에 대비해
 // 지수 backoff 재시도. 메인 루프가 1건 실패로 죽지 않도록 보호.
-async function retry<T>(fn: () => Promise<T>, label: string, attempts = 4): Promise<T | { __failed: true; error: string }> {
+async function retry<T>(fn: () => Promise<T> | PromiseLike<T>, label: string, attempts = 4): Promise<T | { __failed: true; error: string }> {
   let lastErr: unknown = null
   for (let i = 0; i < attempts; i++) {
     try {
-      return await fn()
+      // Promise.resolve 로 한번 더 wrap 하여 PostgrestBuilder thenable 의
+      // 마이크로태스크 분기가 unhandled rejection 으로 빠지는 경로를 막는다.
+      return await Promise.resolve(fn())
     } catch (e) {
       lastErr = e
       const wait = 500 * Math.pow(2, i)  // 500, 1000, 2000, 4000 ms
@@ -45,6 +48,8 @@ async function retry<T>(fn: () => Promise<T>, label: string, attempts = 4): Prom
 async function main() {
   const startedAt = new Date()
   log.info('daily_scrape_start', { startedAt: startedAt.toISOString() })
+
+  let supabase: SupabaseClient = createSupabaseClient()
 
   const listItems = await scrapeAllLists()
   if (listItems.length === 0) {
@@ -63,6 +68,11 @@ async function main() {
   }
   const details = Array.from(dedupeMap.values())
   log.info('dedupe_done', { before: detailsRaw.length, after: details.length })
+
+  // 8 분간 idle 한 HTTP keep-alive 가 죽어 첫 upsert 가 fetch failed 로 throw 되는 문제 해결:
+  // list/dedupe 직후에 클라이언트를 새로 생성하여 fresh connection pool 로 적재 시작.
+  supabase = createSupabaseClient()
+  log.info('supabase_client_refreshed')
 
   let okCount = 0
   let failCount = 0
