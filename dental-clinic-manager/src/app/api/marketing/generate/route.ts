@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
 import { extractKeywordsFromPosts } from '@/lib/marketing/seo-text-miner';
 import { generateBlogImage, generatePlatformImage } from '@/lib/marketing/image-generator';
+import { buildImageDataUrl, uploadMarketingImage } from '@/lib/marketing/image-storage';
 import { resolveBrandMarkers } from '@/lib/marketing/brand/marker-resolver';
 import { transformToInstagram } from '@/lib/marketing/platform-adapters/instagram';
 import { transformToFacebook } from '@/lib/marketing/platform-adapters/facebook';
@@ -338,31 +339,9 @@ export async function POST(request: NextRequest) {
               ]);
 
               // Supabase Storage에 업로드
-              let imagePath = '';
-              if (admin) {
-                try {
-                  const buffer = Buffer.from(imageBase64, 'base64');
-                  const safeFileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
-                  const storagePath = `generated/${safeFileName}`;
-                  const { error: uploadError } = await admin.storage
-                    .from('marketing-images')
-                    .upload(storagePath, buffer, {
-                      contentType: 'image/png',
-                      upsert: true,
-                    });
-                  if (!uploadError) {
-                    const { data: urlData } = admin.storage
-                      .from('marketing-images')
-                      .getPublicUrl(storagePath);
-                    imagePath = urlData.publicUrl;
-                  }
-                } catch (uploadErr) {
-                  console.error('[API] Storage 업로드 실패:', uploadErr);
-                }
-              }
-
-              if (!imagePath && imageBase64.length < 500000) {
-                imagePath = `data:image/png;base64,${imageBase64}`;
+              let imagePath = await uploadMarketingImage(imageBase64, 'generated');
+              if (!imagePath) {
+                imagePath = buildImageDataUrl(imageBase64);
               }
 
               return imagePath ? { fileName, prompt: marker.prompt, path: imagePath } : null;
@@ -430,17 +409,8 @@ export async function POST(request: NextRequest) {
                     const { imageBase64, fileName } = await generatePlatformImage(
                       firstImagePrompt, 'instagram', options.imageStyle, options.referenceImageBase64, options.imageVisualStyle, generationSessionId, userData.clinic_id
                     );
-                    let imagePath = '';
-                    if (admin) {
-                      try {
-                        const buffer = Buffer.from(imageBase64, 'base64');
-                        const safeFileName = `insta_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
-                        const storagePath = `generated/${safeFileName}`;
-                        const { error: upErr } = await admin.storage.from('marketing-images').upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
-                        if (!upErr) imagePath = admin.storage.from('marketing-images').getPublicUrl(storagePath).data.publicUrl;
-                      } catch { /* fallback */ }
-                    }
-                    if (!imagePath && imageBase64.length < 500000) imagePath = `data:image/png;base64,${imageBase64}`;
+                    let imagePath = await uploadMarketingImage(imageBase64, 'insta');
+                    if (!imagePath) imagePath = buildImageDataUrl(imageBase64);
                     if (imagePath) {
                       instaImages = [{ fileName, prompt: firstImagePrompt, path: imagePath, width: 1080, height: 1080 }, ...generatedImages];
                     }
@@ -464,17 +434,8 @@ export async function POST(request: NextRequest) {
                     const { imageBase64, fileName } = await generatePlatformImage(
                       firstImagePrompt, 'facebook', options.imageStyle, options.referenceImageBase64, options.imageVisualStyle, generationSessionId, userData.clinic_id
                     );
-                    let imagePath = '';
-                    if (admin) {
-                      try {
-                        const buffer = Buffer.from(imageBase64, 'base64');
-                        const safeFileName = `fb_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
-                        const storagePath = `generated/${safeFileName}`;
-                        const { error: upErr } = await admin.storage.from('marketing-images').upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
-                        if (!upErr) imagePath = admin.storage.from('marketing-images').getPublicUrl(storagePath).data.publicUrl;
-                      } catch { /* fallback */ }
-                    }
-                    if (!imagePath && imageBase64.length < 500000) imagePath = `data:image/png;base64,${imageBase64}`;
+                    let imagePath = await uploadMarketingImage(imageBase64, 'fb');
+                    if (!imagePath) imagePath = buildImageDataUrl(imageBase64);
                     if (imagePath) {
                       fbImages = [{ fileName, prompt: firstImagePrompt, path: imagePath }];
                     }
@@ -498,17 +459,8 @@ export async function POST(request: NextRequest) {
                     const { imageBase64, fileName } = await generatePlatformImage(
                       firstImagePrompt, 'threads', options.imageStyle, options.referenceImageBase64, options.imageVisualStyle, generationSessionId, userData.clinic_id
                     );
-                    let imagePath = '';
-                    if (admin) {
-                      try {
-                        const buffer = Buffer.from(imageBase64, 'base64');
-                        const safeFileName = `threads_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
-                        const storagePath = `generated/${safeFileName}`;
-                        const { error: upErr } = await admin.storage.from('marketing-images').upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
-                        if (!upErr) imagePath = admin.storage.from('marketing-images').getPublicUrl(storagePath).data.publicUrl;
-                      } catch { /* fallback */ }
-                    }
-                    if (!imagePath && imageBase64.length < 500000) imagePath = `data:image/png;base64,${imageBase64}`;
+                    let imagePath = await uploadMarketingImage(imageBase64, 'threads');
+                    if (!imagePath) imagePath = buildImageDataUrl(imageBase64);
                     if (imagePath) {
                       threadsImages = [{ fileName, prompt: firstImagePrompt, path: imagePath }];
                     }

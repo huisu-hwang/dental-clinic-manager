@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateBlogImage } from '@/lib/marketing/image-generator';
+import { buildImageDataUrl, uploadMarketingImage } from '@/lib/marketing/image-storage';
 import type { ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // Gemini 이미지 생성 타임아웃 대응
@@ -64,34 +64,10 @@ export async function POST(request: NextRequest) {
     );
 
     // Supabase Storage에 업로드
-    let imagePath = '';
-    const admin = getSupabaseAdmin();
-    if (admin) {
-      try {
-        const buffer = Buffer.from(imageBase64, 'base64');
-        const safeFileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
-        const storagePath = `generated/${safeFileName}`;
-        const { error: uploadError } = await admin.storage
-          .from('marketing-images')
-          .upload(storagePath, buffer, {
-            contentType: 'image/png',
-            upsert: true,
-          });
-        if (!uploadError) {
-          const { data: urlData } = admin.storage
-            .from('marketing-images')
-            .getPublicUrl(storagePath);
-          imagePath = urlData.publicUrl;
-        }
-      } catch (uploadErr) {
-        console.error('[API] Storage 업로드 실패:', uploadErr);
-      }
-    }
+    let imagePath = await uploadMarketingImage(imageBase64, 'regenerated');
 
-    // Storage 업로드 실패 시 base64 폴백
-    if (!imagePath && imageBase64.length < 500000) {
-      imagePath = `data:image/png;base64,${imageBase64}`;
-    }
+    // Storage 업로드 실패 시 data URL 폴백
+    if (!imagePath) imagePath = buildImageDataUrl(imageBase64);
 
     if (!imagePath) {
       return NextResponse.json({ error: '이미지 업로드에 실패했습니다.' }, { status: 500 });

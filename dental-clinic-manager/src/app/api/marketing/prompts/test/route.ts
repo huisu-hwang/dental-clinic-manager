@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { generateContent } from '@/lib/marketing/content-generator';
 import { generateBlogImage } from '@/lib/marketing/image-generator';
+import { buildImageDataUrl, uploadMarketingImage } from '@/lib/marketing/image-storage';
 import type { PromptCategory } from '@/types/marketing';
 
 export const maxDuration = 90;
@@ -64,30 +64,8 @@ export async function POST(request: NextRequest) {
         ]);
 
         const { imageBase64, fileName } = imageResult;
-        const admin = getSupabaseAdmin();
-
-        let imagePath = '';
-        if (admin && imageBase64) {
-          try {
-            const buffer = Buffer.from(imageBase64, 'base64');
-            const safeFileName = `test_${Date.now()}.png`;
-            const storagePath = `generated/${safeFileName}`;
-            const { error: uploadError } = await admin.storage
-              .from('marketing-images')
-              .upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
-            if (!uploadError) {
-              const { data: urlData } = admin.storage
-                .from('marketing-images')
-                .getPublicUrl(storagePath);
-              imagePath = urlData.publicUrl;
-            }
-          } catch {
-            // Storage 실패 시 base64로 폴백
-          }
-        }
-        if (!imagePath && imageBase64) {
-          imagePath = `data:image/png;base64,${imageBase64}`;
-        }
+        let imagePath = await uploadMarketingImage(imageBase64, 'test');
+        if (!imagePath) imagePath = buildImageDataUrl(imageBase64);
 
         return NextResponse.json({
           data: {

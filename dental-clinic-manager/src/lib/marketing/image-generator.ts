@@ -17,10 +17,12 @@ import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyl
 
 const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
 const GEMINI_LOG_MODEL = 'gemini-3.0-flash';
-// OpenAI Images API(/v1/images/generations, /v1/images/edits) 의 최신 GPT 이미지 모델.
+// OpenAI Images API(/v1/images/generations, /v1/images/edits) 의 GPT 이미지 모델 체인.
 // 참고: https://developers.openai.com/cookbook/examples/multimodal/image-gen-models-prompting-guide
-// quality 파라미터(low/medium/high) 가 호출에 필요하므로 OPENAI_IMAGE_QUALITY 와 함께 전송.
-const OPENAI_IMAGE_MODEL = 'gpt-image-2';
+// 첫 모델이 비활성/액세스 불가/요청 거부일 때 자동으로 다음 모델로 폴백.
+// gpt-image-2 는 계정/조직에 따라 access verification 이 필요할 수 있어 1.5 / 1 로 graceful fallback.
+const OPENAI_IMAGE_MODEL_CHAIN = ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1'] as const;
+const OPENAI_IMAGE_MODEL = OPENAI_IMAGE_MODEL_CHAIN[0]; // 로깅·UI 표시용 대표 모델
 const OPENAI_IMAGE_QUALITY: 'low' | 'medium' | 'high' = 'medium';
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
@@ -540,62 +542,84 @@ async function generateImageWithOpenAI(
 ): Promise<OpenAIImageResult> {
   const size = resolveOpenAIImageSize(platform);
 
-  try {
-    let b64: string | undefined;
-    let usage: { input_tokens?: number; output_tokens?: number; total_tokens?: number } | undefined;
+  // 모델 호환성/액세스 문제는 status 400/404, code/type 에 model 관련 키워드가 들어옴.
+  const isModelAccessIssue = (err: { status?: number; code?: string; type?: string; message?: string; error?: { message?: string } }) => {
+    const status = err?.status;
+    const blob = `${err?.code || ''} ${err?.type || ''} ${err?.message || ''} ${err?.error?.message || ''}`.toLowerCase();
+    if (status === 404) return true;
+    if (status === 400 && /model|invalid|unsupported|not.+available|access/i.test(blob)) return true;
+    if (/model_not_found|invalid_model|unsupported_model|model_not_supported/i.test(blob)) return true;
+    return false;
+  };
 
-    if (imageStyle === 'use_own_image' && referenceImageBase64) {
-      // 참조 이미지 기반 편집 — gpt-image-2 의 input_fidelity 는 disabled(출력이 이미 고품질)
-      const imageFile = await toFile(
-        Buffer.from(referenceImageBase64, 'base64'),
-        'reference.png',
-        { type: 'image/png' },
-      );
-      const response = await openai.images.edit({
-        model: OPENAI_IMAGE_MODEL,
-        image: imageFile,
-        prompt,
-        size,
-        quality: OPENAI_IMAGE_QUALITY,
-        n: 1,
+  let lastErr: unknown;
+  for (let i = 0; i < OPENAI_IMAGE_MODEL_CHAIN.length; i++) {
+    const model = OPENAI_IMAGE_MODEL_CHAIN[i];
+    try {
+      let b64: string | undefined;
+      let usage: { input_tokens?: number; output_tokens?: number; total_tokens?: number } | undefined;
+
+      if (imageStyle === 'use_own_image' && referenceImageBase64) {
+        const imageFile = await toFile(
+          Buffer.from(referenceImageBase64, 'base64'),
+          'reference.png',
+          { type: 'image/png' },
+        );
+        const response = await openai.images.edit({
+          model,
+          image: imageFile,
+          prompt,
+          size,
+          quality: OPENAI_IMAGE_QUALITY,
+          output_format: 'png',
+          n: 1,
+        });
+        b64 = response.data?.[0]?.b64_json;
+        usage = (response as { usage?: typeof usage }).usage;
+      } else {
+        const response = await openai.images.generate({
+          model,
+          prompt,
+          size,
+          quality: OPENAI_IMAGE_QUALITY,
+          output_format: 'png',
+          n: 1,
+        });
+        b64 = response.data?.[0]?.b64_json;
+        usage = (response as { usage?: typeof usage }).usage;
+      }
+
+      if (!b64) throw new Error('응답에 이미지가 포함되지 않았습니다');
+
+      if (i > 0) {
+        console.warn(`[ImageGen] OpenAI 폴백 모델 사용: ${model} (1순위 모델 액세스 불가)`);
+      }
+      return {
+        imageBase64: b64,
+        usage: {
+          inputTokens: usage?.input_tokens ?? 0,
+          outputTokens: usage?.output_tokens ?? 0,
+          totalTokens: usage?.total_tokens ?? 0,
+        },
+      };
+    } catch (error) {
+      lastErr = error;
+      const err = error as { status?: number; code?: string; type?: string; message?: string; error?: { message?: string } };
+      console.error('[ImageGen] OpenAI API 오류:', {
+        model,
+        status: err?.status,
+        code: err?.code,
+        type: err?.type,
+        message: err?.message || err?.error?.message,
       });
-      b64 = response.data?.[0]?.b64_json;
-      usage = (response as { usage?: typeof usage }).usage;
-    } else {
-      const response = await openai.images.generate({
-        model: OPENAI_IMAGE_MODEL,
-        prompt,
-        size,
-        quality: OPENAI_IMAGE_QUALITY,
-        n: 1,
-      });
-      b64 = response.data?.[0]?.b64_json;
-      usage = (response as { usage?: typeof usage }).usage;
+      // 모델 액세스/호환 문제면 다음 모델로 폴백. 그 외 에러(rate limit, content policy 등)는 즉시 throw.
+      if (i < OPENAI_IMAGE_MODEL_CHAIN.length - 1 && isModelAccessIssue(err)) {
+        continue;
+      }
+      throw error;
     }
-
-    if (!b64) throw new Error('응답에 이미지가 포함되지 않았습니다');
-
-    return {
-      imageBase64: b64,
-      usage: {
-        inputTokens: usage?.input_tokens ?? 0,
-        outputTokens: usage?.output_tokens ?? 0,
-        totalTokens: usage?.total_tokens ?? 0,
-      },
-    };
-  } catch (error) {
-    // OpenAI SDK 에러는 status / code / type / message 가 분리돼 있어 평이 로깅으로는 잘려서 안 보임.
-    // 운영 디버깅을 위해 핵심 필드를 풀어서 함께 기록.
-    const err = error as { status?: number; code?: string; type?: string; message?: string; error?: { message?: string } };
-    console.error('[ImageGen] OpenAI API 오류:', {
-      model: OPENAI_IMAGE_MODEL,
-      status: err?.status,
-      code: err?.code,
-      type: err?.type,
-      message: err?.message || err?.error?.message,
-    });
-    throw error;
   }
+  throw lastErr instanceof Error ? lastErr : new Error('OpenAI 이미지 생성 실패 (모든 폴백 모델 실패)');
 }
 
 // ─── 한글 파일명 생성 (Claude Haiku) ───
