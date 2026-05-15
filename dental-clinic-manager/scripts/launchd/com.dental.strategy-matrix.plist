@@ -34,8 +34,10 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/local/bin/node</string>
+    <string>/opt/homebrew/bin/node</string>
     <string>/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/scripts/buildStrategyMatrix.mjs</string>
+    <string>--concurrency</string>
+    <string>4</string>
   </array>
 
   <key>EnvironmentVariables</key>
