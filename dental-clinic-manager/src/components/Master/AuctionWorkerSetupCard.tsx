@@ -133,8 +133,9 @@ export default function AuctionWorkerSetupCard() {
               스킵됩니다. 경매 물건 수집과 권리분석은 정상 작동합니다.
             </li>
             <li>
-              <code className="bg-amber-100 px-1 py-0.5 rounded">resolveLawdCd</code> 는 MVP 단계에서 항상 null 을 반환
-              (Phase 2 에서 행정안전부 OpenAPI 매핑 추가 예정).
+              LAWD_CD(법정동 5자리) 매핑은 전국 시·군·구 정적 테이블(
+              <code className="bg-amber-100 px-1 py-0.5 rounded">src/matchers/lawdCdMap.ts</code>)을 사용합니다.
+              행정구역 개편(예: 강원특별자치도)이 있으면 해당 파일만 갱신하세요.
             </li>
             <li>
               차단/구조 변경이 의심되면{' '}
