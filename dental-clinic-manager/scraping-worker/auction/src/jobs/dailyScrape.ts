@@ -5,6 +5,7 @@ import { downloadPdf } from '../scrapers/pdfDownloader.js'
 import { extractRightsFromPdf } from '../parsers/rightsExtractor.js'
 import { fetchTrades, type MolitKind } from '../matchers/molitTradeClient.js'
 import { matchMarketPrice } from '../matchers/marketPriceMatcher.js'
+import { resolveLawdCdFromMap } from '../matchers/lawdCdMap.js'
 import { supabase } from '../lib/supabase.js'
 import { log } from '../lib/logger.js'
 import { runDdayAlerts } from './ddayAlerts.js'
@@ -153,10 +154,10 @@ function ymOffset(months: number): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-// MVP placeholder — real implementation needs LAWD_CD lookup table.
-// Returning null causes market matching to be skipped (which is acceptable for MVP).
-async function resolveLawdCd(_sido: string | null, _sigungu: string | null): Promise<string | null> {
-  return null
+// 정적 매핑 테이블(matchers/lawdCdMap.ts) 기반 — 행정구역 개편 시 그 파일만 갱신한다.
+// 매핑 실패(스크래퍼 파싱 이상치 등) 시 null → 시세 매칭 자동 스킵.
+async function resolveLawdCd(sido: string | null, sigungu: string | null): Promise<string | null> {
+  return resolveLawdCdFromMap(sido, sigungu)
 }
 
 async function notifyOps(message: string) {
