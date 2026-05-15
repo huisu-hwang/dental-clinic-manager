@@ -85,33 +85,33 @@ export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Pro
       </div>
 
       <div className="p-4">
-        <div className="text-sm text-at-text-secondary mb-1">
+        <div className="text-[15px] md:text-sm font-semibold text-slate-900 mb-1">
           {item.sido} {item.sigungu} {item.eupmyeondong}
           {item.building_area_m2 ? ` · ${item.building_area_m2}㎡` : ''}
         </div>
 
-        <div className="text-xs text-at-text-secondary mb-3">
+        <div className="text-[13px] md:text-xs text-slate-500 mb-3 font-medium">
           {item.case_number} · {item.court_name}
         </div>
 
-        <div className="grid grid-cols-2 gap-y-1 text-sm">
-          <div>감정가</div>
-          <div className="text-right">{fmt(item.appraisal_price)}원</div>
-          <div>최저가</div>
-          <div className="text-right font-medium">{fmt(item.min_bid_price)}원</div>
-          <div>할인율</div>
-          <div className="text-right text-emerald-600 font-semibold">-{primary.discount_rate_pct.toFixed(1)}%</div>
-        </div>
+        <dl className="grid grid-cols-2 gap-y-1.5 text-[14px] md:text-sm">
+          <dt className="text-slate-600 font-medium">감정가</dt>
+          <dd className="text-right text-slate-900 font-semibold tabular-nums">{fmt(item.appraisal_price)}원</dd>
+          <dt className="text-slate-600 font-medium">최저가</dt>
+          <dd className="text-right text-slate-900 font-bold tabular-nums">{fmt(item.min_bid_price)}원</dd>
+          <dt className="text-slate-600 font-medium">할인율</dt>
+          <dd className="text-right text-emerald-600 font-bold tabular-nums">-{primary.discount_rate_pct.toFixed(1)}%</dd>
+        </dl>
 
-        <div className="flex items-center gap-2 mt-3 flex-wrap text-xs">
+        <div className="flex items-center gap-2 mt-3 flex-wrap text-[12px] md:text-xs font-semibold">
           {m?.match_confidence === 'high' && m.median_price_3m && (
             <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
               시세 대비 -{Math.round((m.median_price_3m - item.min_bid_price) / m.median_price_3m * 100)}%
             </span>
           )}
-          <span className="px-2 py-0.5 rounded-full bg-at-surface-alt">유찰 {primary.failure_count}회</span>
+          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">유찰 {primary.failure_count}회</span>
           {primary.price_per_m2 && (
-            <span className="px-2 py-0.5 rounded-full bg-at-surface-alt">㎡당 {fmt(primary.price_per_m2)}원</span>
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">㎡당 {fmt(primary.price_per_m2)}원</span>
           )}
         </div>
       </div>
