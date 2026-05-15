@@ -159,7 +159,7 @@ async function buildEntryList(PRESET_STRATEGIES, args) {
     const { data: shared, error } = await supabase
       .from('investment_strategies')
       .select('id, name, indicators, buy_conditions, sell_conditions, risk_settings')
-      .eq('is_public', true)
+      .eq('is_shared', true)
     if (error) {
       console.warn('shared strategies fetch failed (계속 진행):', error.message)
     } else if (shared) {
