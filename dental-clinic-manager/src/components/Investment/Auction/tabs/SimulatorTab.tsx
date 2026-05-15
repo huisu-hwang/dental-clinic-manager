@@ -40,7 +40,7 @@ export function SimulatorTab({ item, market, initialInput, onSave }: Props) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border space-y-5">
+      <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card space-y-5">
         <h3 className="text-base font-semibold text-at-text">입찰 시뮬레이션 입력</h3>
 
         <Slider label="응찰가" value={input.bid_price} min={min} max={max} step={100_000} format={(n) => `${fmt(n)}원`} onChange={(v) => set('bid_price', v)} />
@@ -64,7 +64,7 @@ export function SimulatorTab({ item, market, initialInput, onSave }: Props) {
 
       <div className="space-y-4">
         {secondary && (
-          <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+          <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
             <h3 className="text-base font-semibold mb-3 text-at-text">매도 시뮬 (시세 기반)</h3>
             <Result label="예상 시세" value={`${fmt(secondary.expected_market_price)}원`} />
             <Result label="예상 매도차익" value={`${fmt(secondary.expected_resale_profit)}원`} accent={secondary.expected_resale_profit > 0 ? 'emerald' : 'rose'} />
@@ -73,7 +73,7 @@ export function SimulatorTab({ item, market, initialInput, onSave }: Props) {
           </div>
         )}
 
-        <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+        <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
           <h3 className="text-base font-semibold mb-3 text-at-text">임대 시뮬</h3>
           <Result label="총 투자비용" value={`${fmt(tertiary.total_investment)}원`} />
           <Result label="연 순임대수익" value={`${fmt(tertiary.annual_net_rent)}원`} />

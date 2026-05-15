@@ -41,7 +41,7 @@ export function HistoryTab({ itemId, history }: Props) {
 
   return (
     <div className="space-y-4">
-      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
         <h3 className="text-base font-semibold mb-3 text-at-text">회차별 변동</h3>
         {history.length === 0 ? (
           <p className="text-[14px] md:text-sm text-at-text-secondary">이력이 없습니다.</p>
@@ -111,7 +111,7 @@ export function HistoryTab({ itemId, history }: Props) {
         )}
       </section>
 
-      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
         <h3 className="text-base font-semibold mb-3 text-at-text">동일 동·용도 낙찰 통계 (최근 6개월)</h3>
         {!stats ? (
           <p className="text-[14px] md:text-sm text-at-text-secondary">로딩 중...</p>

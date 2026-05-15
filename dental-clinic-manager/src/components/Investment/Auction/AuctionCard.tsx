@@ -37,14 +37,14 @@ export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Pro
   const primary = calculatePrimary(item, today)
   const m = item.market
 
-  const innerClassName = 'block bg-at-surface border border-at-border rounded-2xl overflow-hidden hover:bg-at-surface-hover transition-colors cursor-pointer'
+  const innerClassName = 'group block bg-at-surface border border-at-border rounded-2xl overflow-hidden shadow-at-card hover:-translate-y-0.5 hover:border-at-accent/40 transition-all cursor-pointer'
   const photoUrl = item.photos && item.photos.length > 0 ? item.photos[0] : null
   const visual = PROPERTY_VISUAL[item.property_type] ?? PROPERTY_VISUAL.other
   const PlaceholderIcon = visual.icon
 
   const innerContent = (
     <>
-      {/* 대표 이미지 영역 — 실제 사진이 있으면 표시, 없으면 용도별 placeholder */}
+      {/* 대표 이미지 영역 */}
       <div className="relative w-full aspect-[16/9] bg-at-surface-alt">
         {photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -57,61 +57,71 @@ export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Pro
         ) : (
           <div className={`w-full h-full bg-gradient-to-br ${visual.gradient} flex flex-col items-center justify-center`}>
             <PlaceholderIcon className={`w-12 h-12 ${visual.iconColor} mb-2`} strokeWidth={1.5} />
-            <span className={`text-xs font-medium ${visual.iconColor}`}>
+            <span className={`text-xs font-semibold ${visual.iconColor}`}>
               {PROPERTY_LABEL[item.property_type] ?? '기타'}
             </span>
           </div>
         )}
-        {/* 우상단 좋아요 — 이미지 위에 띄움 */}
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id) }}
           aria-label="관심물건 토글"
-          className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow hover:bg-white"
+          className="absolute top-2 right-2 p-1.5 rounded-full bg-at-surface/95 backdrop-blur-sm shadow-at-card hover:bg-at-surface"
         >
-          <Star className={`w-4 h-4 ${isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-at-text-secondary'}`} />
+          <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400 text-amber-400' : 'text-at-text-secondary'}`} />
         </button>
-        {/* 좌상단 용도 배지 (사진이 있을 때만 — placeholder 에는 이미 라벨 있음) */}
         {photoUrl && (
-          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[11px] font-semibold text-at-text">
+          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-at-surface/95 backdrop-blur-sm text-[11px] font-semibold text-at-text">
             {PROPERTY_LABEL[item.property_type] ?? '기타'}
           </span>
         )}
-        {/* 좌하단 D-day */}
         {primary.d_day !== null && (
-          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[11px] font-bold shadow">
+          <span className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-[var(--at-warning)] text-white text-[11px] font-bold shadow">
             D-{primary.d_day}
           </span>
         )}
       </div>
 
-      <div className="p-4">
-        <div className="text-[15px] md:text-sm font-semibold text-slate-900 mb-1">
-          {item.sido} {item.sigungu} {item.eupmyeondong}
-          {item.building_area_m2 ? ` · ${item.building_area_m2}㎡` : ''}
+      <div className="p-4 space-y-3">
+        {/* 주소 (강조) */}
+        <div>
+          <div className="text-[15px] md:text-sm font-bold text-at-text leading-snug">
+            {item.sido} {item.sigungu} {item.eupmyeondong}
+          </div>
+          <div className="text-[12px] md:text-xs text-at-text-weak mt-0.5 font-medium">
+            {item.case_number} · {item.court_name}{item.building_area_m2 ? ` · ${item.building_area_m2}㎡` : ''}
+          </div>
         </div>
 
-        <div className="text-[13px] md:text-xs text-slate-500 mb-3 font-medium">
-          {item.case_number} · {item.court_name}
+        {/* 핵심 지표 — 최저가 강조 */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <div>
+            <div className="text-[11px] text-at-text-weak font-medium">감정가</div>
+            <div className="text-[13px] md:text-sm font-semibold text-at-text-secondary tabular-nums line-through decoration-at-text-weak/40">{fmt(item.appraisal_price)}원</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-at-text-weak font-medium">최저가</div>
+            <div className="text-[15px] md:text-base font-extrabold text-at-text tabular-nums">{fmt(item.min_bid_price)}원</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] text-at-text-weak font-medium">할인율</div>
+            <div className="text-[15px] md:text-base font-extrabold text-emerald-600 tabular-nums">−{primary.discount_rate_pct.toFixed(1)}%</div>
+          </div>
         </div>
 
-        <dl className="grid grid-cols-2 gap-y-1.5 text-[14px] md:text-sm">
-          <dt className="text-slate-600 font-medium">감정가</dt>
-          <dd className="text-right text-slate-900 font-semibold tabular-nums">{fmt(item.appraisal_price)}원</dd>
-          <dt className="text-slate-600 font-medium">최저가</dt>
-          <dd className="text-right text-slate-900 font-bold tabular-nums">{fmt(item.min_bid_price)}원</dd>
-          <dt className="text-slate-600 font-medium">할인율</dt>
-          <dd className="text-right text-emerald-600 font-bold tabular-nums">-{primary.discount_rate_pct.toFixed(1)}%</dd>
-        </dl>
-
-        <div className="flex items-center gap-2 mt-3 flex-wrap text-[12px] md:text-xs font-semibold">
+        {/* 보조 배지 */}
+        <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-semibold pt-1">
           {m?.match_confidence === 'high' && m.median_price_3m && (
-            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-              시세 대비 -{Math.round((m.median_price_3m - item.min_bid_price) / m.median_price_3m * 100)}%
+            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+              시세 −{Math.round((m.median_price_3m - item.min_bid_price) / m.median_price_3m * 100)}%
             </span>
           )}
-          <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">유찰 {primary.failure_count}회</span>
+          <span className="px-2 py-0.5 rounded-full bg-at-surface-alt text-at-text-secondary border border-at-border">
+            유찰 {primary.failure_count}회
+          </span>
           {primary.price_per_m2 && (
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">㎡당 {fmt(primary.price_per_m2)}원</span>
+            <span className="px-2 py-0.5 rounded-full bg-at-surface-alt text-at-text-secondary border border-at-border">
+              ㎡당 {fmt(primary.price_per_m2)}원
+            </span>
           )}
         </div>
       </div>

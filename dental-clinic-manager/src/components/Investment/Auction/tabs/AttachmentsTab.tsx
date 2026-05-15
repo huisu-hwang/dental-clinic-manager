@@ -16,7 +16,7 @@ export function AttachmentsTab({ item }: Props) {
   }
 
   return (
-    <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border space-y-2">
+    <div className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card space-y-2">
       {items.map((it) => (
         <a
           key={it.label}

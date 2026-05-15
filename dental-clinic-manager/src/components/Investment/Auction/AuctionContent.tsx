@@ -133,18 +133,28 @@ function AuctionListView({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">부동산 경매 ({new Intl.NumberFormat('ko-KR').format(total)}건)</h1>
-      </div>
+      {/* 페이지 헤더 */}
+      <header className="mb-5">
+        <h1 className="text-2xl font-bold text-at-text">부동산 경매</h1>
+        <p className="text-[13px] text-at-text-secondary mt-1">
+          전국 법원에 등록된 매물 <span className="font-semibold text-at-text">{new Intl.NumberFormat('ko-KR').format(total)}건</span> · 매일 새벽 자동 갱신
+        </p>
+      </header>
 
       <AuctionFilters />
 
       {loading && items.length === 0 ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-at-accent" />
+        <div className="flex flex-col items-center justify-center py-24 bg-at-surface border border-at-border rounded-2xl">
+          <Loader2 className="w-7 h-7 animate-spin text-at-accent mb-3" />
+          <p className="text-sm text-at-text-secondary">매물을 불러오는 중...</p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="bg-at-surface border border-at-border rounded-2xl px-6 py-16 text-center">
+          <p className="text-base font-semibold text-at-text">조건에 맞는 매물이 없습니다</p>
+          <p className="text-sm text-at-text-secondary mt-1">필터를 완화하거나 초기화해 보세요.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
           {items.map(item => (
             <AuctionCard
               key={item.id}
@@ -158,10 +168,10 @@ function AuctionListView({ onOpen }: { onOpen: (id: string) => void }) {
       )}
 
       {cursor !== null && !loading && items.length > 0 && (
-        <div className="text-center mt-6">
+        <div className="flex justify-center mt-8">
           <button
             onClick={() => load(cursor)}
-            className="px-4 py-2 rounded-xl bg-at-surface hover:bg-at-surface-hover border border-at-border"
+            className="h-10 px-6 rounded-xl bg-at-surface hover:bg-at-surface-hover border border-at-border text-[14px] font-semibold text-at-text transition-colors shadow-at-card"
           >
             더 보기
           </button>

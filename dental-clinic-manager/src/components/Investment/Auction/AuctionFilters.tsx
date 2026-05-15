@@ -38,7 +38,7 @@ const SORT_OPTS = [
   { value: 'failure_desc',  label: '유찰 ↓' },
 ]
 
-const SELECT_CLS = "px-3 py-1.5 text-sm bg-at-surface border border-at-border rounded-lg"
+const SELECT_CLS = "h-9 px-3 text-[13px] font-medium text-at-text bg-at-surface border border-at-border rounded-lg hover:border-at-accent/50 focus:outline-none focus:border-at-accent focus:ring-2 focus:ring-at-accent/15 transition-colors cursor-pointer"
 
 export function AuctionFilters() {
   const router = useRouter()
@@ -52,42 +52,69 @@ export function AuctionFilters() {
     router.replace(`${pathname}?${next.toString()}`)
   }
 
+  const hasFilters = ['sido', 'propertyType', 'minDiscountPct', 'minFailureCount', 'maxDDay', 'minAppraisalPrice', 'maxAppraisalPrice']
+    .some(k => sp.get(k))
+
+  const reset = () => {
+    const next = new URLSearchParams()
+    // 정렬은 보존
+    const sort = sp.get('sort')
+    if (sort) next.set('sort', sort)
+    // 외부 컨텍스트 파라미터 보존
+    const tab = sp.get('tab'); if (tab) next.set('tab', tab)
+    const sub = sp.get('sub'); if (sub) next.set('sub', sub)
+    router.replace(`${pathname}?${next.toString()}`)
+  }
+
   return (
-    <div className="flex flex-wrap gap-2 items-center mb-4">
-      <select className={SELECT_CLS} value={sp.get('sido') ?? ''} onChange={e => update('sido', e.target.value)}>
-        {SIDO_OPTS.map(s => <option key={s} value={s}>{s || '전체 지역'}</option>)}
-      </select>
-      <select className={SELECT_CLS} value={sp.get('propertyType') ?? ''} onChange={e => update('propertyType', e.target.value)}>
-        {PROPERTY_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <select className={SELECT_CLS} value={sp.get('minDiscountPct') ?? ''} onChange={e => update('minDiscountPct', e.target.value)}>
-        <option value="">할인율 무관</option>
-        {DISCOUNT_OPTS.map(d => <option key={d} value={d}>{d}% 이상</option>)}
-      </select>
-      <select className={SELECT_CLS} value={sp.get('minFailureCount') ?? ''} onChange={e => update('minFailureCount', e.target.value)}>
-        <option value="">유찰 무관</option>
-        {FAILURE_OPTS.map(d => <option key={d} value={d}>{d}회 이상</option>)}
-      </select>
-      <select className={SELECT_CLS} value={sp.get('maxDDay') ?? ''} onChange={e => update('maxDDay', e.target.value)}>
-        <option value="">기일 무관</option>
-        {DDAY_OPTS.map(d => <option key={d} value={d}>{d === 0 ? '오늘' : `D-${d} 이내`}</option>)}
-      </select>
+    <div className="bg-at-surface border border-at-border rounded-2xl shadow-at-card p-3 sm:p-4 mb-4">
+      <div className="flex flex-wrap gap-2 items-center">
+        <select className={SELECT_CLS} value={sp.get('sido') ?? ''} onChange={e => update('sido', e.target.value)}>
+          {SIDO_OPTS.map(s => <option key={s} value={s}>{s || '전체 지역'}</option>)}
+        </select>
+        <select className={SELECT_CLS} value={sp.get('propertyType') ?? ''} onChange={e => update('propertyType', e.target.value)}>
+          {PROPERTY_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <select className={SELECT_CLS} value={sp.get('minDiscountPct') ?? ''} onChange={e => update('minDiscountPct', e.target.value)}>
+          <option value="">할인율 무관</option>
+          {DISCOUNT_OPTS.map(d => <option key={d} value={d}>{d}% 이상</option>)}
+        </select>
+        <select className={SELECT_CLS} value={sp.get('minFailureCount') ?? ''} onChange={e => update('minFailureCount', e.target.value)}>
+          <option value="">유찰 무관</option>
+          {FAILURE_OPTS.map(d => <option key={d} value={d}>{d}회 이상</option>)}
+        </select>
+        <select className={SELECT_CLS} value={sp.get('maxDDay') ?? ''} onChange={e => update('maxDDay', e.target.value)}>
+          <option value="">기일 무관</option>
+          {DDAY_OPTS.map(d => <option key={d} value={d}>{d === 0 ? '오늘' : `D-${d} 이내`}</option>)}
+        </select>
+        <select className={SELECT_CLS} value={sp.get('minAppraisalPrice') ?? ''} onChange={e => update('minAppraisalPrice', e.target.value)}>
+          <option value="">감정가 하한 무관</option>
+          {APPRAISAL_OPTS.map(o => <option key={o.value} value={o.value}>{o.label} 이상</option>)}
+        </select>
+        <select className={SELECT_CLS} value={sp.get('maxAppraisalPrice') ?? ''} onChange={e => update('maxAppraisalPrice', e.target.value)}>
+          <option value="">감정가 상한 무관</option>
+          {APPRAISAL_OPTS.map(o => <option key={o.value} value={o.value}>{o.label} 이하</option>)}
+        </select>
 
-      <select className={SELECT_CLS} value={sp.get('minAppraisalPrice') ?? ''} onChange={e => update('minAppraisalPrice', e.target.value)}>
-        <option value="">감정가 하한 무관</option>
-        {APPRAISAL_OPTS.map(o => <option key={o.value} value={o.value}>{o.label} 이상</option>)}
-      </select>
-      <select className={SELECT_CLS} value={sp.get('maxAppraisalPrice') ?? ''} onChange={e => update('maxAppraisalPrice', e.target.value)}>
-        <option value="">감정가 상한 무관</option>
-        {APPRAISAL_OPTS.map(o => <option key={o.value} value={o.value}>{o.label} 이하</option>)}
-      </select>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={reset}
+            className="h-9 px-3 text-[13px] font-semibold text-at-text-secondary hover:text-at-text border border-at-border rounded-lg hover:bg-at-surface-alt transition-colors"
+          >
+            필터 초기화
+          </button>
+        )}
 
-      <div className="flex-1" />
+        <div className="flex-1" />
 
-      <label className="text-sm text-at-text-secondary">정렬</label>
-      <select className={SELECT_CLS} value={sp.get('sort') ?? 'discount_desc'} onChange={e => update('sort', e.target.value)}>
-        {SORT_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-      </select>
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-[12px] font-semibold text-at-text-weak">정렬</span>
+          <select className={SELECT_CLS} value={sp.get('sort') ?? 'discount_desc'} onChange={e => update('sort', e.target.value)}>
+            {SORT_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+      </div>
     </div>
   )
 }

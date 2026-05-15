@@ -54,7 +54,7 @@ export function RightsTab({ itemId, rights, initialAi }: Props) {
 
   return (
     <div className="space-y-4">
-      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
         <h3 className="text-base font-semibold mb-3 text-at-text">자동 추출 권리분석</h3>
         {rights ? (
           <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-[14px] md:text-sm">
@@ -78,7 +78,7 @@ export function RightsTab({ itemId, rights, initialAi }: Props) {
         )}
       </section>
 
-      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
         <div className="flex justify-between items-center mb-3 gap-2">
           <h3 className="text-base font-semibold text-at-text">AI 권리분석 코멘트</h3>
           <button

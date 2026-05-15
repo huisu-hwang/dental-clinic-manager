@@ -19,10 +19,10 @@ export function OverviewTab({ item, market }: Props) {
     : null
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
-        <h3 className="text-base font-semibold mb-3 text-at-text">물건 정보</h3>
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-[14px] md:text-sm">
+    <div className="space-y-4 md:space-y-5">
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
+        <h3 className="text-base font-bold mb-3 text-at-text">물건 정보</h3>
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-[14px] md:text-sm">
           <Dt>용도</Dt><Dd>{PROPERTY_LABEL[item.property_type] ?? '기타'}</Dd>
           <Dt>주소(도로명)</Dt><Dd>{item.address_road ?? '-'}</Dd>
           <Dt>주소(지번)</Dt><Dd>{item.address_jibun ?? '-'}</Dd>
@@ -33,8 +33,8 @@ export function OverviewTab({ item, market }: Props) {
         </dl>
       </section>
 
-      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
-        <h3 className="text-base font-semibold mb-3 text-at-text">시세 비교</h3>
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
+        <h3 className="text-base font-bold mb-3 text-at-text">시세 비교</h3>
         {market ? (
           <div className="space-y-3">
             <Bar label="감정가" value={item.appraisal_price} max={Math.max(item.appraisal_price, market.median_price_3m ?? 0)} />
@@ -55,12 +55,12 @@ export function OverviewTab({ item, market }: Props) {
       </section>
 
       {item.photos.length > 0 && (
-        <section className="bg-at-surface rounded-2xl p-5 border border-at-border">
-          <h3 className="font-semibold mb-3">사진</h3>
+        <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
+          <h3 className="text-base font-bold mb-3 text-at-text">사진</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {item.photos.map((url, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={url} alt={`사진 ${i+1}`} className="rounded-lg w-full h-40 object-cover" />
+              <img key={i} src={url} alt={`사진 ${i+1}`} className="rounded-xl w-full h-40 object-cover border border-at-border" />
             ))}
           </div>
         </section>
@@ -73,22 +73,22 @@ export function OverviewTab({ item, market }: Props) {
   )
 }
 
-const Dt = (p: { children: React.ReactNode }) => <dt className="text-at-text-secondary">{p.children}</dt>
+const Dt = (p: { children: React.ReactNode }) => <dt className="text-at-text-weak font-medium">{p.children}</dt>
 const Dd = (p: { children: React.ReactNode }) => <dd className="font-semibold text-at-text break-words">{p.children}</dd>
 
 function Bar({ label, value, max, accent }: { label: string; value: number; max: number; accent?: 'blue'|'emerald' }) {
   const pct = max > 0 ? Math.round(value / max * 100) : 0
-  const color = accent === 'emerald' ? 'bg-emerald-500'
-              : accent === 'blue' ? 'bg-blue-500'
-              : 'bg-slate-500'
+  const color = accent === 'emerald' ? 'bg-[var(--at-success)]'
+              : accent === 'blue'    ? 'bg-at-accent'
+              :                        'bg-at-text-weak'
   return (
     <div>
-      <div className="flex justify-between text-[13px] md:text-xs mb-1">
+      <div className="flex justify-between text-[13px] md:text-xs mb-1.5">
         <span className="text-at-text font-medium">{label}</span>
-        <span className="text-at-text font-semibold tabular-nums">{fmt(value)}원</span>
+        <span className="text-at-text font-bold tabular-nums">{fmt(value)}원</span>
       </div>
-      <div className="h-3 rounded-full bg-at-surface-alt overflow-hidden">
-        <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+      <div className="h-2.5 rounded-full bg-at-surface-alt overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
