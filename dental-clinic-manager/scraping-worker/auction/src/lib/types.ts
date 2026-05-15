@@ -16,6 +16,13 @@ export interface ScrapedListItem {
   failureCount: number
   nextAuctionDate: string | null
   sourceUrl: string
+  // 신규 API(searchControllerMain.on)에서 동시에 받을 수 있는 추가 정보 — optional
+  addressJibun?: string | null     // "${sido} ${sigu} ${dong} ${lotno} ${buldNm}"
+  buildingAreaM2?: number | null   // areaList "2193㎡" 파싱
+  landAreaM2?: number | null       // 지목이 토지/임야면 areaList = 대지면적
+  xCordi?: string | null
+  yCordi?: string | null
+  dspslUsgNm?: string | null       // 한글 용도명 (원본 보존)
 }
 
 export interface ScrapedDetail extends ScrapedListItem {

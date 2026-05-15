@@ -26,7 +26,16 @@ async function main() {
     process.exit(1)
   }
 
-  const details = await scrapeDetails(listItems)
+  const detailsRaw = await scrapeDetails(listItems)
+  // 동일 (court_code, case_number, item_number) 가 같은 배치에 두 번 등장하면
+  // Postgres 의 ON CONFLICT 가 두 번째 행을 거부한다. 같은 키는 마지막 값 한 번만 처리.
+  const dedupeMap = new Map<string, typeof detailsRaw[number]>()
+  for (const d of detailsRaw) {
+    const key = `${d.courtCode || '00'}|${d.caseNumber}|${d.itemNumber}`
+    dedupeMap.set(key, d)
+  }
+  const details = Array.from(dedupeMap.values())
+  log.info('dedupe_done', { before: detailsRaw.length, after: details.length })
 
   for (const d of details) {
     const discount = (d.appraisalPrice - d.minBidPrice) / d.appraisalPrice * 100
@@ -66,7 +75,17 @@ async function main() {
       }, { onConflict: 'court_code,case_number,item_number' })
       .select('id')
       .single()
-    if (error || !itemRow) { log.warn('upsert_failed', { caseNumber: d.caseNumber, error: error?.message }); continue }
+    if (error || !itemRow) {
+      log.warn('upsert_failed', {
+        caseNumber: d.caseNumber,
+        itemNumber: d.itemNumber,
+        message: error?.message ?? 'no_row_returned',
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint,
+      })
+      continue
+    }
     const itemId = itemRow.id
 
     if (d.noticePdfUrl) {

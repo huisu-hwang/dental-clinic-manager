@@ -35,7 +35,7 @@ const STEPS: Step[] = [
   {
     title: '5. 첫 실행 (수동 테스트)',
     description:
-      'courtauction.go.kr 사이트 구조 변경 가능성으로 첫 실행 시 0건 수집되면 셀렉터 조정이 필요합니다 (src/scrapers/courtAuctionListScraper.ts).',
+      '검증된 fetch + 브라우저 컨텍스트 하이브리드로 약 1~2분 내 1~2만 건 수집. 0건이면 IP 차단 또는 사이트 구조 변경 의심.',
     commands: ['npm run dev:daily'],
   },
   {
