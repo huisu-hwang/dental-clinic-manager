@@ -306,17 +306,26 @@ export async function POST(request: NextRequest) {
         intradayUnavailableReason = 'yahoo-finance2 에서 한국 종목 1분봉 데이터를 받지 못했습니다 (지연 또는 미지원).'
       }
 
-      // 일봉 (90일치) — fetchPrices(yahoo-finance2) 로 실제 일봉 페치
+      // 일봉 (90일치) — fetchPrices(yahoo-finance2) 로 실제 일봉 페치.
+      // 1차 페치 후 마지막 봉이 시장 캘린더 기준 stale 이면 forceRefresh 로 한 번 재페치.
       try {
         const todayD = new Date()
         const pastD = new Date()
         pastD.setDate(pastD.getDate() - 90)
-        const daily = await fetchPrices(
-          ticker,
-          yMarket,
-          marketDateString(pastD, market),
-          marketDateString(todayD, market),
-        )
+        const startStr = marketDateString(pastD, market)
+        const endStr = marketDateString(todayD, market)
+        let daily = await fetchPrices(ticker, yMarket, startStr, endStr)
+        // stale 재검증: 마지막 봉이 시장 asOfDate 보다 2일↑ 과거이면 yahoo 강제 재페치
+        if (daily && daily.length > 0) {
+          const lastDate = daily[daily.length - 1].date
+          const lastMs = Date.parse(`${lastDate}T00:00:00Z`)
+          const asOfMs = Date.parse(`${asOfDate}T00:00:00Z`)
+          if (Number.isFinite(lastMs) && Number.isFinite(asOfMs) && (asOfMs - lastMs) / 86400000 > 2) {
+            console.warn(`[smart-money/analyze] 일봉 stale (${ticker} ${lastDate} vs ${asOfDate}) → forceRefresh`)
+            const fresh = await fetchPrices(ticker, yMarket, startStr, endStr, { forceRefresh: true })
+            if (fresh && fresh.length > 0) daily = fresh
+          }
+        }
         if (daily && daily.length > 0) {
           dailyBars = daily.map((b) => ({
             datetime: b.date,
@@ -764,11 +773,16 @@ export async function POST(request: NextRequest) {
 
   const alignedAsOfDate = preferredByDay?.asOfDate ?? lastByDay?.asOfDate ?? asOfDate
 
+  // 실데이터 마지막 봉 날짜 — UI 에서 분석 기준일과 비교해 stale 여부 노출
+  const lastDailyBar = dailyBars.length > 0 ? dailyBars[dailyBars.length - 1] : null
+  const dataAsOfDate = lastDailyBar?.datetime?.slice(0, 10)
+
   const analysis: SmartMoneyAnalysis = {
     ticker,
     market,
     name,
     asOfDate: alignedAsOfDate,
+    dataAsOfDate,
     currentPrice,
     vwap,
     investorFlow,
