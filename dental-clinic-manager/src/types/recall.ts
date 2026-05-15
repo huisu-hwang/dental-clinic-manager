@@ -118,8 +118,9 @@ export interface RecallPatient {
   // 조인 데이터
   campaign?: RecallCampaign
 
-  // 덴트웹 차트에서 매칭된 다음 예약일 (chart_number 매칭). dentweb_patients.next_appointment_date.
+  // 덴트웹 차트에서 매칭된 다음 예약 (chart_number 매칭). dentweb_patients.next_appointment_*.
   next_appointment_date?: string | null
+  next_appointment_memo?: string | null
 }
 
 // 환자 목록 업로드용 데이터 (CSV/Excel)

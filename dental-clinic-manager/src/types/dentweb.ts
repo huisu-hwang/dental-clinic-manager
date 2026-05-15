@@ -32,6 +32,7 @@ export interface DentwebPatient {
   last_visit_date: string | null
   last_treatment_type: string | null
   next_appointment_date: string | null
+  next_appointment_memo: string | null
   registration_date: string | null
   acquisition_channel: string | null
   customer_type: string | null
@@ -89,6 +90,7 @@ export interface DentwebPatientSyncData {
   last_visit_date?: string
   last_treatment_type?: string
   next_appointment_date?: string
+  next_appointment_memo?: string | null
   registration_date?: string
   acquisition_channel?: string
   customer_type?: string
