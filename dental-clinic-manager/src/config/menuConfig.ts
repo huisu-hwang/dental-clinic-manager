@@ -18,7 +18,7 @@ export const INVESTMENT_ALLOWED_CLINIC_IDS = [
 ] as const
 
 // 프리미엄 기능 ID 상수
-export const PREMIUM_FEATURE_IDS = ['recall', 'ai-analysis', 'financial', 'monthly-report', 'referral', 'marketing', 'investment'] as const
+export const PREMIUM_FEATURE_IDS = ['recall', 'ai-analysis', 'financial', 'monthly-report', 'referral', 'marketing', 'investment', 'auction'] as const
 export type PremiumFeatureId = typeof PREMIUM_FEATURE_IDS[number]
 
 // 프리미엄 기능 라벨 맵
@@ -30,6 +30,7 @@ export const PREMIUM_FEATURE_LABELS: Record<PremiumFeatureId, string> = {
   'referral': '소개환자 관리',
   'marketing': '마케팅 자동화',
   'investment': '주식 자동매매',
+  'auction': '부동산 경매',
 }
 
 // 프리미엄 기능별 데모 오버레이에 표시할 두 가지 플랜 옵션
@@ -99,6 +100,13 @@ export const PREMIUM_FEATURE_INFO: Record<PremiumFeatureId, {
     description: 'AI 기반 자동매매 전략으로 자산을 운용합니다.',
     plans: [
       { planFeatureId: 'investment', name: '주식 자동매매', priceLabel: '수익의 5%', includes: ['AI 자동매매', '전략 백테스트', '실시간 포트폴리오'], recommended: true },
+    ],
+  },
+  'auction': {
+    title: '부동산 경매',
+    description: '전국 법원 경매 물건을 실시간으로 수집하고 ROI·권리분석까지 자동으로 분석합니다.',
+    plans: [
+      { planFeatureId: 'auction', name: '부동산 경매', priceLabel: '월 49,000원', includes: ['전국 경매 물건', '3단계 ROI 시뮬레이션', 'AI 권리분석', '실거래가 시세 매칭'], recommended: true },
     ],
   },
 }
