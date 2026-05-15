@@ -12,6 +12,8 @@ export interface ListFilter {
   maxArea?: number
   minPrice?: number
   maxPrice?: number
+  minAppraisalPrice?: number
+  maxAppraisalPrice?: number
   sort?: 'discount_desc' | 'd_day_asc' | 'price_asc' | 'failure_desc'
   cursor?: number
   limit?: number
@@ -49,6 +51,8 @@ export async function listAuctionItems(f: ListFilter): Promise<ListResult> {
   if (f.maxArea !== undefined) q = q.lte('building_area_m2', f.maxArea)
   if (f.minPrice !== undefined) q = q.gte('min_bid_price', f.minPrice)
   if (f.maxPrice !== undefined) q = q.lte('min_bid_price', f.maxPrice)
+  if (f.minAppraisalPrice !== undefined) q = q.gte('appraisal_price', f.minAppraisalPrice)
+  if (f.maxAppraisalPrice !== undefined) q = q.lte('appraisal_price', f.maxAppraisalPrice)
   if (f.maxDDay !== undefined) {
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() + f.maxDDay)
