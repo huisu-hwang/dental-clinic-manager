@@ -9,7 +9,7 @@ import { getImageProvider, type ImageProvider } from './image-provider-setting';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
-// AI 이미지 생성 (Gemini 3.0 Flash / OpenAI gpt-image-2)
+// AI 이미지 생성 (Gemini 3.0 Flash / OpenAI gpt-image-1.5)
 // - 마스터가 선택한 프로바이더로 디스패치
 // - 블로그 본문의 [IMAGE: 설명] 마커에서 이미지 생성
 // - 한글 파일명 자동 생성
@@ -17,7 +17,10 @@ import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyl
 
 const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
 const GEMINI_LOG_MODEL = 'gemini-3.0-flash';
-const OPENAI_IMAGE_MODEL = 'gpt-image-2';
+// OpenAI Images API(/v1/images/generations) 가 model 파라미터로 인식하는 GPT 이미지 모델.
+// 공식 문서 기준: gpt-image-1.5 (최신), gpt-image-1, gpt-image-1-mini.
+// (gpt-image-2 는 Responses API 의 image_generation 툴 전용으로 Images API 에서는 invalid)
+const OPENAI_IMAGE_MODEL = 'gpt-image-1.5';
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
@@ -511,7 +514,7 @@ async function generateImageWithGemini(
   }
 }
 
-// ─── OpenAI gpt-image-2 API 호출 ───
+// ─── OpenAI Images API 호출 (gpt-image-1.5) ───
 
 interface OpenAIImageResult {
   imageBase64: string;
@@ -522,7 +525,7 @@ interface OpenAIImageResult {
   };
 }
 
-// gpt-image-2 지원 사이즈에 플랫폼 매핑
+// gpt-image-1.5 지원 사이즈에 플랫폼 매핑
 function resolveOpenAIImageSize(platform?: SocialPlatform): '1024x1024' | '1536x1024' | '1024x1536' {
   if (platform === 'facebook') return '1536x1024'; // 가로형
   return '1024x1024'; // 정사각형 (기본)
@@ -578,7 +581,16 @@ async function generateImageWithOpenAI(
       },
     };
   } catch (error) {
-    console.error('[ImageGen] OpenAI API 오류:', error);
+    // OpenAI SDK 에러는 status / code / type / message 가 분리돼 있어 평이 로깅으로는 잘려서 안 보임.
+    // 운영 디버깅을 위해 핵심 필드를 풀어서 함께 기록.
+    const err = error as { status?: number; code?: string; type?: string; message?: string; error?: { message?: string } };
+    console.error('[ImageGen] OpenAI API 오류:', {
+      model: OPENAI_IMAGE_MODEL,
+      status: err?.status,
+      code: err?.code,
+      type: err?.type,
+      message: err?.message || err?.error?.message,
+    });
     throw error;
   }
 }
