@@ -1,4 +1,13 @@
 import 'dotenv/config'
+// undici fetch 의 일시적 실패가 supabase-js 내부 마이크로태스크에서 unhandled rejection 으로
+// 빠져나오는 케이스가 있어 메인 catch 까지 도달하지 못하고 process 가 죽는다. 전역 핸들러로 흡수.
+process.on('unhandledRejection', (reason) => {
+  // 라이브러리 내부 일시 rejection — 무시하고 진행
+  console.error(JSON.stringify({ ts: new Date().toISOString(), level: 'warn', msg: 'unhandled_rejection', reason: String(reason) }))
+})
+process.on('uncaughtException', (err) => {
+  console.error(JSON.stringify({ ts: new Date().toISOString(), level: 'warn', msg: 'uncaught_exception', error: String(err) }))
+})
 import { scrapeAllLists } from '../scrapers/courtAuctionListScraper.js'
 import { scrapeDetails } from '../scrapers/courtAuctionDetailScraper.js'
 import { downloadPdf } from '../scrapers/pdfDownloader.js'
