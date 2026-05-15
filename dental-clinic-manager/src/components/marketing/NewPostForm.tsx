@@ -115,6 +115,10 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [imageVisualStyle, setImageVisualStyle] = useState<ImageVisualStyle>('realistic')
   const [imageCount, setImageCount] = useState(3)
   const [targetWordCount, setTargetWordCount] = useState<number>(1500)
+  // 숫자 input 의 raw 입력 버퍼 — typing 중에는 clamp 하지 않고 string 그대로 유지하다 blur 시 검증·clamp.
+  // (이전: onChange 에서 즉시 Math.max(500, ...) clamp 가 적용되어 사용자가 "2500" 타이핑 시 첫 키 "2" 가 500 으로 강제되어 입력 불가)
+  const [targetWordCountInput, setTargetWordCountInput] = useState<string>('1500')
+  useEffect(() => { setTargetWordCountInput(String(targetWordCount)) }, [targetWordCount])
   // ── SEO 분석 미리보기 ──
   const seoPreview = useSeoPreview()
   // 키워드 mismatch 가드: 입력 키워드와 분석된 키워드가 일치할 때만 결과 표시 (이전 분석 잔존 방지)
@@ -904,11 +908,18 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
                   min={1000}
                   max={dynamicWordMax}
                   step={100}
-                  value={targetWordCount}
-                  onChange={(e) => {
-                    const v = Number(e.target.value)
-                    if (Number.isFinite(v)) setTargetWordCount(Math.max(500, Math.min(dynamicWordMax, v)))
+                  value={targetWordCountInput}
+                  onChange={(e) => setTargetWordCountInput(e.target.value)}
+                  onBlur={() => {
+                    const v = Number(targetWordCountInput)
+                    if (!Number.isFinite(v) || v <= 0) {
+                      setTargetWordCountInput(String(targetWordCount))
+                      return
+                    }
+                    const clamped = Math.max(1000, Math.min(dynamicWordMax, Math.round(v / 100) * 100))
+                    setTargetWordCount(clamped)
                   }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                   className="w-24 px-2 py-1.5 border border-at-border rounded-lg text-sm focus:ring-2 focus:ring-at-accent focus:border-at-accent"
                 />
                 <span className="text-xs text-at-text-weak">자</span>
