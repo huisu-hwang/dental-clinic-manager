@@ -511,6 +511,30 @@ export const recallPatientService = {
       }
       const deduplicated = Array.from(seen.values()).slice(0, pageSize)
 
+      // 덴트웹 차트에서 다음 예약일 매칭 (chart_number 기준, FK 없으므로 클라이언트 측 IN 조회 후 매칭)
+      // 덴트웹 동기화가 활성화되지 않은 클리닉이면 결과 0건 → 모든 환자 next_appointment_date 미할당(undefined)
+      const chartNumbers = deduplicated
+        .map(p => p.chart_number)
+        .filter((c): c is string => typeof c === 'string' && c.length > 0)
+      if (chartNumbers.length > 0) {
+        const { data: dentwebRows } = await supabase
+          .from('dentweb_patients')
+          .select('chart_number, next_appointment_date')
+          .eq('clinic_id', clinicId)
+          .in('chart_number', chartNumbers)
+        if (dentwebRows) {
+          const nextMap = new Map<string, string | null>()
+          for (const row of dentwebRows as { chart_number: string | null; next_appointment_date: string | null }[]) {
+            if (row.chart_number) nextMap.set(row.chart_number, row.next_appointment_date)
+          }
+          for (const patient of deduplicated) {
+            if (patient.chart_number && nextMap.has(patient.chart_number)) {
+              patient.next_appointment_date = nextMap.get(patient.chart_number) ?? null
+            }
+          }
+        }
+      }
+
       // 중복 비율로 총 개수 보정
       const duplicateCount = allData.length - seen.size
       const adjustedTotal = Math.max(total - duplicateCount, deduplicated.length)

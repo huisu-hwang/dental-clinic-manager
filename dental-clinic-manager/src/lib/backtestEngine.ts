@@ -56,6 +56,12 @@ export interface BacktestParams {
    * 전략 비교 페이지처럼 자본 활용 차이를 제거하고 순수 시그널 성과만 비교할 때 사용.
    */
   useFullCapital?: boolean
+  /**
+   * true이면 equityCurve 의 value 에 Math.round 를 적용하지 않고 raw float 그대로 보존.
+   * Sharpe/MDD 등 metric 재계산 시 누적 round-off 오차를 제거. UI 표시는 별도로 반올림.
+   * 기본 false (백워드 호환 — 종전대로 정수 저장).
+   */
+  preserveEquityPrecision?: boolean
 }
 
 export interface BuyHoldResult {
@@ -127,7 +133,9 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
     prices, indicators, buyConditions, sellConditions,
     riskSettings, initialCapital, market, ticker,
     useFullCapital = false,
+    preserveEquityPrecision = false,
   } = params
+  const eqRound = (v: number): number => preserveEquityPrecision ? v : Math.round(v)
 
   if (prices.length < 2) {
     return emptyResult()
@@ -294,7 +302,7 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
     const totalEquity = cash + positionValue
     equityCurve.push({
       date: bar.date,
-      value: Math.round(totalEquity),
+      value: eqRound(totalEquity),
     })
   }
 
@@ -312,7 +320,7 @@ export function runBacktest(params: BacktestParams, signal?: AbortSignal): Backt
       // 마지막 강제 청산 수수료/세금까지 반영된 최종 평가액으로 맞춘다.
       equityCurve[equityCurve.length - 1] = {
         date: lastBar.date,
-        value: Math.round(cash),
+        value: eqRound(cash),
       }
     }
 

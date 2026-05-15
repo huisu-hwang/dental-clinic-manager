@@ -70,6 +70,20 @@ interface PatientListProps {
   onPageChange?: (page: number) => void
 }
 
+// 덴트웹 next_appointment_date 표시용 — 날짜 + D-day 계산
+function formatNextAppointment(value: string | null | undefined): { dateLabel: string; dday: string; isPast: boolean } | null {
+  if (!value) return null
+  const target = new Date(value)
+  if (Number.isNaN(target.getTime())) return null
+  target.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const dateLabel = `${target.getMonth() + 1}월 ${target.getDate()}일`
+  const dday = diffDays === 0 ? 'D-Day' : diffDays > 0 ? `D-${diffDays}` : `D+${Math.abs(diffDays)}`
+  return { dateLabel, dday, isPast: diffDays < 0 }
+}
+
 // 상태별 아이콘
 const STATUS_ICONS: Record<PatientRecallStatus, React.ReactNode> = {
   pending: <Clock className="w-3.5 h-3.5" />,
@@ -500,6 +514,12 @@ export default function PatientList({
                   )}
                 </button>
               </th>
+              <th
+                className="px-4 py-3 text-left text-sm font-medium text-at-text-secondary"
+                title="덴트웹 차트의 다음 예약 날짜"
+              >
+                다음 예약
+              </th>
               <th className="px-4 py-3 text-left">
                 <button
                   onClick={() => handleSort('status')}
@@ -528,7 +548,7 @@ export default function PatientList({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-at-text-weak">
+                <td colSpan={7} className="px-4 py-8 text-center text-at-text-weak">
                   <div className="flex flex-col items-center gap-2">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-at-accent"></div>
                     <span>로딩 중...</span>
@@ -537,7 +557,7 @@ export default function PatientList({
               </tr>
             ) : sortedPatients.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-at-text-weak">
+                <td colSpan={7} className="px-4 py-8 text-center text-at-text-weak">
                   <div className="flex flex-col items-center gap-2">
                     <User className="w-12 h-12 text-at-text-weak" />
                     <span>환자 목록이 없습니다.</span>
@@ -605,6 +625,32 @@ export default function PatientList({
                     ) : (
                       <span className="text-sm text-at-text-weak">-</span>
                     )}
+                  </td>
+
+                  {/* 다음 예약 (덴트웹 차트의 next_appointment_date) */}
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const next = formatNextAppointment(patient.next_appointment_date)
+                      if (!next) return <span className="text-sm text-at-text-weak">—</span>
+                      return (
+                        <div>
+                          <p className={`text-sm ${next.isPast ? 'text-at-text-weak' : 'text-at-text'}`}>
+                            {next.dateLabel}
+                          </p>
+                          <p
+                            className={`text-xs font-medium ${
+                              next.isPast
+                                ? 'text-at-text-weak'
+                                : next.dday === 'D-Day'
+                                  ? 'text-at-danger'
+                                  : 'text-at-accent'
+                            }`}
+                          >
+                            {next.dday}
+                          </p>
+                        </div>
+                      )
+                    })()}
                   </td>
 
                   {/* 상태 - 버튼으로 표시 */}
