@@ -408,7 +408,7 @@ export const MENU_CONFIG: MenuConfigItem[] = [
     id: 'auction',
     label: '부동산 경매',
     icon: 'Gavel',
-    route: '/dashboard?tab=investment&sub=auction',
+    route: '/dashboard?tab=auction',
     permissions: ['auction_view'],
     categoryId: 'investment',
     order: 16.6,
