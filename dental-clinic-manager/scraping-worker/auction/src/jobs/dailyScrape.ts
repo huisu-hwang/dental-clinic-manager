@@ -69,77 +69,91 @@ async function main() {
   const details = Array.from(dedupeMap.values())
   log.info('dedupe_done', { before: detailsRaw.length, after: details.length })
 
-  // 8 분간 idle 한 HTTP keep-alive 가 죽어 첫 upsert 가 fetch failed 로 throw 되는 문제 해결:
-  // list/dedupe 직후에 클라이언트를 새로 생성하여 fresh connection pool 로 적재 시작.
-  supabase = createSupabaseClient()
-  log.info('supabase_client_refreshed')
+  // auction_items 적재는 supabase-js 대신 REST API 로 batch upsert.
+  // 이유: Node 25 + supabase-js v2 의 PostgrestBuilder thenable 이 idle 후
+  // 마이크로태스크 분기로 fetch rejection 을 흘려 retry try/catch 밖에서 process 가 죽는 패턴.
+  const SUPABASE_URL = process.env.SUPABASE_URL!
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+  const rows = details.map((d) => {
+    const discount = (d.appraisalPrice - d.minBidPrice) / d.appraisalPrice * 100
+    return {
+      case_number: d.caseNumber,
+      item_number: d.itemNumber,
+      court_name: d.courtName,
+      court_code: d.courtCode || '00',
+      property_type: d.propertyType,
+      address_road: d.addressRoad,
+      address_jibun: d.addressJibun,
+      sido: d.sido,
+      sigungu: d.sigungu,
+      eupmyeondong: d.eupmyeondong,
+      pnu: d.pnu,
+      land_area_m2: d.landAreaM2,
+      building_area_m2: d.buildingAreaM2,
+      floor: d.floor,
+      total_floors: d.totalFloors,
+      building_year: d.buildingYear,
+      appraisal_price: d.appraisalPrice,
+      min_bid_price: d.minBidPrice,
+      bid_deposit: d.bidDeposit,
+      failure_count: d.failureCount,
+      discount_rate: Math.round(discount * 100) / 100,
+      next_auction_date: d.nextAuctionDate,
+      status: d.status,
+      sold_price: d.soldPrice,
+      sold_at: d.soldAt,
+      source_url: d.sourceUrl,
+      notice_pdf_url: d.noticePdfUrl,
+      appraisal_pdf_url: d.appraisalPdfUrl,
+      photos: d.photos,
+      last_synced_at: new Date().toISOString(),
+    }
+  })
+
+  const BATCH_SIZE = 500
   let okCount = 0
   let failCount = 0
-  for (const d of details) {
-    const discount = (d.appraisalPrice - d.minBidPrice) / d.appraisalPrice * 100
-    const upsertResult = await retry(async () => {
-      return await supabase
-        .from('auction_items')
-        .upsert({
-          case_number: d.caseNumber,
-          item_number: d.itemNumber,
-          court_name: d.courtName,
-          court_code: d.courtCode || '00',
-          property_type: d.propertyType,
-          address_road: d.addressRoad,
-          address_jibun: d.addressJibun,
-          sido: d.sido,
-          sigungu: d.sigungu,
-          eupmyeondong: d.eupmyeondong,
-          pnu: d.pnu,
-          land_area_m2: d.landAreaM2,
-          building_area_m2: d.buildingAreaM2,
-          floor: d.floor,
-          total_floors: d.totalFloors,
-          building_year: d.buildingYear,
-          appraisal_price: d.appraisalPrice,
-          min_bid_price: d.minBidPrice,
-          bid_deposit: d.bidDeposit,
-          failure_count: d.failureCount,
-          discount_rate: Math.round(discount * 100) / 100,
-          next_auction_date: d.nextAuctionDate,
-          status: d.status,
-          sold_price: d.soldPrice,
-          sold_at: d.soldAt,
-          source_url: d.sourceUrl,
-          notice_pdf_url: d.noticePdfUrl,
-          appraisal_pdf_url: d.appraisalPdfUrl,
-          photos: d.photos,
-          last_synced_at: new Date().toISOString(),
-        }, { onConflict: 'court_code,case_number,item_number' })
-        .select('id')
-        .single()
-    }, `upsert_auction_items:${d.caseNumber}-${d.itemNumber}`)
+  const itemIdByKey = new Map<string, string>()  // "court_code|case_number|item_number" → uuid
 
-    if ('__failed' in upsertResult) {
-      failCount++
-      log.warn('upsert_failed', {
-        caseNumber: d.caseNumber, itemNumber: d.itemNumber, error: upsertResult.error,
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE)
+    const result = await retry(async () => {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/auction_items?on_conflict=court_code,case_number,item_number&select=id,court_code,case_number,item_number`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'authorization': `Bearer ${SUPABASE_KEY}`,
+          'content-type': 'application/json',
+          'prefer': 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(batch),
       })
-      continue
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`status ${res.status}: ${text.slice(0, 300)}`)
+      }
+      return await res.json() as Array<{ id: string; court_code: string; case_number: string; item_number: number }>
+    }, `batch_upsert:${i}-${i + batch.length}`)
+
+    if ('__failed' in result) {
+      failCount += batch.length
+      log.warn('batch_upsert_failed', { from: i, count: batch.length, error: result.error })
+    } else {
+      okCount += result.length
+      for (const r of result) {
+        itemIdByKey.set(`${r.court_code}|${r.case_number}|${r.item_number}`, r.id)
+      }
+      log.info('upsert_progress', { okCount, failCount, totalSeen: okCount + failCount, batches: Math.floor(i / BATCH_SIZE) + 1 })
     }
-    const { data: itemRow, error } = upsertResult
-    if (error || !itemRow) {
-      failCount++
-      log.warn('upsert_failed', {
-        caseNumber: d.caseNumber,
-        itemNumber: d.itemNumber,
-        message: error?.message ?? 'no_row_returned',
-        code: (error as any)?.code,
-        details: (error as any)?.details,
-        hint: (error as any)?.hint,
-      })
-      continue
-    }
-    okCount++
-    if (okCount % 1000 === 0) log.info('upsert_progress', { okCount, failCount, totalSeen: okCount + failCount })
-    const itemId = itemRow.id
+  }
+
+  // 권리분석 / 시세 매칭 후속 처리. 현재 PDF 가 모두 null 이라 rights 는 사실상 스킵.
+  // 시세 매칭(molit)은 외부 API 호출이라 supabase-js fetch failed 문제와 무관.
+  for (const d of details) {
+    const key = `${d.courtCode || '00'}|${d.caseNumber}|${d.itemNumber}`
+    const itemId = itemIdByKey.get(key)
+    if (!itemId) continue
 
     if (d.noticePdfUrl) {
       const pdfPath = await downloadPdf(d.noticePdfUrl, `${d.courtCode || '00'}-${d.caseNumber}-${d.itemNumber}-notice`)
