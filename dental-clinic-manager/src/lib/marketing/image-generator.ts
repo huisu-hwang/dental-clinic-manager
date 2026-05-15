@@ -612,6 +612,12 @@ async function generateImageWithOpenAI(
         type: err?.type,
         message: err?.message || err?.error?.message,
       });
+      // billing 한도 에러는 모든 모델에서 동일하게 발생하므로 폴백 의미 없음 → 즉시 친절한 메시지로 throw.
+      const code = (err?.code || '').toLowerCase();
+      const msgBlob = `${err?.message || ''} ${err?.error?.message || ''}`.toLowerCase();
+      if (code.includes('billing') || code.includes('insufficient_quota') || msgBlob.includes('billing') || msgBlob.includes('hard limit')) {
+        throw new Error('OpenAI 결제 한도에 도달했습니다. OpenAI 대시보드에서 사용 한도를 늘리거나 결제 정보를 확인해주세요.');
+      }
       // 모델 액세스/호환 문제면 다음 모델로 폴백. 그 외 에러(rate limit, content policy 등)는 즉시 throw.
       if (i < OPENAI_IMAGE_MODEL_CHAIN.length - 1 && isModelAccessIssue(err)) {
         continue;
