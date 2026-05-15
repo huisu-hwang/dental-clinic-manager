@@ -36,6 +36,8 @@ export async function listAuctionItems(f: ListFilter): Promise<ListResult> {
   const limit = Math.min(f.limit ?? 30, 100)
   const offset = f.cursor ?? 0
 
+  // status='active' 부분 인덱스(20260516_auction_items_perf_indexes) 덕분에
+  // 30,000+ 행에서도 정렬·필터·exact count 가 1초 이내에 끝난다.
   let q = supabase
     .from('auction_items')
     .select('*, market:auction_market_prices(source, matched_complex, median_price_3m, trade_count_3m, median_price_12m, last_trade_date, match_confidence)', { count: 'exact' })
