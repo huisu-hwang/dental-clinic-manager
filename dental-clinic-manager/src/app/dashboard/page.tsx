@@ -33,6 +33,7 @@ import AIChat from '@/components/AIAnalysis/AIChat'
 import PremiumGate from '@/components/Premium/PremiumGate'
 import TaskChecklistManagement from '@/components/TaskChecklist/TaskChecklistManagement'
 import InvestmentTab from '@/components/Investment/InvestmentTab'
+import AuctionContent from '@/components/Investment/Auction/AuctionContent'
 import { useSupabaseData } from '@/hooks/useSupabaseData'
 import { useUserNotifications } from '@/hooks/useUserNotifications'
 import { dataService } from '@/lib/dataService'
@@ -943,6 +944,15 @@ export default function DashboardPage() {
           {activeTab === 'investment' && (
             <PremiumGate featureId="investment">
               <InvestmentTab />
+            </PremiumGate>
+          )}
+
+          {/* 부동산 경매 (독립 최상위 탭) */}
+          {activeTab === 'auction' && (
+            <PremiumGate featureId="auction">
+              <div className="p-4 sm:p-6 bg-white min-h-screen">
+                <AuctionContent />
+              </div>
             </PremiumGate>
           )}
 

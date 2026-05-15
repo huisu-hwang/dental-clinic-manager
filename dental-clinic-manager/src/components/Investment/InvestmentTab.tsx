@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Link2, Target, TrendingUp, TrendingDown, Briefcase,
   Wallet, Activity, AlertCircle, OctagonX, Loader2,
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
-  Zap, GitCompare, Search, Brain, Users, Trophy, Cpu, Gavel,
+  Zap, GitCompare, Search, Brain, Users, Trophy, Cpu,
 } from 'lucide-react'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
@@ -23,12 +23,11 @@ import PsychologyContent from './Psychology/PsychologyContent'
 import RankingsContent from './RankingsContent'
 import RLModelsContent from './RLModelsContent'
 import StrategyBuilder from './StrategyBuilder/StrategyBuilder'
-import AuctionContent from './Auction/AuctionContent'
 import type { InvestmentStrategy } from '@/types/investment'
 
 type SubTab =
   | 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener'
-  | 'smart-money' | 'auction' | 'trading' | 'psychology' | 'rankings' | 'rl-models' | 'portfolio'
+  | 'smart-money' | 'trading' | 'psychology' | 'rankings' | 'rl-models' | 'portfolio'
 
 const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
@@ -39,7 +38,6 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'rankings', label: '전략 랭킹', icon: Trophy },
   { id: 'screener', label: '종목 스크리너', icon: Search },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain },
-  { id: 'auction', label: '부동산 경매', icon: Gavel },
   { id: 'trading', label: '자동매매', icon: TrendingUp },
   { id: 'psychology', label: '심리 분석', icon: Users },
   { id: 'rl-models', label: 'RL 모델', icon: Cpu },
@@ -48,7 +46,7 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
 
 const SUB_TAB_IDS = new Set<SubTab>([
   'dashboard', 'connect', 'strategy', 'daytrading', 'compare', 'screener',
-  'smart-money', 'auction', 'trading', 'psychology', 'rankings', 'rl-models', 'portfolio',
+  'smart-money', 'trading', 'psychology', 'rankings', 'rl-models', 'portfolio',
 ])
 
 function isSubTab(v: string | null): v is SubTab {
@@ -283,9 +281,6 @@ export default function InvestmentTab() {
         )}
         {!inInlineView && subTab === 'smart-money' && (
           <SmartMoneyContent />
-        )}
-        {!inInlineView && subTab === 'auction' && (
-          <AuctionContent />
         )}
         {!inInlineView && subTab === 'trading' && (
           <TradingContent />

@@ -20,7 +20,6 @@ import {
   Search,
   Brain,
   Users,
-  Gavel,
   Trophy,
 } from 'lucide-react'
 import type { InvestmentTab } from '@/types/investment'
@@ -44,7 +43,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'rankings', label: '전략 랭킹', icon: Trophy, href: '/dashboard?tab=investment&sub=rankings' },
   { id: 'screener', label: '종목 스크리너', icon: Search, href: '/dashboard?tab=investment&sub=screener' },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain, href: '/dashboard?tab=investment&sub=smart-money' },
-  { id: 'auction', label: '부동산 경매', icon: Gavel, href: '/dashboard?tab=investment&sub=auction' },
   { id: 'trading', label: '자동매매', icon: TrendingUp, href: '/dashboard?tab=investment&sub=trading' },
   { id: 'psychology', label: '└ 심리 분석', icon: Users, href: '/dashboard?tab=investment&sub=psychology' },
   { id: 'portfolio', label: '포트폴리오', icon: Briefcase, href: '/dashboard?tab=investment&sub=portfolio' },
