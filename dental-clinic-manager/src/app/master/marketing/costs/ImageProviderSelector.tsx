@@ -11,9 +11,9 @@ const PROVIDER_INFO: Record<Provider, { label: string; description: string; mode
     description: 'Google 나노바나나 (기본)',
   },
   openai: {
-    label: 'OpenAI gpt-image-2',
-    model: 'gpt-image-2',
-    description: 'OpenAI 최신 이미지 생성 모델',
+    label: 'OpenAI gpt-image-1.5',
+    model: 'gpt-image-1.5',
+    description: 'OpenAI 최신 이미지 생성 모델 (Images API)',
   },
 }
 
