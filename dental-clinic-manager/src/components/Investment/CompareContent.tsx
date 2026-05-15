@@ -489,14 +489,24 @@ function LiveCompareSection() {
   return (
     <div className="space-y-6 max-w-6xl">
       {/* 헤더 */}
-      <div>
-        <div className="flex items-center gap-2">
-          <GitCompare className="w-6 h-6 text-purple-500" />
-          <h1 className="text-xl font-bold text-at-text">전략 비교 백테스트</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <GitCompare className="w-6 h-6 text-purple-500" />
+            <h1 className="text-xl font-bold text-at-text">전략 비교 백테스트</h1>
+          </div>
+          <p className="text-sm text-at-text-secondary mt-1">
+            하나의 종목에 대해 여러 전략을 동시에 백테스트하여 성과를 비교합니다. 최대 {MAX_COMPARE}개까지 동시 비교.
+          </p>
         </div>
-        <p className="text-sm text-at-text-secondary mt-1">
-          하나의 종목에 대해 여러 전략을 동시에 백테스트하여 성과를 비교합니다. 최대 {MAX_COMPARE}개까지 동시 비교.
-        </p>
+        <a
+          href="/investment/compare/matrix"
+          className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+          title="사전계산된 모든 종목 × 모든 전략 매트릭스에서 필터링해 즉시 조회"
+        >
+          <LayoutGrid className="w-3.5 h-3.5" />
+          전략 매트릭스 (사전계산) →
+        </a>
       </div>
 
       {/* 비교 모드 안내 */}
