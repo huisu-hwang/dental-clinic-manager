@@ -9,7 +9,7 @@ import { getImageProvider, type ImageProvider } from './image-provider-setting';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
-// AI 이미지 생성 (Gemini 3.0 Flash / OpenAI gpt-image-1.5)
+// AI 이미지 생성 (Gemini 3.0 Flash / OpenAI gpt-image-2)
 // - 마스터가 선택한 프로바이더로 디스패치
 // - 블로그 본문의 [IMAGE: 설명] 마커에서 이미지 생성
 // - 한글 파일명 자동 생성
@@ -17,10 +17,11 @@ import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyl
 
 const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
 const GEMINI_LOG_MODEL = 'gemini-3.0-flash';
-// OpenAI Images API(/v1/images/generations) 가 model 파라미터로 인식하는 GPT 이미지 모델.
-// 공식 문서 기준: gpt-image-1.5 (최신), gpt-image-1, gpt-image-1-mini.
-// (gpt-image-2 는 Responses API 의 image_generation 툴 전용으로 Images API 에서는 invalid)
-const OPENAI_IMAGE_MODEL = 'gpt-image-1.5';
+// OpenAI Images API(/v1/images/generations, /v1/images/edits) 의 최신 GPT 이미지 모델.
+// 참고: https://developers.openai.com/cookbook/examples/multimodal/image-gen-models-prompting-guide
+// quality 파라미터(low/medium/high) 가 호출에 필요하므로 OPENAI_IMAGE_QUALITY 와 함께 전송.
+const OPENAI_IMAGE_MODEL = 'gpt-image-2';
+const OPENAI_IMAGE_QUALITY: 'low' | 'medium' | 'high' = 'medium';
 
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
@@ -514,7 +515,7 @@ async function generateImageWithGemini(
   }
 }
 
-// ─── OpenAI Images API 호출 (gpt-image-1.5) ───
+// ─── OpenAI Images API 호출 (gpt-image-2) ───
 
 interface OpenAIImageResult {
   imageBase64: string;
@@ -525,7 +526,7 @@ interface OpenAIImageResult {
   };
 }
 
-// gpt-image-1.5 지원 사이즈에 플랫폼 매핑
+// gpt-image-2 지원 사이즈에 플랫폼 매핑
 function resolveOpenAIImageSize(platform?: SocialPlatform): '1024x1024' | '1536x1024' | '1024x1536' {
   if (platform === 'facebook') return '1536x1024'; // 가로형
   return '1024x1024'; // 정사각형 (기본)
@@ -544,7 +545,7 @@ async function generateImageWithOpenAI(
     let usage: { input_tokens?: number; output_tokens?: number; total_tokens?: number } | undefined;
 
     if (imageStyle === 'use_own_image' && referenceImageBase64) {
-      // 참조 이미지 기반 편집
+      // 참조 이미지 기반 편집 — gpt-image-2 의 input_fidelity 는 disabled(출력이 이미 고품질)
       const imageFile = await toFile(
         Buffer.from(referenceImageBase64, 'base64'),
         'reference.png',
@@ -555,6 +556,7 @@ async function generateImageWithOpenAI(
         image: imageFile,
         prompt,
         size,
+        quality: OPENAI_IMAGE_QUALITY,
         n: 1,
       });
       b64 = response.data?.[0]?.b64_json;
@@ -564,6 +566,7 @@ async function generateImageWithOpenAI(
         model: OPENAI_IMAGE_MODEL,
         prompt,
         size,
+        quality: OPENAI_IMAGE_QUALITY,
         n: 1,
       });
       b64 = response.data?.[0]?.b64_json;
