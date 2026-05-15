@@ -15,11 +15,11 @@ export function AuctionDetailHeader({ item, market }: Props) {
   const s = market ? calculateSecondary(item, market, { isMultiOwner: false }) : null
 
   return (
-    <div className="bg-at-surface rounded-2xl p-6 border border-at-border mb-4">
-      <div className="text-sm text-at-text-secondary mb-1">
+    <div className="bg-at-surface rounded-2xl p-5 md:p-6 border border-at-border mb-4">
+      <div className="text-[13px] md:text-sm text-at-text-secondary mb-1">
         {item.case_number} · {item.court_name}
       </div>
-      <h1 className="text-xl font-bold mb-4">
+      <h1 className="text-lg md:text-xl font-bold mb-4 text-at-text">
         {item.sido} {item.sigungu} {item.eupmyeondong}
       </h1>
 
@@ -46,8 +46,8 @@ function Field({ label, value, highlight, accent }: { label: string; value: stri
                 : 'text-at-text'
   return (
     <div>
-      <div className="text-xs text-at-text-secondary">{label}</div>
-      <div className={`text-base ${highlight ? 'font-bold' : 'font-medium'} ${colorCls}`}>{value}</div>
+      <div className="text-[13px] md:text-xs text-at-text-secondary">{label}</div>
+      <div className={`text-base md:text-base ${highlight ? 'font-bold' : 'font-semibold'} ${colorCls} tabular-nums`}>{value}</div>
     </div>
   )
 }

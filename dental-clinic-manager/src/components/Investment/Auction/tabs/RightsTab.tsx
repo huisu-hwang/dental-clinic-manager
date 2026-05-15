@@ -54,14 +54,14 @@ export function RightsTab({ itemId, rights, initialAi }: Props) {
 
   return (
     <div className="space-y-4">
-      <section className="bg-at-surface rounded-2xl p-5 border border-at-border">
-        <h3 className="font-semibold mb-3">자동 추출 권리분석</h3>
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+        <h3 className="text-base font-semibold mb-3 text-at-text">자동 추출 권리분석</h3>
         {rights ? (
-          <dl className="grid grid-cols-2 gap-y-2 text-sm">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-[14px] md:text-sm">
             <Dt>말소기준권리</Dt>
             <Dd>{rights.base_right_type ?? '미확인'} {rights.base_right_date && `(${rights.base_right_date})`}</Dd>
             <Dt>대항력 임차인</Dt>
-            <Dd className={rights.has_senior_tenant ? 'text-rose-600 font-semibold' : ''}>
+            <Dd className={rights.has_senior_tenant ? 'text-rose-600 font-bold' : ''}>
               {rights.has_senior_tenant === null ? '미확인' : rights.has_senior_tenant ? '있음 (인수 위험)' : '없음'}
             </Dd>
             <Dt>임차인 수</Dt>
@@ -74,54 +74,54 @@ export function RightsTab({ itemId, rights, initialAi }: Props) {
             <Dd>{rights.parse_status ?? '-'}</Dd>
           </dl>
         ) : (
-          <p className="text-sm text-at-text-secondary">권리분석 데이터가 아직 수집되지 않았습니다.</p>
+          <p className="text-[14px] md:text-sm text-at-text-secondary">권리분석 데이터가 아직 수집되지 않았습니다.</p>
         )}
       </section>
 
-      <section className="bg-at-surface rounded-2xl p-5 border border-at-border">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold">AI 권리분석 코멘트</h3>
+      <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border">
+        <div className="flex justify-between items-center mb-3 gap-2">
+          <h3 className="text-base font-semibold text-at-text">AI 권리분석 코멘트</h3>
           <button
             onClick={callAi}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-at-accent-light text-at-accent text-sm font-medium disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-at-accent-light text-at-accent text-sm font-semibold disabled:opacity-50 shrink-0"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {ai ? '재생성' : 'AI 분석 실행'}
           </button>
         </div>
 
-        {err && <p className="text-sm text-rose-600 mb-2">{err}</p>}
+        {err && <p className="text-[14px] md:text-sm text-rose-600 mb-2 font-medium">{err}</p>}
 
         {ai ? (
           <div className="space-y-3">
             {ai.risk_score !== null && (
               <div className="flex items-center gap-2">
-                <span className="text-sm">위험도</span>
-                <div className="flex-1 h-2 bg-at-surface-alt rounded-full overflow-hidden">
+                <span className="text-[14px] md:text-sm text-at-text font-medium">위험도</span>
+                <div className="flex-1 h-2.5 bg-at-surface-alt rounded-full overflow-hidden">
                   <div
                     className={`h-full ${ai.risk_score >= 70 ? 'bg-rose-500' : ai.risk_score >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
                     style={{ width: `${ai.risk_score}%` }}
                   />
                 </div>
-                <span className="text-sm font-semibold tabular-nums">{ai.risk_score}/100</span>
+                <span className="text-[14px] md:text-sm font-bold tabular-nums text-at-text">{ai.risk_score}/100</span>
               </div>
             )}
-            <p className="text-sm leading-relaxed whitespace-pre-line">{ai.summary}</p>
+            <p className="text-[15px] md:text-sm leading-relaxed whitespace-pre-line text-at-text">{ai.summary}</p>
             {ai.bullet_points && ai.bullet_points.length > 0 && (
-              <ul className="text-sm space-y-1 list-disc list-inside text-at-text-secondary">
+              <ul className="text-[14px] md:text-sm space-y-1 list-disc list-inside text-at-text">
                 {ai.bullet_points.map((b, i) => <li key={i}>{b}</li>)}
               </ul>
             )}
-            <p className="text-xs text-at-text-secondary">
+            <p className="text-[13px] md:text-xs text-at-text-secondary">
               생성: {new Date(ai.generated_at).toLocaleString('ko-KR')} {ai.cached && '(캐시)'}
             </p>
           </div>
         ) : (
-          <p className="text-sm text-at-text-secondary">버튼을 눌러 AI 권리분석을 받아보세요. 결과는 24시간 캐싱됩니다.</p>
+          <p className="text-[14px] md:text-sm text-at-text-secondary">버튼을 눌러 AI 권리분석을 받아보세요. 결과는 24시간 캐싱됩니다.</p>
         )}
 
-        <p className="text-xs text-at-text-secondary mt-4">
+        <p className="text-[13px] md:text-xs text-at-text-secondary mt-4 leading-relaxed">
           ※ AI 코멘트는 보조 자료입니다. 최종 투자 판단의 책임은 사용자에게 있으며, 등기부등본 원본을 반드시 확인하세요.
         </p>
       </section>
@@ -130,4 +130,4 @@ export function RightsTab({ itemId, rights, initialAi }: Props) {
 }
 
 const Dt = (p: { children: React.ReactNode }) => <dt className="text-at-text-secondary">{p.children}</dt>
-const Dd = (p: { children: React.ReactNode; className?: string }) => <dd className={`font-medium ${p.className ?? ''}`}>{p.children}</dd>
+const Dd = (p: { children: React.ReactNode; className?: string }) => <dd className={`font-semibold text-at-text break-words ${p.className ?? ''}`}>{p.children}</dd>
