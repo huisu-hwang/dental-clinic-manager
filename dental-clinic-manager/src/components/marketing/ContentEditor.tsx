@@ -129,8 +129,13 @@ function markdownToHtml(
   const formatInline = (text: string) =>
     escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 
-  for (const line of lines) {
+  let skipUntilIndex: number | null = null
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li]
     const trimmed = line.trim()
+
+    if (skipUntilIndex !== null && li < skipUntilIndex) continue
+    if (skipUntilIndex !== null && li >= skipUntilIndex) skipUntilIndex = null
 
     if (!trimmed) {
       closeList()
@@ -175,6 +180,32 @@ function markdownToHtml(
     if (trimmed.startsWith('## ')) {
       closeList()
       htmlParts.push(`<h2>${formatInline(trimmed.slice(3))}</h2>`)
+      continue
+    }
+
+    // blockquote 콜아웃 (TIP / 주의 / 핵심)
+    if (trimmed.startsWith('> ')) {
+      closeList()
+      const calloutLines: string[] = [trimmed.replace(/^>\s+/, '')]
+      let k = li + 1
+      while (k < lines.length && lines[k].trim().startsWith('> ')) {
+        calloutLines.push(lines[k].trim().replace(/^>\s+/, ''))
+        k++
+      }
+      const first = calloutLines[0] || ''
+      const isWarn = first.includes('⚠️') || first.includes('주의')
+      const isTip = first.includes('💡')
+      const bg = isWarn ? '#fff7ed' : isTip ? '#ecfdf5' : '#eff6ff'
+      const border = isWarn ? '#f59e0b' : isTip ? '#10b981' : '#3b82f6'
+      const inner = calloutLines.map((q) => {
+        const isBullet = /^[-*]\s+/.test(q)
+        const text = isBullet ? q.replace(/^[-*]\s+/, '• ') : q
+        return `<p style="margin:4px 0;line-height:1.7;">${formatInline(text)}</p>`
+      }).join('')
+      htmlParts.push(
+        `<blockquote style="border-left:4px solid ${border};background:${bg};padding:12px 16px;margin:16px 0;border-radius:8px;">${inner}</blockquote>`
+      )
+      li = k - 1 // 다음 반복에서 quote 잔여 줄 모두 건너뜀
       continue
     }
 

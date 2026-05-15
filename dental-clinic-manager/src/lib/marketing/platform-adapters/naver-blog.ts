@@ -48,18 +48,54 @@ function plainToBlogHtml(body: string, images: GeneratedImageMeta[]): string {
   const lines = body.split('\n').map((l) => l.trim());
   const out: string[] = [];
   let bullets: string[] = [];
+  let quotes: string[] = [];
   let imageIdx = 0;
+
+  const renderInline = (s: string): string => {
+    // ** 굵게 ** 처리 + escape
+    const escaped = escapeHtml(s);
+    return escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  };
 
   const flushBullets = () => {
     if (bullets.length === 0) return;
-    out.push(`<ul>${bullets.map((b) => `<li>${escapeHtml(b.replace(/^[-•*]\s*/, ''))}</li>`).join('')}</ul>`);
+    out.push(`<ul>${bullets.map((b) => `<li>${renderInline(b.replace(/^[-•*]\s*/, ''))}</li>`).join('')}</ul>`);
     bullets = [];
+  };
+
+  const flushQuotes = () => {
+    if (quotes.length === 0) return;
+    // 첫 줄 keyword 로 콜아웃 톤 결정 (TIP/주의/핵심)
+    const first = quotes[0] || '';
+    const isWarn = first.includes('⚠️') || first.includes('주의');
+    const isTip = first.includes('💡');
+    const bg = isWarn ? '#fff7ed' : isTip ? '#ecfdf5' : '#eff6ff';
+    const border = isWarn ? '#f59e0b' : isTip ? '#10b981' : '#3b82f6';
+    const inner = quotes.map((q) => {
+      const isBullet = /^[-*]\s+/.test(q);
+      const text = isBullet ? q.replace(/^[-*]\s+/, '• ') : q;
+      return `<p style="margin:4px 0;line-height:1.7;">${renderInline(text)}</p>`;
+    }).join('');
+    out.push(
+      `<blockquote style="border-left:4px solid ${border};background:${bg};padding:12px 16px;margin:16px 0;border-radius:8px;">${inner}</blockquote>`
+    );
+    quotes = [];
   };
 
   for (const line of lines) {
     if (!line) {
       flushBullets();
+      flushQuotes();
       continue;
+    }
+
+    // blockquote 콜아웃 — `> ` 로 시작하는 연속 줄
+    if (line.startsWith('> ')) {
+      flushBullets();
+      quotes.push(line.replace(/^>\s+/, ''));
+      continue;
+    } else if (quotes.length > 0) {
+      flushQuotes();
     }
 
     // 이미지 마커 (예: [IMAGE] 또는 ![...])
@@ -88,9 +124,10 @@ function plainToBlogHtml(body: string, images: GeneratedImageMeta[]): string {
     }
 
     flushBullets();
-    out.push(`<p>${escapeHtml(line)}</p>`);
+    out.push(`<p>${renderInline(line)}</p>`);
   }
   flushBullets();
+  flushQuotes();
 
   // 남은 이미지가 있다면 본문 뒤에 첨부
   while (imageIdx < images.length) {
