@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Strategy Matrix 야간 배치 launchd 설정 (Mac mini M4)
+
+  설치:
+    1) 본 plist 를 사용자 LaunchAgents 로 복사
+       cp scripts/launchd/com.dental.strategy-matrix.plist ~/Library/LaunchAgents/
+
+    2) 등록 (자동 실행 시작)
+       launchctl load ~/Library/LaunchAgents/com.dental.strategy-matrix.plist
+
+    3) 즉시 실행 (테스트용)
+       launchctl start com.dental.strategy-matrix
+
+    4) 해제
+       launchctl unload ~/Library/LaunchAgents/com.dental.strategy-matrix.plist
+
+  로그:
+    /Users/hhs/Library/Logs/strategy-matrix/out.log
+    /Users/hhs/Library/Logs/strategy-matrix/err.log
+
+  매일 KST 19:00 (장마감 후) 자동 실행.
+  StandardOutPath / StandardErrorPath 의 디렉토리는 미리 만들어둘 것:
+    mkdir -p ~/Library/Logs/strategy-matrix
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dental.strategy-matrix</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/scripts/buildStrategyMatrix.mjs</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    <key>NODE_ENV</key>
+    <string>production</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>19</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/hhs/Library/Logs/strategy-matrix/out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/hhs/Library/Logs/strategy-matrix/err.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>Nice</key>
+  <integer>10</integer>
+</dict>
+</plist>

@@ -21,6 +21,12 @@ import { calculateIndicators, calcATR, type IndicatorResultMap } from './indicat
 import { evaluateConditionTreeWithMatches, type EvaluationContext } from './signalEngine'
 
 // ============================================
+// 엔진 버전 (매트릭스 캐시 무효화 키)
+// ============================================
+
+export const ENGINE_VERSION = '2026.05.16'
+
+// ============================================
 // 수수료 상수
 // ============================================
 
