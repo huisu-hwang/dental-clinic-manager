@@ -37,6 +37,10 @@ interface StoreSchema {
   dentwebLastSyncDate: string;
   dentwebLastSyncStatus: string;
   dentwebLastSyncPatientCount: number;
+  // 덴트웹 → Supabase 매핑 스키마 버전.
+  // 새 컬럼 추가 시 이 값을 올리면 워커가 첫 실행 때 자동 full sync 1회 실행 후 갱신.
+  // 0 = legacy(메모 없음), 2 = next_appointment_memo 포함.
+  dentwebSchemaVersion: number;
 }
 
 export interface AppConfig {
@@ -59,6 +63,7 @@ export interface AppConfig {
   dentwebLastSyncDate: string;
   dentwebLastSyncStatus: string;
   dentwebLastSyncPatientCount: number;
+  dentwebSchemaVersion: number;
 }
 
 export interface UpdateMeta {
@@ -98,6 +103,7 @@ const storeDefaults: StoreSchema = {
   dentwebLastSyncDate: '',
   dentwebLastSyncStatus: '',
   dentwebLastSyncPatientCount: 0,
+  dentwebSchemaVersion: 0,
 };
 
 function createStore(): Store<StoreSchema> {
@@ -165,6 +171,7 @@ export function getConfig(): AppConfig {
     dentwebLastSyncDate: store.get('dentwebLastSyncDate'),
     dentwebLastSyncStatus: store.get('dentwebLastSyncStatus'),
     dentwebLastSyncPatientCount: store.get('dentwebLastSyncPatientCount'),
+    dentwebSchemaVersion: store.get('dentwebSchemaVersion') ?? 0,
   };
 }
 
@@ -191,6 +198,7 @@ export function setConfig(partial: Partial<AppConfig>): void {
   if (partial.dentwebLastSyncDate !== undefined) store.set('dentwebLastSyncDate', partial.dentwebLastSyncDate);
   if (partial.dentwebLastSyncStatus !== undefined) store.set('dentwebLastSyncStatus', partial.dentwebLastSyncStatus);
   if (partial.dentwebLastSyncPatientCount !== undefined) store.set('dentwebLastSyncPatientCount', partial.dentwebLastSyncPatientCount);
+  if (partial.dentwebSchemaVersion !== undefined) store.set('dentwebSchemaVersion', partial.dentwebSchemaVersion);
   store.set('isConfigured', true);
 }
 
