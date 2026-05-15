@@ -749,6 +749,14 @@ export function SmartMoneyContent() {
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
                     <span>기준 거래일 {viewAnalysis.asOfDate}</span>
+                    {viewAnalysis.dataAsOfDate && viewAnalysis.dataAsOfDate !== viewAnalysis.asOfDate && (
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded font-semibold bg-amber-50 text-amber-700"
+                        title={`정교화 분석에 사용된 일봉 데이터의 마지막 날짜는 ${viewAnalysis.dataAsOfDate} 입니다. 기준 거래일(${viewAnalysis.asOfDate})과 차이가 있어 결과가 stale 일 수 있습니다.`}
+                      >
+                        데이터 {viewAnalysis.dataAsOfDate}
+                      </span>
+                    )}
                     <span>·</span>
                     <span>마지막 갱신 {lastRefreshLabel}</span>
                     {sessionBadge && (

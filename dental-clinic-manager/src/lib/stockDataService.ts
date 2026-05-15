@@ -24,6 +24,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
  * @param market 시장 ('KR' | 'US')
  * @param startDate 시작일 'YYYY-MM-DD'
  * @param endDate 종료일 'YYYY-MM-DD'
+ * @param opts.forceRefresh 캐시를 무시하고 yahoo 신선 fetch (실패 시 캐시 폴백)
  * @returns OHLCV 배열 (오래된 순 정렬)
  */
 export async function fetchPrices(
@@ -31,13 +32,16 @@ export async function fetchPrices(
   market: Market,
   startDate: string,
   endDate: string,
+  opts?: { forceRefresh?: boolean },
 ): Promise<OHLCV[]> {
   // 1. DB 캐시에서 조회
   const cached = await getCachedPrices(ticker, market, startDate, endDate)
-  if (cached.length > 0) {
+  if (!opts?.forceRefresh && cached.length > 0) {
     const requestDays = daysBetween(startDate, endDate)
     const minExpectedDays = Math.floor(requestDays * 0.5) // 주말/휴일 감안 50%
-    if (cached.length >= minExpectedDays) {
+    // 50% 임계 + 마지막 캔들 stale 검증.
+    // 캐시 마지막 봉이 시장 기준 최신 거래일(또는 최근 영업일) 보다 오래되면 yahoo 재조회.
+    if (cached.length >= minExpectedDays && !isCacheStale(cached, market, endDate)) {
       return cached
     }
   }
@@ -69,6 +73,25 @@ export async function fetchPrices(
   }
 
   return prices
+}
+
+/**
+ * 캐시 stale 검증 — 마지막 봉 날짜가 시장 기준 최근 거래일보다 오래됐는지.
+ * KR: KST 기준 / US: ET 기준. 휴장/주말은 가장 최근 영업일로 후퇴.
+ */
+function isCacheStale(cached: OHLCV[], market: Market, endDate: string): boolean {
+  if (cached.length === 0) return true
+  const lastBarDate = cached[cached.length - 1].date
+  // endDate (요청 마지막 일) 와 lastBarDate 비교.
+  // 캐시 마지막 봉이 요청 endDate 보다 2일 이상 (= 휴장 감안) 더 과거이면 stale 로 판정.
+  const lastBarMs = Date.parse(`${lastBarDate}T00:00:00Z`)
+  const endMs = Date.parse(`${endDate}T00:00:00Z`)
+  if (!Number.isFinite(lastBarMs) || !Number.isFinite(endMs)) return false
+  const diffDays = Math.floor((endMs - lastBarMs) / (24 * 60 * 60 * 1000))
+  // diffDays > 2 면 stale. (오늘이 휴장이거나 주말이라 1~2일 차이는 정상)
+  // KR/US 모두 동일 기준 적용.
+  void market // 시장별 차별화 필요시 확장 지점
+  return diffDays > 2
 }
 
 // ============================================

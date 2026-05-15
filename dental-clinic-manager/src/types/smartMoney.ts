@@ -267,8 +267,11 @@ export interface SmartMoneyAnalysis {
   ticker: string
   market: Market
   name: string
-  /** YYYY-MM-DD */
+  /** YYYY-MM-DD — 분석 기준일 (시스템 시각 기반, 시장 캘린더 정렬) */
   asOfDate: string
+  /** YYYY-MM-DD — 실제 분석에 사용된 OHLCV 데이터의 마지막 봉 날짜.
+   *  asOfDate 와 다르면 stale 가능성. UI에서 경고 배지로 노출. */
+  dataAsOfDate?: string
   currentPrice: number
   vwap: VWAPResult
   investorFlow: InvestorFlowResult | null

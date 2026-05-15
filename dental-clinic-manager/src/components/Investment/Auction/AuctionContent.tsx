@@ -175,15 +175,32 @@ function AuctionListView({ onOpen }: { onOpen: (id: string) => void }) {
 function AuctionDetailView({ itemId, onBack }: { itemId: string; onBack: () => void }) {
   const [data, setData] = useState<DetailResponse | null>(null)
   const [tab, setTab] = useState<DetailTabId>('overview')
+  const [photos, setPhotos] = useState<string[] | null>(null)
+  const [photosLoading, setPhotosLoading] = useState(false)
 
   useEffect(() => {
     setData(null)
-    fetch(`/api/auction/items/${itemId}`).then(r => r.json()).then(setData).catch(() => setData(null))
+    setPhotos(null)
+    fetch(`/api/auction/items/${itemId}`).then(r => r.json()).then((d: DetailResponse) => {
+      setData(d)
+      // 이미 photos 가 채워져 있으면 그대로 사용, 아니면 lazy fetch
+      if (Array.isArray(d.item?.photos) && d.item.photos.length > 0) {
+        setPhotos(d.item.photos)
+      } else {
+        setPhotosLoading(true)
+        fetch(`/api/auction/photos/${itemId}`).then(r => r.json()).then(j => {
+          setPhotos(j.photos ?? [])
+        }).catch(() => setPhotos([])).finally(() => setPhotosLoading(false))
+      }
+    }).catch(() => setData(null))
   }, [itemId])
 
   if (!data) {
     return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-at-accent" /></div>
   }
+
+  // 데이터 객체에 lazy fetch 한 photos 반영하여 OverviewTab 에 전달
+  const itemWithPhotos = photos !== null ? { ...data.item, photos } : data.item
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-0">
@@ -191,7 +208,30 @@ function AuctionDetailView({ itemId, onBack }: { itemId: string; onBack: () => v
         <ArrowLeft className="w-4 h-4" /> 목록으로
       </button>
 
-      <AuctionDetailHeader item={data.item} market={data.market} />
+      <AuctionDetailHeader item={itemWithPhotos} market={data.market} />
+
+      {/* 사진 갤러리 (lazy 로딩) */}
+      {photosLoading && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-at-text-secondary">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          매물 사진을 불러오는 중...
+        </div>
+      )}
+      {photos && photos.length > 0 && (
+        <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {photos.map((url, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={url}
+              alt={`매물 사진 ${i + 1}`}
+              loading="lazy"
+              className="w-full h-32 sm:h-40 object-cover rounded-lg border border-at-border bg-at-surface-alt"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="flex gap-1 border-b border-at-border mb-4 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
         {DETAIL_TABS.map(t => (
@@ -208,7 +248,7 @@ function AuctionDetailView({ itemId, onBack }: { itemId: string; onBack: () => v
       </div>
 
       <div>
-        {tab === 'overview'    && <OverviewTab item={data.item} market={data.market} />}
+        {tab === 'overview'    && <OverviewTab item={itemWithPhotos} market={data.market} />}
         {tab === 'simulator' && (
           <SimulatorTab
             item={data.item}
