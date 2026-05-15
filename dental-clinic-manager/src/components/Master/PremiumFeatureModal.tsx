@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { dataService } from '@/lib/dataService'
 import { PREMIUM_FEATURE_IDS, PREMIUM_FEATURE_LABELS } from '@/config/menuConfig'
 import type { PremiumFeatureId } from '@/config/menuConfig'
-import { X, Sparkles, BarChart3, Megaphone, PhoneCall, FileBarChart2, Heart } from 'lucide-react'
+import { X, Sparkles, BarChart3, Megaphone, PhoneCall, FileBarChart2, Heart, Gavel } from 'lucide-react'
 
 interface PremiumFeatureModalProps {
   clinic: { id: string; name: string }
@@ -21,6 +21,7 @@ const FEATURE_ICONS: Record<PremiumFeatureId, React.ElementType> = {
   'referral': Heart,
   'marketing': Megaphone,
   'investment': BarChart3,
+  'auction': Gavel,
 }
 
 export default function PremiumFeatureModal({ clinic, grantedBy, onClose, onUpdated }: PremiumFeatureModalProps) {
