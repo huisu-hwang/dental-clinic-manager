@@ -16,6 +16,23 @@ const KIND_MAP: Record<string, MolitKind | null> = {
   house: null, commercial: null, land: null, factory: null, forest: null, other: null,
 }
 
+// Supabase 호출이 일시적 네트워크 오류(fetch failed, 502 등)로 throw 하는 경우에 대비해
+// 지수 backoff 재시도. 메인 루프가 1건 실패로 죽지 않도록 보호.
+async function retry<T>(fn: () => Promise<T>, label: string, attempts = 4): Promise<T | { __failed: true; error: string }> {
+  let lastErr: unknown = null
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastErr = e
+      const wait = 500 * Math.pow(2, i)  // 500, 1000, 2000, 4000 ms
+      log.warn('supabase_retry', { label, attempt: i + 1, wait, error: String(e) })
+      await new Promise((r) => setTimeout(r, wait))
+    }
+  }
+  return { __failed: true, error: String(lastErr) }
+}
+
 async function main() {
   const startedAt = new Date()
   log.info('daily_scrape_start', { startedAt: startedAt.toISOString() })
@@ -38,45 +55,59 @@ async function main() {
   const details = Array.from(dedupeMap.values())
   log.info('dedupe_done', { before: detailsRaw.length, after: details.length })
 
+  let okCount = 0
+  let failCount = 0
   for (const d of details) {
     const discount = (d.appraisalPrice - d.minBidPrice) / d.appraisalPrice * 100
-    const { data: itemRow, error } = await supabase
-      .from('auction_items')
-      .upsert({
-        case_number: d.caseNumber,
-        item_number: d.itemNumber,
-        court_name: d.courtName,
-        court_code: d.courtCode || '00',
-        property_type: d.propertyType,
-        address_road: d.addressRoad,
-        address_jibun: d.addressJibun,
-        sido: d.sido,
-        sigungu: d.sigungu,
-        eupmyeondong: d.eupmyeondong,
-        pnu: d.pnu,
-        land_area_m2: d.landAreaM2,
-        building_area_m2: d.buildingAreaM2,
-        floor: d.floor,
-        total_floors: d.totalFloors,
-        building_year: d.buildingYear,
-        appraisal_price: d.appraisalPrice,
-        min_bid_price: d.minBidPrice,
-        bid_deposit: d.bidDeposit,
-        failure_count: d.failureCount,
-        discount_rate: Math.round(discount * 100) / 100,
-        next_auction_date: d.nextAuctionDate,
-        status: d.status,
-        sold_price: d.soldPrice,
-        sold_at: d.soldAt,
-        source_url: d.sourceUrl,
-        notice_pdf_url: d.noticePdfUrl,
-        appraisal_pdf_url: d.appraisalPdfUrl,
-        photos: d.photos,
-        last_synced_at: new Date().toISOString(),
-      }, { onConflict: 'court_code,case_number,item_number' })
-      .select('id')
-      .single()
+    const upsertResult = await retry(async () => {
+      return await supabase
+        .from('auction_items')
+        .upsert({
+          case_number: d.caseNumber,
+          item_number: d.itemNumber,
+          court_name: d.courtName,
+          court_code: d.courtCode || '00',
+          property_type: d.propertyType,
+          address_road: d.addressRoad,
+          address_jibun: d.addressJibun,
+          sido: d.sido,
+          sigungu: d.sigungu,
+          eupmyeondong: d.eupmyeondong,
+          pnu: d.pnu,
+          land_area_m2: d.landAreaM2,
+          building_area_m2: d.buildingAreaM2,
+          floor: d.floor,
+          total_floors: d.totalFloors,
+          building_year: d.buildingYear,
+          appraisal_price: d.appraisalPrice,
+          min_bid_price: d.minBidPrice,
+          bid_deposit: d.bidDeposit,
+          failure_count: d.failureCount,
+          discount_rate: Math.round(discount * 100) / 100,
+          next_auction_date: d.nextAuctionDate,
+          status: d.status,
+          sold_price: d.soldPrice,
+          sold_at: d.soldAt,
+          source_url: d.sourceUrl,
+          notice_pdf_url: d.noticePdfUrl,
+          appraisal_pdf_url: d.appraisalPdfUrl,
+          photos: d.photos,
+          last_synced_at: new Date().toISOString(),
+        }, { onConflict: 'court_code,case_number,item_number' })
+        .select('id')
+        .single()
+    }, `upsert_auction_items:${d.caseNumber}-${d.itemNumber}`)
+
+    if ('__failed' in upsertResult) {
+      failCount++
+      log.warn('upsert_failed', {
+        caseNumber: d.caseNumber, itemNumber: d.itemNumber, error: upsertResult.error,
+      })
+      continue
+    }
+    const { data: itemRow, error } = upsertResult
     if (error || !itemRow) {
+      failCount++
       log.warn('upsert_failed', {
         caseNumber: d.caseNumber,
         itemNumber: d.itemNumber,
@@ -87,6 +118,8 @@ async function main() {
       })
       continue
     }
+    okCount++
+    if (okCount % 1000 === 0) log.info('upsert_progress', { okCount, failCount, totalSeen: okCount + failCount })
     const itemId = itemRow.id
 
     if (d.noticePdfUrl) {
@@ -146,7 +179,7 @@ async function main() {
   await runFilterMatchAlerts()
 
   const elapsed = Date.now() - startedAt.getTime()
-  log.info('daily_scrape_done', { elapsedMs: elapsed, itemsProcessed: details.length })
+  log.info('daily_scrape_done', { elapsedMs: elapsed, itemsProcessed: details.length, okCount, failCount })
 }
 
 function ymOffset(months: number): string {
