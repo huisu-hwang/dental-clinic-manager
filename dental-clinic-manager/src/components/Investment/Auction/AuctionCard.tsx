@@ -8,6 +8,8 @@ interface Props {
   item: AuctionItem & { market: MarketPrice | null }
   isFavorite: boolean
   onToggleFavorite: (itemId: string) => void
+  // 있으면 카드 클릭 시 콜백 호출(dashboard 내부 라우팅). 없으면 기존 페이지 라우트로 이동.
+  onClick?: () => void
 }
 
 const PROPERTY_LABEL: Record<string, string> = {
@@ -17,23 +19,22 @@ const PROPERTY_LABEL: Record<string, string> = {
 
 const fmt = (n: number | null) => n === null ? '-' : new Intl.NumberFormat('ko-KR').format(n)
 
-export function AuctionCard({ item, isFavorite, onToggleFavorite }: Props) {
+export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Props) {
   const today = new Date().toISOString().slice(0, 10)
   const primary = calculatePrimary(item, today)
   const m = item.market
 
-  return (
-    <Link
-      href={`/investment/auction/${item.id}`}
-      className="block bg-at-surface border border-at-border rounded-2xl p-4 hover:bg-at-surface-hover transition-colors"
-    >
+  const innerClassName = 'block bg-at-surface border border-at-border rounded-2xl p-4 hover:bg-at-surface-hover transition-colors cursor-pointer'
+
+  const innerContent = (
+    <>
       <div className="flex justify-between items-start mb-2">
         <div className="text-sm text-at-text-secondary">
           {PROPERTY_LABEL[item.property_type] ?? '기타'} · {item.sido} {item.sigungu} {item.eupmyeondong}
           {item.building_area_m2 ? ` · ${item.building_area_m2}㎡` : ''}
         </div>
         <button
-          onClick={(e) => { e.preventDefault(); onToggleFavorite(item.id) }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(item.id) }}
           aria-label="관심물건 토글"
           className="p-1.5 rounded-lg hover:bg-at-accent-light"
         >
@@ -68,6 +69,29 @@ export function AuctionCard({ item, isFavorite, onToggleFavorite }: Props) {
           <span className="px-2 py-0.5 rounded-full bg-at-surface-alt">㎡당 {fmt(primary.price_per_m2)}원</span>
         )}
       </div>
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+        className={innerClassName}
+      >
+        {innerContent}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      href={`/investment/auction/${item.id}`}
+      className={innerClassName}
+    >
+      {innerContent}
     </Link>
   )
 }
