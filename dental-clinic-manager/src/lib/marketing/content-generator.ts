@@ -236,6 +236,37 @@ export async function generateContent(
     seoSection = `\n\n## SEO 키워드 분석 결과 (경쟁 글 기반)\n\n상위 노출 경쟁 글에서 추출된 핵심 키워드입니다. 아래 키워드들을 자연스럽게 본문에 포함해주세요.\n\n### 필수 포함 키워드 (본문에 각 2-3회 자연스럽게 배치):\n${top5.map(k => `- ${k.keyword} (경쟁 글에서 총 ${k.frequency}회, ${k.postCount}/5개 글에서 사용)`).join('\n')}\n\n${rest.length > 0 ? `### 권장 포함 키워드 (1-2회 자연스럽게 언급):\n${rest.map(k => `- ${k.keyword} (총 ${k.frequency}회, ${k.postCount}/5개 글)`).join('\n')}\n\n` : ''}### 경쟁 글 통계 (참고용):\n- 평균 본문 길이: ${seoKeywordData.avgBodyLength}자\n- 평균 이미지 수: ${seoKeywordData.avgImageCount}개\n- 평균 소제목 수: ${seoKeywordData.avgHeadingCount}개\n${seoKeywordData.commonTags.length > 0 ? `- 자주 사용되는 태그: ${seoKeywordData.commonTags.slice(0, 10).join(', ')}\n` : ''}\n### 키워드 배치 주의사항:\n- 키워드를 억지로 나열하지 말고 문맥에 맞게 자연스럽게 녹여주세요\n- 하나의 문단에 키워드를 몰아넣지 말고 글 전체에 고르게 분포시켜주세요\n- 키워드 밀도가 과도하면 스팸으로 분류될 수 있으니 주의하세요`;
   }
 
+  // 2-1. 글 구조 지침 (독자 가독성 ↑) — TOC, 핵심 요약, 콜아웃, 단계, FAQ, 짧은 문단
+  // 임상글은 환자 사례 흐름이 우선이라 일부 항목(FAQ 등)을 권장 수준으로 약화.
+  const isClinical = options.postType === 'clinical';
+  const structureInstruction = `\n\n## 글 구조 지침 (필수, 독자 가독성 ↑)\n` +
+    `독자가 모바일에서 빠르게 스캔하며 읽을 수 있는 구조로 작성하세요. 다음 6개 규칙을 모두 적용:\n\n` +
+    `### 1) 핵심 요약 콜아웃 (글 가장 처음)\n` +
+    `인사 문장(1문단) 직후, 본문 시작 전에 다음 blockquote 형식으로 "이 글의 핵심" 박스를 삽입:\n` +
+    `\`\`\`\n> 💡 **이 글의 핵심**\n> - 핵심 1 한 줄 요약\n> - 핵심 2 한 줄 요약\n> - 핵심 3 한 줄 요약\n\`\`\`\n` +
+    `핵심은 3~4개, 각 줄 30자 이내.\n\n` +
+    `### 2) 목차(TOC)\n` +
+    `핵심 요약 박스 직후에 다음 H2 섹션을 삽입:\n` +
+    `\`\`\`\n## 📋 이 글의 목차\n- (H2 소제목 1)\n- (H2 소제목 2)\n- (H2 소제목 3)\n...\n\`\`\`\n` +
+    `목차 항목은 본문 H2 소제목과 정확히 일치해야 합니다.\n\n` +
+    `### 3) 본문 중 TIP / 주의 콜아웃\n` +
+    `각 H2 섹션마다 최소 1개 콜아웃 권장. 다음 blockquote 형식 사용:\n` +
+    `\`\`\`\n> 💡 **TIP**: 한 문장 팁\n> ⚠️ **주의**: 한 문장 경고\n\`\`\`\n` +
+    `\n` +
+    `### 4) 단계별 절차 분리\n` +
+    `"방법", "절차", "순서", "단계" 류 설명은 반드시 번호 리스트로 분리:\n` +
+    `\`\`\`\n1. **1단계 — 액션 제목**: 짧은 액션 설명 (1문장)\n2. **2단계 — 액션 제목**: 짧은 액션 설명 (1문장)\n3. **3단계 — 액션 제목**: 짧은 액션 설명 (1문장)\n\`\`\`\n` +
+    `\n` +
+    `### 5) FAQ 섹션 (${isClinical ? '권장' : '필수'}, 글 마지막)\n` +
+    `글 마무리 직전에 다음 H2 섹션을 추가하고 3~5개의 Q&A 형식으로:\n` +
+    `\`\`\`\n## ❓ 자주 묻는 질문\n\n**Q1. (자주 받는 질문 한 줄)**\nA. (간결한 답변 2~3문장)\n\n**Q2. ...**\nA. ...\n\`\`\`\n` +
+    `\n` +
+    `### 6) 문단 길이 강제\n` +
+    `- 한 문단 최대 3문장. 한 문장이 길어지면 둘로 쪼개세요.\n` +
+    `- 한 문단 길이 200자 이내 권장.\n` +
+    `- 모바일 한 화면 가독성을 우선합니다.\n\n` +
+    `위 6가지 규칙을 모두 본문에 반영하세요. 단, [IMAGE:] 마커는 이미지 마커 지침을 따르고, 위 구조 요소(콜아웃·목차·FAQ)와 별개로 배치하세요.`;
+
   // 3. 변수 치환
   const systemPrompt = substituteVariables(promptTemplate, {
     keyword: options.keyword,
@@ -256,7 +287,7 @@ export async function generateContent(
       : '',
     // 공지글 변수
     ...options.notice?.templateData,
-  }) + imageStyleInstruction + seoSection + buildLengthInstruction(options.targetWordCount);
+  }) + imageStyleInstruction + seoSection + structureInstruction + buildLengthInstruction(options.targetWordCount);
 
   // 4. Claude API 호출 (임상 사진이 있으면 멀티모달)
   const callStart = Date.now();

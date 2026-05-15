@@ -1532,6 +1532,40 @@ function RenderedBody({
       continue
     }
 
+    // blockquote 콜아웃 — 연속된 `> ...` 줄을 모아서 한 박스로 렌더
+    if (trimmed.startsWith('> ')) {
+      flushParagraph()
+      const calloutLines: string[] = []
+      let j = i
+      while (j < lines.length && lines[j].trim().startsWith('> ')) {
+        calloutLines.push(lines[j].trim().replace(/^>\s+/, ''))
+        j++
+      }
+      i = j - 1 // for-loop 가 다음 j 로 이동
+      // 첫 줄에 emoji 단서로 톤 결정 (TIP/주의/핵심)
+      const firstLine = calloutLines[0] || ''
+      const tone = firstLine.includes('⚠️') || firstLine.includes('주의')
+        ? { border: 'border-amber-300', bg: 'bg-amber-50', text: 'text-amber-900' }
+        : firstLine.includes('💡')
+          ? { border: 'border-emerald-300', bg: 'bg-emerald-50', text: 'text-emerald-900' }
+          : { border: 'border-blue-300', bg: 'bg-blue-50', text: 'text-blue-900' }
+      elements.push(
+        <div key={key++} className={`my-4 rounded-xl border ${tone.border} ${tone.bg} px-4 py-3`}>
+          {calloutLines.map((cl, idx) => {
+            const isBullet = /^[-*]\s+/.test(cl)
+            const content = isBullet ? cl.replace(/^[-*]\s+/, '') : cl
+            return (
+              <div key={idx} className={`text-sm leading-6 ${tone.text} ${isBullet ? 'flex gap-2 ml-1' : ''}`}>
+                {isBullet && <span className="mt-1 text-xs">•</span>}
+                <span className="flex-1">{renderInlineFormatting(content)}</span>
+              </div>
+            )
+          })}
+        </div>
+      )
+      continue
+    }
+
     if (trimmed.startsWith('## ')) {
       flushParagraph()
       elements.push(
