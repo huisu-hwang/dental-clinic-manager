@@ -14,6 +14,7 @@ interface PatientSyncData {
   last_visit_date?: string
   last_treatment_type?: string
   next_appointment_date?: string
+  next_appointment_memo?: string | null
   registration_date?: string
   acquisition_channel?: string | null
   customer_type?: string | null
@@ -111,6 +112,9 @@ export async function POST(request: NextRequest) {
           last_visit_date: sanitizeDate(p.last_visit_date),
           last_treatment_type: p.last_treatment_type || null,
           next_appointment_date: sanitizeDate(p.next_appointment_date),
+          next_appointment_memo: typeof p.next_appointment_memo === 'string' && p.next_appointment_memo.trim()
+            ? p.next_appointment_memo.trim().slice(0, 500)
+            : null,
           registration_date: sanitizeDate(p.registration_date),
           acquisition_channel: p.acquisition_channel ?? null,
           customer_type: p.customer_type ?? null,

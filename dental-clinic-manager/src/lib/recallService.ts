@@ -519,17 +519,22 @@ export const recallPatientService = {
       if (chartNumbers.length > 0) {
         const { data: dentwebRows } = await supabase
           .from('dentweb_patients')
-          .select('chart_number, next_appointment_date')
+          .select('chart_number, next_appointment_date, next_appointment_memo')
           .eq('clinic_id', clinicId)
           .in('chart_number', chartNumbers)
         if (dentwebRows) {
-          const nextMap = new Map<string, string | null>()
-          for (const row of dentwebRows as { chart_number: string | null; next_appointment_date: string | null }[]) {
-            if (row.chart_number) nextMap.set(row.chart_number, row.next_appointment_date)
+          type DentwebNextRow = { chart_number: string | null; next_appointment_date: string | null; next_appointment_memo: string | null }
+          const nextMap = new Map<string, { date: string | null; memo: string | null }>()
+          for (const row of dentwebRows as DentwebNextRow[]) {
+            if (row.chart_number) {
+              nextMap.set(row.chart_number, { date: row.next_appointment_date, memo: row.next_appointment_memo })
+            }
           }
           for (const patient of deduplicated) {
             if (patient.chart_number && nextMap.has(patient.chart_number)) {
-              patient.next_appointment_date = nextMap.get(patient.chart_number) ?? null
+              const matched = nextMap.get(patient.chart_number)
+              patient.next_appointment_date = matched?.date ?? null
+              patient.next_appointment_memo = matched?.memo ?? null
             }
           }
         }

@@ -22,6 +22,7 @@ export interface PatientSyncData {
   last_visit_date?: string;
   last_treatment_type?: string;
   next_appointment_date?: string;
+  next_appointment_memo?: string | null;
   registration_date?: string;
   is_active?: boolean;
 }

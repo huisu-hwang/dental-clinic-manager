@@ -154,6 +154,7 @@ function formatPatientRow(row: Record<string, unknown>) {
     last_visit_date: formatDentwebDate(row['sz최종내원일'] as string),
     last_treatment_type: (row['last_treatment_type'] as string) || null,
     next_appointment_date: formatDentwebDate(row['next_appointment_date'] as string),
+    next_appointment_memo: ((row['next_appointment_memo'] as string) || '').trim() || null,
     registration_date: formatDentwebDate((row['sz등록시각'] as string)?.slice(0, 8)),
     acquisition_channel: acquisitionChannel,
     customer_type: customerType,
@@ -207,7 +208,12 @@ function buildPatientQueryBase(): string {
       (SELECT TOP 1 LEFT(a.sz예약시각, 8)
        FROM TB_예약목록 a
        WHERE a.n환자ID = p.n환자ID AND a.sz예약시각 >= CONVERT(VARCHAR(8), GETDATE(), 112)
-       ORDER BY a.sz예약시각 ASC) AS next_appointment_date
+       ORDER BY a.sz예약시각 ASC) AS next_appointment_date,
+      -- 다음 예약의 내용/메모 (sz예약내용)
+      (SELECT TOP 1 a.sz예약내용
+       FROM TB_예약목록 a
+       WHERE a.n환자ID = p.n환자ID AND a.sz예약시각 >= CONVERT(VARCHAR(8), GETDATE(), 112)
+       ORDER BY a.sz예약시각 ASC) AS next_appointment_memo
     FROM TB_환자정보 p
     WHERE p.sz이름 IS NOT NULL AND p.sz이름 != ''
   `;

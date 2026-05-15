@@ -627,27 +627,36 @@ export default function PatientList({
                     )}
                   </td>
 
-                  {/* 다음 예약 (덴트웹 차트의 next_appointment_date) */}
-                  <td className="px-4 py-3">
+                  {/* 다음 예약 (덴트웹 차트의 next_appointment_date + next_appointment_memo) */}
+                  <td className="px-4 py-3 max-w-[180px]">
                     {(() => {
                       const next = formatNextAppointment(patient.next_appointment_date)
                       if (!next) return <span className="text-sm text-at-text-weak">—</span>
+                      const memo = patient.next_appointment_memo?.trim() || null
                       return (
                         <div>
                           <p className={`text-sm ${next.isPast ? 'text-at-text-weak' : 'text-at-text'}`}>
                             {next.dateLabel}
+                            <span
+                              className={`ml-1.5 text-xs font-medium ${
+                                next.isPast
+                                  ? 'text-at-text-weak'
+                                  : next.dday === 'D-Day'
+                                    ? 'text-at-danger'
+                                    : 'text-at-accent'
+                              }`}
+                            >
+                              {next.dday}
+                            </span>
                           </p>
-                          <p
-                            className={`text-xs font-medium ${
-                              next.isPast
-                                ? 'text-at-text-weak'
-                                : next.dday === 'D-Day'
-                                  ? 'text-at-danger'
-                                  : 'text-at-accent'
-                            }`}
-                          >
-                            {next.dday}
-                          </p>
+                          {memo && (
+                            <p
+                              className="text-xs text-at-text-weak mt-0.5 truncate"
+                              title={memo}
+                            >
+                              {memo}
+                            </p>
+                          )}
                         </div>
                       )
                     })()}
