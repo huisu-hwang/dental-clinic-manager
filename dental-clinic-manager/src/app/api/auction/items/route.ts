@@ -21,6 +21,8 @@ export async function GET(req: NextRequest) {
     maxArea: numOrUndef(sp.get('maxArea')),
     minPrice: numOrUndef(sp.get('minPrice')),
     maxPrice: numOrUndef(sp.get('maxPrice')),
+    minAppraisalPrice: numOrUndef(sp.get('minAppraisalPrice')),
+    maxAppraisalPrice: numOrUndef(sp.get('maxAppraisalPrice')),
     sort: (sp.get('sort') ?? undefined) as any,
     cursor: numOrUndef(sp.get('cursor')),
     limit: numOrUndef(sp.get('limit')),
