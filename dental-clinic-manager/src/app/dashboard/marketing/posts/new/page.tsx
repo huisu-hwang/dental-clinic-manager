@@ -252,9 +252,30 @@ export default function NewMarketingPostPage() {
   const recommendedImages = seoResult ? Math.max(0, Math.round(seoResult.avgImageCount)) : 0
   const recommendedLength = seoResult ? Math.max(1000, Math.round(seoResult.avgBodyLength / 100) * 100) : 1500
 
+  // 권장 이미지 수를 allocation 의 dominant 스타일에 흡수.
+  // allocation → imageCount 자동 sync useEffect 가 imageCount 를 덮어쓰기 때문에
+  // setImageCount 직접 호출은 무효화됨 → allocation 자체를 권장값으로 갱신해야 함.
+  const applyRecommendedImagesToAllocation = useCallback((target: number) => {
+    const clamped = clampImageCount(target)
+    setImageStyleAllocation(prev => {
+      const entries = Object.entries(prev) as [ImageStyleOption, number][]
+      const activeEntries = entries.filter(([, n]) => n > 0)
+      const dominant: ImageStyleOption = activeEntries.length > 0
+        ? activeEntries.reduce((a, c) => (c[1] > a[1] ? c : a))[0]
+        : 'infographic_only'
+      return {
+        infographic_only: 0,
+        allow_person: 0,
+        use_own_image: 0,
+        [dominant]: clamped,
+      } as Record<ImageStyleOption, number>
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dynamicImageMax])
+
   const applySeoRecommendations = () => {
     if (!seoResult) return
-    setImageCount(clampImageCount(recommendedImages))
+    applyRecommendedImagesToAllocation(recommendedImages)
     setTargetWordCount(recommendedLength)
   }
 
@@ -266,7 +287,7 @@ export default function NewMarketingPostPage() {
     if (!seoResult || !k) return
     if (lastAutoApplyKeyRef.current === k) return
     lastAutoApplyKeyRef.current = k
-    setImageCount(clampImageCount(recommendedImages))
+    applyRecommendedImagesToAllocation(recommendedImages)
     setTargetWordCount(recommendedLength)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seoPreview.appliedKeyword, seoResult])
