@@ -28,9 +28,15 @@ export function matchMarketPrice(
   const cutoff3m = new Date(today.getFullYear(), today.getMonth() - 3, 1)
   const cutoff12m = new Date(today.getFullYear(), today.getMonth() - 12, 1)
 
-  const sameComplex = trades.filter(t =>
-    t.apartmentName && normalize(t.apartmentName) === normalize(input.complexName!)
-  )
+  // 단지명 정규화 비교. molit 응답은 "아스테라스 1단지" 처럼 부속 단지 번호를 붙이지만
+  // 경매 지번 주소는 "아스테라스" 처럼 단지명만 들어오는 경우가 많다.
+  // 정확히 일치하지 않아도 한쪽이 다른 쪽을 포함하면 같은 단지로 본다.
+  const normalizedInput = normalize(input.complexName!)
+  const sameComplex = trades.filter(t => {
+    if (!t.apartmentName) return false
+    const a = normalize(t.apartmentName)
+    return a === normalizedInput || a.includes(normalizedInput) || normalizedInput.includes(a)
+  })
   if (sameComplex.length === 0) return emptyResult()
 
   const matchedComplex = sameComplex[0].apartmentName
