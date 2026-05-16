@@ -74,7 +74,11 @@ export function RightsTab({ itemId, rights, initialAi }: Props) {
             <Dd>{rights.parse_status ?? '-'}</Dd>
           </dl>
         ) : (
-          <p className="text-[14px] md:text-sm text-at-text-secondary">권리분석 데이터가 아직 수집되지 않았습니다.</p>
+          <p className="text-[14px] md:text-sm text-at-text-secondary leading-relaxed">
+            매각물건명세서 자동 파싱 결과가 아직 수집되지 않았습니다.
+            <br />
+            <span className="text-[13px] md:text-xs text-at-text-weak">아래 &quot;AI 분석 실행&quot; 버튼으로 매물 메타데이터 기반의 위험도 코멘트를 받을 수 있습니다.</span>
+          </p>
         )}
       </section>
 

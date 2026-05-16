@@ -54,18 +54,6 @@ export function OverviewTab({ item, market }: Props) {
         )}
       </section>
 
-      {item.photos.length > 0 && (
-        <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
-          <h3 className="text-base font-bold mb-3 text-at-text">사진</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {item.photos.map((url, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={url} alt={`사진 ${i+1}`} className="rounded-xl w-full h-40 object-cover border border-at-border" />
-            ))}
-          </div>
-        </section>
-      )}
-
       <p className="text-[13px] md:text-xs text-at-text-secondary px-1 leading-relaxed">
         ※ 본 정보는 투자 판단의 보조 자료이며, 최종 판단의 책임은 사용자에게 있습니다.
       </p>

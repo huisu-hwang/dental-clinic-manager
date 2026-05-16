@@ -59,7 +59,8 @@ export default function AuctionContent() {
     setSelectedItemId(id)
     const params = new URLSearchParams(Array.from(sp.entries()))
     params.set('item', id)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
     // 상세 진입 시 스크롤 상단으로
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'instant' })
   }, [pathname, router, sp])
@@ -68,7 +69,8 @@ export default function AuctionContent() {
     setSelectedItemId(null)
     const params = new URLSearchParams(Array.from(sp.entries()))
     params.delete('item')
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }, [pathname, router, sp])
 
   if (selectedItemId) {
@@ -264,7 +266,7 @@ function AuctionDetailView({ itemId, onBack }: { itemId: string; onBack: () => v
             item={data.item}
             market={data.market}
             onSave={async (input: SimulatorInput) => {
-              await fetch('/api/auction/favorites', {
+              const r = await fetch('/api/auction/favorites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -274,7 +276,10 @@ function AuctionDetailView({ itemId, onBack }: { itemId: string; onBack: () => v
                   expected_monthly_rent: input.monthly_rent,
                 }),
               })
-              alert('관심물건에 저장되었습니다.')
+              if (!r.ok) {
+                const j = await r.json().catch(() => ({}))
+                throw new Error(j?.error ?? `HTTP ${r.status}`)
+              }
             }}
           />
         )}

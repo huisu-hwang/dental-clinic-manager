@@ -30,8 +30,20 @@ const RESULT_LABEL: Record<string, string> = {
 
 export function HistoryTab({ itemId, history }: Props) {
   const [stats, setStats] = useState<ComplexStats | null>(null)
+  const [statsErr, setStatsErr] = useState<string | null>(null)
   useEffect(() => {
-    fetch(`/api/auction/items/${itemId}/complex-stats`).then(r => r.json()).then(setStats).catch(() => {})
+    setStats(null)
+    setStatsErr(null)
+    fetch(`/api/auction/items/${itemId}/complex-stats`)
+      .then(async r => {
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok || typeof j?.sample_count !== 'number') {
+          setStatsErr(j?.error ?? `통계를 불러오지 못했습니다 (HTTP ${r.status})`)
+          return
+        }
+        setStats(j)
+      })
+      .catch(e => setStatsErr(`통계를 불러오지 못했습니다: ${e?.message ?? e}`))
   }, [itemId])
 
   const chartData = history.map(h => ({
@@ -44,7 +56,11 @@ export function HistoryTab({ itemId, history }: Props) {
       <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
         <h3 className="text-base font-semibold mb-3 text-at-text">회차별 변동</h3>
         {history.length === 0 ? (
-          <p className="text-[14px] md:text-sm text-at-text-secondary">이력이 없습니다.</p>
+          <p className="text-[14px] md:text-sm text-at-text-secondary leading-relaxed">
+            이 물건의 회차별 가격 변동·낙찰 이력이 아직 수집되지 않았습니다.
+            <br />
+            <span className="text-[13px] md:text-xs text-at-text-weak">법원경매정보의 사건 상세에서 직접 확인하실 수 있습니다 (첨부 탭의 &quot;법원경매정보 원문&quot; 링크).</span>
+          </p>
         ) : (
           <>
             <div className="h-48 mb-4">
@@ -113,10 +129,16 @@ export function HistoryTab({ itemId, history }: Props) {
 
       <section className="bg-at-surface rounded-2xl p-4 md:p-5 border border-at-border shadow-at-card">
         <h3 className="text-base font-semibold mb-3 text-at-text">동일 동·용도 낙찰 통계 (최근 6개월)</h3>
-        {!stats ? (
+        {statsErr ? (
+          <p className="text-[14px] md:text-sm text-rose-600">{statsErr}</p>
+        ) : !stats ? (
           <p className="text-[14px] md:text-sm text-at-text-secondary">로딩 중...</p>
         ) : stats.sample_count === 0 ? (
-          <p className="text-[14px] md:text-sm text-at-text-secondary">이 동·용도의 최근 낙찰 이력이 없습니다.</p>
+          <p className="text-[14px] md:text-sm text-at-text-secondary leading-relaxed">
+            동일 동·용도의 최근 6개월 낙찰 표본이 없습니다.
+            <br />
+            <span className="text-[13px] md:text-xs text-at-text-weak">표본은 낙찰 이력이 수집된 매물에서 자동 집계됩니다.</span>
+          </p>
         ) : (
           <dl className="grid grid-cols-3 gap-2 sm:gap-4 text-[14px] md:text-sm">
             <div>
