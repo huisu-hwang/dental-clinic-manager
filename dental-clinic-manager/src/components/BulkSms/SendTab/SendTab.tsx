@@ -9,12 +9,12 @@ import SendActionBar from './SendActionBar'
 import SendConfirmDialog from './SendConfirmDialog'
 import type { BulkSmsFilter, BulkSmsEligiblePatient } from '@/types/bulkSms'
 
-// 진입 시 기본값: "오늘 생일자" 자동 조회 — 데스크의 주요 use case
+// 진입 시 기본값: 생일 필터 없음 — 사용자가 필요할 때 명시적으로 선택
 const INITIAL_FILTER: BulkSmsFilter = {
   gender: 'all', ageMin: null, ageMax: null,
   lastVisitFrom: null, lastVisitTo: null,
   lastTreatmentTypes: [], hasNextAppointment: null,
-  birthMonths: [], birthToday: true, searchKeyword: '', activeOnly: true,
+  birthMonths: [], birthToday: false, searchKeyword: '', activeOnly: true,
 }
 
 export default function SendTab() {

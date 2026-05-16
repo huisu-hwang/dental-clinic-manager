@@ -26,10 +26,26 @@ function daysAgo(d: number): string {
   return date.toISOString().slice(0, 10)
 }
 
+type BirthMode = 'none' | 'today' | 'months'
+
+function deriveBirthMode(value: BulkSmsFilter): BirthMode {
+  if (value.birthToday) return 'today'
+  if ((value.birthMonths ?? []).length > 0) return 'months'
+  return 'none'
+}
+
 export default function PatientFilterPanel({ value, onChange, onApply, loading }: Props) {
   const [keyword, setKeyword] = useState(value.searchKeyword ?? '')
+  const [birthMode, setBirthMode] = useState<BirthMode>(() => deriveBirthMode(value))
 
   const update = (patch: Partial<BulkSmsFilter>) => onChange({ ...value, ...patch })
+
+  const setBirthModeAndApply = (mode: BirthMode) => {
+    setBirthMode(mode)
+    if (mode === 'none') update({ birthToday: false, birthMonths: [] })
+    else if (mode === 'today') update({ birthToday: true, birthMonths: [] })
+    else update({ birthToday: false })
+  }
 
   const applyPreset = (preset: typeof LAST_VISIT_PRESETS[number]) => {
     if (preset.from === null && preset.to === null && !('daysFrom' in preset)) {
@@ -159,16 +175,17 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
         <div>
           <label className="block text-sm font-medium text-[var(--at-text-primary)] mb-1.5">생일</label>
           <div className="flex gap-2 mb-2">
-            {[
-              { label: '🎂 오늘 생일자만', value: true },
-              { label: '월별 선택', value: false },
-            ].map(opt => (
+            {([
+              { mode: 'none', label: '사용 안 함' },
+              { mode: 'today', label: '🎂 오늘' },
+              { mode: 'months', label: '월별 선택' },
+            ] as const).map(opt => (
               <button
-                key={String(opt.value)}
+                key={opt.mode}
                 type="button"
-                onClick={() => update({ birthToday: opt.value, ...(opt.value ? { birthMonths: [] } : {}) })}
+                onClick={() => setBirthModeAndApply(opt.mode)}
                 className={`flex-1 px-3 py-1.5 text-sm rounded-lg border ${
-                  (value.birthToday ?? false) === opt.value
+                  birthMode === opt.mode
                     ? 'bg-[var(--at-accent-tag)] border-[var(--at-accent)] text-[var(--at-accent)]'
                     : 'bg-white border-[var(--at-border)] text-[var(--at-text-primary)] hover:bg-[var(--at-surface-alt)]'
                 }`}
@@ -177,7 +194,7 @@ export default function PatientFilterPanel({ value, onChange, onApply, loading }
               </button>
             ))}
           </div>
-          {!value.birthToday && (
+          {birthMode === 'months' && (
             <div className="grid grid-cols-6 gap-1.5">
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
                 const active = (value.birthMonths ?? []).includes(m)
