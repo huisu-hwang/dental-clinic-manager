@@ -7,7 +7,13 @@ import { refreshSessionWithTimeout, handleSessionExpired } from '@/lib/sessionUt
 import { TIMEOUTS } from '@/lib/constants/timeouts'
 import type { DailyReport, ConsultLog, GiftLog, GiftInventory, GiftCategory, InventoryLog, CashRegisterLog } from '@/types'
 
-export const useSupabaseData = (clinicId?: string | null) => {
+interface UseSupabaseDataOptions {
+  enabled?: boolean
+  includeInventory?: boolean
+}
+
+export const useSupabaseData = (clinicId?: string | null, options: UseSupabaseDataOptions = {}) => {
+  const { enabled = true, includeInventory = true } = options
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([])
   const [consultLogs, setConsultLogs] = useState<ConsultLog[]>([])
   const [giftLogs, setGiftLogs] = useState<GiftLog[]>([])
@@ -173,7 +179,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
         }
 
         // 각 쿼리를 개별 타임아웃으로 감싸기 (60초 - idle 연결 재생성 시간 고려)
-        const [dailyResult, consultResult, giftResult, inventoryResult, invLogResult, cashRegisterResult, categoriesResult] = await Promise.allSettled([
+        const queryPromises = [
           withTimeout(
             Promise.resolve(applyClinicFilter(
               supabase.from('daily_reports').select('*'),
@@ -197,40 +203,56 @@ export const useSupabaseData = (clinicId?: string | null) => {
             )),
             TIMEOUTS.QUERY_LONG,
             'gift_logs'
-          ),
-          withTimeout(
-            Promise.resolve(applyClinicFilter(
-              supabase.from('gift_inventory').select('*'),
-              targetClinicId
-            )),
-            TIMEOUTS.QUERY_LONG,
-            'gift_inventory'
-          ),
-          withTimeout(
-            Promise.resolve(applyClinicFilter(
-              supabase.from('inventory_logs').select('*'),
-              targetClinicId
-            )),
-            TIMEOUTS.QUERY_LONG,
-            'inventory_logs'
-          ),
-          withTimeout(
-            Promise.resolve(applyClinicFilter(
-              supabase.from('cash_register_logs').select('*'),
-              targetClinicId
-            )),
-            TIMEOUTS.QUERY_LONG,
-            'cash_register_logs'
-          ),
-          withTimeout(
-            Promise.resolve(applyClinicFilter(
-              supabase.from('gift_categories').select('*'),
-              targetClinicId
-            )),
-            TIMEOUTS.QUERY_LONG,
-            'gift_categories'
           )
-        ])
+        ]
+
+        if (includeInventory) {
+          queryPromises.push(
+            withTimeout(
+              Promise.resolve(applyClinicFilter(
+                supabase.from('gift_inventory').select('*'),
+                targetClinicId
+              )),
+              TIMEOUTS.QUERY_LONG,
+              'gift_inventory'
+            ),
+            withTimeout(
+              Promise.resolve(applyClinicFilter(
+                supabase.from('inventory_logs').select('*'),
+                targetClinicId
+              )),
+              TIMEOUTS.QUERY_LONG,
+              'inventory_logs'
+            ),
+            withTimeout(
+              Promise.resolve(applyClinicFilter(
+                supabase.from('cash_register_logs').select('*'),
+                targetClinicId
+              )),
+              TIMEOUTS.QUERY_LONG,
+              'cash_register_logs'
+            ),
+            withTimeout(
+              Promise.resolve(applyClinicFilter(
+                supabase.from('gift_categories').select('*'),
+                targetClinicId
+              )),
+              TIMEOUTS.QUERY_LONG,
+              'gift_categories'
+            )
+          )
+        }
+
+        const settledResults = await Promise.allSettled(queryPromises)
+        const [
+          dailyResult,
+          consultResult,
+          giftResult,
+          inventoryResult = { status: 'fulfilled', value: { data: [], error: null } } as const,
+          invLogResult = { status: 'fulfilled', value: { data: [], error: null } } as const,
+          cashRegisterResult = { status: 'fulfilled', value: { data: [], error: null } } as const,
+          categoriesResult = { status: 'fulfilled', value: { data: [], error: null } } as const,
+        ] = settledResults
 
         const elapsedTime = Date.now() - startTime
         console.log(`[useSupabaseData] 전체 데이터 로딩 완료 (${elapsedTime}ms)`)
@@ -454,6 +476,11 @@ export const useSupabaseData = (clinicId?: string | null) => {
       return
     }
 
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
+
     if (!activeClinicId) {
       console.log('[useSupabaseData] Waiting for clinic_id before loading data')
       setLoading(false)
@@ -485,7 +512,7 @@ export const useSupabaseData = (clinicId?: string | null) => {
       supabase.removeChannel(channel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeClinicId])
+  }, [activeClinicId, enabled])
 
   return {
     dailyReports,

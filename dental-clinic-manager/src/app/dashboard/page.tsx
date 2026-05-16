@@ -122,6 +122,7 @@ export default function DashboardPage() {
   // 일일보고서에서 현재 입력 중인 선물 데이터 (재고 관리 실시간 반영용)
   const [currentGiftRows, setCurrentGiftRows] = useState<GiftRowData[]>([])
   const [currentReportDate, setCurrentReportDate] = useState<string>('')
+  const shouldLoadTabData = activeTab !== 'home'
 
   console.log('Current selectors:', { weekSelector, monthSelector, yearSelector })
 
@@ -138,7 +139,7 @@ export default function DashboardPage() {
     refetch,
     silentRefetch,
     refetchInventory
-  } = useSupabaseData(user?.clinic_id ?? null)
+  } = useSupabaseData(user?.clinic_id ?? null, { enabled: shouldLoadTabData })
 
   // 결제 성공 알림 감지 → 대기 직원 승인 모달
   const { notifications, markAsRead } = useUserNotifications({ limit: 20, autoRefresh: true, refreshInterval: 30_000 })
