@@ -151,12 +151,15 @@ export function extractKeywordsFromPosts(
 
   const top15 = competitorKeywords.slice(0, 15);
 
-  // Aggregate stats
-  const totalPosts = posts.length || 1;
-  const avgBodyLength = posts.reduce((sum, p) => sum + p.body_length, 0) / totalPosts;
-  const avgImageCount = posts.reduce((sum, p) => sum + p.image_count, 0) / totalPosts;
-  const avgHeadingCount = posts.reduce((sum, p) => sum + p.heading_count, 0) / totalPosts;
-  const avgKeywordCount = posts.reduce((sum, p) => sum + p.keyword_count, 0) / totalPosts;
+  // Aggregate stats — 본문 추출 실패 글(body_length == 0)은 평균 계산에서 제외.
+  // (선택자 변경/iframe 차단 등으로 분석 실패한 글까지 평균에 포함되면 실제값보다 평균이 낮게 잡혀
+  //  사용자가 글자수/이미지 목표를 과소 설정하게 됨)
+  const analyzedPosts = posts.filter((p) => p.body_length > 0);
+  const totalAnalyzed = analyzedPosts.length || 1;
+  const avgBodyLength = analyzedPosts.reduce((sum, p) => sum + p.body_length, 0) / totalAnalyzed;
+  const avgImageCount = analyzedPosts.reduce((sum, p) => sum + p.image_count, 0) / totalAnalyzed;
+  const avgHeadingCount = analyzedPosts.reduce((sum, p) => sum + p.heading_count, 0) / totalAnalyzed;
+  const avgKeywordCount = analyzedPosts.reduce((sum, p) => sum + p.keyword_count, 0) / totalAnalyzed;
 
   // Collect common tags
   const tagCounts = new Map<string, number>();
