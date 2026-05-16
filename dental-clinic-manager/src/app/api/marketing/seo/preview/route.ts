@@ -82,12 +82,22 @@ async function buildResultFromAnalysis(admin: ReturnType<typeof getSupabaseAdmin
     });
   }
 
+  // 본문 추출 실패(bodyLength === 0) 글은 평균 계산에서 제외 — 캐시된 textMining 결과까지 일관 보정.
+  // (워커가 분석에 실패한 글이 평균에 들어가면 실제값 대비 평균이 낮게 잡혀 사용자가 글자수/이미지 목표를 과소 설정하게 됨)
+  const analyzed = referencedPosts.filter((p) => p.bodyLength > 0);
+  const n = analyzed.length;
+  const recomputedAverages = n > 0 ? {
+    avgBodyLength: Math.round(analyzed.reduce((s, p) => s + p.bodyLength, 0) / n),
+    avgImageCount: Math.round((analyzed.reduce((s, p) => s + p.imageCount, 0) / n) * 10) / 10,
+    avgHeadingCount: Math.round((analyzed.reduce((s, p) => s + p.headingCount, 0) / n) * 10) / 10,
+  } : null;
+
   if (analysis.summary?.textMining) {
-    return { ...analysis.summary.textMining, referencedPosts };
+    return { ...analysis.summary.textMining, ...(recomputedAverages || {}), referencedPosts };
   }
   if (!postRows || postRows.length === 0) return null;
   const mined = extractKeywordsFromPosts(postRows, keyword);
-  return { ...mined, referencedPosts };
+  return { ...mined, ...(recomputedAverages || {}), referencedPosts };
 }
 
 /** 키워드의 현재 상태 조사 — POST/GET 공용 핵심 로직 */

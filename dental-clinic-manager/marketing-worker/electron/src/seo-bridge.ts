@@ -421,15 +421,34 @@ async function scrapeAndAnalyzePost(page: any, url: string, keyword: string, ran
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2000);
 
-  // iframe 내부 콘텐츠 접근 (네이버 블로그는 iframe 사용)
-  let contentFrame = page;
+  // iframe 내부 콘텐츠 접근 (네이버 블로그는 iframe 사용).
+  // 일부 글은 top-level 에 본문이 노출되지 않고 iframe#mainFrame 내부에만 .se-main-container 가 있어,
+  // 단순 waitForTimeout 만으로는 본문 로드 전에 evaluate 가 실행되어 body_length === 0 으로 잘못 표시됨.
+  // → iframe contentFrame 안 본문 selector 가 실제로 나타날 때까지 명시적으로 대기 (최대 10초).
+  let contentFrame: any = page;
   try {
     const iframe = await page.waitForSelector('#mainFrame', { timeout: 5000 });
     if (iframe) {
-      contentFrame = await iframe.contentFrame();
-      await contentFrame.waitForTimeout(1000);
+      const cf = await iframe.contentFrame();
+      if (cf) {
+        contentFrame = cf;
+        try {
+          await cf.waitForSelector('.se-main-container, #postViewArea', { timeout: 10000 });
+        } catch { /* 본문 selector 못 찾음 — 다음 단계에서 top-level fallback */ }
+      }
     }
   } catch { /* iframe 없는 경우 */ }
+
+  // iframe 안에서 본문을 못 찾았으면 top-level 에서 한 번 더 시도 (보강 fallback).
+  if (contentFrame !== page) {
+    const found = await contentFrame.evaluate(() => !!document.querySelector('.se-main-container, #postViewArea'));
+    if (!found) {
+      try {
+        await page.waitForSelector('.se-main-container, #postViewArea', { timeout: 5000 });
+        contentFrame = page;
+      } catch { /* 정말 본문 selector 없음 — body_length=0 로 진행 */ }
+    }
+  }
 
   // 정량 데이터 추출
   const quantitative = await contentFrame.evaluate((kw: string) => {
