@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       scraping?: { installed: boolean; online: boolean; workerCount: number };
       seo?: { installed: boolean; online: boolean; workerCount: number };
       email?: { installed: boolean; online: boolean };
-      dentweb?: { installed: boolean; online: boolean; lastSyncStatus: string | null };
+      dentweb?: { installed: boolean; online: boolean; lastSyncStatus: string | null; agentVersion: string | null };
     } = {};
 
     // 마케팅 워커 상태 (DB 기반 - Electron 워커가 heartbeat 업데이트)
@@ -235,11 +235,12 @@ export async function GET(request: NextRequest) {
       let installed = false;
       let online = false;
       let lastSyncStatus: string | null = null;
+      let agentVersion: string | null = null;
       const admin = getSupabaseAdmin();
       if (admin) {
         const { data: syncConfig } = await admin
           .from('dentweb_sync_config')
-          .select('is_active, last_sync_at, last_sync_status')
+          .select('is_active, last_sync_at, last_sync_status, agent_version')
           .limit(1)
           .single();
 
@@ -250,9 +251,10 @@ export async function GET(request: NextRequest) {
           // heartbeat 여유를 감안해 3분(180초) 이내면 온라인으로 판단.
           online = !!(syncConfig.is_active && lastSync && (Date.now() - lastSync.getTime() < 3 * 60 * 1000));
           lastSyncStatus = syncConfig.last_sync_status;
+          agentVersion = (syncConfig as { agent_version?: string | null }).agent_version ?? null;
         }
       }
-      result.dentweb = { installed, online, lastSyncStatus };
+      result.dentweb = { installed, online, lastSyncStatus, agentVersion };
     }
 
     return NextResponse.json(result);
