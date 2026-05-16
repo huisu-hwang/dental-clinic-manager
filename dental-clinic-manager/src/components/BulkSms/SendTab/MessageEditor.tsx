@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { FileText, Sparkles } from 'lucide-react'
 import MessageByteCounter from '@/components/BulkSms/shared/MessageByteCounter'
+import AiGenerateModal from './AiGenerateModal'
 import type { BulkSmsTemplate } from '@/types/bulkSms'
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 export default function MessageEditor({ message, onMessageChange, title, onTitleChange }: Props) {
   const [templates, setTemplates] = useState<BulkSmsTemplate[]>([])
   const [selectedId, setSelectedId] = useState<string>('')
+  const [aiOpen, setAiOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/bulk-sms/templates')
@@ -42,9 +44,19 @@ export default function MessageEditor({ message, onMessageChange, title, onTitle
 
   return (
     <div className="bg-[var(--at-surface)] border border-[var(--at-border)] rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <FileText className="w-4 h-4 text-[var(--at-text-secondary)]" />
-        <h3 className="font-medium text-[var(--at-text-primary)]">메시지 작성</h3>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-[var(--at-text-secondary)]" />
+          <h3 className="font-medium text-[var(--at-text-primary)]">메시지 작성</h3>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAiOpen(true)}
+          className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-[var(--at-accent-tag)] text-[var(--at-accent)] hover:opacity-90"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          AI로 작성
+        </button>
       </div>
 
       <div className="space-y-3">
@@ -101,6 +113,15 @@ export default function MessageEditor({ message, onMessageChange, title, onTitle
           </div>
         </div>
       </div>
+
+      <AiGenerateModal
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        onSelect={(content) => {
+          onMessageChange(content)
+          setSelectedId('')
+        }}
+      />
     </div>
   )
 }
