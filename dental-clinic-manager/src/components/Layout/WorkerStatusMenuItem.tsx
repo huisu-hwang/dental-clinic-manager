@@ -64,8 +64,6 @@ interface WorkerDef {
   premiumId: string
   /** 온라인 시 부가 정보 (예: workerCount) */
   getExtra?: (status: WorkerStatusResponse) => string
-  /** 워커 버전 추출 (있을 때만 표시) */
-  getVersion?: (status: WorkerStatusResponse) => string | null
 }
 
 const WORKER_DEFS: WorkerDef[] = [
@@ -73,7 +71,6 @@ const WORKER_DEFS: WorkerDef[] = [
     key: 'marketing',
     label: '마케팅 (발행)',
     premiumId: 'marketing',
-    getVersion: (s) => s.marketing?.currentVersion ?? null,
   },
   {
     key: 'seo',
@@ -85,8 +82,6 @@ const WORKER_DEFS: WorkerDef[] = [
     key: 'email',
     label: '이메일 모니터',
     premiumId: 'financial',
-    // 이메일 모니터는 마케팅 워커 서브 모듈 — 마케팅 워커 버전을 그대로 표시
-    getVersion: (s) => s.marketing?.currentVersion ?? null,
   },
   {
     key: 'scraping',
@@ -98,11 +93,10 @@ const WORKER_DEFS: WorkerDef[] = [
     key: 'dentweb',
     label: '덴트웹 동기화',
     premiumId: 'marketing',
-    getVersion: (s) => s.dentweb?.agentVersion ?? null,
   },
 ]
 
-/** v 접두사 정규화: "1.1.106" → "v1.1.106", "v1.1.106" 유지, "2.0.0-electron" → "2.0.0-electron" */
+/** v 접두사 정규화: "1.1.106" → "v1.1.106", "v1.1.106" 유지 */
 function formatVersion(v: string | null | undefined): string | null {
   if (!v) return null
   const trimmed = v.trim()
@@ -231,24 +225,18 @@ export default function WorkerStatusMenuItem() {
 
       {expanded && (
         <div className="ml-3 mr-1 mt-1 mb-2 space-y-1.5 px-3 py-2 rounded-lg bg-at-surface-alt border border-at-border">
-          {workerStatuses.map((w) => {
-            const version = w.getVersion ? formatVersion(w.getVersion(status)) : null
-            return (
-              <div key={w.key} className="flex items-center justify-between text-xs gap-2">
-                <span className="text-at-text-secondary truncate">{w.label}</span>
-                <div className="flex items-center space-x-1.5 flex-shrink-0">
-                  {version && w.status !== 'not-installed' && (
-                    <span className="text-[10px] text-at-text-weak font-mono">{version}</span>
-                  )}
-                  <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[w.status]}`} />
-                  <span className="text-at-text-secondary">
-                    {STATUS_LABEL[w.status]}
-                    {w.status === 'online' && w.getExtra ? w.getExtra(status) : ''}
-                  </span>
-                </div>
+          {workerStatuses.map((w) => (
+            <div key={w.key} className="flex items-center justify-between text-xs">
+              <span className="text-at-text-secondary">{w.label}</span>
+              <div className="flex items-center space-x-1.5">
+                <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[w.status]}`} />
+                <span className="text-at-text-secondary">
+                  {STATUS_LABEL[w.status]}
+                  {w.status === 'online' && w.getExtra ? w.getExtra(status) : ''}
+                </span>
               </div>
-            )
-          })}
+            </div>
+          ))}
           {overallStatus !== 'online' && overallStatus !== 'loading' && (
             <div className="pt-1 mt-1 border-t border-at-border text-[11px] text-at-text-weak leading-snug">
               워커에 문제가 있습니다. 관리자에게 설치/실행을 요청하세요.
