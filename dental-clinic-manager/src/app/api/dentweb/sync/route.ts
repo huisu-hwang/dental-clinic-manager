@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { clinic_id, api_key, sync_type, patients, agent_version } = body
 
-    if (!clinic_id || !api_key || !patients) {
+    if (!clinic_id || !api_key || !Array.isArray(patients)) {
       return NextResponse.json(
-        { success: false, error: '필수 파라미터가 누락되었습니다. (clinic_id, api_key, patients)' },
+        { success: false, error: '필수 파라미터가 누락되었거나 형식이 올바르지 않습니다. (clinic_id, api_key, patients[])' },
         { status: 400 }
       )
     }
@@ -91,101 +91,74 @@ export async function POST(request: NextRequest) {
       console.error('[dentweb/sync] Failed to create sync log:', logError)
     }
 
-    // 환자 데이터 동기화 (upsert)
-    let newRecords = 0
-    let updatedRecords = 0
     const totalRecords = patients.length
-    const batchSize = 100
 
     try {
-      for (let i = 0; i < patients.length; i += batchSize) {
-        const batch = patients.slice(i, i + batchSize) as PatientSyncData[]
+      const syncedAt = new Date().toISOString()
+      const normalizedPatients = (patients as PatientSyncData[]).map((p: PatientSyncData) => ({
+        dentweb_patient_id: p.dentweb_patient_id,
+        chart_number: p.chart_number || null,
+        patient_name: p.patient_name,
+        phone_number: p.phone_number || null,
+        birth_date: sanitizeDate(p.birth_date),
+        gender: p.gender || null,
+        last_visit_date: sanitizeDate(p.last_visit_date),
+        last_treatment_type: p.last_treatment_type || null,
+        next_appointment_date: sanitizeDate(p.next_appointment_date),
+        next_appointment_memo: typeof p.next_appointment_memo === 'string' && p.next_appointment_memo.trim()
+          ? p.next_appointment_memo.trim().slice(0, 500)
+          : null,
+        registration_date: sanitizeDate(p.registration_date),
+        acquisition_channel: p.acquisition_channel ?? null,
+        customer_type: p.customer_type ?? null,
+        is_active: p.is_active !== false,
+        raw_data: p.raw_data || null,
+      }))
 
-        const upsertData = batch.map((p: PatientSyncData) => ({
-          clinic_id,
-          dentweb_patient_id: p.dentweb_patient_id,
-          chart_number: p.chart_number || null,
-          patient_name: p.patient_name,
-          phone_number: p.phone_number || null,
-          birth_date: sanitizeDate(p.birth_date),
-          gender: p.gender || null,
-          last_visit_date: sanitizeDate(p.last_visit_date),
-          last_treatment_type: p.last_treatment_type || null,
-          next_appointment_date: sanitizeDate(p.next_appointment_date),
-          next_appointment_memo: typeof p.next_appointment_memo === 'string' && p.next_appointment_memo.trim()
-            ? p.next_appointment_memo.trim().slice(0, 500)
-            : null,
-          registration_date: sanitizeDate(p.registration_date),
-          acquisition_channel: p.acquisition_channel ?? null,
-          customer_type: p.customer_type ?? null,
-          is_active: p.is_active !== false,
-          raw_data: p.raw_data || null,
-          synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }))
+      const { data: syncSummaryRows, error: syncError } = await supabase.rpc('sync_dentweb_patients_batch', {
+        p_clinic_id: clinic_id,
+        p_patients: normalizedPatients,
+        p_synced_at: syncedAt,
+      })
 
-        // 기존 데이터 확인 (신규/업데이트 구분용)
-        const dentwebIds = batch.map(p => p.dentweb_patient_id)
-        const { data: existingPatients } = await supabase
-          .from('dentweb_patients')
-          .select('dentweb_patient_id')
-          .eq('clinic_id', clinic_id)
-          .in('dentweb_patient_id', dentwebIds)
-
-        const existingIdSet = new Set(
-          (existingPatients || []).map(p => p.dentweb_patient_id)
-        )
-
-        for (const p of batch) {
-          if (existingIdSet.has(p.dentweb_patient_id)) {
-            updatedRecords++
-          } else {
-            newRecords++
-          }
-        }
-
-        // Upsert 실행
-        const { error: upsertError } = await supabase
-          .from('dentweb_patients')
-          .upsert(upsertData, {
-            onConflict: 'clinic_id,dentweb_patient_id'
-          })
-
-        if (upsertError) {
-          throw new Error(`Batch upsert failed: ${upsertError.message}`)
-        }
+      if (syncError) {
+        throw new Error(`Batch upsert failed: ${syncError.message}`)
       }
+
+      const syncSummary = Array.isArray(syncSummaryRows) ? syncSummaryRows[0] : syncSummaryRows
+      const newRecords = syncSummary?.new_records ?? 0
+      const updatedRecords = syncSummary?.updated_records ?? 0
 
       // 동기화 성공 - 설정 업데이트
       const completedAt = new Date().toISOString()
       const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
 
-      await supabase
-        .from('dentweb_sync_config')
-        .update({
-          last_sync_at: completedAt,
-          last_sync_status: 'success',
-          last_sync_error: null,
-          last_sync_patient_count: totalRecords,
-          agent_version: agent_version || null,
-          updated_at: completedAt
-        })
-        .eq('clinic_id', clinic_id)
-
-      // 동기화 로그 업데이트
-      if (syncLog) {
-        await supabase
-          .from('dentweb_sync_logs')
+      await Promise.all([
+        supabase
+          .from('dentweb_sync_config')
           .update({
-            status: 'success',
-            total_records: totalRecords,
-            new_records: newRecords,
-            updated_records: updatedRecords,
-            completed_at: completedAt,
-            duration_ms: durationMs
+            last_sync_at: completedAt,
+            last_sync_status: 'success',
+            last_sync_error: null,
+            last_sync_patient_count: totalRecords,
+            agent_version: agent_version || null,
+            updated_at: completedAt
           })
-          .eq('id', syncLog.id)
-      }
+          .eq('clinic_id', clinic_id),
+        syncLog
+          ? supabase
+              .from('dentweb_sync_logs')
+              .update({
+                status: 'success',
+                total_records: totalRecords,
+                new_records: newRecords,
+                updated_records: updatedRecords,
+                completed_at: completedAt,
+                duration_ms: durationMs
+              })
+              .eq('id', syncLog.id)
+          : Promise.resolve(null)
+      ])
 
       return NextResponse.json({
         success: true,
@@ -201,30 +174,31 @@ export async function POST(request: NextRequest) {
       const completedAt = new Date().toISOString()
       const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime()
 
-      await supabase
-        .from('dentweb_sync_config')
-        .update({
-          last_sync_at: completedAt,
-          last_sync_status: 'error',
-          last_sync_error: errorMessage,
-          updated_at: completedAt
-        })
-        .eq('clinic_id', clinic_id)
-
-      if (syncLog) {
-        await supabase
-          .from('dentweb_sync_logs')
+      await Promise.all([
+        supabase
+          .from('dentweb_sync_config')
           .update({
-            status: 'error',
-            error_message: errorMessage,
-            total_records: totalRecords,
-            new_records: newRecords,
-            updated_records: updatedRecords,
-            completed_at: completedAt,
-            duration_ms: durationMs
+            last_sync_at: completedAt,
+            last_sync_status: 'error',
+            last_sync_error: errorMessage,
+            updated_at: completedAt
           })
-          .eq('id', syncLog.id)
-      }
+          .eq('clinic_id', clinic_id),
+        syncLog
+          ? supabase
+              .from('dentweb_sync_logs')
+              .update({
+                status: 'error',
+                error_message: errorMessage,
+                total_records: totalRecords,
+                new_records: 0,
+                updated_records: 0,
+                completed_at: completedAt,
+                duration_ms: durationMs
+              })
+              .eq('id', syncLog.id)
+          : Promise.resolve(null)
+      ])
 
       return NextResponse.json(
         { success: false, error: errorMessage },

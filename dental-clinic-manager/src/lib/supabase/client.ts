@@ -1,7 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/types/supabase'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createCookieStorageAdapter } from '../cookieStorageAdapter'
 
 /**
  * 싱글톤 Supabase 클라이언트 인스턴스
@@ -76,24 +75,26 @@ export function createClient() {
     console.log('[Supabase Browser Client] iOS device detected - using cookie-based storage for session persistence')
   }
 
-  // 쿠키 기반 스토리지 어댑터 생성
-  // iOS Safari에서 앱 종료 후에도 세션 유지를 위해 쿠키 사용
-  const cookieStorage = createCookieStorageAdapter()
+  const isSecure = window.location.protocol === 'https:'
 
   // 싱글톤 인스턴스 생성 (iOS 호환 설정 포함)
-  // 주의: storageKey는 미들웨어와 일관성을 위해 기본값 사용
-  // 커스텀 storageKey 사용 시 미들웨어와 쿠키 이름이 불일치하여 iOS Chrome에서 세션 유지 문제 발생
+  // @supabase/ssr의 브라우저/미들웨어 쿠키 구현을 함께 사용해
+  // 세션 쿠키 포맷과 갱신 책임을 하나의 경로로 통일합니다.
   supabaseInstance = createBrowserClient<Database>(
     supabaseUrl,
     supabaseAnonKey,
     {
+      cookieOptions: {
+        path: '/',
+        sameSite: 'lax',
+        secure: isSecure,
+        maxAge: 60 * 60 * 24 * 30,
+      },
       auth: {
         autoRefreshToken: true,  // 자동 토큰 갱신 활성화
         persistSession: true,    // 세션 유지
         detectSessionInUrl: true, // URL에서 세션 감지
         flowType: 'pkce',        // PKCE flow 명시적 사용 (보안 강화)
-        storage: cookieStorage,  // 쿠키 기반 스토리지 (iOS Safari 호환)
-        // storageKey 제거: 기본값 사용하여 미들웨어와 일관성 유지
       },
       global: {
         headers: {
