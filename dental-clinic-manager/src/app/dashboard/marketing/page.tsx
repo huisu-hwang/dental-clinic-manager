@@ -22,18 +22,21 @@ import type {
   PostType,
   GeneratedContent,
 } from '@/types/marketing'
-import PremiumGate from '@/components/Premium/PremiumGate'
-import NewPostForm from '@/components/marketing/NewPostForm'
-import ScheduleModal from '@/components/marketing/ScheduleModal'
-import WorkerStatusBanner from '@/components/marketing/WorkerStatusBanner'
-import { BrandSettingsClient } from '@/app/dashboard/marketing/brand/BrandSettingsClient'
 import { usePermissions } from '@/hooks/usePermissions'
 import dynamic from 'next/dynamic'
 
+const PremiumGate = dynamic(() => import('@/components/Premium/PremiumGate'), { ssr: false })
+const NewPostForm = dynamic(() => import('@/components/marketing/NewPostForm'), { ssr: false })
+const ScheduleModal = dynamic(() => import('@/components/marketing/ScheduleModal'), { ssr: false })
+const WorkerStatusBanner = dynamic(() => import('@/components/marketing/WorkerStatusBanner'), { ssr: false })
+const BrandSettingsClient = dynamic(
+  () => import('@/app/dashboard/marketing/brand/BrandSettingsClient').then((mod) => mod.BrandSettingsClient),
+  { ssr: false }
+)
 const ContentEditor = dynamic(() => import('@/components/marketing/ContentEditor'), { ssr: false })
 const ClinicalPhotoEditor = dynamic(() => import('@/components/marketing/clinical/ClinicalPhotoEditor'), { ssr: false })
 const ContentCalendarView = dynamic(() => import('@/components/marketing/ContentCalendarView'), { ssr: false })
-import ImageEditModal from '@/components/marketing/ImageEditModal'
+const ImageEditModal = dynamic(() => import('@/components/marketing/ImageEditModal'), { ssr: false })
 
 type MarketingTab = 'newpost' | 'dashboard' | 'posts' | 'calendar' | 'settings'
 

@@ -1,5 +1,35 @@
 import { createClient } from './client'
 
+const DEFINITIVE_SESSION_ERROR_PATTERNS = [
+  'refresh token',
+  'invalid refresh token',
+  'refresh token not found',
+  'jwt',
+  'session missing',
+  'auth session missing',
+]
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+function isDefinitiveSessionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  const normalized = message.toLowerCase()
+  return DEFINITIVE_SESSION_ERROR_PATTERNS.some(pattern => normalized.includes(pattern))
+}
+
+function isTransientSessionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  const normalized = message.toLowerCase()
+
+  return (
+    normalized.includes('timeout') ||
+    normalized.includes('network') ||
+    normalized.includes('failed to fetch') ||
+    normalized.includes('fetch failed') ||
+    normalized.includes('connection')
+  )
+}
+
 /**
  * DB 연결 확인 및 자동 재연결 유틸리티
  *
@@ -28,26 +58,52 @@ export async function ensureConnection() {
   }
 
   try {
-    // 1. 세션 확인 (타임아웃 3초 - 공격적 최적화)
-    const sessionPromise = supabase.auth.getSession()
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Session check timeout')), 3000)
-    )
+    // 1. 세션 확인 (재시도 포함)
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Session check timeout')), 3000)
+        )
 
-    const { data: { session }, error: sessionError } = await Promise.race([
-      sessionPromise,
-      timeoutPromise
-    ]) as any
+        const { data: { session }, error: sessionError } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any
 
-    if (sessionError) {
-      console.error('[ensureConnection] Session check error:', sessionError)
-      throw sessionError
-    }
+        if (sessionError) {
+          if (isDefinitiveSessionError(sessionError)) {
+            console.error('[ensureConnection] Definitive session check error:', sessionError)
+            throw sessionError
+          }
 
-    // 2. 세션이 유효한 경우 - 바로 반환
-    if (session) {
-      console.log('[ensureConnection] Session valid')
-      return supabase
+          if (attempt === 2) {
+            throw sessionError
+          }
+
+          console.warn(`[ensureConnection] Transient session check error, retrying... (${attempt}/2)`, sessionError)
+          await delay(500)
+          continue
+        }
+
+        if (session) {
+          console.log('[ensureConnection] Session valid')
+          return supabase
+        }
+
+        break
+      } catch (error) {
+        if (isDefinitiveSessionError(error)) {
+          throw error
+        }
+
+        if (attempt === 2) {
+          throw error
+        }
+
+        console.warn(`[ensureConnection] Session check attempt ${attempt}/2 failed, retrying...`, error)
+        await delay(500)
+      }
     }
 
     // 3. 세션이 없는 경우 - 갱신 시도 (재시도 로직 포함)
@@ -83,6 +139,10 @@ export async function ensureConnection() {
         // 실패한 경우
         console.warn(`[ensureConnection] Refresh attempt ${attempt} failed:`, refreshError)
 
+        if (isDefinitiveSessionError(refreshError)) {
+          break
+        }
+
         // 마지막 시도가 아니면 백오프 후 재시도
         if (attempt < 2) {
           const backoffMs = attempt * 1000 // 1초
@@ -94,6 +154,10 @@ export async function ensureConnection() {
         console.error(`[ensureConnection] Refresh attempt ${attempt} exception:`, error)
         refreshError = error
 
+        if (isDefinitiveSessionError(error)) {
+          break
+        }
+
         // 마지막 시도가 아니면 백오프 후 재시도
         if (attempt < 2) {
           const backoffMs = attempt * 1000
@@ -102,8 +166,13 @@ export async function ensureConnection() {
       }
     }
 
-    // 4. 모든 재시도 실패 - 로그아웃 및 리다이렉트
+    // 4. 모든 재시도 실패
     console.error('[ensureConnection] All refresh attempts failed')
+
+    if (!isDefinitiveSessionError(refreshError)) {
+      throw new Error('세션 확인 중 일시적인 연결 문제가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    }
+
     await supabase.auth.signOut()
 
     if (typeof window !== 'undefined') {
@@ -120,7 +189,7 @@ export async function ensureConnection() {
     console.error('[ensureConnection] Error:', error)
 
     // 타임아웃 또는 네트워크 에러인 경우
-    if (error.message?.includes('timeout') || error.message?.includes('network')) {
+    if (isTransientSessionError(error)) {
       throw new Error('데이터베이스 연결에 실패했습니다. 네트워크를 확인해주세요.')
     }
 

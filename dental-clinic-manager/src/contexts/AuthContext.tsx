@@ -1,15 +1,14 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { dataService } from '@/lib/dataService'
 import type { Permission } from '@/types/permissions'
 import { useActivityTracker } from '@/hooks/useActivityTracker'
 import { SESSION_CHECK_TIMEOUT, safeLocalStorage, isIOSDevice } from '@/lib/sessionUtils'
-import { TIMEOUTS } from '@/lib/constants/timeouts'
 import { useRouter } from 'next/navigation'
-import { clearAllSupabaseCookies, refreshSessionCookies } from '@/lib/cookieStorageAdapter'
+import { clearAllSupabaseCookies } from '@/lib/cookieStorageAdapter'
 import { appAlert } from '@/components/ui/AppDialog'
 
 export interface UserProfile {
@@ -34,12 +33,141 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const PROFILE_FETCH_MAX_ATTEMPTS = 3
+const PROFILE_FETCH_RETRY_DELAY_MS = 700
+const SIGNED_OUT_RECHECK_DELAY_MS = 400
+const SESSION_RECHECK_MAX_ATTEMPTS = 2
+
+type ProfileResolution =
+  | { status: 'success'; profile: UserProfile }
+  | { status: 'missing' }
+  | { status: 'transient'; error?: string }
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+const DEFINITIVE_SESSION_ERROR_PATTERNS = [
+  'refresh token',
+  'invalid refresh token',
+  'refresh token not found',
+  'jwt',
+  'session missing',
+  'auth session missing',
+]
+
+function isDefinitiveSessionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  const normalized = message.toLowerCase()
+  return DEFINITIVE_SESSION_ERROR_PATTERNS.some(pattern => normalized.includes(pattern))
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [showInactivityModal, setShowInactivityModal] = useState(false)
+  const isLoggingOutRef = useRef(false)
+
+  const persistUser = (profile: UserProfile) => {
+    setUser(profile)
+    safeLocalStorage.setItem('dental_auth', 'true')
+    safeLocalStorage.setItem('dental_user', JSON.stringify(profile))
+    if (profile.clinic_id) {
+      dataService.setCachedClinicId(profile.clinic_id)
+    } else {
+      dataService.clearCachedClinicId()
+    }
+  }
+
+  const clearPersistedUser = () => {
+    setUser(null)
+    safeLocalStorage.removeItem('dental_auth')
+    safeLocalStorage.removeItem('dental_user')
+    dataService.clearCachedClinicId()
+  }
+
+  const restoreCachedUser = (userId: string) => {
+    const cachedUserRaw = safeLocalStorage.getItem('dental_user')
+    if (!cachedUserRaw) {
+      return false
+    }
+
+    try {
+      const cachedUser = JSON.parse(cachedUserRaw)
+      if (cachedUser?.id !== userId) {
+        return false
+      }
+
+      console.log('AuthContext: 캐시된 프로필로 폴백')
+      setUser(cachedUser)
+      if (cachedUser.clinic_id) {
+        dataService.setCachedClinicId(cachedUser.clinic_id)
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const resolveUserProfile = async (userId: string): Promise<ProfileResolution> => {
+    let lastTransientError: string | undefined
+
+    for (let attempt = 1; attempt <= PROFILE_FETCH_MAX_ATTEMPTS; attempt++) {
+      const result = await dataService.getUserProfileById(userId)
+
+      if (result.success && result.data) {
+        return { status: 'success', profile: result.data }
+      }
+
+      if (result.success === true && !result.data) {
+        if (attempt < PROFILE_FETCH_MAX_ATTEMPTS) {
+          console.warn(`[AuthContext] User profile missing, retrying... (${attempt}/${PROFILE_FETCH_MAX_ATTEMPTS})`)
+          await delay(PROFILE_FETCH_RETRY_DELAY_MS)
+          continue
+        }
+        return { status: 'missing' }
+      }
+
+      lastTransientError = (result as { error?: string }).error
+
+      if (attempt < PROFILE_FETCH_MAX_ATTEMPTS) {
+        console.warn(`[AuthContext] User profile fetch failed, retrying... (${attempt}/${PROFILE_FETCH_MAX_ATTEMPTS})`, lastTransientError)
+        await delay(PROFILE_FETCH_RETRY_DELAY_MS)
+      }
+    }
+
+    return {
+      status: 'transient',
+      error: lastTransientError,
+    }
+  }
+
+  const confirmSignedOutState = async (supabase: ReturnType<typeof createClient>) => {
+    for (let attempt = 1; attempt <= SESSION_RECHECK_MAX_ATTEMPTS; attempt++) {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (data.session?.user) {
+          console.warn('[AuthContext] Ignoring transient SIGNED_OUT event because session still exists')
+          return false
+        }
+
+        if (error && isDefinitiveSessionError(error)) {
+          return true
+        }
+      } catch (error) {
+        if (isDefinitiveSessionError(error)) {
+          return true
+        }
+        console.warn(`[AuthContext] SIGNED_OUT recheck failed (${attempt}/${SESSION_RECHECK_MAX_ATTEMPTS})`, error)
+      }
+
+      if (attempt < SESSION_RECHECK_MAX_ATTEMPTS) {
+        await delay(SIGNED_OUT_RECHECK_DELAY_MS)
+      }
+    }
+
+    return true
+  }
 
   useEffect(() => {
     let subscription: any = null
@@ -212,37 +340,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   return
                 }
 
-                setUser(result.data)
-                // storage에도 저장하여 bulletinService 등에서 접근 가능하게 함
-                safeLocalStorage.setItem('dental_auth', 'true')
-                safeLocalStorage.setItem('dental_user', JSON.stringify(result.data))
-                if (result.data.clinic_id) {
-                  dataService.setCachedClinicId(result.data.clinic_id)
-                }
+                persistUser(result.data)
               } else if (result.success === true && !result.data) {
                 // 프로필이 DB에 실제로 존재하지 않을 때만 로그아웃 (예: 탈퇴 후 잔존 세션)
-                console.warn('AuthContext: 프로필이 DB에 존재하지 않음 - 로그아웃')
-                await supabase.auth.signOut()
+                const profileResolution = await resolveUserProfile(session.user.id)
+
+                if (profileResolution.status === 'success') {
+                  persistUser(profileResolution.profile)
+                } else if (profileResolution.status === 'missing') {
+                  console.warn('AuthContext: 프로필이 재시도 후에도 존재하지 않음 - 로그아웃')
+                  await supabase.auth.signOut()
+                } else {
+                  console.warn('AuthContext: 프로필 확인 실패 (transient) - 세션 유지:', profileResolution.error)
+                  restoreCachedUser(session.user.id)
+                }
               } else {
                 // ⚠️ 일시적 로드 실패 (네트워크, 배포 직후 cold-start, RLS 일시 오류 등)
                 // 세션은 유지하고 캐시된 프로필로 폴백. 다음 요청에서 자동 재시도됨.
                 // 과거에는 무조건 signOut을 호출해 배포 후 간헐적 강제 로그아웃의 원인이었음.
                 console.warn('AuthContext: 프로필 로드 실패 (transient) - 세션 유지:', (result as { error?: string }).error)
-                const cachedUserRaw = safeLocalStorage.getItem('dental_user')
-                if (cachedUserRaw) {
-                  try {
-                    const cachedUser = JSON.parse(cachedUserRaw)
-                    if (cachedUser?.id === session.user.id) {
-                      console.log('AuthContext: 캐시된 프로필로 폴백')
-                      setUser(cachedUser)
-                      if (cachedUser.clinic_id) {
-                        dataService.setCachedClinicId(cachedUser.clinic_id)
-                      }
-                    }
-                  } catch {
-                    // 캐시 파싱 실패 — 세션은 그대로 유지
-                  }
-                }
+                restoreCachedUser(session.user.id)
               }
             } else {
               // Supabase 세션이 없으면 storage 확인 (기존 방식 호환)
@@ -299,54 +416,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // 데드락이 발생합니다.
                 // setTimeout(0)으로 다음 이벤트 루프에서 실행하여 잠금 해제 후
                 // 프로필을 안전하게 조회합니다.
-                if (!isLoggingOut) {
+                if (!isLoggingOutRef.current) {
                   const userId = session.user.id
                   setTimeout(async () => {
                     try {
-                      const result = await dataService.getUserProfileById(userId)
-                      if (result.success && result.data) {
-                        if (result.data.status === 'pending' || result.data.status === 'rejected') {
-                          console.warn('[AuthContext] SIGNED_IN event - User status:', result.data.status)
-                          setUser(result.data)
+                      const profileResolution = await resolveUserProfile(userId)
+
+                      if (profileResolution.status === 'success') {
+                        if (profileResolution.profile.status === 'pending' || profileResolution.profile.status === 'rejected') {
+                          console.warn('[AuthContext] SIGNED_IN event - User status:', profileResolution.profile.status)
+                          setUser(profileResolution.profile)
                           if (window.location.pathname !== '/pending-approval') {
                             router.push('/pending-approval')
                           }
                           return
                         }
 
-                        if (result.data.status === 'resigned') {
+                        if (profileResolution.profile.status === 'resigned') {
                           console.warn('[AuthContext] SIGNED_IN event - User has resigned')
-                          setUser(result.data)
+                          setUser(profileResolution.profile)
                           if (window.location.pathname !== '/resigned') {
                             router.push('/resigned')
                           }
                           return
                         }
 
-                        if (result.data.clinic?.status === 'suspended') {
+                        if (profileResolution.profile.clinic?.status === 'suspended') {
                           await appAlert('소속 병원이 중지되었습니다. 관리자에게 문의해주세요.')
                           await supabase.auth.signOut()
                           window.location.href = '/'
                           return
                         }
 
-                        setUser(result.data)
-                        safeLocalStorage.setItem('dental_auth', 'true')
-                        safeLocalStorage.setItem('dental_user', JSON.stringify(result.data))
-                        if (result.data.clinic_id) {
-                          dataService.setCachedClinicId(result.data.clinic_id)
-                        }
+                        persistUser(profileResolution.profile)
+                        return
                       }
+
+                      if (profileResolution.status === 'missing') {
+                        console.warn('[AuthContext] SIGNED_IN event - user profile missing after retry, keeping session for follow-up recovery')
+                        restoreCachedUser(userId)
+                        return
+                      }
+
+                      console.warn('[AuthContext] Failed to load user profile on SIGNED_IN, keeping session:', profileResolution.error)
+                      restoreCachedUser(userId)
                     } catch (err) {
                       console.warn('[AuthContext] Failed to load user profile on SIGNED_IN:', err)
                     }
                   }, 0)
                 }
               } else if (event === 'SIGNED_OUT') {
-                setUser(null)
-                safeLocalStorage.removeItem('dental_auth')
-                safeLocalStorage.removeItem('dental_user')
-                dataService.clearCachedClinicId()
+                setTimeout(async () => {
+                  if (isLoggingOutRef.current || safeLocalStorage.getItem('dental_logging_out') === 'true') {
+                    clearPersistedUser()
+                    return
+                  }
+
+                  const confirmedSignedOut = await confirmSignedOutState(supabase)
+                  if (confirmedSignedOut) {
+                    clearPersistedUser()
+                  }
+                }, 0)
               } else if (event === 'TOKEN_REFRESHED') {
                 console.log('[AuthContext] Token refreshed successfully')
                 // 토큰 갱신 시 세션 유지 확인을 위해 프로필 다시 로드
@@ -449,15 +579,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userId: userId, // 로그인 시 사용한 ID는 별도로 저장
     };
 
-    setUser(userData)
-    safeLocalStorage.setItem('dental_auth', 'true')
-    safeLocalStorage.setItem('dental_user', JSON.stringify(userData))
-    if (userData.clinic_id) {
-      dataService.setCachedClinicId(userData.clinic_id)
-    } else {
-      // clinic_id가 없는 경우 (마스터 관리자 등) 캐시 클리어
-      dataService.clearCachedClinicId()
-    }
+    persistUser(userData)
   }
 
   const updateUser = (updatedUserData: any) => {
@@ -467,16 +589,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      isLoggingOutRef.current = true
       setIsLoggingOut(true)
       safeLocalStorage.setItem('dental_logging_out', 'true')
 
       const supabase = createClient()
       await supabase.auth.signOut()
 
-      setUser(null)
-      safeLocalStorage.removeItem('dental_auth')
-      safeLocalStorage.removeItem('dental_user')
-      dataService.clearCachedClinicId()
+      clearPersistedUser()
 
       // iOS Safari 호환: 쿠키 기반 스토리지 클리어
       clearAllSupabaseCookies()
@@ -487,9 +607,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error)
       // Force logout even if error
-      setUser(null)
-      safeLocalStorage.removeItem('dental_auth')
-      safeLocalStorage.removeItem('dental_user')
+      clearPersistedUser()
       // iOS Safari 호환: 쿠키 기반 스토리지 클리어
       clearAllSupabaseCookies()
       window.location.href = '/'
@@ -511,40 +629,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }).catch(() => {}) // 실패해도 무시
     }
   }, [user?.id])
-
-  // iOS Safari 호환: 사용자 활동 시 세션 쿠키 갱신
-  // 사용자가 사이트와 상호작용하면 쿠키 수명이 연장됨
-  useEffect(() => {
-    if (!isAuthenticated || typeof window === 'undefined') return
-
-    // 사용자 활동 감지 시 쿠키 갱신
-    const handleUserActivity = () => {
-      // 너무 자주 갱신하지 않도록 debounce (5분에 한 번)
-      const lastRefresh = sessionStorage.getItem('lastCookieRefresh')
-      const now = Date.now()
-
-      if (!lastRefresh || now - parseInt(lastRefresh) > 5 * 60 * 1000) {
-        refreshSessionCookies()
-        sessionStorage.setItem('lastCookieRefresh', now.toString())
-      }
-    }
-
-    // 사용자 활동 이벤트 리스너 등록
-    const events = ['click', 'scroll', 'keypress', 'touchstart']
-    events.forEach(event => {
-      window.addEventListener(event, handleUserActivity, { passive: true })
-    })
-
-    // 초기 갱신 (페이지 로드 시)
-    handleUserActivity()
-
-    return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, handleUserActivity)
-      })
-    }
-  }, [isAuthenticated])
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-at-surface-alt">
