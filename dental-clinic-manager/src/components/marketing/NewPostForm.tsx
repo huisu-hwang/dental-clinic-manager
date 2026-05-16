@@ -131,8 +131,10 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
   const [referenceImagePreview, setReferenceImagePreview] = useState<string>('')
   const [clinicalData, setClinicalData] = useState<ClinicalFormData | null>(null)
   const [brandImageOptions, setBrandImageOptions] = useState<BrandImageOptions>({
+    // 텍스트 카드(title) 를 네이버 검색 노출 첫 이미지로 보이도록 'top' 우선 배치.
+    // insertBrandMarkers 가 top 슬롯 안에서도 title 을 최상위로 정렬.
     medicalLaw: { enabled: true, positions: ['top'] },
-    title:      { enabled: true, positions: ['middle'], copy: '' },
+    title:      { enabled: true, positions: ['top'], copy: '' },
     photo:      { enabled: true, positions: ['bottom'], mode: 'random' },
   })
 
@@ -329,7 +331,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     setTargetWordCount(1500)
     setBrandImageOptions({
       medicalLaw: { enabled: true, positions: ['top'] },
-      title: { enabled: true, positions: ['middle'], copy: '' },
+      title: { enabled: true, positions: ['top'], copy: '' },
       photo: { enabled: true, positions: ['bottom'], mode: 'random' },
     })
     setReferenceImageBase64('')

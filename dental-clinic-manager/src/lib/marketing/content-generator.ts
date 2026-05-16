@@ -60,8 +60,10 @@ function applyParagraphIndent(body: string): string {
 }
 
 // ─── 브랜드 이미지 마커 삽입 ───
-// options.brandImageOptions에 따라 [BRAND_IMAGE:...] 마커를 본문 위치(top/middle/bottom)에 삽입
-function insertBrandMarkers(body: string, opts?: BrandImageOptions): string {
+// options.brandImageOptions에 따라 [BRAND_IMAGE:...] 마커를 본문 위치(top/middle/bottom)에 삽입.
+// title(텍스트 카드) 의 copy 가 비어있거나 placeholder('/' 만) 면 글 제목을 자동 적용 — 네이버 검색
+// 노출 시 첫 이미지가 글 주제를 그대로 보여주도록.
+function insertBrandMarkers(body: string, opts?: BrandImageOptions, articleTitle?: string): string {
   if (!opts) return body;
 
   type Spot = 'top' | 'middle' | 'bottom';
@@ -71,8 +73,14 @@ function insertBrandMarkers(body: string, opts?: BrandImageOptions): string {
     for (const pos of opts.medicalLaw.positions) buckets[pos].push('[BRAND_IMAGE:medical_law]');
   }
   if (opts.title.enabled) {
-    const copy = opts.title.copy.replace(/\]/g, '');
-    for (const pos of opts.title.positions) buckets[pos].push(`[BRAND_IMAGE:title|copy=${copy}]`);
+    // copy 자동 채움: 사용자 입력이 비었거나 placeholder('/' 만) 면 articleTitle 사용.
+    // marker 형식 보존을 위해 `]` 및 `|` 는 그대로 두면 파서가 깨짐 → 제거.
+    const userCopy = (opts.title.copy || '').replace(/\]/g, '').replace(/\|/g, '').trim();
+    const looksEmpty = userCopy.length === 0 || /^\/+\s*$/.test(userCopy);
+    const finalCopy = looksEmpty
+      ? (articleTitle || '').replace(/\]/g, '').replace(/\|/g, '').trim()
+      : userCopy;
+    for (const pos of opts.title.positions) buckets[pos].push(`[BRAND_IMAGE:title|copy=${finalCopy}]`);
   }
   if (opts.photo.enabled) {
     const tail = opts.photo.mode === 'manual' && opts.photo.photoId
@@ -81,8 +89,9 @@ function insertBrandMarkers(body: string, opts?: BrandImageOptions): string {
     for (const pos of opts.photo.positions) buckets[pos].push(`[BRAND_IMAGE:photo|${tail}]`);
   }
 
-  // 우선순위 정렬: medical_law → title → photo
-  const order = (m: string) => m.includes('medical_law') ? 0 : m.includes(':title') ? 1 : 2;
+  // 우선순위 정렬: title → medical_law → photo
+  // (네이버 검색 첫 이미지 = 글 최상단 이미지. 텍스트 카드가 글 주제를 보여주도록 title 을 최상위로)
+  const order = (m: string) => m.includes(':title') ? 0 : m.includes('medical_law') ? 1 : 2;
   for (const k of ['top', 'middle', 'bottom'] as const) {
     buckets[k].sort((a, b) => order(a) - order(b));
   }
@@ -441,12 +450,13 @@ export async function generateContent(
 
     const retryText = retryResponse.content[0].type === 'text' ? retryResponse.content[0].text : '';
     const retryParsed = parseGeneratedContent(retryText, options.keyword);
-    // 단락 들여쓰기 후 브랜드 마커 삽입 (마커 줄은 들여쓰기 대상이 아니므로 순서 중요)
-    retryParsed.body = insertBrandMarkers(applyParagraphIndent(retryParsed.body), options.brandImageOptions);
+    // 단락 들여쓰기 후 브랜드 마커 삽입 (마커 줄은 들여쓰기 대상이 아니므로 순서 중요).
+    // title 카드 copy 자동 채움을 위해 글 제목 전달.
+    retryParsed.body = insertBrandMarkers(applyParagraphIndent(retryParsed.body), options.brandImageOptions, retryParsed.title);
     return retryParsed;
   }
 
-  parsed.body = insertBrandMarkers(applyParagraphIndent(parsed.body), options.brandImageOptions);
+  parsed.body = insertBrandMarkers(applyParagraphIndent(parsed.body), options.brandImageOptions, parsed.title);
   return parsed;
 }
 

@@ -66,7 +66,11 @@ export async function resolveBrandMarkers(body: string, ctx: ResolveContext): Pr
       if (marker.type === 'medical_law') {
         url = await renderBrandImage({ type: 'medical_law', assets: a });
       } else if (marker.type === 'title') {
-        const copy = marker.params.copy || `${a.name_ko ?? ''} / `.trim();
+        // copy 가 비었거나 placeholder('/' 만) 면 의미 없는 카드가 생성되므로 폼/상위에서 articleTitle 자동 채움이 우선.
+        // 여기는 최후 fallback — 클리닉명만이라도 노출.
+        const rawCopy = (marker.params.copy || '').trim();
+        const looksEmpty = rawCopy.length === 0 || /^\/+\s*$/.test(rawCopy);
+        const copy = looksEmpty ? (a.name_ko ?? a.name_en ?? '').trim() : rawCopy;
         url = await renderBrandImage({ type: 'title', assets: a, copy });
       } else if (marker.type === 'photo') {
         let chosen: BrandPhoto | undefined;
@@ -80,7 +84,12 @@ export async function resolveBrandMarkers(body: string, ctx: ResolveContext): Pr
         if (chosen) url = await renderBrandImage({ type: 'photo', assets: a, photo: chosen });
       }
     } catch (err) {
-      console.error('[brand marker resolve] error:', err);
+      const e = err as { message?: string; stack?: string };
+      console.error('[brand marker resolve] error:', {
+        type: marker.type,
+        params: marker.params,
+        message: e?.message,
+      });
     }
     const replacement = url ? `\n\n![](${url})\n\n` : '';
     out = out.slice(0, marker.index) + replacement + out.slice(marker.index + marker.raw.length);
