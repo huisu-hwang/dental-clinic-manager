@@ -1,8 +1,22 @@
 import sql from 'mssql';
+import { app } from 'electron';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { getConfig, setConfig, getDentwebConfig } from './config-store';
 import { log } from './logger';
 import { DentwebApiClient } from './dentweb-api-client';
+
+/**
+ * 워커 패키지 버전 — sync/heartbeat 의 agent_version 으로 전송되어
+ * `dentweb_sync_config.agent_version` 에 저장되고 대시보드 사이드바에 표시됨.
+ * Electron 메인 프로세스에서만 호출 (app.getVersion() 은 패키지 시점에만 의미있음).
+ */
+function getAgentVersion(): string {
+  try {
+    return app.getVersion();
+  } catch {
+    return 'unknown';
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /*  Status management                                                  */
@@ -280,7 +294,7 @@ async function syncPatientsToServer(patients: Record<string, unknown>[], syncTyp
         api_key: cfg.apiKey,
         sync_type: syncType,
         patients,
-        agent_version: '2.0.0-electron',
+        agent_version: getAgentVersion(),
       }),
     });
     return await response.json();
@@ -303,7 +317,7 @@ async function syncPatientsToServer(patients: Record<string, unknown>[], syncTyp
         // 첫 chunk 만 원래 sync_type — 나머지는 incremental 로 로그 분리 (서버 측 upsert 동작은 동일)
         sync_type: i === 0 ? syncType : 'incremental',
         patients: chunk,
-        agent_version: '2.0.0-electron',
+        agent_version: getAgentVersion(),
       }),
     });
     const result = await response.json();
@@ -1251,7 +1265,7 @@ async function sendHeartbeat(): Promise<void> {
       body: JSON.stringify({
         clinic_id: cfg.clinicId,
         api_key: cfg.apiKey,
-        agent_version: '2.0.0-electron',
+        agent_version: getAgentVersion(),
         db_connected: dbConnected,
         last_error: lastSyncError,
       }),
