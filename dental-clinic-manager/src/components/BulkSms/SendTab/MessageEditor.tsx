@@ -44,11 +44,9 @@ export default function MessageEditor({ message, onMessageChange, title, onTitle
 
   return (
     <div className="bg-[var(--at-surface)] border border-[var(--at-border)] rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-[var(--at-text-secondary)]" />
-          <h3 className="font-medium text-[var(--at-text-primary)]">메시지 작성</h3>
-        </div>
+      <div className="flex items-center gap-2 mb-3">
+        <FileText className="w-4 h-4 text-[var(--at-text-secondary)]" />
+        <h3 className="font-medium text-[var(--at-text-primary)]">메시지 작성</h3>
         <button
           type="button"
           onClick={() => setAiOpen(true)}
