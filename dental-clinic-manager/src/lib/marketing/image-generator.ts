@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import { logApiUsage } from './api-usage-logger';
 import { getImageProvider, type ImageProvider } from './image-provider-setting';
+import { overlayClinicLogo } from './brand/logo-overlay';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
@@ -284,7 +285,9 @@ export async function generateBlogImage(
     });
   }
 
-  const imageBase64 = result.imageBase64;
+  // 로고 워터마크 합성: AI 가 생성한 가짜 로고 영역 위에 실제 클리닉 로고를 우상단에 오버레이.
+  // 실패해도 원본을 반환하므로 이미지 생성 전체 흐름은 보장됨.
+  const imageBase64 = await overlayClinicLogo(result.imageBase64, resolvedClinicId);
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt, generationSessionId, resolvedClinicId);
@@ -360,7 +363,10 @@ export async function generatePlatformImage(
 
   const fileName = await generateImageFileName(`${platform}_${prompt}`, generationSessionId, generationClinicId);
 
-  return { imageBase64: result.imageBase64, fileName };
+  // 플랫폼 이미지도 로고 워터마크 합성 (블로그 이미지와 일관성)
+  const imageBase64 = await overlayClinicLogo(result.imageBase64, generationClinicId);
+
+  return { imageBase64, fileName };
 }
 
 // ─── 기본 이미지 프롬프트 (DB 미조회 시 폴백) ───

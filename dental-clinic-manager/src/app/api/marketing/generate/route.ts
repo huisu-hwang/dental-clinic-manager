@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
           schedule: body.schedule || { snsDelayMinutes: 30 },
           clinical: body.clinical,
           notice: body.notice,
+          brandImageOptions: body.brandImageOptions,
         };
 
         const useSeoAnalysis = body.useSeoAnalysis || false;
@@ -502,51 +503,75 @@ export async function POST(request: NextRequest) {
             console.error('[API] 자동 저장 업데이트 실패:', updateError);
           }
         } else {
-          // 신규 항목 자동 생성 (캘린더 + 항목)
+          // 신규 항목 자동 생성 (캘린더 + 항목) — 일시 statement timeout 대비 최대 3회 재시도
           const today = new Date().toISOString().split('T')[0];
-          const { data: calendar, error: calInsertError } = await saveClient
-            .from('content_calendars')
-            .insert({
-              clinic_id: userData.clinic_id,
-              period_start: today,
-              period_end: today,
-              status: 'approved',
-              created_by: user.id,
-              approved_by: user.id,
-              approved_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
+          const insertWithRetry = async <T,>(
+            label: string,
+            fn: () => Promise<{ data: T | null; error: { message?: string; code?: string } | null }>
+          ): Promise<{ data: T | null; error: { message?: string; code?: string } | null }> => {
+            let lastErr: { message?: string; code?: string } | null = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              const r = await fn();
+              if (!r.error) return r;
+              lastErr = r.error;
+              const msg = (r.error.message || '').toLowerCase();
+              const transient = msg.includes('timeout') || msg.includes('canceling statement') || msg.includes('temporarily') || msg.includes('connection');
+              if (!transient) return r;
+              console.warn(`[API] ${label} 재시도 ${attempt}/3 - ${r.error.message}`);
+              await new Promise((res) => setTimeout(res, 1500 * attempt));
+            }
+            return { data: null, error: lastErr };
+          };
+
+          const { data: calendar, error: calInsertError } = await insertWithRetry<{ id: string }>('캘린더 생성', async () =>
+            await saveClient
+              .from('content_calendars')
+              .insert({
+                clinic_id: userData.clinic_id,
+                period_start: today,
+                period_end: today,
+                status: 'approved',
+                created_by: user.id,
+                approved_by: user.id,
+                approved_at: new Date().toISOString(),
+              })
+              .select()
+              .single()
+          );
 
           if (calInsertError) {
             console.error('[API] 캘린더 생성 실패:', calInsertError);
+            sendEvent(controller, { saveWarning: `자동 저장에 실패했습니다(캘린더): ${calInsertError.message || calInsertError.code || '알 수 없는 오류'}. 글관리에 노출되지 않을 수 있습니다.` });
           }
 
           if (calendar) {
-            const { data: item, error: itemInsertError } = await saveClient
-              .from('content_calendar_items')
-              .insert({
-                calendar_id: calendar.id,
-                publish_date: today,
-                publish_time: '09:00',
-                title: result.title,
-                topic: options.topic,
-                keyword: options.keyword,
-                post_type: options.postType,
-                tone: options.tone,
-                use_research: options.useResearch,
-                fact_check: options.factCheck,
-                platforms: options.platforms,
-                status: 'review',
-                generated_content: JSON.stringify(result),
-                generated_images: // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (result as any).generatedImages || null,
-              })
-              .select('id')
-              .single();
+            const { data: item, error: itemInsertError } = await insertWithRetry<{ id: string }>('캘린더 항목 생성', async () =>
+              await saveClient
+                .from('content_calendar_items')
+                .insert({
+                  calendar_id: calendar.id,
+                  publish_date: today,
+                  publish_time: '09:00',
+                  title: result.title,
+                  topic: options.topic,
+                  keyword: options.keyword,
+                  post_type: options.postType,
+                  tone: options.tone,
+                  use_research: options.useResearch,
+                  fact_check: options.factCheck,
+                  platforms: options.platforms,
+                  status: 'review',
+                  generated_content: JSON.stringify(result),
+                  generated_images: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (result as any).generatedImages || null,
+                })
+                .select('id')
+                .single()
+            );
 
             if (itemInsertError) {
               console.error('[API] 캘린더 항목 생성 실패:', itemInsertError);
+              sendEvent(controller, { saveWarning: `자동 저장에 실패했습니다(항목): ${itemInsertError.message || itemInsertError.code || '알 수 없는 오류'}. 글관리에 노출되지 않을 수 있습니다.` });
             }
 
             if (item) {

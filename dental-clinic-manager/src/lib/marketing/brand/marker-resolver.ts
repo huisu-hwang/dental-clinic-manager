@@ -46,7 +46,10 @@ export async function resolveBrandMarkers(body: string, ctx: ResolveContext): Pr
     .select('*')
     .eq('clinic_id', ctx.clinicId)
     .maybeSingle();
-  if (!assets) return body.replace(/\[BRAND_IMAGE:[^\]]+\]/g, '');
+  if (!assets) {
+    console.warn('[brand-resolve] assets 없음 — 마커 제거');
+    return body.replace(/\[BRAND_IMAGE:[^\]]+\]/g, '');
+  }
   const a = assets as BrandAssets;
 
   const { data: photoRows } = await (admin as any)
@@ -89,6 +92,7 @@ export async function resolveBrandMarkers(body: string, ctx: ResolveContext): Pr
         type: marker.type,
         params: marker.params,
         message: e?.message,
+        stack: e?.stack?.split('\n').slice(0, 4),
       });
     }
     const replacement = url ? `\n\n![](${url})\n\n` : '';
