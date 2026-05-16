@@ -127,7 +127,9 @@ export default function DashboardHome() {
   )
 
   // 일일 보고서 데이터
-  const { dailyReports, consultLogs, giftLogs, loading: dataLoading } = useSupabaseData(user?.clinic_id ?? null)
+  const { dailyReports, consultLogs, giftLogs, loading: dataLoading } = useSupabaseData(user?.clinic_id ?? null, {
+    includeInventory: false,
+  })
 
   // 팀 출퇴근 현황
   const [teamStatus, setTeamStatus] = useState<TeamAttendanceStatus | null>(null)

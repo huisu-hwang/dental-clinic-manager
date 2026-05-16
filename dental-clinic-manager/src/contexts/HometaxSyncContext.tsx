@@ -78,7 +78,7 @@ export function HometaxSyncProvider({ children }: { children: ReactNode }) {
       } catch {
         // polling failure ignored
       }
-    }, 3000)
+    }, 10000)
 
     return () => clearInterval(interval)
   }, [currentJob])

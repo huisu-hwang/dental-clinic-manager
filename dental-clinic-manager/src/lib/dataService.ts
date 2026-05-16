@@ -453,107 +453,103 @@ export const dataService = {
 
       console.log('[DataService] Starting data fetch for clinic:', targetClinicId)
 
-      // 각 테이블을 개별적으로 조회하여 에러 격리
-      let dailyReportResult, consultLogsResult, giftLogsResult, happyCallLogsResult;
-
-      // daily_reports 조회
-      try {
-        dailyReportResult = await applyClinicFilter(
+      const [
+        dailyReportResult,
+        consultLogsResult,
+        giftLogsResult,
+        happyCallLogsResult,
+        cashRegisterLogResult,
+        specialNotesResult,
+      ] = await Promise.all([
+        applyClinicFilter(
           supabase
             .from('daily_reports')
             .select('*')
             .eq('date', targetDate),
           targetClinicId
-        ).maybeSingle();
-        console.log('[DataService] daily_reports fetched:', dailyReportResult);
-      } catch (err) {
-        console.error('[DataService] Error fetching daily_reports:', err);
-        dailyReportResult = { data: null, error: err };
-      }
-
-      // consult_logs 조회
-      try {
-        consultLogsResult = await applyClinicFilter(
+        ).maybeSingle().then((result: any) => {
+          console.log('[DataService] daily_reports fetched:', result);
+          return result;
+        }).catch((err: unknown) => {
+          console.error('[DataService] Error fetching daily_reports:', err);
+          return { data: null, error: err };
+        }),
+        applyClinicFilter(
           supabase
             .from('consult_logs')
             .select('*')
             .eq('date', targetDate)
             .order('id'),
           targetClinicId
-        );
-        console.log('[DataService] consult_logs fetched:', consultLogsResult?.data?.length || 0, 'items');
-      } catch (err) {
-        console.error('[DataService] Error fetching consult_logs:', err);
-        consultLogsResult = { data: [], error: err };
-      }
-
-      // gift_logs 조회
-      try {
-        giftLogsResult = await applyClinicFilter(
+        ).then((result: any) => {
+          console.log('[DataService] consult_logs fetched:', result?.data?.length || 0, 'items');
+          return result;
+        }).catch((err: unknown) => {
+          console.error('[DataService] Error fetching consult_logs:', err);
+          return { data: [], error: err };
+        }),
+        applyClinicFilter(
           supabase
             .from('gift_logs')
             .select('*')
             .eq('date', targetDate)
             .order('id'),
           targetClinicId
-        );
-        console.log('[DataService] gift_logs fetched:', giftLogsResult?.data?.length || 0, 'items');
-      } catch (err) {
-        console.error('[DataService] Error fetching gift_logs:', err);
-        giftLogsResult = { data: [], error: err };
-      }
-
-      // happy_call_logs 조회 (테이블이 없을 수 있음)
-      try {
-        happyCallLogsResult = await applyClinicFilter(
+        ).then((result: any) => {
+          console.log('[DataService] gift_logs fetched:', result?.data?.length || 0, 'items');
+          return result;
+        }).catch((err: unknown) => {
+          console.error('[DataService] Error fetching gift_logs:', err);
+          return { data: [], error: err };
+        }),
+        applyClinicFilter(
           supabase
             .from('happy_call_logs')
             .select('*')
             .eq('date', targetDate)
             .order('id'),
           targetClinicId
-        );
-        console.log('[DataService] happy_call_logs fetched:', happyCallLogsResult?.data?.length || 0, 'items');
-      } catch (err) {
-        console.warn('[DataService] Error fetching happy_call_logs (table might not exist):', err);
-        happyCallLogsResult = { data: [], error: err };
-      }
-
-      // cash_register_logs 조회 (테이블이 없을 수 있음)
-      let cashRegisterLogResult;
-      try {
-        cashRegisterLogResult = await applyClinicFilter(
+        ).then((result: any) => {
+          console.log('[DataService] happy_call_logs fetched:', result?.data?.length || 0, 'items');
+          return result;
+        }).catch((err: unknown) => {
+          console.warn('[DataService] Error fetching happy_call_logs (table might not exist):', err);
+          return { data: [], error: err };
+        }),
+        applyClinicFilter(
           supabase
             .from('cash_register_logs')
             .select('*')
             .eq('date', targetDate),
           targetClinicId
-        ).maybeSingle();
-        console.log('[DataService] cash_register_logs fetched:', cashRegisterLogResult?.data ? 'found' : 'not found');
-      } catch (err) {
-        console.warn('[DataService] Error fetching cash_register_logs (table might not exist):', err);
-        cashRegisterLogResult = { data: null, error: err };
-      }
-
-      // special_notes_history에서 해당 날짜의 최신 특이사항 조회
-      let latestSpecialNote: { content: string; author_name: string } | null = null;
-      try {
-        const { data: specialNotesData } = await supabase
+        ).maybeSingle().then((result: any) => {
+          console.log('[DataService] cash_register_logs fetched:', result?.data ? 'found' : 'not found');
+          return result;
+        }).catch((err: unknown) => {
+          console.warn('[DataService] Error fetching cash_register_logs (table might not exist):', err);
+          return { data: null, error: err };
+        }),
+        supabase
           .from('special_notes_history')
           .select('content, author_name')
           .eq('clinic_id', targetClinicId)
           .eq('report_date', targetDate)
           .order('edited_at', { ascending: false })
           .limit(1)
-          .maybeSingle();
+          .maybeSingle()
+          .then(({ data }: { data: { content: string; author_name: string } | null }) => {
+            if (data) {
+              console.log('[DataService] special_notes_history fetched for date:', targetDate);
+            }
+            return data;
+          })
+          .catch((err: unknown) => {
+            console.warn('[DataService] Error fetching special_notes_history:', err);
+            return null;
+          })
+      ])
 
-        if (specialNotesData) {
-          latestSpecialNote = specialNotesData;
-          console.log('[DataService] special_notes_history fetched for date:', targetDate);
-        }
-      } catch (err) {
-        console.warn('[DataService] Error fetching special_notes_history:', err);
-      }
+      const latestSpecialNote = specialNotesResult
 
       const { normalized: normalizedDailyReport, missingIds: dailyIdsToBackfill } = ensureClinicIds(
         dailyReportResult?.data ? [dailyReportResult.data as DailyReport] : [],
