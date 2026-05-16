@@ -347,45 +347,34 @@ export async function saveDailyReport(formData: {
     // ============================================================
 
     if (formData.cashRegister) {
-      try {
-        console.log('[saveDailyReport] Saving cash register log directly...')
-        console.log('[saveDailyReport] Cash register data:', JSON.stringify(formData.cashRegister))
+      // CRITICAL: 옛 구현은 DELETE → INSERT 2단계라 INSERT 실패 시 데이터가
+      // 통째로 사라지고 에러는 console.error 로만 처리되어 사용자가 인지하지 못한 채
+      // 현금 내역이 손실되는 사고가 발생함. UNIQUE(date, clinic_id) 제약을 사용한
+      // atomic UPSERT 로 교체하고, 실패 시 명확한 에러를 응답으로 반환한다.
+      console.log('[saveDailyReport] Upserting cash register log...')
 
-        // 전일 이월액 총액 계산
-        const previousBalance =
-          (formData.cashRegister.prev_bill_50000 || 0) * 50000 +
-          (formData.cashRegister.prev_bill_10000 || 0) * 10000 +
-          (formData.cashRegister.prev_bill_5000 || 0) * 5000 +
-          (formData.cashRegister.prev_bill_1000 || 0) * 1000 +
-          (formData.cashRegister.prev_coin_500 || 0) * 500 +
-          (formData.cashRegister.prev_coin_100 || 0) * 100
+      const previousBalance =
+        (formData.cashRegister.prev_bill_50000 || 0) * 50000 +
+        (formData.cashRegister.prev_bill_10000 || 0) * 10000 +
+        (formData.cashRegister.prev_bill_5000 || 0) * 5000 +
+        (formData.cashRegister.prev_bill_1000 || 0) * 1000 +
+        (formData.cashRegister.prev_coin_500 || 0) * 500 +
+        (formData.cashRegister.prev_coin_100 || 0) * 100
 
-        // 금일 잔액 총액 계산
-        const currentBalance =
-          (formData.cashRegister.curr_bill_50000 || 0) * 50000 +
-          (formData.cashRegister.curr_bill_10000 || 0) * 10000 +
-          (formData.cashRegister.curr_bill_5000 || 0) * 5000 +
-          (formData.cashRegister.curr_bill_1000 || 0) * 1000 +
-          (formData.cashRegister.curr_coin_500 || 0) * 500 +
-          (formData.cashRegister.curr_coin_100 || 0) * 100
+      const currentBalance =
+        (formData.cashRegister.curr_bill_50000 || 0) * 50000 +
+        (formData.cashRegister.curr_bill_10000 || 0) * 10000 +
+        (formData.cashRegister.curr_bill_5000 || 0) * 5000 +
+        (formData.cashRegister.curr_bill_1000 || 0) * 1000 +
+        (formData.cashRegister.curr_coin_500 || 0) * 500 +
+        (formData.cashRegister.curr_coin_100 || 0) * 100
 
-        const balanceDifference = currentBalance - previousBalance
+      const balanceDifference = currentBalance - previousBalance
 
-        // 기존 레코드 삭제
-        const { error: deleteError } = await supabase
-          .from('cash_register_logs')
-          .delete()
-          .eq('clinic_id', userProfile.clinic_id)
-          .eq('date', formData.date)
-
-        if (deleteError) {
-          console.warn('[saveDailyReport] Delete cash register error (may not exist):', deleteError)
-        }
-
-        // 새 레코드 삽입
-        const { error: insertError } = await supabase
-          .from('cash_register_logs')
-          .insert({
+      const { error: upsertError } = await supabase
+        .from('cash_register_logs')
+        .upsert(
+          {
             date: formData.date,
             clinic_id: userProfile.clinic_id,
             prev_bill_50000: formData.cashRegister.prev_bill_50000 || 0,
@@ -403,18 +392,21 @@ export async function saveDailyReport(formData: {
             curr_coin_100: formData.cashRegister.curr_coin_100 || 0,
             current_balance: currentBalance,
             balance_difference: balanceDifference,
-            notes: formData.cashRegister.notes || ''
-          })
+            notes: formData.cashRegister.notes || '',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'date,clinic_id' }
+        )
 
-        if (insertError) {
-          console.error('[saveDailyReport] Insert cash register error:', insertError)
-        } else {
-          console.log('[saveDailyReport] Cash register log saved successfully')
-          console.log('[saveDailyReport] Previous balance:', previousBalance, 'Current balance:', currentBalance)
+      if (upsertError) {
+        console.error('[saveDailyReport] Cash register upsert error:', upsertError)
+        return {
+          success: false,
+          error: `현금 내역 저장 실패: ${upsertError.message}. 다시 시도해주세요.`,
         }
-      } catch (cashRegisterError) {
-        console.error('[saveDailyReport] Error saving cash register:', cashRegisterError)
       }
+
+      console.log('[saveDailyReport] Cash register log upserted. prev=', previousBalance, 'curr=', currentBalance)
     } else {
       console.log('[saveDailyReport] No cash register data to save')
     }
