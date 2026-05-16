@@ -30,6 +30,7 @@ interface WorkerStatusResponse {
     installed: boolean
     online: boolean
     lastSyncStatus: string | null
+    agentVersion: string | null
   }
 }
 
@@ -63,6 +64,8 @@ interface WorkerDef {
   premiumId: string
   /** 온라인 시 부가 정보 (예: workerCount) */
   getExtra?: (status: WorkerStatusResponse) => string
+  /** 워커 버전 추출 (있을 때만 표시) */
+  getVersion?: (status: WorkerStatusResponse) => string | null
 }
 
 const WORKER_DEFS: WorkerDef[] = [
@@ -70,6 +73,7 @@ const WORKER_DEFS: WorkerDef[] = [
     key: 'marketing',
     label: '마케팅 (발행)',
     premiumId: 'marketing',
+    getVersion: (s) => s.marketing?.currentVersion ?? null,
   },
   {
     key: 'seo',
@@ -81,6 +85,8 @@ const WORKER_DEFS: WorkerDef[] = [
     key: 'email',
     label: '이메일 모니터',
     premiumId: 'financial',
+    // 이메일 모니터는 마케팅 워커 서브 모듈 — 마케팅 워커 버전을 그대로 표시
+    getVersion: (s) => s.marketing?.currentVersion ?? null,
   },
   {
     key: 'scraping',
@@ -92,8 +98,17 @@ const WORKER_DEFS: WorkerDef[] = [
     key: 'dentweb',
     label: '덴트웹 동기화',
     premiumId: 'marketing',
+    getVersion: (s) => s.dentweb?.agentVersion ?? null,
   },
 ]
+
+/** v 접두사 정규화: "1.1.106" → "v1.1.106", "v1.1.106" 유지, "2.0.0-electron" → "2.0.0-electron" */
+function formatVersion(v: string | null | undefined): string | null {
+  if (!v) return null
+  const trimmed = v.trim()
+  if (!trimmed) return null
+  return /^v\d/.test(trimmed) ? trimmed : `v${trimmed}`
+}
 
 /**
  * 좌측 메뉴 하단에 워커 상태를 표시하는 아이템
@@ -162,14 +177,17 @@ export default function WorkerStatusMenuItem() {
     return 'offline'
   })()
 
+  // 메인 워커(클리닉 매니저 워커 = marketing/dentweb 공유 Electron 앱) 버전
+  const primaryVersion = formatVersion(status.marketing?.currentVersion ?? status.dentweb?.agentVersion ?? null)
+
   const overallLabel = (() => {
     switch (overallStatus) {
       case 'loading':
         return '워커 확인 중...'
       case 'online':
-        return '워커 정상'
+        return primaryVersion ? `워커 정상 · ${primaryVersion}` : '워커 정상'
       case 'offline':
-        return '워커 오프라인'
+        return primaryVersion ? `워커 오프라인 · ${primaryVersion}` : '워커 오프라인'
       case 'not-installed':
         return '워커 미설치'
     }
@@ -213,18 +231,24 @@ export default function WorkerStatusMenuItem() {
 
       {expanded && (
         <div className="ml-3 mr-1 mt-1 mb-2 space-y-1.5 px-3 py-2 rounded-lg bg-at-surface-alt border border-at-border">
-          {workerStatuses.map((w) => (
-            <div key={w.key} className="flex items-center justify-between text-xs">
-              <span className="text-at-text-secondary">{w.label}</span>
-              <div className="flex items-center space-x-1.5">
-                <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[w.status]}`} />
-                <span className="text-at-text-secondary">
-                  {STATUS_LABEL[w.status]}
-                  {w.status === 'online' && w.getExtra ? w.getExtra(status) : ''}
-                </span>
+          {workerStatuses.map((w) => {
+            const version = w.getVersion ? formatVersion(w.getVersion(status)) : null
+            return (
+              <div key={w.key} className="flex items-center justify-between text-xs gap-2">
+                <span className="text-at-text-secondary truncate">{w.label}</span>
+                <div className="flex items-center space-x-1.5 flex-shrink-0">
+                  {version && w.status !== 'not-installed' && (
+                    <span className="text-[10px] text-at-text-weak font-mono">{version}</span>
+                  )}
+                  <span className={`w-2 h-2 rounded-full ${STATUS_COLOR[w.status]}`} />
+                  <span className="text-at-text-secondary">
+                    {STATUS_LABEL[w.status]}
+                    {w.status === 'online' && w.getExtra ? w.getExtra(status) : ''}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           {overallStatus !== 'online' && overallStatus !== 'loading' && (
             <div className="pt-1 mt-1 border-t border-at-border text-[11px] text-at-text-weak leading-snug">
               워커에 문제가 있습니다. 관리자에게 설치/실행을 요청하세요.
