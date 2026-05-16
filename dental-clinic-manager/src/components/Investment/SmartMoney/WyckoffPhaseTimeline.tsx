@@ -132,8 +132,37 @@ export function WyckoffPhaseTimeline({ phase }: Props) {
       )}
 
       {noData ? (
-        <div className="text-[11px] text-slate-500 leading-relaxed py-2">
-          데이터 부족 — 와이코프 페이즈 미감지
+        <div className="text-[11px] text-slate-500 leading-relaxed py-2 space-y-1.5">
+          {phase.description === '데이터 부족' ? (
+            <div>데이터 부족 — 와이코프 페이즈 미감지 (일봉 30개 미만)</div>
+          ) : phase.trendHeuristic ? (
+            <>
+              <div className="font-medium text-slate-700">
+                {phase.trendHeuristic.cycle === 'distribution' ? '강한 상승 추세' : '강한 하락 추세'}
+                {' — Wyckoff 매집/분배 이벤트 미검출'}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={`px-1.5 py-0.5 rounded font-semibold ${
+                  phase.trendHeuristic.cycle === 'distribution'
+                    ? 'bg-rose-50 text-rose-700'
+                    : 'bg-emerald-50 text-emerald-700'
+                }`}>
+                  {phase.trendHeuristic.cycle === 'distribution' ? '분배 가능성 (고점)' : '매집 가능성 (저점)'}
+                </span>
+                <span className="text-slate-500 font-mono">
+                  {phase.trendHeuristic.lookbackDays}일 {phase.trendHeuristic.returnPct >= 0 ? '+' : ''}{(phase.trendHeuristic.returnPct * 100).toFixed(1)}%
+                </span>
+              </div>
+              <p className="text-slate-400 leading-relaxed">
+                Wyckoff 패턴은 횡보(Trading Range) 구간의 매집·분배 이벤트 검출을 본질로 합니다.
+                강한 단방향 추세장에서는 PS/SC/Spring/SOS 등 이벤트가 자연스럽게 미감지됩니다.
+              </p>
+            </>
+          ) : phase.description === '이벤트 없음 — 횡보' ? (
+            <div>횡보 구간 — Wyckoff 매집/분배 이벤트 미검출</div>
+          ) : (
+            <div>{phase.description || '와이코프 페이즈 미감지'}</div>
+          )}
         </div>
       ) : (
         <>
