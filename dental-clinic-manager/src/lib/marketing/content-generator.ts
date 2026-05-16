@@ -187,7 +187,9 @@ export async function generateContent(
       `### 이미지 ${imgCount}장 ↔ 핵심 포인트 ${imgCount}개 매핑 (필수 절차)\n` +
       `1) 글을 쓰기 전에 환자에게 전달할 **핵심 포인트 ${imgCount}개**를 먼저 정하세요 ` +
       `(서로 중복되지 않는, 글의 주요 메시지).\n` +
-      `2) 각 핵심 포인트가 본문에 등장하는 위치 **바로 다음**에 [IMAGE: ...] 마커를 1개씩 배치하세요. ` +
+      `2) **이미지는 그 핵심 포인트를 설명하는 본문 단락의 바로 "앞"에 배치**하세요. ` +
+      `즉 [IMAGE: ...] 마커를 먼저 1줄 두고, 그 다음 줄부터 해당 포인트를 설명하는 본문이 시작되어야 합니다. ` +
+      `독자가 이미지(시각적 요약)를 먼저 보고 그 아래에서 자세한 설명을 읽는 자연스러운 흐름을 만드세요. ` +
       `한 곳에 몰지 말고 글 전체에 고르게 분포.\n` +
       `3) 마커의 내용은 "그 카드 이미지 안에 그대로 들어갈 한글 텍스트" 입니다. 그림 묘사가 아닙니다. ` +
       `다음 형식을 권장합니다:\n` +
@@ -347,9 +349,11 @@ export async function generateContent(
     userContent = `다음 주제로 블로그 글을 작성해주세요.\n\n주제: ${options.topic}\n키워드: ${options.keyword}`;
   }
 
+  // max_tokens: 본문이 짧은 글도 자주 4096 토큰을 초과해 잘리므로 8192로 상향
+  // (Claude Sonnet 4.6 은 충분히 지원, 비용은 출력 토큰 기준으로 과금되므로 실제 사용분만 청구됨)
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [
       {
         role: 'user',
@@ -359,6 +363,52 @@ export async function generateContent(
     system: systemPrompt,
   });
   const callDurationMs = Date.now() - callStart;
+
+  // stop_reason 검사: max_tokens 로 잘렸으면 이어쓰기 호출로 글을 완결시킨다.
+  // 한 글이 max_tokens 두 번에도 안 끝나면 그대로 진행(이상치).
+  let assembledText = response.content[0].type === 'text' ? response.content[0].text : '';
+  let lastStopReason = response.stop_reason;
+  let continueIter = 0;
+  while (lastStopReason === 'max_tokens' && continueIter < 2) {
+    continueIter++;
+    const contStart = Date.now();
+    const contResponse = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
+      messages: [
+        { role: 'user', content: userContent },
+        { role: 'assistant', content: assembledText },
+        { role: 'user', content: '이어서 마저 작성해주세요. 끊긴 문장부터 자연스럽게 이어 쓰고, 글이 완전히 마무리될 때까지(결론·해시태그까지) 작성하세요. 새로 시작하지 말고 이어쓰기만 하세요. 기존 [IMAGE:] / [BRAND_IMAGE:] / [CLINICAL_PHOTO:] 마커는 중복 삽입하지 마세요.' },
+      ],
+      system: systemPrompt,
+    });
+    const contDurationMs = Date.now() - contStart;
+    const contText = contResponse.content[0].type === 'text' ? contResponse.content[0].text : '';
+    assembledText += contText;
+    lastStopReason = contResponse.stop_reason;
+
+    if (generationSessionId) {
+      logApiUsage({
+        clinicId,
+        generationSessionId,
+        apiProvider: 'anthropic',
+        model: 'claude-sonnet-4-6',
+        callType: 'text_retry',
+        inputTokens: contResponse.usage.input_tokens,
+        outputTokens: contResponse.usage.output_tokens,
+        totalTokens: contResponse.usage.input_tokens + contResponse.usage.output_tokens,
+        generationOptions: {
+          topic: options.topic,
+          keyword: options.keyword,
+          tone: options.tone,
+          postType: options.postType,
+          imageCount: options.imageCount,
+        },
+        success: true,
+        durationMs: contDurationMs,
+      });
+    }
+  }
 
   if (generationSessionId) {
     logApiUsage({
@@ -382,7 +432,7 @@ export async function generateContent(
     });
   }
 
-  const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
+  const rawText = assembledText;
 
   // 5. 결과 파싱
   const parsed = parseGeneratedContent(rawText, options.keyword);
@@ -407,7 +457,7 @@ export async function generateContent(
       : '1,000자 이상';
     const retryResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [
         {
           role: 'user',

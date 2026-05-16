@@ -171,6 +171,10 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
 
                 if (data.heartbeat) continue
                 if (data.error) throw new Error(data.error)
+                if (data.saveWarning) {
+                  // 글은 정상 생성되었지만 자동 저장 실패 — 에러로 표시(생성된 본문은 result로 들어옴)
+                  setGenerationError(String(data.saveWarning))
+                }
 
                 if (data.progress !== undefined) setGenerationProgress(data.progress)
                 if (data.step) setGenerationStep(data.step)
