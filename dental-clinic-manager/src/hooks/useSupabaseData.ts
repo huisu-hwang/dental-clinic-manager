@@ -472,7 +472,7 @@ export const useSupabaseData = (clinicId?: string | null, options: UseSupabaseDa
   useEffect(() => {
     if (typeof window === 'undefined') {
       console.log('[useSupabaseData] Server-side rendering, skipping data fetch')
-      setLoading(false)
+      // SSR: loading 초기값(true) 유지 — 클라이언트 hydration 후 첫 fetch 까지 빈 화면 깜빡임 방지
       return
     }
 
@@ -483,7 +483,9 @@ export const useSupabaseData = (clinicId?: string | null, options: UseSupabaseDa
 
     if (!activeClinicId) {
       console.log('[useSupabaseData] Waiting for clinic_id before loading data')
-      setLoading(false)
+      // 인증/프로필 로딩이 끝나 clinic_id 가 도착할 때까지 loading=true 유지.
+      // 옛 동작은 여기서 setLoading(false) 호출 → 빈 데이터 + loading=false 상태로 한 번 렌더
+      // → 모바일에서 \"빈 화면 → 스피너 → 데이터\" 깜빡임의 원인이었음.
       return
     }
 
