@@ -133,10 +133,13 @@ export default function MatrixContent() {
     const aggParams = new URLSearchParams({
       period_window: periodWindow,
       group_by: market === 'SPLIT' || market === 'ALL' ? 'market' : 'market',
+      entry_ids: selectedStrategies.join(','),
     })
     if (market === 'KR' || market === 'US') {
       aggParams.set('market', market)
     }
+    // 종목 필터가 있으면 aggregate 도 같은 종목으로 동적 집계 (Leaderboard 도 필터 반영)
+    if (tickers.length > 0) aggParams.set('tickers', tickers.join(','))
 
     try {
       const [queryRes, aggRes] = await Promise.all([
@@ -208,6 +211,10 @@ export default function MatrixContent() {
         availableStrategies={availableStrategies}
         tickersText={tickersText}
         onTickersChange={setTickersText}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortKeyChange={(k) => { setSortKey(k); setSortDir(DEFAULT_DIR[k]) }}
+        onSortDirToggle={() => setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))}
         loading={loading}
       />
 

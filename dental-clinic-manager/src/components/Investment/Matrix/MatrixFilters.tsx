@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import type { PeriodWindow, MarketFilter } from './types'
+import type { PeriodWindow, MarketFilter, SortKey, SortDir } from './types'
 
 interface Props {
   market: MarketFilter
@@ -13,6 +13,10 @@ interface Props {
   availableStrategies: Array<{ id: string; name: string; type: 'preset' | 'shared' }>
   tickersText: string
   onTickersChange: (v: string) => void
+  sortKey: SortKey
+  sortDir: SortDir
+  onSortKeyChange: (k: SortKey) => void
+  onSortDirToggle: () => void
   loading?: boolean
 }
 
@@ -25,6 +29,18 @@ const MARKETS: Array<{ value: MarketFilter; label: string; desc: string }> = [
 
 const WINDOWS: PeriodWindow[] = ['1Y', '3Y', '5Y', '10Y']
 
+const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
+  { value: 'avg_return', label: '평균 수익률' },
+  { value: 'avg_annualized', label: '연환산 수익률' },
+  { value: 'avg_sharpe', label: 'Sharpe' },
+  { value: 'avg_mdd', label: 'MDD (최대낙폭)' },
+  { value: 'avg_winrate', label: '승률' },
+  { value: 'avg_profit_factor', label: 'Profit Factor' },
+  { value: 'best_return', label: '최고 수익률' },
+  { value: 'worst_return', label: '최저 수익률' },
+  { value: 'sample_size', label: '표본 수' },
+]
+
 export default function MatrixFilters(props: Props) {
   const {
     market, onMarketChange,
@@ -32,6 +48,7 @@ export default function MatrixFilters(props: Props) {
     selectedStrategies, onStrategiesChange,
     availableStrategies,
     tickersText, onTickersChange,
+    sortKey, sortDir, onSortKeyChange, onSortDirToggle,
     loading,
   } = props
 
@@ -99,16 +116,52 @@ export default function MatrixFilters(props: Props) {
       {/* 종목 필터 (콤마구분 입력) */}
       <div>
         <div className="mb-2 text-sm font-medium text-gray-700">
-          종목 필터 <span className="text-xs text-gray-400">(콤마구분, 비워두면 전체)</span>
+          종목 필터{' '}
+          <span className="text-xs text-gray-400">
+            (콤마구분 · 비우면 전체 · KR=6자리코드 005930 / US=티커 AAPL)
+          </span>
         </div>
         <input
           type="text"
           value={tickersText}
           onChange={e => onTickersChange(e.target.value)}
-          placeholder="예: 005930, AAPL, TSLA"
+          placeholder="예: 005930, 000660, AAPL, TSLA"
           disabled={loading}
           className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
+        {tickersText.trim() && (
+          <div className="mt-1 text-xs text-blue-600">
+            현재 {tickersText.split(',').map(s => s.trim()).filter(Boolean).length}개 종목 필터 적용 중 (Leaderboard·Grid 모두)
+          </div>
+        )}
+      </div>
+
+      {/* 정렬 */}
+      <div>
+        <div className="mb-2 text-sm font-medium text-gray-700">
+          정렬 <span className="text-xs text-gray-400">(Leaderboard 컬럼 헤더 클릭으로도 가능)</span>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            value={sortKey}
+            onChange={e => onSortKeyChange(e.target.value as SortKey)}
+            disabled={loading}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={onSortDirToggle}
+            disabled={loading}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            title={sortDir === 'asc' ? '오름차순 → 내림차순' : '내림차순 → 오름차순'}
+          >
+            {sortDir === 'asc' ? '오름차순 ▲' : '내림차순 ▼'}
+          </button>
+        </div>
       </div>
 
       {/* 전략 다중 선택 */}
