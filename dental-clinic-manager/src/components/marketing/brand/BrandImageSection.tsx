@@ -24,7 +24,10 @@ export function BrandImageSection({ clinicNameForCopy, keyword, value, onChange,
 
   useEffect(() => {
     if (copyTouched) return;
-    const auto = `${clinicNameForCopy} / ${keyword}`.trim();
+    // 클리닉명과 키워드 중 채워진 값만 합쳐 자동 카피 생성.
+    // 둘 다 비어있으면 빈 문자열을 유지(서버에서 글 제목으로 자동 채움).
+    const parts = [clinicNameForCopy, keyword].map((s) => (s || '').trim()).filter(Boolean);
+    const auto = parts.join(' / ');
     if (auto !== value.title.copy) {
       onChange({ ...value, title: { ...value.title, copy: auto } });
     }

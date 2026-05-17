@@ -1,16 +1,33 @@
 import sharp from 'sharp';
+import satori from 'satori';
+import React from 'react';
+import { readFile } from 'fs/promises';
+import path from 'path';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 const LOGO_CACHE = new Map<string, { buffer: Buffer; fetchedAt: number }>();
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const FOOTER_CACHE = new Map<string, { buffer: Buffer; width: number; height: number; fetchedAt: number }>();
+const CACHE_TTL_MS = 30 * 60 * 1000;
 
-/**
- * 클리닉 로고를 fetch 후 캐시. URL → PNG 버퍼.
- */
+let cachedFonts: { name: 'Pretendard'; data: Buffer; weight: 400 | 700; style: 'normal' }[] | null = null;
+
+async function loadFonts() {
+  if (cachedFonts) return cachedFonts;
+  const root = process.cwd();
+  const [regular, bold] = await Promise.all([
+    readFile(path.join(root, 'public/fonts/Pretendard-Regular.ttf')),
+    readFile(path.join(root, 'public/fonts/Pretendard-Bold.ttf')),
+  ]);
+  cachedFonts = [
+    { name: 'Pretendard', data: regular, weight: 400, style: 'normal' },
+    { name: 'Pretendard', data: bold, weight: 700, style: 'normal' },
+  ];
+  return cachedFonts;
+}
+
 async function fetchLogoBuffer(logoUrl: string): Promise<Buffer | null> {
   const cached = LOGO_CACHE.get(logoUrl);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.buffer;
-
   try {
     const res = await fetch(logoUrl);
     if (!res.ok) return null;
@@ -24,36 +41,124 @@ async function fetchLogoBuffer(logoUrl: string): Promise<Buffer | null> {
   }
 }
 
-async function loadClinicLogoUrl(clinicId: string): Promise<string | null> {
+async function loadClinicBrand(clinicId: string): Promise<{ logoUrl: string; nameKo: string; nameEn: string | null } | null> {
   const admin = getSupabaseAdmin();
   if (!admin) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (admin as any)
     .from('clinic_brand_assets')
-    .select('logo_url')
+    .select('logo_url, name_ko, name_en')
     .eq('clinic_id', clinicId)
     .maybeSingle();
-  const url = data?.logo_url as string | undefined;
-  return url && url.trim() ? url.trim() : null;
+  const logoUrl = (data?.logo_url as string | undefined)?.trim();
+  const nameKo = ((data?.name_ko as string | undefined) ?? '').trim();
+  const nameEn = ((data?.name_en as string | undefined) ?? '').trim() || null;
+  if (!logoUrl || !nameKo) return null;
+  return { logoUrl, nameKo, nameEn };
 }
 
 /**
- * 생성된 이미지(base64 PNG)에 클리닉 로고를 우상단에 합성한다.
- * - 로고가 없으면 원본 그대로 반환.
- * - 로고 크기: 캔버스 짧은 변의 12% (가독성과 시각적 비중 균형).
- * - 위치: 우상단, 패딩 = 짧은 변의 3%.
- * - 반투명 흰 라운드 배경 박스로 다양한 배경에서도 식별성 확보.
+ * 클리닉 푸터 PNG (둥근 흰 박스 안에 로고+클리닉명) 를 satori 로 합성.
+ * 클리닉당 메모리 캐시 — 한 클리닉에서 여러 이미지를 만들어도 1회만 합성.
+ */
+async function renderFooterPng(
+  clinicId: string,
+  logoUrl: string,
+  nameKo: string,
+  targetWidthPx: number,
+): Promise<{ buffer: Buffer; width: number; height: number } | null> {
+  const cacheKey = `${clinicId}::${targetWidthPx}`;
+  const cached = FOOTER_CACHE.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return { buffer: cached.buffer, width: cached.width, height: cached.height };
+  }
+
+  try {
+    const logoBuf = await fetchLogoBuffer(logoUrl);
+    if (!logoBuf) return null;
+    const ext = logoUrl.split('.').pop()?.toLowerCase() || 'png';
+    const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
+    const logoDataUrl = `data:${mime};base64,${logoBuf.toString('base64')}`;
+
+    // satori 가 가변 폰트 메트릭에 약하므로 고정 사이즈 SVG 합성.
+    // 박스 비율: width:height = 5:1 (가로형 명함 비율)
+    const W = targetWidthPx;
+    const H = Math.round(W / 5);
+    const padding = Math.round(H * 0.18);
+    const logoBoxSize = Math.round(H * 0.62);
+    const fontSize = Math.round(H * 0.42);
+
+    const fonts = await loadFonts();
+    const element = React.createElement(
+      'div',
+      {
+        style: {
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'white',
+          borderRadius: `${Math.round(H * 0.4)}px`,
+          padding: `${padding}px ${Math.round(padding * 2)}px`,
+          boxSizing: 'border-box',
+        },
+      },
+      React.createElement(
+        'div',
+        {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: `${Math.round(padding * 0.8)}px`,
+          },
+        },
+        React.createElement('img', {
+          src: logoDataUrl,
+          width: logoBoxSize,
+          height: logoBoxSize,
+          style: { objectFit: 'contain' },
+        }),
+        React.createElement(
+          'span',
+          {
+            style: {
+              fontFamily: 'Pretendard',
+              fontWeight: 700,
+              fontSize: `${fontSize}px`,
+              color: '#111827',
+              letterSpacing: '-0.02em',
+            },
+          },
+          nameKo,
+        ),
+      ),
+    );
+
+    const svg = await satori(element, { width: W, height: H, fonts });
+    const buffer = await sharp(Buffer.from(svg)).png().toBuffer();
+    FOOTER_CACHE.set(cacheKey, { buffer, width: W, height: H, fetchedAt: Date.now() });
+    return { buffer, width: W, height: H };
+  } catch (err) {
+    console.error('[logo-overlay] 푸터 렌더 실패:', err);
+    return null;
+  }
+}
+
+/**
+ * 생성된 이미지(base64 PNG)에 클리닉 푸터(로고+클리닉명)를 하단 중앙에 합성한다.
+ * - 푸터 폭: 이미지 폭의 38%
+ * - 위치: 하단 중앙, 하단 패딩 = 짧은 변의 3%
+ * - 흰 라운드 배경 박스로 다양한 배경에서도 식별성 확보
  */
 export async function overlayClinicLogo(
   imageBase64: string,
-  clinicId: string | undefined
+  clinicId: string | undefined,
 ): Promise<string> {
   if (!clinicId) return imageBase64;
   try {
-    const logoUrl = await loadClinicLogoUrl(clinicId);
-    if (!logoUrl) return imageBase64;
-    const logoBuf = await fetchLogoBuffer(logoUrl);
-    if (!logoBuf) return imageBase64;
+    const brand = await loadClinicBrand(clinicId);
+    if (!brand) return imageBase64;
 
     const baseBuf = Buffer.from(imageBase64, 'base64');
     const base = sharp(baseBuf);
@@ -61,34 +166,17 @@ export async function overlayClinicLogo(
     const W = meta.width || 1024;
     const H = meta.height || 1024;
     const shortSide = Math.min(W, H);
-    const targetW = Math.round(shortSide * 0.12);
-    const pad = Math.round(shortSide * 0.03);
+    const footerW = Math.round(W * 0.38);
+    const padBottom = Math.round(shortSide * 0.04);
 
-    // 로고를 targetW 로 비례 리사이즈 (PNG/JPEG/SVG 모두 sharp 가 처리)
-    const logoResized = await sharp(logoBuf, { failOn: 'none' })
-      .resize({ width: targetW, withoutEnlargement: false, fit: 'inside' })
-      .png()
-      .toBuffer({ resolveWithObject: true });
+    const footer = await renderFooterPng(clinicId, brand.logoUrl, brand.nameKo, footerW);
+    if (!footer) return imageBase64;
 
-    const logoW = logoResized.info.width;
-    const logoH = logoResized.info.height;
-
-    // 라운드 사각형 배경 (반투명 흰색) - SVG 로 생성
-    const boxPad = Math.max(6, Math.round(targetW * 0.12));
-    const boxW = logoW + boxPad * 2;
-    const boxH = logoH + boxPad * 2;
-    const r = Math.max(8, Math.round(boxPad * 1.5));
-    const bgSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${boxW}" height="${boxH}"><rect x="0" y="0" width="${boxW}" height="${boxH}" rx="${r}" ry="${r}" fill="white" fill-opacity="0.88"/></svg>`;
-    const bgBuf = await sharp(Buffer.from(bgSvg)).png().toBuffer();
-
-    const left = W - boxW - pad;
-    const top = pad;
+    const left = Math.round((W - footer.width) / 2);
+    const top = H - footer.height - padBottom;
 
     const out = await base
-      .composite([
-        { input: bgBuf, left, top },
-        { input: logoResized.data, left: left + boxPad, top: top + boxPad },
-      ])
+      .composite([{ input: footer.buffer, left, top }])
       .png()
       .toBuffer();
 
