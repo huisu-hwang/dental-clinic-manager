@@ -98,33 +98,49 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
     // SSE 스트리밍을 비동기로 실행
     ;(async () => {
       try {
-        const res = await fetch('/api/marketing/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            topic: options.topic,
-            keyword: options.keyword,
-            postType: options.postType,
-            tone: options.tone,
-            useResearch: options.useResearch,
-            factCheck: options.factCheck,
-            useSeoAnalysis: options.useSeoAnalysis,
-            platforms: options.platforms,
-            imageStyle: options.imageStyle,
-            imageVisualStyle: options.imageVisualStyle,
-            imageCount: options.imageCount,
-            ...(options.imageStyleAllocation ? { imageStyleAllocation: options.imageStyleAllocation } : {}),
-            ...(options.targetWordCount ? { targetWordCount: options.targetWordCount } : {}),
-            ...((options.imageStyleAllocation?.use_own_image ?? 0) > 0 && options.referenceImageBase64
-              ? { referenceImageBase64: options.referenceImageBase64 }
-              : options.imageStyle === 'use_own_image' && options.referenceImageBase64
-              ? { referenceImageBase64: options.referenceImageBase64 }
-              : {}),
-            ...(options.clinical ? { clinical: options.clinical } : {}),
-            ...(options.brandImageOptions ? { brandImageOptions: options.brandImageOptions } : {}),
-          }),
-          signal: abortController.signal,
+        const requestBody = JSON.stringify({
+          topic: options.topic,
+          keyword: options.keyword,
+          postType: options.postType,
+          tone: options.tone,
+          useResearch: options.useResearch,
+          factCheck: options.factCheck,
+          useSeoAnalysis: options.useSeoAnalysis,
+          platforms: options.platforms,
+          imageStyle: options.imageStyle,
+          imageVisualStyle: options.imageVisualStyle,
+          imageCount: options.imageCount,
+          ...(options.imageStyleAllocation ? { imageStyleAllocation: options.imageStyleAllocation } : {}),
+          ...(options.targetWordCount ? { targetWordCount: options.targetWordCount } : {}),
+          ...((options.imageStyleAllocation?.use_own_image ?? 0) > 0 && options.referenceImageBase64
+            ? { referenceImageBase64: options.referenceImageBase64 }
+            : options.imageStyle === 'use_own_image' && options.referenceImageBase64
+            ? { referenceImageBase64: options.referenceImageBase64 }
+            : {}),
+          ...(options.clinical ? { clinical: options.clinical } : {}),
+          ...(options.brandImageOptions ? { brandImageOptions: options.brandImageOptions } : {}),
         })
+
+        // 첫 호출은 Vercel cold start / dev 첫 컴파일로 네트워크 오류가 날 수 있어
+        // 자동 1회 재시도 (사용자가 "두 번째는 된다"고 보고한 패턴 해결).
+        const doFetch = (): Promise<Response> =>
+          fetch('/api/marketing/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: requestBody,
+            signal: abortController.signal,
+          })
+
+        let res: Response
+        try {
+          res = await doFetch()
+        } catch (firstErr) {
+          if (firstErr instanceof Error && firstErr.name === 'AbortError') throw firstErr
+          // 첫 호출 실패(콜드 스타트 등) → 1.5초 대기 후 재시도
+          await new Promise((r) => setTimeout(r, 1500))
+          if (abortController.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+          res = await doFetch()
+        }
 
         if (!res.ok || !res.body) {
           const text = await res.text()
@@ -142,9 +158,9 @@ export function AIGenerationProvider({ children }: { children: ReactNode }) {
         const decoder = new TextDecoder()
         let buffer = ''
 
-        // idle timeout: 서버가 90초간 어떤 chunk도 보내지 않으면 hang으로 판단하고 abort
-        // (서버는 5초 간격 heartbeat 송신; 90초는 단계 전환 사이 안전 마진)
-        const IDLE_TIMEOUT_MS = 90000
+        // idle timeout: 서버가 120초간 어떤 chunk도 보내지 않으면 hang으로 판단하고 abort
+        // (서버는 5초 간격 heartbeat 송신; 120초는 SEO 워커 polling·Vercel cold start 안전 마진)
+        const IDLE_TIMEOUT_MS = 120000
         let idleTimer: ReturnType<typeof setTimeout> | null = null
         const resetIdleTimer = () => {
           if (idleTimer) clearTimeout(idleTimer)
