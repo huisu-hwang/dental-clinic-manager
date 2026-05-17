@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { MatrixRow } from './types'
 
 interface Props {
@@ -170,12 +171,14 @@ export default function MatrixDetailDrawer({ row, strategyNames, onClose }: Prop
           </div>
 
           {/* ad-hoc 백테스트 링크 */}
-          <a
+          <Link
             href={`/dashboard?tab=investment&sub=compare&ticker=${d.ticker}&market=${d.market}`}
+            scroll={false}
+            onClick={onClose}
             className="block w-full rounded-md bg-gray-800 px-4 py-2 text-center text-sm font-medium text-white hover:bg-gray-700"
           >
             이 전략으로 ad-hoc 백테스트 실행 →
-          </a>
+          </Link>
         </div>
       </div>
     </div>
