@@ -7,6 +7,8 @@ interface Props {
   rows: MatrixRow[]
   market: MarketFilter
   strategyNames: Map<string, string>
+  /** Leaderboard 정렬과 동기화된 전략 표시 순서. 비어 있으면 등장 순서. */
+  strategyOrder?: string[]
   onCellClick?: (row: MatrixRow) => void
 }
 
@@ -28,7 +30,7 @@ function formatPct(v: number | null) {
   return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
 }
 
-export default function MatrixGrid({ rows, market, strategyNames, onCellClick }: Props) {
+export default function MatrixGrid({ rows, market, strategyNames, strategyOrder, onCellClick }: Props) {
   const { tickers, strategies, cellMap } = useMemo(() => {
     const tickerSet = new Map<string, { ticker: string; market: 'KR' | 'US' }>()
     const stratSet = new Map<string, { id: string; type: 'preset' | 'shared' }>()
@@ -48,9 +50,18 @@ export default function MatrixGrid({ rows, market, strategyNames, onCellClick }:
     } else {
       tickers.sort((a, b) => a.ticker.localeCompare(b.ticker))
     }
-    const strategies = Array.from(stratSet.values())
+    // 전략 순서 — strategyOrder(Leaderboard 정렬) 우선 적용, 누락분은 등장 순서로 뒤에
+    let strategies = Array.from(stratSet.values())
+    if (strategyOrder && strategyOrder.length > 0) {
+      const orderIdx = new Map(strategyOrder.map((id, i) => [id, i]))
+      strategies = strategies.sort((a, b) => {
+        const ai = orderIdx.get(a.id) ?? Number.MAX_SAFE_INTEGER
+        const bi = orderIdx.get(b.id) ?? Number.MAX_SAFE_INTEGER
+        return ai - bi
+      })
+    }
     return { tickers, strategies, cellMap }
-  }, [rows, market])
+  }, [rows, market, strategyOrder])
 
   if (rows.length === 0) {
     return (

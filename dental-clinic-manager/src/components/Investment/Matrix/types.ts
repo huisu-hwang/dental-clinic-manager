@@ -1,6 +1,19 @@
 export type PeriodWindow = '1Y' | '3Y' | '5Y' | '10Y'
 export type MarketFilter = 'KR' | 'US' | 'ALL' | 'SPLIT'
 
+export type SortKey =
+  | 'avg_return'
+  | 'avg_annualized'
+  | 'avg_sharpe'
+  | 'avg_mdd'
+  | 'avg_winrate'
+  | 'avg_profit_factor'
+  | 'best_return'
+  | 'worst_return'
+  | 'sample_size'
+
+export type SortDir = 'asc' | 'desc'
+
 export interface MatrixRow {
   id: number
   entry_type: 'preset' | 'shared'

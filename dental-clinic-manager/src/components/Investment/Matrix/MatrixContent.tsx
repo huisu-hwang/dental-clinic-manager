@@ -7,7 +7,28 @@ import MatrixFilters from './MatrixFilters'
 import MatrixLeaderboard from './MatrixLeaderboard'
 import MatrixGrid from './MatrixGrid'
 import MatrixDetailDrawer from './MatrixDetailDrawer'
-import type { MatrixRow, MatrixAggregateRow, MarketFilter, PeriodWindow } from './types'
+import type { MatrixRow, MatrixAggregateRow, MarketFilter, PeriodWindow, SortKey, SortDir } from './types'
+
+// 정렬 방향 기본값 — 메트릭별로 자연스러운 방향 (수익률/Sharpe/PF/승률/표본수=내림차순, MDD=오름차순)
+const DEFAULT_DIR: Record<SortKey, SortDir> = {
+  avg_return: 'desc',
+  avg_annualized: 'desc',
+  avg_sharpe: 'desc',
+  avg_mdd: 'asc',           // 낮은 MDD가 좋음
+  avg_winrate: 'desc',
+  avg_profit_factor: 'desc',
+  best_return: 'desc',
+  worst_return: 'desc',
+  sample_size: 'desc',
+}
+
+function compareNullable(a: number | null | undefined, b: number | null | undefined, dir: SortDir): number {
+  // null 은 항상 뒤로
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return dir === 'asc' ? a - b : b - a
+}
 
 interface SharedStrategy {
   id: string
@@ -21,6 +42,8 @@ export default function MatrixContent() {
   const [selectedStrategies, setSelectedStrategies] = useState<string[]>(
     PRESET_STRATEGIES.slice(0, 10).map(p => p.id)
   )
+  const [sortKey, setSortKey] = useState<SortKey>('avg_return')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [sharedStrategies, setSharedStrategies] = useState<SharedStrategy[]>([])
   const [matrixRows, setMatrixRows] = useState<MatrixRow[]>([])
   const [aggregateRows, setAggregateRows] = useState<MatrixAggregateRow[]>([])
@@ -42,6 +65,35 @@ export default function MatrixContent() {
     for (const s of availableStrategies) map.set(s.id, s.name)
     return map
   }, [availableStrategies])
+
+  // 정렬된 aggregateRows + 정렬 기반 전략 순서 (Grid 행 동기화용)
+  const sortedAggregateRows = useMemo(() => {
+    const arr = [...aggregateRows]
+    arr.sort((a, b) => compareNullable(a[sortKey], b[sortKey], sortDir))
+    return arr
+  }, [aggregateRows, sortKey, sortDir])
+
+  const strategyOrder = useMemo(() => {
+    // SPLIT/ALL 에서는 동일 entry_id 가 KR/US 양쪽 row 로 존재 — KR 우선 한 번씩만
+    const seen = new Set<string>()
+    const order: string[] = []
+    for (const r of sortedAggregateRows) {
+      if (!seen.has(r.entry_id)) {
+        order.push(r.entry_id)
+        seen.add(r.entry_id)
+      }
+    }
+    return order
+  }, [sortedAggregateRows])
+
+  const handleSortChange = useCallback((key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir(DEFAULT_DIR[key])
+    }
+  }, [sortKey])
 
   // 공유 전략 목록 로딩 (is_shared=true 인 전략들 — share_alias 우선)
   useEffect(() => {
@@ -167,16 +219,20 @@ export default function MatrixContent() {
       )}
 
       <MatrixLeaderboard
-        rows={aggregateRows}
+        rows={sortedAggregateRows}
         market={market}
         periodWindow={periodWindow}
         strategyNames={strategyNames}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={handleSortChange}
       />
 
       <MatrixGrid
         rows={matrixRows}
         market={market}
         strategyNames={strategyNames}
+        strategyOrder={strategyOrder}
         onCellClick={setSelectedCell}
       />
 

@@ -1,12 +1,40 @@
 'use client'
 
-import type { MatrixAggregateRow, MarketFilter, PeriodWindow } from './types'
+import type { MatrixAggregateRow, MarketFilter, PeriodWindow, SortKey, SortDir } from './types'
 
 interface Props {
   rows: MatrixAggregateRow[]
   market: MarketFilter
   periodWindow: PeriodWindow
   strategyNames: Map<string, string>
+  sortKey: SortKey
+  sortDir: SortDir
+  onSortChange: (key: SortKey) => void
+}
+
+interface SortHeaderProps {
+  label: string
+  sortKey: SortKey
+  currentKey: SortKey
+  currentDir: SortDir
+  onSort: (k: SortKey) => void
+  align?: 'left' | 'right'
+}
+
+function SortHeader({ label, sortKey, currentKey, currentDir, onSort, align = 'right' }: SortHeaderProps) {
+  const active = sortKey === currentKey
+  const arrow = active ? (currentDir === 'asc' ? '▲' : '▼') : '↕'
+  return (
+    <th
+      className={`px-3 py-2 ${align === 'right' ? 'text-right' : 'text-left'} cursor-pointer select-none hover:bg-gray-100 transition`}
+      onClick={() => onSort(sortKey)}
+      title={`${label} 정렬 (현재: ${active ? (currentDir === 'asc' ? '오름차순' : '내림차순') : '비활성'})`}
+    >
+      <span className={active ? 'text-blue-700' : ''}>
+        {label} <span className="text-[10px] opacity-70">{arrow}</span>
+      </span>
+    </th>
+  )
 }
 
 // DB 저장 단위: total_return / annualized / mdd / win_rate 는 모두 % (백분율 그대로)
@@ -24,7 +52,7 @@ function returnColor(v: number | null) {
   return 'text-gray-600'
 }
 
-export default function MatrixLeaderboard({ rows, market, periodWindow, strategyNames }: Props) {
+export default function MatrixLeaderboard({ rows, market, periodWindow, strategyNames, sortKey, sortDir, onSortChange }: Props) {
   // 시장별 분할비교 모드: KR/US 두 컬럼으로 표시
   if (market === 'SPLIT') {
     const byEntry = new Map<string, { kr?: MatrixAggregateRow; us?: MatrixAggregateRow }>()
@@ -114,13 +142,15 @@ export default function MatrixLeaderboard({ rows, market, periodWindow, strategy
             <tr>
               <th className="px-3 py-2 text-left">전략</th>
               {market === 'ALL' && <th className="px-3 py-2 text-left">시장</th>}
-              <th className="px-3 py-2 text-right">평균 수익률</th>
-              <th className="px-3 py-2 text-right">Sharpe</th>
-              <th className="px-3 py-2 text-right">MDD</th>
-              <th className="px-3 py-2 text-right">승률</th>
-              <th className="px-3 py-2 text-right">최고</th>
-              <th className="px-3 py-2 text-right">최저</th>
-              <th className="px-3 py-2 text-right">표본수</th>
+              <SortHeader label="평균 수익률" sortKey="avg_return" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="연환산" sortKey="avg_annualized" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="Sharpe" sortKey="avg_sharpe" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="MDD" sortKey="avg_mdd" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="승률" sortKey="avg_winrate" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="PF" sortKey="avg_profit_factor" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="최고" sortKey="best_return" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="최저" sortKey="worst_return" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
+              <SortHeader label="표본수" sortKey="sample_size" currentKey={sortKey} currentDir={sortDir} onSort={onSortChange} />
             </tr>
           </thead>
           <tbody>
@@ -142,6 +172,9 @@ export default function MatrixLeaderboard({ rows, market, periodWindow, strategy
                 <td className={`px-3 py-2 text-right font-semibold ${returnColor(r.avg_return)}`}>
                   {formatPct(r.avg_return)}
                 </td>
+                <td className={`px-3 py-2 text-right ${returnColor(r.avg_annualized)}`}>
+                  {formatPct(r.avg_annualized)}
+                </td>
                 <td className="px-3 py-2 text-right text-gray-700">
                   {r.avg_sharpe != null ? r.avg_sharpe.toFixed(2) : '—'}
                 </td>
@@ -150,6 +183,9 @@ export default function MatrixLeaderboard({ rows, market, periodWindow, strategy
                 </td>
                 <td className="px-3 py-2 text-right text-gray-700">
                   {r.avg_winrate != null ? `${r.avg_winrate.toFixed(0)}%` : '—'}
+                </td>
+                <td className="px-3 py-2 text-right text-gray-700">
+                  {r.avg_profit_factor != null && isFinite(r.avg_profit_factor) ? r.avg_profit_factor.toFixed(2) : '—'}
                 </td>
                 <td className={`px-3 py-2 text-right ${returnColor(r.best_return)}`}>
                   {formatPct(r.best_return)}
@@ -162,7 +198,7 @@ export default function MatrixLeaderboard({ rows, market, periodWindow, strategy
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={market === 'ALL' ? 9 : 8} className="px-3 py-6 text-center text-gray-400">데이터 없음</td>
+                <td colSpan={market === 'ALL' ? 11 : 10} className="px-3 py-6 text-center text-gray-400">데이터 없음</td>
               </tr>
             )}
           </tbody>
