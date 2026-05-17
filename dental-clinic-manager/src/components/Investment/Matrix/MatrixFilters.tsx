@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PeriodWindow, MarketFilter, SortKey, SortDir } from './types'
 
 interface Props {
@@ -113,28 +113,8 @@ export default function MatrixFilters(props: Props) {
         </div>
       </div>
 
-      {/* 종목 필터 (콤마구분 입력) */}
-      <div>
-        <div className="mb-2 text-sm font-medium text-gray-700">
-          종목 필터{' '}
-          <span className="text-xs text-gray-400">
-            (콤마구분 · 비우면 전체 · KR=6자리코드 005930 / US=티커 AAPL)
-          </span>
-        </div>
-        <input
-          type="text"
-          value={tickersText}
-          onChange={e => onTickersChange(e.target.value)}
-          placeholder="예: 005930, 000660, AAPL, TSLA"
-          disabled={loading}
-          className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        {tickersText.trim() && (
-          <div className="mt-1 text-xs text-blue-600">
-            현재 {tickersText.split(',').map(s => s.trim()).filter(Boolean).length}개 종목 필터 적용 중 (Leaderboard·Grid 모두)
-          </div>
-        )}
-      </div>
+      {/* 종목 필터 — self-isolated 컴포넌트 (외부 re-render/loading 영향 차단) */}
+      <TickersInput value={tickersText} onCommit={onTickersChange} />
 
       {/* 정렬 */}
       <div>
@@ -223,6 +203,57 @@ export default function MatrixFilters(props: Props) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * 종목 필터 입력 — self-isolated.
+ * 외부 loading state / re-render 로 인해 input 이 disabled 되거나 value 가 reset 되는
+ * 문제를 차단하기 위해 local state 로 보관. 350ms 디바운스 후 부모(onCommit)에 전달.
+ */
+function TickersInput({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  const [local, setLocal] = useState(value)
+  // 부모가 외부에서 강제로 비우는 경우(예: reset 버튼) 동기화
+  const lastExternalRef = useRef(value)
+  useEffect(() => {
+    if (value !== lastExternalRef.current) {
+      lastExternalRef.current = value
+      setLocal(value)
+    }
+  }, [value])
+  useEffect(() => {
+    const id = setTimeout(() => {
+      lastExternalRef.current = local
+      onCommit(local)
+    }, 350)
+    return () => clearTimeout(id)
+    // onCommit 이 새 reference 일 수 있으나 의존성 추가 시 무한루프 → eslint disable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [local])
+
+  const tickerCount = local.split(',').map(s => s.trim()).filter(Boolean).length
+
+  return (
+    <div>
+      <div className="mb-2 text-sm font-medium text-gray-700">
+        종목 필터{' '}
+        <span className="text-xs text-gray-400">
+          (콤마구분 · 비우면 전체 · KR=6자리코드 005930 / US=티커 AAPL)
+        </span>
+      </div>
+      <input
+        type="text"
+        value={local}
+        onChange={e => setLocal(e.target.value)}
+        placeholder="예: 005930, 000660, AAPL, TSLA"
+        className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      />
+      {tickerCount > 0 && (
+        <div className="mt-1 text-xs text-blue-600">
+          {tickerCount}개 종목 필터 적용 중 (Leaderboard·Grid 모두)
+        </div>
+      )}
     </div>
   )
 }
