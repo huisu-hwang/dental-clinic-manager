@@ -36,9 +36,34 @@ export async function GET(req: Request) {
   const market = (url.searchParams.get('market') ?? 'ALL').toUpperCase()
   const groupBy = url.searchParams.get('group_by') ?? 'market'
   const entryType = url.searchParams.get('entry_type')
+  const tickersParam = url.searchParams.get('tickers')
+  const entryIdsParam = url.searchParams.get('entry_ids')
+  const tickers = tickersParam ? tickersParam.split(',').map(s => s.trim()).filter(Boolean) : []
+  const entryIds = entryIdsParam ? entryIdsParam.split(',').map(s => s.trim()).filter(Boolean) : []
 
   if (!ALLOWED_WINDOWS.has(periodWindow)) {
     return NextResponse.json({ error: `period_window must be one of ${[...ALLOWED_WINDOWS].join(', ')}` }, { status: 400 })
+  }
+
+  // tickers 필터가 있으면 머티리얼라이즈드 뷰는 사용 불가 (뷰는 ticker 단위로 group by 하지 않음).
+  // raw strategy_matrix_runs 에서 동적 집계.
+  if (tickers.length > 0) {
+    let rq = supabase
+      .from('strategy_matrix_runs')
+      .select('entry_type, entry_id, market, total_return, annualized_return, max_drawdown, sharpe_ratio, win_rate, profit_factor')
+      .eq('period_window', periodWindow)
+      .in('ticker', tickers)
+      .limit(50000)
+    if (market !== 'ALL') rq = rq.eq('market', market)
+    if (entryType) rq = rq.eq('entry_type', entryType)
+    if (entryIds.length > 0) rq = rq.in('entry_id', entryIds)
+
+    const { data: raw, error: rawErr } = await rq
+    if (rawErr) {
+      return NextResponse.json({ error: rawErr.message }, { status: 500 })
+    }
+    const aggregated = aggregateRaw(raw ?? [], periodWindow, groupBy)
+    return NextResponse.json({ data: aggregated })
   }
 
   let q = supabase
@@ -49,6 +74,7 @@ export async function GET(req: Request) {
 
   if (market !== 'ALL') q = q.eq('market', market)
   if (entryType) q = q.eq('entry_type', entryType)
+  if (entryIds.length > 0) q = q.in('entry_id', entryIds)
 
   const { data, error } = await q
   if (error) {
@@ -138,4 +164,100 @@ function finalizeAgg(acc: ReturnType<typeof emptyAgg>) {
     worst_return: acc.worst_return === Infinity ? null : acc.worst_return,
     positive_count: acc.positive_count,
   }
+}
+
+interface MatrixRawRow {
+  entry_type: string
+  entry_id: string
+  market: 'KR' | 'US'
+  total_return: number | null
+  annualized_return: number | null
+  max_drawdown: number | null
+  sharpe_ratio: number | null
+  win_rate: number | null
+  profit_factor: number | null
+}
+
+interface RawAcc {
+  entry_type: string
+  entry_id: string
+  market: string
+  period_window: string
+  n_return: number
+  sum_return: number
+  n_annualized: number
+  sum_annualized: number
+  n_sharpe: number
+  sum_sharpe: number
+  n_mdd: number
+  sum_mdd: number
+  n_winrate: number
+  sum_winrate: number
+  n_pf: number
+  sum_pf: number
+  best_return: number
+  worst_return: number
+  positive_count: number
+  sample_size: number
+}
+
+/** tickers 필터 적용 시 raw runs 테이블을 entry × market 단위로 그룹·집계.
+ *  groupBy='none' 이면 시장 통합(=market 'ALL') 한 행만 반환. */
+function aggregateRaw(rows: MatrixRawRow[], periodWindow: string, groupBy: string) {
+  const splitByMarket = groupBy !== 'none'
+  const map = new Map<string, RawAcc>()
+  for (const r of rows) {
+    const key = splitByMarket
+      ? `${r.entry_type}|${r.entry_id}|${r.market}`
+      : `${r.entry_type}|${r.entry_id}|ALL`
+    let acc = map.get(key)
+    if (!acc) {
+      acc = {
+        entry_type: r.entry_type,
+        entry_id: r.entry_id,
+        market: splitByMarket ? r.market : 'ALL',
+        period_window: periodWindow,
+        n_return: 0, sum_return: 0,
+        n_annualized: 0, sum_annualized: 0,
+        n_sharpe: 0, sum_sharpe: 0,
+        n_mdd: 0, sum_mdd: 0,
+        n_winrate: 0, sum_winrate: 0,
+        n_pf: 0, sum_pf: 0,
+        best_return: -Infinity,
+        worst_return: Infinity,
+        positive_count: 0,
+        sample_size: 0,
+      }
+      map.set(key, acc)
+    }
+    acc.sample_size += 1
+    if (r.total_return != null) {
+      acc.n_return++
+      acc.sum_return += r.total_return
+      if (r.total_return > acc.best_return) acc.best_return = r.total_return
+      if (r.total_return < acc.worst_return) acc.worst_return = r.total_return
+      if (r.total_return > 0) acc.positive_count++
+    }
+    if (r.annualized_return != null) { acc.n_annualized++; acc.sum_annualized += r.annualized_return }
+    if (r.sharpe_ratio != null) { acc.n_sharpe++; acc.sum_sharpe += r.sharpe_ratio }
+    if (r.max_drawdown != null) { acc.n_mdd++; acc.sum_mdd += r.max_drawdown }
+    if (r.win_rate != null) { acc.n_winrate++; acc.sum_winrate += r.win_rate }
+    if (r.profit_factor != null && isFinite(r.profit_factor)) { acc.n_pf++; acc.sum_pf += r.profit_factor }
+  }
+  return Array.from(map.values()).map(a => ({
+    entry_type: a.entry_type,
+    entry_id: a.entry_id,
+    market: a.market,
+    period_window: a.period_window,
+    sample_size: a.sample_size,
+    avg_return: a.n_return > 0 ? a.sum_return / a.n_return : null,
+    avg_annualized: a.n_annualized > 0 ? a.sum_annualized / a.n_annualized : null,
+    avg_sharpe: a.n_sharpe > 0 ? a.sum_sharpe / a.n_sharpe : null,
+    avg_mdd: a.n_mdd > 0 ? a.sum_mdd / a.n_mdd : null,
+    avg_winrate: a.n_winrate > 0 ? a.sum_winrate / a.n_winrate : null,
+    avg_profit_factor: a.n_pf > 0 ? a.sum_pf / a.n_pf : null,
+    best_return: a.best_return === -Infinity ? null : a.best_return,
+    worst_return: a.worst_return === Infinity ? null : a.worst_return,
+    positive_count: a.positive_count,
+  })).sort((x, y) => (y.avg_return ?? -Infinity) - (x.avg_return ?? -Infinity))
 }

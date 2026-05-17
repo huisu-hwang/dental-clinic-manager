@@ -8,6 +8,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import HistoryTab from './CompareHistory/HistoryTab'
 import { GitCompare, Play, Loader2, AlertCircle, Trophy, X, CheckCircle2, Sparkles, User, ChevronDown, ChevronRight, Info, Wand2, TrendingUp, ArrowDown, ArrowUp, ArrowUpDown, LayoutGrid, List as ListIcon } from 'lucide-react'
 import TickerSearch from '@/components/Investment/TickerSearch'
@@ -132,6 +134,7 @@ interface SelectedTicker {
 type ViewMode = 'matrix' | 'list'
 
 function LiveCompareSection() {
+  const router = useRouter()
   const [strategies, setStrategies] = useState<InvestmentStrategy[]>([])
   const [loadingStrategies, setLoadingStrategies] = useState(true)
   const [statsByStrategy, setStatsByStrategy] = useState<Map<string, StrategyBacktestStats>>(new Map())
@@ -499,14 +502,15 @@ function LiveCompareSection() {
             하나의 종목에 대해 여러 전략을 동시에 백테스트하여 성과를 비교합니다. 최대 {MAX_COMPARE}개까지 동시 비교.
           </p>
         </div>
-        <a
-          href="/investment/compare/matrix"
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard?tab=investment&sub=matrix', { scroll: false })}
           className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
           title="사전계산된 모든 종목 × 모든 전략 매트릭스에서 필터링해 즉시 조회"
         >
           <LayoutGrid className="w-3.5 h-3.5" />
           전략 매트릭스 (사전계산) →
-        </a>
+        </button>
       </div>
 
       {/* 비교 모드 안내 */}
