@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import dynamic from 'next/dynamic'
 import {
   LayoutDashboard, Link2, Target, TrendingUp, TrendingDown, Briefcase,
   Wallet, Activity, AlertCircle, OctagonX, Loader2,
   ArrowRight, Plus, Play, Pause, Trash2, BarChart3,
   Zap, GitCompare, Search, Brain, Users, Trophy, Cpu,
+  LayoutGrid,
 } from 'lucide-react'
 import ConnectContent from './ConnectContent'
 import TradingContent from './TradingContent'
@@ -25,8 +27,14 @@ import RLModelsContent from './RLModelsContent'
 import StrategyBuilder from './StrategyBuilder/StrategyBuilder'
 import type { InvestmentStrategy } from '@/types/investment'
 
+// 매트릭스는 초기 로드에 포함하지 않음 (chunk 분리 — 들어갈 때만 로드)
+const MatrixContent = dynamic(() => import('./Matrix/MatrixContent'), {
+  loading: () => <div className="p-8 text-sm text-gray-500">매트릭스 로딩 중...</div>,
+  ssr: false,
+})
+
 type SubTab =
-  | 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'screener'
+  | 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'matrix' | 'screener'
   | 'smart-money' | 'trading' | 'psychology' | 'rankings' | 'rl-models' | 'portfolio'
 
 const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
@@ -35,6 +43,7 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'strategy', label: '전략 관리', icon: Target },
   { id: 'daytrading', label: '단타 (분봉)', icon: Zap },
   { id: 'compare', label: '전략 비교', icon: GitCompare },
+  { id: 'matrix', label: '전략 매트릭스', icon: LayoutGrid },
   { id: 'rankings', label: '전략 랭킹', icon: Trophy },
   { id: 'screener', label: '종목 스크리너', icon: Search },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain },
@@ -45,7 +54,7 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
 ]
 
 const SUB_TAB_IDS = new Set<SubTab>([
-  'dashboard', 'connect', 'strategy', 'daytrading', 'compare', 'screener',
+  'dashboard', 'connect', 'strategy', 'daytrading', 'compare', 'matrix', 'screener',
   'smart-money', 'trading', 'psychology', 'rankings', 'rl-models', 'portfolio',
 ])
 
@@ -275,6 +284,9 @@ export default function InvestmentTab() {
         )}
         {!inInlineView && subTab === 'compare' && (
           <CompareContent />
+        )}
+        {!inInlineView && subTab === 'matrix' && (
+          <MatrixContent />
         )}
         {!inInlineView && subTab === 'screener' && (
           <ScreenerContent />

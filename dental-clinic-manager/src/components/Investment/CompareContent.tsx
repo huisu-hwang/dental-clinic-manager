@@ -500,7 +500,7 @@ function LiveCompareSection() {
           </p>
         </div>
         <a
-          href="/investment/compare/matrix"
+          href="/dashboard?tab=investment&sub=matrix"
           className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
           title="사전계산된 모든 종목 × 모든 전략 매트릭스에서 필터링해 즉시 조회"
         >
