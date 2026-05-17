@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PeriodWindow, MarketFilter, SortKey, SortDir } from './types'
+import { searchKRTicker } from '@/lib/krTickerDict'
+import { searchUSTicker } from '@/lib/usTickerDict'
 
 interface Props {
   market: MarketFilter
@@ -208,50 +210,124 @@ export default function MatrixFilters(props: Props) {
 }
 
 /**
+ * 한글/영문/코드 토큰 1개를 ticker 코드로 변환.
+ * 매칭 안 되면 raw token 을 그대로 반환 (사용자가 미등록 종목 코드 직접 입력한 경우).
+ */
+function resolveToken(token: string): { ticker: string; matched: { ticker: string; name: string } | null } {
+  const t = token.trim()
+  if (!t) return { ticker: '', matched: null }
+
+  // 1) KR 6자리 숫자 코드 → 그대로
+  if (/^\d{6}$/.test(t)) return { ticker: t, matched: null }
+  // 2) 영문/숫자 조합으로만 1~5자 → US ticker 로 그대로 시도 + dict 매칭
+  if (/^[A-Za-z][A-Za-z0-9.\-]{0,9}$/.test(t)) {
+    const upper = t.toUpperCase()
+    const us = searchUSTicker(upper, 1)
+    if (us.length > 0 && us[0].ticker.toUpperCase() === upper) {
+      return { ticker: us[0].ticker, matched: { ticker: us[0].ticker, name: us[0].name } }
+    }
+    // dict 매칭 없어도 사용자가 입력한 ticker 그대로 시도 (등록 안 된 미국 종목 가능성)
+    return { ticker: upper, matched: null }
+  }
+
+  // 3) 한글 또는 한영 혼합 → KR 우선 검색, 없으면 US 검색
+  const kr = searchKRTicker(t, 1)
+  if (kr.length > 0) {
+    return { ticker: kr[0].ticker, matched: { ticker: kr[0].ticker, name: kr[0].name } }
+  }
+  const us = searchUSTicker(t, 1)
+  if (us.length > 0) {
+    return { ticker: us[0].ticker, matched: { ticker: us[0].ticker, name: us[0].name } }
+  }
+  return { ticker: t, matched: null }
+}
+
+/**
  * 종목 필터 입력 — self-isolated.
  * 외부 loading state / re-render 로 인해 input 이 disabled 되거나 value 가 reset 되는
  * 문제를 차단하기 위해 local state 로 보관. 350ms 디바운스 후 부모(onCommit)에 전달.
+ *
+ * 한글/영문 종목명 입력 지원: '삼성전자', '애플' 같은 토큰을 ticker 코드로 자동 변환하여
+ * 부모에 전달 (UI 에는 사용자가 친 raw 텍스트 유지 + 변환 결과 안내 표시).
  */
 function TickersInput({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
   const [local, setLocal] = useState(value)
-  // 부모가 외부에서 강제로 비우는 경우(예: reset 버튼) 동기화
   const lastExternalRef = useRef(value)
+
   useEffect(() => {
     if (value !== lastExternalRef.current) {
       lastExternalRef.current = value
       setLocal(value)
     }
   }, [value])
-  useEffect(() => {
-    const id = setTimeout(() => {
-      lastExternalRef.current = local
-      onCommit(local)
-    }, 350)
-    return () => clearTimeout(id)
-    // onCommit 이 새 reference 일 수 있으나 의존성 추가 시 무한루프 → eslint disable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  // raw 토큰 → resolved ticker 배열 (입력 즉시 매칭 결과 보여줌)
+  const resolved = useMemo(() => {
+    const tokens = local.split(',').map(s => s.trim()).filter(Boolean)
+    return tokens.map(t => ({ raw: t, ...resolveToken(t) }))
   }, [local])
 
-  const tickerCount = local.split(',').map(s => s.trim()).filter(Boolean).length
+  useEffect(() => {
+    const id = setTimeout(() => {
+      // 부모에는 변환된 ticker 코드만 전달
+      const tickers = resolved.map(r => r.ticker).filter(Boolean).join(',')
+      lastExternalRef.current = tickers
+      onCommit(tickers)
+    }, 350)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolved])
+
+  const hasUnresolved = resolved.some(r => !r.matched && !/^\d{6}$/.test(r.raw) && !/^[A-Z][A-Z0-9.\-]*$/.test(r.raw))
 
   return (
     <div>
       <div className="mb-2 text-sm font-medium text-gray-700">
         종목 필터{' '}
         <span className="text-xs text-gray-400">
-          (콤마구분 · 비우면 전체 · KR=6자리코드 005930 / US=티커 AAPL)
+          (콤마구분 · 비우면 전체 · 한글·영문·코드 모두 지원: 삼성전자, 애플, 005930, AAPL)
         </span>
       </div>
       <input
         type="text"
         value={local}
         onChange={e => setLocal(e.target.value)}
-        placeholder="예: 005930, 000660, AAPL, TSLA"
+        placeholder="예: 삼성전자, 애플, 카카오, TSLA"
         className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
-      {tickerCount > 0 && (
-        <div className="mt-1 text-xs text-blue-600">
-          {tickerCount}개 종목 필터 적용 중 (Leaderboard·Grid 모두)
+      {resolved.length > 0 && (
+        <div className="mt-1.5 space-y-0.5">
+          <div className="text-xs text-blue-600">
+            {resolved.length}개 종목 필터 적용 중 (Leaderboard·Grid 모두)
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {resolved.map((r, i) => (
+              <span
+                key={`${r.raw}-${i}`}
+                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-mono ${
+                  r.matched
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+                title={r.matched ? `${r.matched.name} (${r.matched.ticker})` : `${r.raw} (사전 미등록 — ticker 그대로 검색)`}
+              >
+                {r.matched ? (
+                  <>
+                    <span>{r.matched.name}</span>
+                    <span className="text-blue-400">→</span>
+                    <span>{r.ticker}</span>
+                  </>
+                ) : (
+                  <span>{r.ticker}</span>
+                )}
+              </span>
+            ))}
+          </div>
+          {hasUnresolved && (
+            <div className="text-[11px] text-amber-700">
+              일부 입력은 종목명 사전에서 매칭되지 않았습니다. 정확한 종목명 또는 ticker 코드를 입력해 보세요.
+            </div>
+          )}
         </div>
       )}
     </div>
