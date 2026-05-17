@@ -41,33 +41,42 @@ async function fetchLogoBuffer(logoUrl: string): Promise<Buffer | null> {
   }
 }
 
-async function loadClinicBrand(clinicId: string): Promise<{ logoUrl: string; nameKo: string; nameEn: string | null } | null> {
+async function loadClinicBrand(clinicId: string): Promise<{ logoUrl: string; nameKo: string; nameEn: string | null; primaryColor: string | null } | null> {
   const admin = getSupabaseAdmin();
   if (!admin) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (admin as any)
     .from('clinic_brand_assets')
-    .select('logo_url, name_ko, name_en')
+    .select('logo_url, name_ko, name_en, primary_color')
     .eq('clinic_id', clinicId)
     .maybeSingle();
   const logoUrl = (data?.logo_url as string | undefined)?.trim();
   const nameKo = ((data?.name_ko as string | undefined) ?? '').trim();
   const nameEn = ((data?.name_en as string | undefined) ?? '').trim() || null;
+  const primaryColor = ((data?.primary_color as string | undefined) ?? '').trim() || null;
   if (!logoUrl || !nameKo) return null;
-  return { logoUrl, nameKo, nameEn };
+  return { logoUrl, nameKo, nameEn, primaryColor };
+}
+
+function isValidHexColor(s: string | null): s is string {
+  return !!s && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(s);
 }
 
 /**
- * 클리닉 푸터 PNG (둥근 흰 박스 안에 로고+클리닉명) 를 satori 로 합성.
- * 클리닉당 메모리 캐시 — 한 클리닉에서 여러 이미지를 만들어도 1회만 합성.
+ * 클리닉 푸터 PNG (가로 풀폭 흰 띠 안에 로고+클리닉명) 를 satori 로 합성.
+ * 풀폭 띠 형태이므로 AI 가 그린 가짜 클리닉명/로고가 있어도 자연스럽게 완전히 덮어 가림.
+ * 상단에 브랜드 컬러 1px 라인으로 시각적 분리.
+ * 클리닉당 + 가로폭당 메모리 캐시 — 한 클리닉에서 여러 이미지를 만들어도 1회만 합성.
  */
 async function renderFooterPng(
   clinicId: string,
   logoUrl: string,
   nameKo: string,
-  targetWidthPx: number,
+  primaryColor: string | null,
+  imageWidthPx: number,
+  imageHeightPx: number,
 ): Promise<{ buffer: Buffer; width: number; height: number } | null> {
-  const cacheKey = `${clinicId}::${targetWidthPx}`;
+  const cacheKey = `${clinicId}::${imageWidthPx}x${imageHeightPx}`;
   const cached = FOOTER_CACHE.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
     return { buffer: cached.buffer, width: cached.width, height: cached.height };
@@ -80,13 +89,16 @@ async function renderFooterPng(
     const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
     const logoDataUrl = `data:${mime};base64,${logoBuf.toString('base64')}`;
 
-    // satori 가 가변 폰트 메트릭에 약하므로 고정 사이즈 SVG 합성.
-    // 박스 비율: width:height = 5:1 (가로형 명함 비율)
-    const W = targetWidthPx;
-    const H = Math.round(W / 5);
-    const padding = Math.round(H * 0.18);
-    const logoBoxSize = Math.round(H * 0.62);
-    const fontSize = Math.round(H * 0.42);
+    // 풀폭 푸터 바: 이미지 가로 전체, 높이 = 이미지 짧은 변의 12%
+    const W = imageWidthPx;
+    const shortSide = Math.min(imageWidthPx, imageHeightPx);
+    const H = Math.round(shortSide * 0.12);
+    const accentLineHeight = Math.max(2, Math.round(H * 0.04));
+    const logoSize = Math.round(H * 0.56);
+    const fontSize = Math.round(H * 0.36);
+    const gap = Math.round(H * 0.18);
+
+    const accentColor = isValidHexColor(primaryColor) ? primaryColor : '#0ea5e9';
 
     const fonts = await loadFonts();
     const element = React.createElement(
@@ -96,27 +108,31 @@ async function renderFooterPng(
           width: '100%',
           height: '100%',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          flexDirection: 'column',
           background: 'white',
-          borderRadius: `${Math.round(H * 0.4)}px`,
-          padding: `${padding}px ${Math.round(padding * 2)}px`,
-          boxSizing: 'border-box',
         },
       },
+      // 상단 brand 컬러 라인
+      React.createElement('div', {
+        style: { width: '100%', height: `${accentLineHeight}px`, background: accentColor },
+      }),
+      // 본문 (로고 + 클리닉명, 가운데 정렬)
       React.createElement(
         'div',
         {
           style: {
+            flex: '1 1 0',
             display: 'flex',
             alignItems: 'center',
-            gap: `${Math.round(padding * 0.8)}px`,
+            justifyContent: 'center',
+            gap: `${gap}px`,
+            paddingTop: '2px',
           },
         },
         React.createElement('img', {
           src: logoDataUrl,
-          width: logoBoxSize,
-          height: logoBoxSize,
+          width: logoSize,
+          height: logoSize,
           style: { objectFit: 'contain' },
         }),
         React.createElement(
@@ -146,10 +162,11 @@ async function renderFooterPng(
 }
 
 /**
- * 생성된 이미지(base64 PNG)에 클리닉 푸터(로고+클리닉명)를 하단 중앙에 합성한다.
- * - 푸터 폭: 이미지 폭의 38%
- * - 위치: 하단 중앙, 하단 패딩 = 짧은 변의 3%
- * - 흰 라운드 배경 박스로 다양한 배경에서도 식별성 확보
+ * 생성된 이미지(base64 PNG)에 클리닉 푸터(로고+클리닉명)를 하단에 가로 풀폭으로 합성한다.
+ * - 푸터 폭: 이미지 가로 100%
+ * - 푸터 높이: 짧은 변의 12% (AI 가 비워둔 영역에 정확히 맞춤)
+ * - AI 가 그린 가짜 클리닉명/로고가 있어도 흰 배경 풀폭 띠로 자연스럽게 덮어 가림
+ * - 상단에 brand primary color 1~2px 라인으로 시각적 분리
  */
 export async function overlayClinicLogo(
   imageBase64: string,
@@ -165,15 +182,19 @@ export async function overlayClinicLogo(
     const meta = await base.metadata();
     const W = meta.width || 1024;
     const H = meta.height || 1024;
-    const shortSide = Math.min(W, H);
-    const footerW = Math.round(W * 0.38);
-    const padBottom = Math.round(shortSide * 0.04);
 
-    const footer = await renderFooterPng(clinicId, brand.logoUrl, brand.nameKo, footerW);
+    const footer = await renderFooterPng(
+      clinicId,
+      brand.logoUrl,
+      brand.nameKo,
+      brand.primaryColor,
+      W,
+      H,
+    );
     if (!footer) return imageBase64;
 
-    const left = Math.round((W - footer.width) / 2);
-    const top = H - footer.height - padBottom;
+    const left = 0;
+    const top = H - footer.height;
 
     const out = await base
       .composite([{ input: footer.buffer, left, top }])
