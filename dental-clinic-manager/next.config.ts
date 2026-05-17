@@ -38,6 +38,18 @@ const nextConfig: NextConfig = {
     BUILD_TIMESTAMP: BUILD_ID.replace(/^build-/, ''),
     NEXT_BUILD_ID: BUILD_ID,
   },
+  async redirects() {
+    return [
+      // 매트릭스는 dashboard 통합 sub 탭으로만 진입. 별도 라우트로 들어오면
+      // /investment/layout.tsx 의 투자 전용 사이드바가 잠깐 보였다가 redirect 되어
+      // 사용자가 "새 페이지로 열린다" 고 느낌. 서버 단 영구 redirect 로 layout 노출 자체를 차단.
+      {
+        source: '/investment/compare/matrix',
+        destination: '/dashboard?tab=investment&sub=matrix',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default nextConfig;
