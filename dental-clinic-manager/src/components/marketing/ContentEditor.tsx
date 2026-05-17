@@ -157,16 +157,20 @@ function markdownToHtml(
       continue
     }
 
-    // 마크다운 이미지 ![alt](url) - 임상 사진 등
+    // 마크다운 이미지 ![alt](url) - 임상 사진 / brand 이미지 (의료법·텍스트 카드)
+    // 주의: alt 가 비어있는 ![](url) 도 허용해야 함 (brand 이미지가 ![](url) 형식으로 들어옴)
     if (/^!\[.*?\]\(.+?\)$/.test(trimmed)) {
       closeList()
-      const imgMatch = trimmed.match(/^!\[(.+?)\]\((.+?)\)$/)
+      const imgMatch = trimmed.match(/^!\[(.*?)\]\((.+?)\)$/)
       if (imgMatch) {
         const alt = imgMatch[1]
-        const img = images?.[imageIndex]
-        const url = img?.path || imgMatch[2]
-        imageIndex++
-        htmlParts.push(`<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" />`)
+        const url = imgMatch[2]
+        // brand 이미지(marketing-brand 경로)는 URL 그대로 사용 — images 배열 인덱스 사용 금지
+        const isBrand = /marketing-brand\//.test(url)
+        const img = isBrand ? undefined : images?.[imageIndex]
+        const finalUrl = img?.path || url
+        if (!isBrand) imageIndex++
+        htmlParts.push(`<img src="${escapeHtml(finalUrl)}" alt="${escapeHtml(alt)}" />`)
       }
       continue
     }
