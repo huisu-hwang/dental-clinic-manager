@@ -36,6 +36,10 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      // 클라이언트가 즉시 첫 body chunk 를 받도록 보장 (Vercel cold start / dev 첫 컴파일 시
+      // 브라우저 fetch 가 응답 body 없이 timeout 되는 "network error" 방지)
+      sendEvent(controller, { heartbeat: true });
+
       let keepalive: ReturnType<typeof setInterval> | null = null;
       try {
         // 인증 확인
