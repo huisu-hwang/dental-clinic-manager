@@ -7,6 +7,8 @@ import Link from 'next/link';
 interface Props {
   clinicNameForCopy: string;
   keyword: string;
+  /** 글 제목(주제) — 텍스트 카드 자동 카피의 기본값으로 사용 */
+  topic?: string;
   value: BrandImageOptions;
   onChange: (next: BrandImageOptions) => void;
   disabled?: boolean;
@@ -18,21 +20,22 @@ const POSITIONS: { key: 'top' | 'middle' | 'bottom'; label: string }[] = [
   { key: 'bottom', label: '끝' },
 ];
 
-export function BrandImageSection({ clinicNameForCopy, keyword, value, onChange, disabled }: Props) {
+export function BrandImageSection({ clinicNameForCopy, keyword, topic, value, onChange, disabled }: Props) {
   const { assets, photos } = useBrandAssets();
   const [copyTouched, setCopyTouched] = useState(false);
 
   useEffect(() => {
     if (copyTouched) return;
-    // 클리닉명과 키워드 중 채워진 값만 합쳐 자동 카피 생성.
-    // 둘 다 비어있으면 빈 문자열을 유지(서버에서 글 제목으로 자동 채움).
-    const parts = [clinicNameForCopy, keyword].map((s) => (s || '').trim()).filter(Boolean);
-    const auto = parts.join(' / ');
+    // 기본 카피는 글 제목(topic) 으로 자동 세팅.
+    // 제목이 비어있으면 키워드 → 클리닉명 순으로 폴백, 모두 비면 빈 문자열 유지(서버에서 글 제목으로 자동 채움).
+    const auto = (topic || '').trim()
+      || (keyword || '').trim()
+      || (clinicNameForCopy || '').trim();
     if (auto !== value.title.copy) {
       onChange({ ...value, title: { ...value.title, copy: auto } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clinicNameForCopy, keyword, copyTouched]);
+  }, [topic, keyword, clinicNameForCopy, copyTouched]);
 
   const togglePosition = (
     section: keyof BrandImageOptions,

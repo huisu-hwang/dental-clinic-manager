@@ -892,6 +892,7 @@ export default function NewMarketingPostPage() {
             <BrandImageSection
               clinicNameForCopy=""
               keyword={keyword}
+              topic={topic}
               value={brandImageOptions}
               onChange={setBrandImageOptions}
               disabled={isFormDisabled}
