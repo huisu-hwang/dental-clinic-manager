@@ -6,7 +6,6 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import { logApiUsage } from './api-usage-logger';
 import { getImageProvider, type ImageProvider } from './image-provider-setting';
-import { overlayClinicLogo } from './brand/logo-overlay';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
@@ -134,13 +133,23 @@ function buildBrandDesignPrefix(ctx: BrandPromptCtx | null, imageStyle?: ImageSt
     } else {
       lines.push('4) 하단(전체 높이의 60~80% 위치): 진한 브랜드 컬러 박스 + 체크마크(✓) 핵심 포인트 한 줄.');
     }
-    // 5번 푸터 영역은 더 이상 AI 가 그리지 않는다. sharp 로 진짜 클리닉 로고/한글 클리닉명을
-    // 가로 풀폭 푸터 바로 후처리 합성하므로 AI 가 가짜 텍스트/로고를 만들면 충돌·중복 발생.
-    lines.push(
-      '5) **최하단 약 12~14% 높이의 푸터 영역은 반드시 빈 흰색 단색 배경으로 비워두세요**. ' +
-        '이 영역에는 텍스트·로고·아이콘·도형·장식·라인 등 어떤 요소도 그리지 마세요. ' +
-        '클리닉명·브랜드 로고는 이 영역에 별도 합성으로 추가될 것이므로 AI 가 미리 그리면 충돌합니다.',
-    );
+    // 5번: AI 가 푸터를 직접 그리도록 지시 (옵션 A — 한 번에 통합 생성).
+    // 한글 클리닉명을 정확히 명시하고, 로고 파일을 변형 없이 사용하도록 명시.
+    if (nameKo) {
+      const footerLines = [
+        `5) **최하단 푸터 (전체 높이의 약 88~98% 영역)**: 흰 배경 가로 풀폭 띠. ` +
+          `가운데에 클리닉 로고와 함께 한글 클리닉명 **"${nameKo}"** 를 가로 정렬로 배치하세요.`,
+        `   - 한글 텍스트는 반드시 정확히 "${nameKo}" 그대로 렌더링 (자모 깨짐·오탈자·다른 글자 금지).`,
+        `   - **로고 파일을 변형하지 마세요**: 클리닉 공식 로고는 원본 디자인의 비율·형태·색상·캐릭터 표정·디테일을 ` +
+          `그대로 유지해야 합니다. 양식화(stylize)·단순화(simplify)·재해석(reinterpret)·색상 변경·구성 요소 추가/제거 ` +
+          `등 어떤 변형도 금지. 로고는 항상 동일한 원본 형태로 보여야 합니다.`,
+        `   - 푸터 영역 위쪽에 ${primary || '주 브랜드 컬러'} 의 얇은 가로 라인(2~3px)으로 본문과 시각적으로 분리.`,
+        `   - 푸터 높이는 전체 이미지 높이의 약 10~12% 정도, 로고는 푸터 높이의 60~70% 크기로 작게.`,
+      ];
+      lines.push(...footerLines);
+    } else {
+      lines.push('5) 최하단 푸터는 비워두거나 흰 단색 배경으로 마무리.');
+    }
     lines.push('');
     lines.push('## 프롬프트 → 카드 텍스트 매핑 (매우 중요)');
     lines.push('아래 "이미지 설명" 이 `TITLE=...| CHECK=...` 형식이면 다음과 같이 그대로 카드 텍스트로 사용하세요:');
@@ -289,9 +298,9 @@ export async function generateBlogImage(
     });
   }
 
-  // 로고 워터마크 합성: AI 가 생성한 가짜 로고 영역 위에 실제 클리닉 로고를 우상단에 오버레이.
-  // 실패해도 원본을 반환하므로 이미지 생성 전체 흐름은 보장됨.
-  const imageBase64 = await overlayClinicLogo(result.imageBase64, resolvedClinicId);
+  // 옵션 A: AI 프롬프트에 한글 클리닉명·로고 변형 금지를 직접 명시 → AI 가 한 번에 통합 생성.
+  // (sharp 후처리 합성은 비활성. 시각적 충돌을 줄이고 통일된 디자인을 위함.)
+  const imageBase64 = result.imageBase64;
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt, generationSessionId, resolvedClinicId);
@@ -367,8 +376,8 @@ export async function generatePlatformImage(
 
   const fileName = await generateImageFileName(`${platform}_${prompt}`, generationSessionId, generationClinicId);
 
-  // 플랫폼 이미지도 로고 워터마크 합성 (블로그 이미지와 일관성)
-  const imageBase64 = await overlayClinicLogo(result.imageBase64, generationClinicId);
+  // 옵션 A: 플랫폼 이미지도 AI 프롬프트로 로고/클리닉명을 통합 생성 (sharp 후처리 합성 비활성)
+  const imageBase64 = result.imageBase64;
 
   return { imageBase64, fileName };
 }
