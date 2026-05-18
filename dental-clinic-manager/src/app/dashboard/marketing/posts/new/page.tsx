@@ -123,6 +123,7 @@ export default function NewMarketingPostPage() {
     medicalLaw: { enabled: true, positions: ['top'] },
     title:      { enabled: true, positions: ['top'], copy: '' },
     photo:      { enabled: true, positions: ['bottom'], mode: 'random' },
+    imageSet:   { enabled: false, positions: ['bottom'] },
   })
   const seoPreview = useSeoPreview()
   // 키워드 mismatch 가드: 입력 키워드와 분석된 키워드가 일치할 때만 결과 표시 (이전 분석 잔존 방지)

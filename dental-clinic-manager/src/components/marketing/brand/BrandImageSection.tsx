@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useBrandAssets } from '@/hooks/useBrandAssets';
+import { useBrandImageSets } from '@/hooks/useBrandImageSets';
 import type { BrandImageOptions } from '@/types/brand';
 import Link from 'next/link';
 
@@ -22,6 +23,7 @@ const POSITIONS: { key: 'top' | 'middle' | 'bottom'; label: string }[] = [
 
 export function BrandImageSection({ clinicNameForCopy, keyword, topic, value, onChange, disabled }: Props) {
   const { assets, photos } = useBrandAssets();
+  const { sets } = useBrandImageSets();
   const [copyTouched, setCopyTouched] = useState(false);
 
   useEffect(() => {
@@ -41,12 +43,23 @@ export function BrandImageSection({ clinicNameForCopy, keyword, topic, value, on
     section: keyof BrandImageOptions,
     pos: 'top' | 'middle' | 'bottom',
   ) => {
-    const cur = value[section].positions;
+    const cur = value[section]?.positions ?? [];
     const next = cur.includes(pos) ? cur.filter(p => p !== pos) : [...cur, pos];
+    // imageSet 은 optional 이라 기본 구조를 채워서 안전하게 전개
+    if (section === 'imageSet') {
+      const base = value.imageSet ?? { enabled: false, positions: [], setId: undefined };
+      onChange({ ...value, imageSet: { ...base, positions: next } });
+      return;
+    }
     onChange({ ...value, [section]: { ...value[section], positions: next } });
   };
 
   const setEnabled = (section: keyof BrandImageOptions, enabled: boolean) => {
+    if (section === 'imageSet') {
+      const base = value.imageSet ?? { enabled: false, positions: ['bottom'] as ('top'|'middle'|'bottom')[], setId: undefined };
+      onChange({ ...value, imageSet: { ...base, enabled } });
+      return;
+    }
     onChange({ ...value, [section]: { ...value[section], enabled } });
   };
 
@@ -87,6 +100,54 @@ export function BrandImageSection({ clinicNameForCopy, keyword, topic, value, on
           placeholder="중앙 큰 글씨 (자동 채움 — 수정 가능)"
           className="mt-2 w-full px-2 py-1.5 border border-at-border rounded text-xs"
         />
+      </Row>
+
+      <Row
+        label="끝맺음 이미지 세트 (LRU 순환 + 동적 변형)"
+        enabled={value.imageSet?.enabled ?? false}
+        onEnabledChange={(v) => setEnabled('imageSet', v)}
+        disabled={disabled || sets.length === 0}
+      >
+        {sets.length === 0 ? (
+          <p className="text-xs text-at-text-weak">
+            세트가 없습니다 —{' '}
+            <Link href="/dashboard/marketing/brand" className="text-at-accent underline">설정 페이지</Link>
+            에서 먼저 세트를 만들어주세요.
+          </p>
+        ) : (
+          <>
+            <div className="mt-2">
+              <label className="block text-xs text-at-text-secondary mb-1">사용할 세트</label>
+              <select
+                value={value.imageSet?.setId ?? ''}
+                onChange={(e) => {
+                  const base = value.imageSet ?? { enabled: false, positions: ['bottom' as const] };
+                  onChange({ ...value, imageSet: { ...base, setId: e.target.value || undefined } });
+                }}
+                disabled={disabled || !(value.imageSet?.enabled)}
+                className="w-full px-2 py-1.5 border border-at-border rounded text-xs disabled:bg-at-surface-alt"
+              >
+                <option value="">선택하세요…</option>
+                {sets.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.cards.length}장)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-2">
+              <PositionPicker
+                positions={value.imageSet?.positions ?? []}
+                onToggle={(p) => togglePosition('imageSet', p)}
+                disabled={disabled || !(value.imageSet?.enabled)}
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-at-text-weak leading-relaxed">
+              매번 다른 카드가 LRU 순서로 자동 선택되며, 발행 시점에 크롭·색조·텍스트 오버레이를 미세 변형해
+              네이버 유사이미지 판독을 회피합니다.
+            </p>
+          </>
+        )}
       </Row>
 
       <Row

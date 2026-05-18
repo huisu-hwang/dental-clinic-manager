@@ -243,7 +243,11 @@ export async function POST(request: NextRequest) {
         // 브랜드 이미지 마커를 합성된 이미지 URL로 치환
         // ([BRAND_IMAGE:...] 만 처리. AI 이미지용 [IMAGE: ...] 마커는 영향 없음)
         try {
-          result.body = await resolveBrandMarkers(result.body, { clinicId: userData.clinic_id });
+          result.body = await resolveBrandMarkers(result.body, {
+            clinicId: userData.clinic_id,
+            articleTitle: result.title,
+            keyword: body.keyword,
+          });
         } catch (brandErr) {
           console.error('[API] 브랜드 마커 리졸브 실패:', brandErr);
         }

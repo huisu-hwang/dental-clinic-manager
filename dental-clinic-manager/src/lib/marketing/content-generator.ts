@@ -88,6 +88,12 @@ function insertBrandMarkers(body: string, opts?: BrandImageOptions, articleTitle
       : `mode=${opts.photo.mode}`;
     for (const pos of opts.photo.positions) buckets[pos].push(`[BRAND_IMAGE:photo|${tail}]`);
   }
+  if (opts.imageSet?.enabled && opts.imageSet.setId) {
+    // 끝맺음 브랜드 이미지 세트 — LRU 순환 + sharp 동적 변형
+    for (const pos of opts.imageSet.positions) {
+      buckets[pos].push(`[BRAND_IMAGE:image_set|set_id=${opts.imageSet.setId}]`);
+    }
+  }
 
   // 우선순위 정렬: title → medical_law → photo
   // (네이버 검색 첫 이미지 = 글 최상단 이미지. 텍스트 카드가 글 주제를 보여주도록 title 을 최상위로)

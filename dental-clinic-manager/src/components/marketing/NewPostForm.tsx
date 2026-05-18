@@ -136,6 +136,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
     medicalLaw: { enabled: true, positions: ['top'] },
     title:      { enabled: true, positions: ['top'], copy: '' },
     photo:      { enabled: true, positions: ['bottom'], mode: 'random' },
+    imageSet:   { enabled: false, positions: ['bottom'] },
   })
 
   // ── 생성 / 저장 상태 (컨텍스트에서 가져옴) ──
