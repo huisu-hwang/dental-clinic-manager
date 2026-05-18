@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { seedDefaultPromptsIfNeeded } from './seed-prompts';
 import { logApiUsage } from './api-usage-logger';
 import { getImageProvider, type ImageProvider } from './image-provider-setting';
+import { overlayClinicLogo } from './brand/logo-overlay';
 import type { GeneratedImageMeta, ImageMarker, ImageStyleOption, ImageVisualStyle } from '@/types/marketing';
 
 // ============================================
@@ -74,6 +75,8 @@ interface BrandPromptCtx {
   primary_color?: string | null;
   secondary_color?: string | null;
   slogan?: string | null;
+  /** 로고 URL — 존재하면 AI 생성 후 sharp 로 푸터에 정확히 합성 (AI 가 그린 가짜 로고와 충돌 회피) */
+  logo_url?: string | null;
 }
 
 async function loadBrandPromptContext(clinicId: string): Promise<BrandPromptCtx | null> {
@@ -81,7 +84,7 @@ async function loadBrandPromptContext(clinicId: string): Promise<BrandPromptCtx 
   if (!admin) return null;
   const { data } = await (admin as any)
     .from('clinic_brand_assets')
-    .select('name_ko, name_en, primary_color, secondary_color, slogan')
+    .select('name_ko, name_en, primary_color, secondary_color, slogan, logo_url')
     .eq('clinic_id', clinicId)
     .maybeSingle();
   return (data as BrandPromptCtx) || null;
@@ -133,23 +136,17 @@ function buildBrandDesignPrefix(ctx: BrandPromptCtx | null, imageStyle?: ImageSt
     } else {
       lines.push('4) 하단(전체 높이의 60~80% 위치): 진한 브랜드 컬러 박스 + 체크마크(✓) 핵심 포인트 한 줄.');
     }
-    // 5번: AI 가 푸터를 직접 그리도록 지시 (옵션 A — 한 번에 통합 생성).
-    // 한글 클리닉명을 정확히 명시하고, 로고 파일을 변형 없이 사용하도록 명시.
-    if (nameKo) {
-      const footerLines = [
-        `5) **최하단 푸터 (전체 높이의 약 88~98% 영역)**: 흰 배경 가로 풀폭 띠. ` +
-          `가운데에 클리닉 로고와 함께 한글 클리닉명 **"${nameKo}"** 를 가로 정렬로 배치하세요.`,
-        `   - 한글 텍스트는 반드시 정확히 "${nameKo}" 그대로 렌더링 (자모 깨짐·오탈자·다른 글자 금지).`,
-        `   - **로고 파일을 변형하지 마세요**: 클리닉 공식 로고는 원본 디자인의 비율·형태·색상·캐릭터 표정·디테일을 ` +
-          `그대로 유지해야 합니다. 양식화(stylize)·단순화(simplify)·재해석(reinterpret)·색상 변경·구성 요소 추가/제거 ` +
-          `등 어떤 변형도 금지. 로고는 항상 동일한 원본 형태로 보여야 합니다.`,
-        `   - 푸터 영역 위쪽에 ${primary || '주 브랜드 컬러'} 의 얇은 가로 라인(2~3px)으로 본문과 시각적으로 분리.`,
-        `   - 푸터 높이는 전체 이미지 높이의 약 10~12% 정도, 로고는 푸터 높이의 60~70% 크기로 작게.`,
-      ];
-      lines.push(...footerLines);
-    } else {
-      lines.push('5) 최하단 푸터는 비워두거나 흰 단색 배경으로 마무리.');
-    }
+    // 5번: 푸터 영역을 비워두고, 우리(서버)가 실제 로고 PNG 를 sharp 로 정확히 합성한다.
+    // - AI 가 그린 가상의 로고/클리닉명은 실제 로고와 모양이 달라서 브랜드 일관성 깨짐 → 사용 금지.
+    // - 푸터 영역을 빈 흰 배경으로 비워둬야 후처리 합성이 자연스럽게 겹쳐짐.
+    lines.push(
+      `5) **최하단 푸터 (전체 높이의 약 88~100% 영역, 짧은 변의 12% 높이)**: ` +
+        `반드시 순수 흰색(#FFFFFF) 배경만 두고 어떤 글자·아이콘·로고·도형·일러스트도 그리지 마세요. ` +
+        `이 영역은 서버에서 실제 클리닉 로고 PNG 와 한글 클리닉명을 후처리로 정확히 합성하므로, ` +
+        `AI 가 가상의 로고나 클리닉명을 그리면 실제 로고와 겹쳐 깨지게 됩니다.`,
+      `   - 푸터 위쪽 본문은 푸터 영역을 침범하지 않도록 충분한 여백 확보.`,
+      `   - 본문에 가상의 클리닉명·영문 브랜드·로고 마크 등을 임의로 추가하지 마세요 (헤더의 영문 클리닉명만 허용).`,
+    );
     lines.push('');
     lines.push('## 프롬프트 → 카드 텍스트 매핑 (매우 중요)');
     lines.push('아래 "이미지 설명" 이 `TITLE=...| CHECK=...` 형식이면 다음과 같이 그대로 카드 텍스트로 사용하세요:');
@@ -298,9 +295,12 @@ export async function generateBlogImage(
     });
   }
 
-  // 옵션 A: AI 프롬프트에 한글 클리닉명·로고 변형 금지를 직접 명시 → AI 가 한 번에 통합 생성.
-  // (sharp 후처리 합성은 비활성. 시각적 충돌을 줄이고 통일된 디자인을 위함.)
-  const imageBase64 = result.imageBase64;
+  // AI 생성 결과에 실제 클리닉 로고 PNG 를 sharp 로 후처리 합성 (옵션 B 복귀).
+  // 옵션 A(AI 가 직접 로고 그림) 는 실제 로고를 모르니까 가상의 로고를 그려 브랜드 일관성 깨짐 → 폐기.
+  // 프롬프트에서 푸터 영역을 비워두라고 강하게 지시했으므로 후처리 합성이 자연스럽게 겹쳐짐.
+  const imageBase64 = resolvedClinicId
+    ? await overlayClinicLogo(result.imageBase64, resolvedClinicId)
+    : result.imageBase64;
 
   // 2. 한글 파일명 생성
   const fileName = await generateImageFileName(prompt, generationSessionId, resolvedClinicId);
@@ -376,8 +376,10 @@ export async function generatePlatformImage(
 
   const fileName = await generateImageFileName(`${platform}_${prompt}`, generationSessionId, generationClinicId);
 
-  // 옵션 A: 플랫폼 이미지도 AI 프롬프트로 로고/클리닉명을 통합 생성 (sharp 후처리 합성 비활성)
-  const imageBase64 = result.imageBase64;
+  // 플랫폼 이미지도 실제 로고 PNG 를 sharp 로 후처리 합성 (옵션 B 복귀).
+  const imageBase64 = generationClinicId
+    ? await overlayClinicLogo(result.imageBase64, generationClinicId)
+    : result.imageBase64;
 
   return { imageBase64, fileName };
 }
