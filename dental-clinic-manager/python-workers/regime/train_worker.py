@@ -22,7 +22,7 @@ from regime.fetchers.fred_fetcher import fetch_all_fred
 from regime.fetchers.ecos_fetcher import fetch_all_ecos
 from regime.fetchers.price_fetcher import fetch_prices
 from regime.features.feature_engineer import compute_features
-from regime.labeling import heuristic_labels
+from regime.labeling import heuristic_labels, compute_current_signals
 from regime.macro_loader import load_macro
 from regime.models import hmm_voting, kernel_markov, reservoir_hypernet
 from regime.storage import upload_model
@@ -187,7 +187,8 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
             "probs": {s: float(v) for s, v in zip(STATES, last)},
         }
 
-    # 전환 확률 (HMM transmat 기반 — hmm_voting 의 HMM 사용)
+    # ── 국면 전환 예측 ── 두 가지 모델 분리 활용
+    # 1) HMM transition matrix (P^n) — 통계적 마르코프 전이
     transitions = {}
     if "hmm_voting" in trained:
         m_hmm = trained["hmm_voting"][0]
@@ -195,6 +196,22 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
         transitions = {f"{h}d": _n_step_transition(m_hmm["hmm"], m_hmm["state_map"],
                                                     current_hidden, h)
                        for h in [5, 10, 30]}
+
+    # 2) Reservoir Hypernet N-step ahead (Sun 2025 강점: 시계열 next-step 예측)
+    reservoir_predictions = {}
+    if "reservoir_hypernet" in trained:
+        try:
+            m_res = trained["reservoir_hypernet"][0]
+            nstep = reservoir_hypernet.predict_nstep_proba(m_res, X, [5, 10, 30])
+            reservoir_predictions = {
+                f"{h}d": {s: float(p) for s, p in zip(STATES, nstep[h])}
+                for h in [5, 10, 30]
+            }
+        except Exception as e:
+            print(f"  WARN reservoir n-step skipped: {e}")
+
+    # 판단 근거 시그널 (ret_20d, vol_60d, VIX + 규칙 매칭)
+    signals = compute_current_signals(feat)
 
     today = feat.index[-1].date()
     sb = get_supabase()
@@ -215,6 +232,8 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
         "state_probabilities": state_probs,
         "model_votes": model_votes,
         "transition_probabilities": transitions,
+        "reservoir_predictions": reservoir_predictions,
+        "signals": signals,
         "data_as_of": today.isoformat(),
     }, on_conflict="scope_type,scope_id,as_of_date,trigger_type").execute()
 

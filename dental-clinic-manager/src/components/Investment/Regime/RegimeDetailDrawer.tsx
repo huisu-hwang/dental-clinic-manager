@@ -9,6 +9,7 @@ import RegimeTimelineChart from './RegimeTimelineChart'
 import RegimeTransitionTable from './RegimeTransitionTable'
 import RegimeModelVotes from './RegimeModelVotes'
 import RegimeBestStrategies from './RegimeBestStrategies'
+import RegimeSignals from './RegimeSignals'
 
 const KR_MARKETS = new Set(['KOSPI', 'KOSDAQ'])
 
@@ -132,9 +133,15 @@ export default function RegimeDetailDrawer({ scope, scopeId, scopeLabel, run, on
           </section>
 
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-gray-800">N일 후 국면 전환 확률</h3>
+            <h3 className="mb-2 text-sm font-semibold text-gray-800">현재 국면 판단 근거</h3>
+            <RegimeSignals signals={run.signals} currentState={state} />
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-sm font-semibold text-gray-800">N일 후 국면 전환 예측</h3>
             <RegimeTransitionTable
               transitions={run.transition_probabilities ?? {}}
+              reservoirPredictions={run.reservoir_predictions}
               currentState={state}
             />
           </section>
