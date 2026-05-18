@@ -33,9 +33,16 @@ const MatrixContent = dynamic(() => import('./Matrix/MatrixContent'), {
   ssr: false,
 })
 
+// 시장 국면 분석 — chunk 분리
+const RegimeContent = dynamic(() => import('./Regime/RegimeContent'), {
+  loading: () => <div className="p-8 text-sm text-gray-500">시장 국면 분석 로딩 중...</div>,
+  ssr: false,
+})
+
 type SubTab =
   | 'dashboard' | 'connect' | 'strategy' | 'daytrading' | 'compare' | 'matrix' | 'screener'
   | 'smart-money' | 'trading' | 'psychology' | 'rankings' | 'rl-models' | 'portfolio'
+  | 'regime'
 
 const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
@@ -47,6 +54,7 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'rankings', label: '전략 랭킹', icon: Trophy },
   { id: 'screener', label: '종목 스크리너', icon: Search },
   { id: 'smart-money', label: '스마트머니 분석', icon: Brain },
+  { id: 'regime', label: '시장 국면', icon: Activity },
   { id: 'trading', label: '자동매매', icon: TrendingUp },
   { id: 'psychology', label: '심리 분석', icon: Users },
   { id: 'rl-models', label: 'RL 모델', icon: Cpu },
@@ -56,6 +64,7 @@ const SUB_TABS: { id: SubTab; label: string; icon: React.ElementType }[] = [
 const SUB_TAB_IDS = new Set<SubTab>([
   'dashboard', 'connect', 'strategy', 'daytrading', 'compare', 'matrix', 'screener',
   'smart-money', 'trading', 'psychology', 'rankings', 'rl-models', 'portfolio',
+  'regime',
 ])
 
 function isSubTab(v: string | null): v is SubTab {
@@ -293,6 +302,9 @@ export default function InvestmentTab() {
         )}
         {!inInlineView && subTab === 'smart-money' && (
           <SmartMoneyContent />
+        )}
+        {!inInlineView && subTab === 'regime' && (
+          <RegimeContent />
         )}
         {!inInlineView && subTab === 'trading' && (
           <TradingContent />
