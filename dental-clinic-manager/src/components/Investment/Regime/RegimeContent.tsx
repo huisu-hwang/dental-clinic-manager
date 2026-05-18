@@ -4,12 +4,14 @@ import { useState } from 'react'
 import dynamic from 'next/dynamic'
 
 const RegimeMarketGrid = dynamic(() => import('./RegimeMarketGrid'), { ssr: false })
+const RegimeSectorGrid = dynamic(() => import('./RegimeSectorGrid'), { ssr: false })
 const RegimeUserTickerTab = dynamic(() => import('./RegimeUserTickerTab'), { ssr: false })
 
-type Tab = 'markets' | 'tickers'
+type Tab = 'markets' | 'sectors' | 'tickers'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'markets', label: '시장 지수' },
+  { id: 'sectors', label: 'GICS 섹터' },
   { id: 'tickers', label: '내 종목 분석' },
 ]
 
@@ -47,6 +49,7 @@ export default function RegimeContent() {
       </div>
 
       {tab === 'markets' && <RegimeMarketGrid />}
+      {tab === 'sectors' && <RegimeSectorGrid />}
       {tab === 'tickers' && <RegimeUserTickerTab />}
     </div>
   )

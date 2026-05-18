@@ -38,6 +38,18 @@ def fetch_prices(ticker: str, market: str, since: date) -> pd.DataFrame:
         offset += PAGE_SIZE
 
     if not rows:
+        # cache 에 없는 ticker (ETF 등) → yahoo 직접 fallback
+        # KR 6자리 숫자는 .KS 접미사 시도, 실패하면 .KQ (KOSDAQ)
+        candidates = [ticker]
+        if ticker.isdigit() and len(ticker) == 6:
+            candidates = [f"{ticker}.KS", f"{ticker}.KQ"]
+        for cand in candidates:
+            try:
+                df = fetch_index_prices(cand, since)
+                if not df.empty:
+                    return df
+            except Exception:
+                continue
         return pd.DataFrame()
 
     df = pd.DataFrame(rows)

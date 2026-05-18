@@ -22,10 +22,33 @@ MARKETS = {
     "RUSSELL2000": {"market": "US", "ticker": "^RUT"},
 }
 
-# GICS 11 섹터 (Phase 2)
-GICS_SECTORS_KR = ["TECH","COMM","FIN","INDUS","CONS_DISC","CONS_STAPLE",
-                   "HEALTH","ENERGY","UTIL","MATERIAL","REIT"]
-GICS_SECTORS_US = GICS_SECTORS_KR[:]
+# GICS 11 섹터 — US 는 SPDR XL 시리즈 정확 매핑, KR 은 KODEX 일부만 (정확 매핑 가능한 것)
+SECTORS = {
+    # US (SPDR Select Sector ETF — GICS 공식 매핑)
+    "US_TECH":          {"market": "US", "ticker": "XLK",  "label": "Technology"},
+    "US_FIN":           {"market": "US", "ticker": "XLF",  "label": "Financials"},
+    "US_HEALTH":        {"market": "US", "ticker": "XLV",  "label": "Health Care"},
+    "US_ENERGY":        {"market": "US", "ticker": "XLE",  "label": "Energy"},
+    "US_INDUS":         {"market": "US", "ticker": "XLI",  "label": "Industrials"},
+    "US_CONS_DISC":     {"market": "US", "ticker": "XLY",  "label": "Consumer Discretionary"},
+    "US_CONS_STAPLE":   {"market": "US", "ticker": "XLP",  "label": "Consumer Staples"},
+    "US_UTIL":          {"market": "US", "ticker": "XLU",  "label": "Utilities"},
+    "US_MATERIAL":      {"market": "US", "ticker": "XLB",  "label": "Materials"},
+    "US_REIT":          {"market": "US", "ticker": "XLRE", "label": "Real Estate"},
+    "US_COMM":          {"market": "US", "ticker": "XLC",  "label": "Communication Services"},
+    # KR (KODEX 섹터 ETF — GICS 매핑 가능한 것만)
+    "KR_SEMI":          {"market": "KR", "ticker": "091160", "label": "반도체 (KODEX)"},
+    "KR_BANK":          {"market": "KR", "ticker": "091170", "label": "은행 (KODEX)"},
+    "KR_AUTO":          {"market": "KR", "ticker": "091180", "label": "자동차 (KODEX)"},
+    "KR_BIO":           {"market": "KR", "ticker": "244580", "label": "바이오 (KODEX)"},
+    "KR_SECURITIES":    {"market": "KR", "ticker": "102970", "label": "증권 (KODEX)"},
+    "KR_BUILD":         {"market": "KR", "ticker": "117700", "label": "건설 (KODEX)"},
+    "KR_STEEL":         {"market": "KR", "ticker": "117680", "label": "철강 (KODEX)"},
+    "KR_ENERGY_CHEM":   {"market": "KR", "ticker": "117460", "label": "에너지화학 (KODEX)"},
+    "KR_IT":            {"market": "KR", "ticker": "157490", "label": "IT (KODEX)"},
+    "KR_CONS":          {"market": "KR", "ticker": "266390", "label": "필수소비재 (KODEX)"},
+    "KR_TRANSPORT":     {"market": "KR", "ticker": "140710", "label": "운송 (KODEX)"},
+}
 
 # FRED 매크로 지표 — US
 FRED_INDICATORS = [
