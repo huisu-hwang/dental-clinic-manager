@@ -114,6 +114,10 @@ export type Permission =
   | 'bulk_sms_view'             // 단체 문자 조회
   | 'bulk_sms_send'             // 단체 문자 발송
   | 'bulk_sms_manage'           // 단체 문자 템플릿 관리
+  // 시장 국면 분석 권한
+  | 'regime_view'               // 시장 국면 조회 (시장/섹터 + 알림 받기)
+  | 'regime_analyze'            // 사용자 지정 종목 국면 분석
+  | 'regime_admin'              // 알림 설정 변경 + 정밀 학습 큐 관리
 
 // 역할별 기본 권한 설정
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
@@ -173,7 +177,9 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     // 부동산 경매 관리 (모든 권한)
     'auction_view', 'auction_favorite', 'auction_ai',
     // 단체 문자 (모든 권한)
-    'bulk_sms_view', 'bulk_sms_send', 'bulk_sms_manage'
+    'bulk_sms_view', 'bulk_sms_send', 'bulk_sms_manage',
+    // 시장 국면 분석 (모든 권한)
+    'regime_view', 'regime_analyze', 'regime_admin'
   ],
   vice_director: [
     // 부원장은 직원 관리와 병원 설정, 프로토콜 삭제 제외한 모든 권한
@@ -325,6 +331,7 @@ export const NEW_FEATURE_PREFIXES = [
   'referral_',
   'auction_',
   'bulk_sms_',
+  'regime_',
 ] as const
 
 // 기존 그룹에 추가된 단독 신규 권한 (prefix 보충 대상이 아니라 직접 보충)
@@ -476,6 +483,11 @@ export const PERMISSION_GROUPS = {
     { key: 'bulk_sms_send', label: '단체 문자 발송' },
     { key: 'bulk_sms_manage', label: '템플릿 관리' }
   ],
+  '시장 국면 분석': [
+    { key: 'regime_view', label: '시장 국면 조회' },
+    { key: 'regime_analyze', label: '사용자 종목 분석' },
+    { key: 'regime_admin', label: '알림 설정 관리' }
+  ],
   '기타': [
     { key: 'guide_view', label: '사용 안내 보기' }
   ]
@@ -597,4 +609,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'bulk_sms_view': '단체 문자 메뉴와 발송 이력을 조회할 수 있습니다.',
   'bulk_sms_send': '환자들에게 단체 문자를 발송할 수 있습니다.',
   'bulk_sms_manage': '단체 문자 템플릿을 생성·수정·삭제할 수 있습니다.',
+  // 시장 국면 분석 권한 설명
+  'regime_view': '시장 지수/섹터의 현재 국면(Bull/Bear/Sideways/Crisis)과 전환 확률을 조회할 수 있습니다.',
+  'regime_analyze': '사용자 지정 종목의 시장 국면을 즉시/정밀 분석할 수 있습니다.',
+  'regime_admin': '국면 전환 알림 설정을 변경하고 정밀 학습 큐를 관리할 수 있습니다.',
 }
