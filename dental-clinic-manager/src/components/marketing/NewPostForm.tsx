@@ -1062,6 +1062,7 @@ export default function NewPostForm({ onClose, onComplete }: NewPostFormProps) {
             <BrandImageSection
               clinicNameForCopy=""
               keyword={keyword}
+              topic={topic}
               value={brandImageOptions}
               onChange={setBrandImageOptions}
               disabled={isGenerating}
