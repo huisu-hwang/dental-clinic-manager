@@ -80,3 +80,35 @@ def predict_proba(model: dict, features: np.ndarray) -> np.ndarray:
     Xs = model["scaler"].transform(features)
     X_emb = model["kpca"].transform(Xs)
     return _label_proba(model["hmm"], model["state_map"], X_emb)
+
+
+def predict_nstep_transitions(model: dict, features: np.ndarray, horizons: list[int]) -> dict[int, np.ndarray]:
+    """Kernel embedding 공간에서 학습된 HMM 의 transmat^n 으로 N-step 전이.
+
+    RHINE(Xu 2024) 의 핵심: 비선형 표현 공간에서 Markov 체인을 학습 → 단순
+    원본-feature HMM 보다 비선형 동학을 더 잘 잡음.
+
+    Returns: {horizon: (4,) label-wise probability}
+    """
+    if len(features) == 0:
+        return {h: np.full(N_LABELS, 1.0 / N_LABELS) for h in horizons}
+
+    Xs = model["scaler"].transform(features)
+    X_emb = model["kpca"].transform(Xs)
+    hmm = model["hmm"]
+    state_map = model["state_map"]
+
+    # 마지막 시점의 hidden state (kernel-embedded HMM 기준)
+    current_hidden = int(hmm.predict(X_emb[-1:].reshape(1, -1))[0])
+
+    out = {}
+    for n in horizons:
+        T = np.linalg.matrix_power(hmm.transmat_, n)
+        init = np.zeros(hmm.n_components)
+        init[current_hidden] = 1.0
+        future_hidden = init @ T
+        future_label = np.zeros(N_LABELS)
+        for s, lab in state_map.items():
+            future_label[lab] += future_hidden[s]
+        out[n] = future_label
+    return out

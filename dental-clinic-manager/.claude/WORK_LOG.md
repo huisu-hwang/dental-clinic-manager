@@ -10,6 +10,42 @@
 
 ---
 
+## 2026-05-19 [기능 개선] Kernel Markov 도 전환 예측 활용 (3-모델 모두 N-step)
+
+**키워드:** #regime #kernel-markov #rhine #nstep #model-coverage
+
+### 📋 작업 배경
+- 사용자 질문: "Kernel Markov 모델은 국면 예측에 활용 안한 이유가 뭐야?"
+- 분석 결과: 기술적 이유 없음 — Part 2 작업 시 Reservoir 강점에 집중하면서 단순 누락
+- 코드 확인: kernel_markov 도 내부에 GaussianHMM 보유 → transmat^n N-step 즉시 가능
+
+### 📋 작업 내용
+- 마이그레이션: `regime_runs.kernel_predictions` (JSONB) 컬럼 추가
+- 신규 `kernel_markov.predict_nstep_transitions(model, features, horizons)`:
+  - 비선형 KernelPCA 임베딩 공간에서 학습된 HMM 의 transmat^n
+  - hidden state → label 매핑은 학습 시 저장한 `state_map` 사용
+- `train_worker`: kernel_predictions 계산 + upsert
+- `RegimeTransitionTable` 재설계: 3-모델 모두 표시
+  - ① HMM Voting (원본 feature P^n, 인디고)
+  - ② **Kernel Markov (RHINE, 비선형 임베딩 P^n, 보라색)** ← 신규
+  - ③ Reservoir Hypernet (auto-regressive, 에메랄드)
+- 안내 문구: "세 모델은 서로 다른 가정 위에서 동작" + "세 결과 일치 시 신뢰도 ↑"
+
+### 🧪 검증 (KOSPI)
+- 28 scope 풀배치 PASS (market 6 + sector 22, 0 error, 0 WARN)
+- 5d/10d/30d 전환 예측 비교:
+  - HMM Voting: Sideways 100% (보수적, 통계적 안정 유지)
+  - Kernel Markov: Sideways 100% (비선형 임베딩도 동일 결론 → HMM 강건성 검증)
+  - Reservoir Hypernet: Bear 100% (시계열 동학 단독 시그널)
+- **2-vs-1 구도**가 명확히 노출 — 사용자가 의사결정 시 가중치 부여 가능
+
+### 💡 배운 점
+- 작업 후 \"모델별 활용 분석\" 단계를 빼먹으면 강점 누락 가능 — **3-모델 매트릭스 같은 cross-check 표를 사전에 만들어두면 누락 방지**
+- HMM과 Kernel Markov가 결과 일치할 때 → 통계적 안정 신호
+- 결과 불일치할 때 → 비선형 동학이 보이는 다른 패턴 → 후속 분석 필요
+
+---
+
 ## 2026-05-19 [기능 개선] 국면 타임라인에 실제 지수 가격 라인 추가
 
 **키워드:** #regime #timeline #price-overlay #dual-axis #close

@@ -142,6 +142,7 @@ export default function RegimeDetailDrawer({ scope, scopeId, scopeLabel, run, on
             <RegimeTransitionTable
               transitions={run.transition_probabilities ?? {}}
               reservoirPredictions={run.reservoir_predictions}
+              kernelPredictions={run.kernel_predictions}
               currentState={state}
             />
           </section>
