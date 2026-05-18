@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Market Regime 일배치 launchd 설정 (Mac mini M4)
+
+  설치:
+    1) plist 를 사용자 LaunchAgents 로 복사
+       cp python-workers/regime/launchd/com.dental.regime.plist ~/Library/LaunchAgents/
+
+    2) 로그 디렉토리 생성
+       mkdir -p ~/Library/Logs/regime
+
+    3) 등록 (자동 실행 시작)
+       launchctl load ~/Library/LaunchAgents/com.dental.regime.plist
+
+    4) 즉시 실행 (테스트용)
+       launchctl start com.dental.regime
+
+    5) 해제
+       launchctl unload ~/Library/LaunchAgents/com.dental.regime.plist
+
+  로그:
+    /Users/hhs/Library/Logs/regime/out.log
+    /Users/hhs/Library/Logs/regime/err.log
+
+  매일 KST 20:30 (US 장 시작 30분 후, KR/US 모두 가장 최신 종가 반영) 자동 실행.
+  파이프라인:
+    1) FRED / ECOS 매크로 30일 backfill
+    2) 6 시장 (KOSPI/KOSDAQ/SP500/NASDAQ/DOW/RUSSELL2000) 3-모델 앙상블 학습
+    3) regime_runs/history upsert + 상태 전환 알림 발송 (user_notifications)
+    4) 사용자 ticker 큐 (regime_jobs) 처리
+
+  macOS BLAS/joblib + reservoirpy fork hang 회피 위해 단일 스레드 환경변수 강제.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dental.regime</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/python-workers</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/python-workers/regime/.venv/bin/python</string>
+    <string>-u</string>
+    <string>-m</string>
+    <string>regime.train_worker</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    <key>PYTHONPATH</key>
+    <string>/Users/hhs/Project/dental-clinic-manager/dental-clinic-manager/python-workers</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+    <key>OPENBLAS_NUM_THREADS</key>
+    <string>1</string>
+    <key>OMP_NUM_THREADS</key>
+    <string>1</string>
+    <key>MKL_NUM_THREADS</key>
+    <string>1</string>
+    <key>OBJC_DISABLE_INITIALIZE_FORK_SAFETY</key>
+    <string>YES</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>20</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/hhs/Library/Logs/regime/out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/hhs/Library/Logs/regime/err.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>Nice</key>
+  <integer>10</integer>
+</dict>
+</plist>
