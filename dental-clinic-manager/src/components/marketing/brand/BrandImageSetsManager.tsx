@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function BrandImageSetsManager({ canManage }: Props) {
-  const { sets, loading, createSet, updateSet, deleteSet, addCard, updateCard, deleteCard } = useBrandImageSets();
+  const { sets, loading, createSet, updateSet, deleteSet, addCard, generateCard, updateCard, deleteCard } = useBrandImageSets();
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [busyMsg, setBusyMsg] = useState<string>('');
@@ -81,6 +81,10 @@ export function BrandImageSetsManager({ canManage }: Props) {
                 setBusyMsg(`${set.name}: 카드 업로드 중...`);
                 try { await addCard(set.id, file, t, s); } finally { setBusyMsg(''); }
               }}
+              onGenerateCard={async (args) => {
+                setBusyMsg(`${set.name}: AI 이미지 생성 중... (30~60초 소요)`);
+                try { await generateCard(set.id, args); } finally { setBusyMsg(''); }
+              }}
               onUpdateCard={(cardId, update) => updateCard(set.id, cardId, update)}
               onDeleteCard={(cardId) => deleteCard(set.id, cardId)}
             />
@@ -97,15 +101,19 @@ interface SetCardProps {
   onRename: (name: string) => Promise<void>;
   onDelete: () => Promise<void>;
   onAddCard: (file: File, titleCopy?: string, subtitleCopy?: string) => Promise<void>;
+  onGenerateCard: (args: { prompt: string; titleCopy?: string; subtitleCopy?: string }) => Promise<void>;
   onUpdateCard: (cardId: string, update: { title_copy?: string | null; subtitle_copy?: string | null }) => Promise<void>;
   onDeleteCard: (cardId: string) => Promise<void>;
 }
 
-function SetCard({ set, canManage, onRename, onDelete, onAddCard, onUpdateCard, onDeleteCard }: SetCardProps) {
+function SetCard({ set, canManage, onRename, onDelete, onAddCard, onGenerateCard, onUpdateCard, onDeleteCard }: SetCardProps) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(set.name);
   const [cardTitleCopy, setCardTitleCopy] = useState('');
   const [cardSubtitleCopy, setCardSubtitleCopy] = useState('');
+  const [mode, setMode] = useState<'generate' | 'upload'>('generate');
+  const [generatePrompt, setGeneratePrompt] = useState('');
+  const [generating, setGenerating] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const handleFile = async (file: File) => {
@@ -115,6 +123,29 @@ function SetCard({ set, canManage, onRename, onDelete, onAddCard, onUpdateCard, 
       setCardSubtitleCopy('');
     } catch (e) {
       alert(e instanceof Error ? e.message : '업로드 실패');
+    }
+  };
+
+  const handleGenerate = async () => {
+    const p = generatePrompt.trim();
+    if (!p) {
+      alert('이미지 설명(프롬프트)을 입력해주세요.');
+      return;
+    }
+    setGenerating(true);
+    try {
+      await onGenerateCard({
+        prompt: p,
+        titleCopy: cardTitleCopy || undefined,
+        subtitleCopy: cardSubtitleCopy || undefined,
+      });
+      setGeneratePrompt('');
+      setCardTitleCopy('');
+      setCardSubtitleCopy('');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '이미지 생성 실패');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -185,7 +216,24 @@ function SetCard({ set, canManage, onRename, onDelete, onAddCard, onUpdateCard, 
 
       {canManage && (
         <div className="border-t border-at-border pt-3 space-y-2">
-          <p className="text-xs font-medium text-at-text-secondary">카드 추가</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-at-text">+ 카드 추가</p>
+            <div className="flex gap-1 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setMode('generate')}
+                disabled={generating}
+                className={`px-2 py-0.5 rounded ${mode === 'generate' ? 'bg-at-accent text-white' : 'border border-at-border text-at-text-secondary'}`}
+              >AI 이미지 생성</button>
+              <button
+                type="button"
+                onClick={() => setMode('upload')}
+                disabled={generating}
+                className={`px-2 py-0.5 rounded ${mode === 'upload' ? 'bg-at-accent text-white' : 'border border-at-border text-at-text-secondary'}`}
+              >파일 업로드</button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
               type="text"
@@ -193,6 +241,7 @@ function SetCard({ set, canManage, onRename, onDelete, onAddCard, onUpdateCard, 
               onChange={e => setCardTitleCopy(e.target.value)}
               placeholder="상단 카피 (선택) — 예: 진료시간 안내"
               className="px-2 py-1.5 border border-at-border rounded text-xs"
+              disabled={generating}
             />
             <input
               type="text"
@@ -200,26 +249,61 @@ function SetCard({ set, canManage, onRename, onDelete, onAddCard, onUpdateCard, 
               onChange={e => setCardSubtitleCopy(e.target.value)}
               placeholder="하단 카피 (선택) — 예: 평일 10:00~19:00"
               className="px-2 py-1.5 border border-at-border rounded text-xs"
+              disabled={generating}
             />
           </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={e => {
-              const f = e.target.files?.[0];
-              if (f) handleFile(f);
-              if (fileRef.current) fileRef.current.value = '';
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="w-full px-3 py-2 border-2 border-dashed border-at-border rounded text-xs text-at-text-secondary hover:bg-at-surface-alt"
-          >
-            이미지 파일 선택 (10MB 이하)
-          </button>
+
+          {mode === 'generate' ? (
+            <>
+              <textarea
+                value={generatePrompt}
+                onChange={e => setGeneratePrompt(e.target.value)}
+                placeholder={'이미지로 만들고 싶은 내용을 자세히 설명하세요.\n예: "치과 진료시간을 보여주는 깔끔한 인포그래픽. 평일 / 토요일 / 휴진일을 표 형태로 정리"'}
+                rows={3}
+                className="w-full px-2 py-1.5 border border-at-border rounded text-xs leading-relaxed resize-y"
+                disabled={generating}
+              />
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating || !generatePrompt.trim()}
+                className="w-full px-3 py-2 bg-at-accent text-white rounded text-xs font-medium disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {generating ? (
+                  <>
+                    <span className="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    AI 이미지 생성 중... (30~60초)
+                  </>
+                ) : (
+                  <>🎨 AI 이미지 생성</>
+                )}
+              </button>
+              <p className="text-[11px] text-at-text-weak">
+                클리닉의 브랜드 컬러·로고가 자동 적용된 인포그래픽 카드가 생성됩니다. 생성 후 미리보기로 확인하고 마음에 들지 않으면 삭제 후 다시 시도하세요.
+              </p>
+            </>
+          ) : (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                  if (fileRef.current) fileRef.current.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="w-full px-3 py-3 border-2 border-dashed border-at-border rounded text-xs text-at-text-secondary hover:bg-at-surface-alt"
+              >
+                📁 이미지 파일 선택 (JPG/PNG, 10MB 이하)
+              </button>
+            </>
+          )}
         </div>
       )}
     </li>

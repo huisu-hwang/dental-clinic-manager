@@ -66,6 +66,30 @@ export function useBrandImageSets() {
     return json.card as BrandImageSetCard;
   }, []);
 
+  /**
+   * AI 이미지 생성으로 카드 추가.
+   * - 사용자 프롬프트 + 카피 → OpenAI gpt-image-2 (infographic_only) → Storage → 카드 INSERT
+   * - 생성 + 업로드까지 30~60초 소요 — 호출부에서 로딩 상태 표시 필요
+   */
+  const generateCard = useCallback(async (
+    setId: string,
+    args: { prompt: string; titleCopy?: string; subtitleCopy?: string },
+  ) => {
+    const res = await fetch(`/api/marketing/brand/image-sets/${setId}/cards/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: args.prompt,
+        title_copy: args.titleCopy,
+        subtitle_copy: args.subtitleCopy,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || '이미지 생성 실패');
+    setSets(prev => prev.map(s => s.id === setId ? { ...s, cards: [...s.cards, json.card] } : s));
+    return json.card as BrandImageSetCard;
+  }, []);
+
   const updateCard = useCallback(async (setId: string, cardId: string, update: { title_copy?: string | null; subtitle_copy?: string | null; sort_order?: number }) => {
     const res = await fetch(`/api/marketing/brand/image-sets/${setId}/cards/${cardId}`, {
       method: 'PATCH',
@@ -90,5 +114,5 @@ export function useBrandImageSets() {
       : s));
   }, []);
 
-  return { sets, loading, error, refresh, createSet, updateSet, deleteSet, addCard, updateCard, deleteCard };
+  return { sets, loading, error, refresh, createSet, updateSet, deleteSet, addCard, generateCard, updateCard, deleteCard };
 }
