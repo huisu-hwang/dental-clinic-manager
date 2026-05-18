@@ -124,9 +124,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [router])
 
   // 퇴사자/승인대기/거절된 사용자는 대시보드를 렌더링하지 않음
+  // 배경색은 본 콘텐츠와 동일하게 bg-at-surface 사용 — 로딩 → 본 콘텐츠 전환 시
+  // 배경 톤이 바뀌면서 화면 전체가 깜빡이는 것처럼 보였음 (시크릿 모드에서도 재현됨)
   if (loading) {
     return (
-      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+      <div className="min-h-screen bg-at-surface flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
@@ -134,7 +136,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user || user.status === 'resigned') {
     return (
-      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+      <div className="min-h-screen bg-at-surface flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
@@ -142,7 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // pending/rejected 사용자는 공개 모임 상세 페이지에 한해 본문 렌더 허용
   if ((user.status === 'pending' || user.status === 'rejected') && !isPublicTelegramGroupRoute) {
     return (
-      <div className="min-h-screen bg-at-surface-alt flex items-center justify-center">
+      <div className="min-h-screen bg-at-surface flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-at-accent"></div>
       </div>
     )
