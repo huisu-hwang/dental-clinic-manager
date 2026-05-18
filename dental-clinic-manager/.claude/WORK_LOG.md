@@ -10,6 +10,37 @@
 
 ---
 
+## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-E (국면 전환 알림)
+
+**키워드:** #regime #alerts #user_notifications #state-change
+
+### 📋 작업 내용
+- 마이그레이션: `user_notifications.type` CHECK 에 `regime_state_change` 추가 (32 → 33 types)
+- `train_worker._emit_state_change_alert()` 헬퍼: `regime_alerts` INSERT (감사 로그) + `user_notifications` 행 단위 INSERT (owner/vice_director/manager 대상)
+- `train_scope` 학습 후: 직전 `regime_runs` (≠ today) 조회 → state 다르면 알림 발송
+- 알림 본문 포맷: 이모지 + 한글 라벨 + 신뢰도, link → `/dashboard?tab=investment&sub=regime`
+- 행 단위 try/except 로 orphan auth.users 1건이 전체 발송을 막지 않음
+
+### 🐛 해결한 문제
+1. user_notifications 스키마 차이 (예상 `body`/`metadata` → 실제 `content`/`link`/`reference_type`) → 헬퍼 수정
+2. clinic_id NOT NULL → 빈 clinic_id 유저는 skip
+3. auth.users FK orphan → 행 단위 insert + foreign key 에러는 조용히 skip
+
+### 🧪 검증
+- 테스트 케이스 (TEST_REGIME_ALERT bear→sideways):
+  - regime_alerts 1 row INSERT (notified_user_ids 18명)
+  - user_notifications **17/18 발송** (1명 orphan)
+  - 본문 예: "🟡 TEST_REGIME_ALERT 국면 전환: 하락 → 횡보 / 신뢰도 85%."
+- 테스트 데이터 정리 (regime_runs/alerts/notifications DELETE)
+- 클린 빌드 PASS
+
+### 💡 배운 점
+- 알림 발송은 batch insert 보다 행 단위 try/except 가 안정 — orphan FK 한 건이 100명 발송을 막지 않음
+- 알림은 기존 user_notifications 시스템(우상단 알림 벨) 재사용 → 별도 UI 불필요. 사용자가 종이 클릭하면 자동으로 link 로 이동
+- 실제 운영 시 KOSPI/SP500 등 시장 regime 이 변할 때마다 owner/manager 들에게 자동 알림 → 시장 변동 인지 시간 단축
+
+---
+
 ## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-B (사용자 종목 분석 탭)
 
 **키워드:** #regime #user-ticker #queue #polling #aapl

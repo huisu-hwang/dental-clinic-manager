@@ -36,6 +36,73 @@ MODEL_REGISTRY = [
 ]
 
 
+STATE_KO = {"bull": "상승", "bear": "하락", "sideways": "횡보", "crisis": "위기"}
+STATE_EMOJI = {"bull": "🟢", "bear": "🔵", "sideways": "🟡", "crisis": "🔴"}
+ALERT_ROLES = ["owner", "vice_director", "manager"]
+
+
+def _emit_state_change_alert(sb, scope_type: str, scope_id: str,
+                              from_state: str, to_state: str,
+                              confidence: float, transition_date: str,
+                              prev_date: str | None) -> None:
+    """국면 전환 감지 시 regime_alerts + user_notifications 동시 발송."""
+    # 1) regime_alerts (감사·집계용)
+    notified_user_ids: list[str] = []
+    try:
+        users = sb.table("users").select("id, role, clinic_id").in_(
+            "role", ALERT_ROLES
+        ).execute().data or []
+        notified_user_ids = [u["id"] for u in users]
+    except Exception as e:
+        print(f"  WARN users fetch: {e}")
+        users = []
+
+    try:
+        sb.table("regime_alerts").insert({
+            "scope_type": scope_type, "scope_id": scope_id,
+            "from_state": from_state, "to_state": to_state,
+            "transition_date": transition_date,
+            "notified_at": "now()",
+            "notified_user_ids": notified_user_ids,
+        }).execute()
+    except Exception as e:
+        print(f"  WARN regime_alerts insert: {e}")
+
+    # 2) user_notifications (사용자 알림 인박스)
+    title = f"{STATE_EMOJI[to_state]} {scope_id} 국면 전환: {STATE_KO[from_state]} → {STATE_KO[to_state]}"
+    content = (
+        f"{scope_id}({scope_type}) 가 {prev_date or '이전'} {STATE_KO[from_state]}에서 "
+        f"{transition_date} {STATE_KO[to_state]} 국면으로 전환되었습니다. "
+        f"신뢰도 {(confidence * 100):.0f}%."
+    )
+    link = "/dashboard?tab=investment&sub=regime"
+    rows = []
+    for u in users:
+        if not u.get("clinic_id"):
+            continue  # clinic_id NOT NULL
+        rows.append({
+            "user_id": u["id"],
+            "clinic_id": u["clinic_id"],
+            "type": "regime_state_change",
+            "title": title,
+            "content": content,
+            "link": link,
+            "reference_type": "regime_run",
+            "is_read": False,
+        })
+    # 행 단위 insert — orphan user(auth.users 없는 row) 한건 실패해도 나머지는 발송
+    success_count = 0
+    for row in rows:
+        try:
+            sb.table("user_notifications").insert(row).execute()
+            success_count += 1
+        except Exception as e:
+            # FK 위반 등은 조용히 skip
+            if "foreign key" not in str(e).lower():
+                print(f"  WARN notify user {row['user_id']}: {e}")
+    print(f"  alert: {scope_id} {from_state}→{to_state}, notified {success_count}/{len(rows)} users")
+
+
 def _n_step_transition(hmm, state_map: dict, current_hidden_idx: int, n: int) -> dict:
     """HMM transmat^n 으로 N-step 전환 확률 (label 단위)."""
     T = np.linalg.matrix_power(hmm.transmat_, n)
@@ -131,6 +198,16 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
 
     today = feat.index[-1].date()
     sb = get_supabase()
+
+    # 이전 상태 조회 (state 변경 감지용)
+    prev = sb.table("regime_runs").select("current_state, as_of_date").eq(
+        "scope_type", scope_type
+    ).eq("scope_id", scope_id).neq("as_of_date", today.isoformat()).order(
+        "as_of_date", desc=True
+    ).limit(1).execute().data
+    prev_state = prev[0]["current_state"] if prev else None
+    prev_date = prev[0]["as_of_date"] if prev else None
+
     sb.table("regime_runs").upsert({
         "scope_type": scope_type, "scope_id": scope_id,
         "as_of_date": today.isoformat(), "trigger_type": "batch",
@@ -140,6 +217,13 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
         "transition_probabilities": transitions,
         "data_as_of": today.isoformat(),
     }, on_conflict="scope_type,scope_id,as_of_date,trigger_type").execute()
+
+    # 상태 전환 감지 → regime_alerts + user_notifications
+    if prev_state and prev_state != state:
+        _emit_state_change_alert(
+            sb, scope_type, scope_id, prev_state, state,
+            confidence, today.isoformat(), prev_date,
+        )
 
     # History backfill (지난 5년) — 앙상블 평균 기준
     cutoff = max(0, len(feat) - 252 * 5)
