@@ -1,11 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   REGIME_LABEL, REGIME_LABEL_KO, REGIME_EMOJI, REGIME_COLOR,
   RegimeRun, RegimeState,
 } from './types'
 import RegimeDetailDrawer from './RegimeDetailDrawer'
+
+interface SearchSuggestion {
+  ticker: string
+  name: string
+  market: 'KR' | 'US'
+}
 
 interface JobRow {
   job_id: number
@@ -53,6 +59,9 @@ export default function RegimeUserTickerTab() {
   const [message, setMessage] = useState<string | null>(null)
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
   const [selectedRun, setSelectedRun] = useState<RegimeRun | null>(null)
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const suggestionAbortRef = useRef<AbortController | null>(null)
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -84,12 +93,33 @@ export default function RegimeUserTickerTab() {
     return () => clearInterval(id)
   }, [fetchJobs])
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const t = ticker.trim().toUpperCase()
+  // 입력 변경 시 자동완성 검색 (debounce 200ms, 한글/영문 모두)
+  useEffect(() => {
+    const q = ticker.trim()
+    if (q.length < 1) {
+      setSuggestions([])
+      return
+    }
+    const handle = setTimeout(() => {
+      suggestionAbortRef.current?.abort()
+      const ctrl = new AbortController()
+      suggestionAbortRef.current = ctrl
+      fetch(`/api/investment/regime/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+        .then(r => r.json())
+        .then(j => {
+          if (!ctrl.signal.aborted) setSuggestions(j.data ?? [])
+        })
+        .catch(() => {})
+    }, 200)
+    return () => clearTimeout(handle)
+  }, [ticker])
+
+  const submitWith = async (rawInput: string) => {
+    const t = rawInput.trim()
     if (!t) return
     setSubmitting(true)
     setMessage(null)
+    setShowSuggestions(false)
     try {
       const r = await fetch('/api/investment/regime/analyze', {
         method: 'POST',
@@ -99,18 +129,29 @@ export default function RegimeUserTickerTab() {
       const j = await r.json()
       if (!r.ok) {
         setMessage(`❌ ${j.error ?? '요청 실패'}`)
-      } else if (j.data?.already_running) {
-        setMessage(`⏳ ${t} 분석이 이미 진행 중입니다`)
       } else {
-        setMessage(`✅ ${t} 분석 큐에 추가됨 (Mac mini 워커가 처리)`)
-        setTicker('')
-        fetchJobs()
+        const display = j.data?.resolved_name
+          ? `${j.data.ticker} (${j.data.resolved_name})`
+          : j.data?.ticker ?? t
+        if (j.data?.already_running) {
+          setMessage(`⏳ ${display} 분석이 이미 진행 중입니다`)
+        } else {
+          setMessage(`✅ ${display} 분석 큐에 추가됨 (Mac mini 워커가 처리)`)
+          setTicker('')
+          setSuggestions([])
+          fetchJobs()
+        }
       }
     } catch (err) {
       setMessage(`❌ ${String(err)}`)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    submitWith(ticker)
   }
 
   const openDetail = async (t: string) => {
@@ -128,17 +169,40 @@ export default function RegimeUserTickerTab() {
       <form onSubmit={submit} className="rounded-md border bg-white p-3">
         <div className="text-sm font-medium text-gray-800">종목 분석 요청</div>
         <div className="mt-1 text-xs text-gray-500">
-          KR 종목 6자리 코드(예: 005930) 또는 US 티커(예: AAPL, MSFT) 입력. Mac mini 워커가 학습(약 30~60초)
+          종목 코드(예: 005930, AAPL) 또는 이름(예: 삼성전자, 애플, Apple) 입력. Mac mini 워커가 학습(약 30~60초)
         </div>
         <div className="mt-2 flex gap-2">
-          <input
-            value={ticker}
-            onChange={e => setTicker(e.target.value)}
-            placeholder="005930 / AAPL"
-            maxLength={12}
-            className="flex-1 rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
-            disabled={submitting}
-          />
+          <div className="relative flex-1">
+            <input
+              value={ticker}
+              onChange={e => { setTicker(e.target.value); setShowSuggestions(true) }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="005930 / AAPL / 삼성전자 / 애플"
+              maxLength={30}
+              className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+              disabled={submitting}
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                {suggestions.map(s => (
+                  <li key={`${s.market}-${s.ticker}`}>
+                    <button
+                      type="button"
+                      onMouseDown={e => { e.preventDefault(); submitWith(s.ticker) }}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-indigo-50"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-gray-500">{s.ticker}</span>
+                        <span className="text-gray-800">{s.name}</span>
+                      </span>
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{s.market}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <button
             type="submit"
             disabled={submitting || !ticker.trim()}

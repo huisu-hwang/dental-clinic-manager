@@ -10,6 +10,35 @@
 
 ---
 
+## 2026-05-19 [기능 개선] 내 종목 분석 — 종목 이름 검색 + 자동완성
+
+**키워드:** #regime #ticker-search #autocomplete #korean-search #user-ticker
+
+### 📋 작업 내용
+- 신규 API `GET /api/investment/regime/search?q=`: KR/US ticker dict 검색 (한글 이름 / 영문 이름 / alias / 코드 모두 지원, KR 우선 정렬, 최대 10건)
+- `analyze` API 개선:
+  - 입력값을 ticker 형식 검증 → 통과하면 그대로, 실패하면 KR/US dict 검색으로 ticker 변환
+  - `resolved_name` 응답 필드 추가 (사용자에게 어떤 종목으로 매칭됐는지 노출)
+  - 매칭 실패 시 친절한 에러 메시지
+- `RegimeUserTickerTab` 자동완성 드롭다운:
+  - 입력 200ms debounce + AbortController 로 race condition 방지
+  - 결과 클릭 → 자동 큐 등록 (별도 버튼 클릭 불필요)
+  - placeholder/안내 문구 갱신: "005930 / AAPL / 삼성전자 / 애플"
+- 성공 메시지 포맷: `✅ AAPL (Apple Inc.) 분석 큐에 추가됨`
+
+### 🧪 검증
+- "삼성전자" 입력 → 자동완성 [005930 삼성전자 KR / 005935 삼성전자우 KR]
+- 자동완성 항목 클릭 → "✅ 005930 분석 큐에 추가됨" 즉시 등록
+- "애플" 직접 입력 + 분석 요청 버튼 → "✅ **AAPL (Apple Inc.)** 분석 큐에 추가됨" (resolved_name 표시)
+- 콘솔 에러 0, 빌드 PASS
+
+### 💡 배운 점
+- 기존 `searchTickerDict` 헬퍼 (점수 기반 매칭) 재사용 — UX 일관성 + 코드 중복 회피
+- onMouseDown + preventDefault 로 input onBlur 직전 자동완성 클릭 캡처 (setTimeout 150ms 도 보조)
+- resolved_name 응답 필드 1개 추가만으로 입력 안내 UX 크게 향상
+
+---
+
 ## 2026-05-19 [운영/기능] 시장 국면 시스템 launchd + GICS 섹터 22개
 
 **키워드:** #regime #sectors #gics #launchd #etf #yahoo-fallback

@@ -1,8 +1,31 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { searchKRTicker } from '@/lib/krTickerDict'
+import { searchUSTicker } from '@/lib/usTickerDict'
 
 export const dynamic = 'force-dynamic'
+
+const TICKER_PATTERN = /^([0-9]{6}|[A-Z][A-Z0-9.\-]*)$/
+
+function resolveTicker(input: string): { ticker: string; resolved_name?: string } | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+
+  // 1. ticker 형식이면 그대로 사용
+  const upper = trimmed.toUpperCase()
+  if (TICKER_PATTERN.test(upper)) {
+    return { ticker: upper }
+  }
+
+  // 2. 종목 이름 → ticker dict 검색 (KR 우선, 그 다음 US)
+  const krMatch = searchKRTicker(trimmed, 1)[0]
+  if (krMatch) return { ticker: krMatch.ticker, resolved_name: krMatch.name }
+  const usMatch = searchUSTicker(trimmed, 1)[0]
+  if (usMatch) return { ticker: usMatch.ticker, resolved_name: usMatch.name }
+
+  return null
+}
 
 export async function POST(req: Request) {
   const auth = await requireAuth(['owner', 'vice_director', 'manager'])
@@ -11,14 +34,19 @@ export async function POST(req: Request) {
   }
 
   const body = (await req.json().catch(() => ({}))) as { ticker?: string }
-  const raw = (body.ticker ?? '').trim().toUpperCase()
-  if (!raw || raw.length > 12) {
-    return NextResponse.json({ error: 'ticker 는 1~12자 필수' }, { status: 400 })
+  const rawInput = (body.ticker ?? '').trim()
+  if (!rawInput || rawInput.length > 30) {
+    return NextResponse.json({ error: '종목 코드 또는 이름은 1~30자 필수' }, { status: 400 })
   }
-  // 6자리 숫자(KR) 또는 알파벳·점·하이픈(US) 만 허용
-  if (!/^([0-9]{6}|[A-Z][A-Z0-9.\-]*)$/.test(raw)) {
-    return NextResponse.json({ error: 'ticker 형식 오류 (예: 005930 또는 AAPL)' }, { status: 400 })
+
+  const resolved = resolveTicker(rawInput)
+  if (!resolved) {
+    return NextResponse.json({
+      error: `'${rawInput}' 을 찾을 수 없습니다. 종목 코드(예: 005930, AAPL) 또는 정확한 이름(예: 삼성전자, Apple)을 입력하세요`,
+    }, { status: 400 })
   }
+  const raw = resolved.ticker
+  const resolvedName = resolved.resolved_name
 
   const sb = getSupabaseAdmin()
   if (!sb) return NextResponse.json({ error: 'Server error' }, { status: 500 })
@@ -46,7 +74,7 @@ export async function POST(req: Request) {
 
   if (pending) {
     return NextResponse.json({
-      data: { job_id: pending.id, status: pending.status, ticker: raw, already_running: true },
+      data: { job_id: pending.id, status: pending.status, ticker: raw, resolved_name: resolvedName, already_running: true },
     })
   }
 
@@ -71,6 +99,7 @@ export async function POST(req: Request) {
       job_id: inserted.id,
       status: inserted.status,
       ticker: raw,
+      resolved_name: resolvedName,
       has_existing_result: !!existing,
     },
   })
