@@ -249,11 +249,22 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
     history_rows = []
     for i in range(cutoff, len(feat)):
         idx = int(np.argmax(ensemble_proba[i]))
+        dt = feat.index[i]
+        # feat 인덱스에 해당하는 price.close 가 있으면 함께 기록 (가격 라인용)
+        close_val = None
+        try:
+            if dt in prices.index:
+                v = prices.loc[dt, "close"]
+                if isinstance(v, (int, float)) and v == v:  # NaN 체크
+                    close_val = float(v)
+        except Exception:
+            close_val = None
         history_rows.append({
             "scope_type": scope_type, "scope_id": scope_id,
-            "date": feat.index[i].date().isoformat(),
+            "date": dt.date().isoformat(),
             "state": STATES[idx],
             "confidence": float(ensemble_proba[i, idx]),
+            "close": close_val,
         })
     for k in range(0, len(history_rows), 500):
         sb.table("regime_history").upsert(

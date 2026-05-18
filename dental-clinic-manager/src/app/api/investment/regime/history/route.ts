@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await sb
     .from('regime_history')
-    .select('date, state, confidence')
+    .select('date, state, confidence, close')
     .eq('scope_type', scope)
     .eq('scope_id', id)
     .gte('date', sinceStr)
