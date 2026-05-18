@@ -10,6 +10,31 @@
 
 ---
 
+## 2026-05-18 [기능 개발] 시장 국면 시스템 Phase 3-C (상세 드로어)
+
+**키워드:** #regime #drawer #timeline #recharts #transition-matrix #model-voting
+
+### 📋 작업 내용
+- 신규 API `GET /api/investment/regime/history?scope&id&days` (30~730일 클램프, 인덱스 조회)
+- `RegimeTimelineChart`: recharts AreaChart + 같은 state 구간을 `ReferenceArea` 색상 배경으로 표현, 신뢰도 라인 overlay
+- `RegimeTransitionTable`: 5d/10d/30d × Bull/Sideways/Bear/Crisis 매트릭스, 확률 강도 셀 색상
+- `RegimeModelVotes`: 앙상블 + 모델별 투표 분포 가로 막대 (4-state 색상 segment)
+- `RegimeDetailDrawer`: 우측 슬라이드 드로어 (Esc 닫기, 90/180/365d 토글, 백드롭 클릭 닫기)
+- `RegimeMarketGrid`: 카드 div→button 변경, 클릭 시 드로어 오픈
+
+### 🧪 검증
+- 빌드 PASS, 콘솔 에러 0
+- KOSPI 카드 클릭 → 드로어 오픈 → 타임라인/전환표/투표 모두 정상 렌더
+- 365d 토글 → history API 재호출 (200 OK)
+- 닫기 버튼 정상 작동
+- 브라우저: `whitedc0902@gmail.com` 세션, 6 시장 카드 모두 데이터 정상
+
+### 💡 배운 점
+- recharts `ReferenceArea` 로 카테고리 구간을 색칠하면 별도 stacked area 없이도 regime 색상 띠를 표현 가능
+- regime_history 700 row × 6 시장 = 4,200 row 도 인덱스(PRIMARY KEY) 만으로 ~300ms 응답
+
+---
+
 ## 2026-05-18 [기능 개발] 시장 국면 감지·예측 시스템 (Phase 1+2)
 
 **키워드:** #regime #investment #hmm #python-sidecar #fred #ecos #yahoo #market-regime #gupta2025
