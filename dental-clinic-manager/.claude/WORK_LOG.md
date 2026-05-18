@@ -10,6 +10,37 @@
 
 ---
 
+## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-B (사용자 종목 분석 탭)
+
+**키워드:** #regime #user-ticker #queue #polling #aapl
+
+### 📋 작업 내용
+- `train_worker.process_queued_jobs()`: `regime_jobs.status='queued'`이고 `job_type='ticker_analyze'` 인 작업을 학습 → `regime_runs/history` upsert + status 갱신
+- `train_worker jobs N` CLI 인자로 큐 N건만 처리 모드 추가 (cron 별도 운용 가능)
+- `run_full_batch()` 끝에 `process_queued_jobs()` 자동 호출 — 야간 배치가 알아서 사용자 큐도 비움
+- POST `/api/investment/regime/analyze`: ticker 형식 검증(6자리 숫자/대문자) + 중복 큐 방지 + `already_running`/`has_existing_result` 메타 반환
+- GET `/api/investment/regime/jobs`: 내 ticker 큐 + 최신 `regime_runs` 결과 JOIN (latestByTicker 맵으로 합침)
+- `RegimeUserTickerTab`: 입력 폼 + 큐 리스트 + 5초 폴링 (queued/running 있을 때만) + 완료 시 Drawer 재사용
+- `RegimeContent` 탭 구조: '시장 지수' / '내 종목 분석'
+
+### 🐛 해결한 문제
+1. `regime_jobs` 마이그레이션에 `started_at` 컬럼 누락 → ALTER TABLE ADD COLUMN
+2. ticker market 자동 판별: 6자리 숫자 → KR, 그 외 → US
+
+### 🧪 검증
+- AAPL 입력 → POST analyze 200 → DB `regime_jobs.id=1 status=queued`
+- `train_worker jobs 5` 실행 → AAPL 학습 PASS → state=bull conf=0.54 (HMM=99% / Kernel=33% / Reservoir=43%)
+- UI 폴링 자동 갱신: "완료" 배지 + 🟢 Bull (54%) + "상세 보기" 버튼 활성화
+- 상세 보기 → ticker scope Drawer (타임라인/전환표/모델 투표) 정상 렌더, 콘솔 에러 0
+- API 흐름: analyze → jobs(polling, queued) → train_worker process → jobs(done with result) → detail drawer
+
+### 💡 배운 점
+- 큐 + 폴링 패턴이 long-running ML 작업에 최적 (Vercel 30s timeout 우회)
+- UI 폴링 조건을 'queued/running 있을 때만' 으로 제한해 idle 트래픽 0 유지
+- ticker scope 재사용으로 market Drawer 코드 100% 재활용 (scopeIdToMarket이 ticker일 때 best-strategies 섹션은 자동 hidden)
+
+---
+
 ## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-D (Strategy Matrix 연동)
 
 **키워드:** #regime #strategy-matrix #backfill #materialized-view #best-strategies

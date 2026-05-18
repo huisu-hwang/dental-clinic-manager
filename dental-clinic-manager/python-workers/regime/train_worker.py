@@ -163,6 +163,41 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
             "n_models": len(trained)}
 
 
+def process_queued_jobs(limit: int = 20) -> None:
+    """사용자 ticker 분석 큐 처리. regime_jobs.status='queued' 인 ticker 학습."""
+    sb = get_supabase()
+    rows = sb.table("regime_jobs").select("*").eq("status", "queued").eq(
+        "job_type", "ticker_analyze"
+    ).order("requested_at").limit(limit).execute().data or []
+    if not rows:
+        print("  no queued ticker jobs")
+        return
+    print(f"== process {len(rows)} queued ticker jobs ==")
+    for job in rows:
+        job_id = job["id"]
+        ticker = job.get("scope_id", "")
+        # ticker 자체에 market 정보가 없으면 휴리스틱: 6자리 숫자 → KR, 그 외 → US
+        market = "KR" if ticker.isdigit() and len(ticker) == 6 else "US"
+        sb.table("regime_jobs").update({
+            "status": "running",
+            "started_at": "now()",
+        }).eq("id", job_id).execute()
+        try:
+            train_scope("ticker", ticker, ticker, market)
+            sb.table("regime_jobs").update({
+                "status": "done",
+                "finished_at": "now()",
+            }).eq("id", job_id).execute()
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+            print(f"  ERROR ticker {ticker}: {err}")
+            sb.table("regime_jobs").update({
+                "status": "failed",
+                "finished_at": "now()",
+                "error": err,
+            }).eq("id", job_id).execute()
+
+
 def run_full_batch(scope_filter: str | None = None,
                    macro_backfill_days: int = 365 * 8) -> None:
     """일배치 — 첫 실행은 macro_backfill_days=8년, 이후 일배치는 30일로 충분."""
@@ -185,7 +220,13 @@ def run_full_batch(scope_filter: str | None = None,
         except Exception as e:
             print(f"  ERROR {name}: {type(e).__name__}: {e}")
 
+    # 시장 학습 후 사용자 ticker 큐 처리
+    process_queued_jobs()
+
 
 if __name__ == "__main__":
-    scope = sys.argv[1] if len(sys.argv) > 1 else None
-    run_full_batch(scope_filter=scope)
+    if len(sys.argv) > 1 and sys.argv[1] == "jobs":
+        process_queued_jobs(limit=int(sys.argv[2]) if len(sys.argv) > 2 else 20)
+    else:
+        scope = sys.argv[1] if len(sys.argv) > 1 else None
+        run_full_batch(scope_filter=scope)
