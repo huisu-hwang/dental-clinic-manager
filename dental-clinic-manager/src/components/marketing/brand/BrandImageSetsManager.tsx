@@ -1,7 +1,34 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBrandImageSets } from '@/hooks/useBrandImageSets';
 import type { BrandImageSetCard, BrandImageSetWithCards } from '@/types/brand';
+
+/**
+ * 카피 + 세트 이름으로 AI 이미지 생성 프롬프트 자동 작성.
+ * 세트 이름은 카테고리 힌트로(예: "병원 소개", "오시는 길"), 상단/하단 카피가 실제 내용을 결정.
+ * 사용자가 textarea 를 직접 수정한 뒤에는 호출하지 않음 (promptTouched 가드).
+ */
+function buildAutoPrompt(setName: string, titleCopy: string, subtitleCopy: string): string {
+  const tc = titleCopy.trim();
+  const sc = subtitleCopy.trim();
+  const sn = setName.trim();
+
+  // 어느 것도 없으면 빈 문자열 → 사용자가 직접 입력하도록 유도
+  if (!tc && !sc) return '';
+
+  const parts: string[] = [];
+  if (tc && sc) {
+    parts.push(`'${tc}' 를 주제로 한 깔끔한 인포그래픽 카드.`);
+    parts.push(`중앙에 큰 글씨로 '${sc}' 정보를 보기 좋게 배치.`);
+  } else if (tc) {
+    parts.push(`'${tc}' 를 주제로 한 깔끔한 인포그래픽 카드.`);
+  } else if (sc) {
+    parts.push(`'${sc}' 정보를 보여주는 인포그래픽 카드.`);
+  }
+  if (sn) parts.push(`(분류: ${sn})`);
+  parts.push('치과 병원 브랜드에 어울리는 미니멀하고 전문적인 디자인, 인물 없이 도형·아이콘·텍스트 위주로 구성.');
+  return parts.join(' ');
+}
 
 interface Props {
   canManage: boolean;
@@ -113,14 +140,23 @@ function SetCard({ set, canManage, onRename, onDelete, onAddCard, onGenerateCard
   const [cardSubtitleCopy, setCardSubtitleCopy] = useState('');
   const [mode, setMode] = useState<'generate' | 'upload'>('generate');
   const [generatePrompt, setGeneratePrompt] = useState('');
+  const [promptTouched, setPromptTouched] = useState(false);
   const [generating, setGenerating] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  // 카피 입력에 따라 프롬프트 자동 작성 — 사용자가 직접 수정한 뒤에는 건드리지 않음
+  useEffect(() => {
+    if (promptTouched) return;
+    const auto = buildAutoPrompt(set.name, cardTitleCopy, cardSubtitleCopy);
+    setGeneratePrompt(auto);
+  }, [cardTitleCopy, cardSubtitleCopy, set.name, promptTouched]);
 
   const handleFile = async (file: File) => {
     try {
       await onAddCard(file, cardTitleCopy || undefined, cardSubtitleCopy || undefined);
       setCardTitleCopy('');
       setCardSubtitleCopy('');
+      setPromptTouched(false);
     } catch (e) {
       alert(e instanceof Error ? e.message : '업로드 실패');
     }
@@ -142,6 +178,7 @@ function SetCard({ set, canManage, onRename, onDelete, onAddCard, onGenerateCard
       setGeneratePrompt('');
       setCardTitleCopy('');
       setCardSubtitleCopy('');
+      setPromptTouched(false);
     } catch (e) {
       alert(e instanceof Error ? e.message : '이미지 생성 실패');
     } finally {
@@ -255,11 +292,30 @@ function SetCard({ set, canManage, onRename, onDelete, onAddCard, onGenerateCard
 
           {mode === 'generate' ? (
             <>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-[11px] font-medium text-at-text-secondary">
+                  이미지 프롬프트
+                  <span className="ml-1 text-at-text-weak">
+                    {promptTouched ? '(직접 수정됨)' : '(카피 기반 자동 작성)'}
+                  </span>
+                </label>
+                {promptTouched && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPromptTouched(false);
+                      setGeneratePrompt(buildAutoPrompt(set.name, cardTitleCopy, cardSubtitleCopy));
+                    }}
+                    disabled={generating}
+                    className="text-[11px] text-at-accent hover:underline disabled:text-at-text-weak"
+                  >🔄 자동으로 다시 채우기</button>
+                )}
+              </div>
               <textarea
                 value={generatePrompt}
-                onChange={e => setGeneratePrompt(e.target.value)}
-                placeholder={'이미지로 만들고 싶은 내용을 자세히 설명하세요.\n예: "치과 진료시간을 보여주는 깔끔한 인포그래픽. 평일 / 토요일 / 휴진일을 표 형태로 정리"'}
-                rows={3}
+                onChange={e => { setPromptTouched(true); setGeneratePrompt(e.target.value); }}
+                placeholder={'위 상단/하단 카피를 입력하면 자동으로 작성됩니다.\n또는 직접 입력 — 예: "치과 진료시간을 보여주는 깔끔한 인포그래픽. 평일 / 토요일 / 휴진일을 표 형태로 정리"'}
+                rows={4}
                 className="w-full px-2 py-1.5 border border-at-border rounded text-xs leading-relaxed resize-y"
                 disabled={generating}
               />
