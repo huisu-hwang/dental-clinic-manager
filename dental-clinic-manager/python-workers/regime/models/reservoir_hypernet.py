@@ -137,3 +137,48 @@ def predict_proba(bundle: dict, features: np.ndarray) -> np.ndarray:
         c = torch.from_numpy(ctx)
         proba = torch.softmax(model(h, c), dim=1).numpy()
     return proba
+
+
+def predict_nstep_proba(bundle: dict, features: np.ndarray, horizons: list[int]) -> dict[int, np.ndarray]:
+    """N-step ahead 라벨 확률 — Sun 2025 의 핵심 강점인 시계열 다음 시점 예측.
+
+    구현: 입력 시계열 끝점부터 reservoir state 를 자기-반복(auto-regressive)으로
+    propagate 하여 t+1, t+5, ... t+N 시점의 4-state 분포를 얻는다.
+    - 새 입력이 없으므로 마지막 feature 를 반복 입력 (단순 baseline)
+    - context vector 도 동일하게 마지막 윈도우 mean 사용
+
+    Returns: {horizon: (4,) probability array}
+    """
+    if not _AVAILABLE:
+        raise RuntimeError(f"reservoir_hypernet unavailable: {_IMPORT_ERROR}")
+
+    if len(features) == 0:
+        return {h: np.array([0.25] * N_LABELS) for h in horizons}
+
+    Xs = bundle["scaler"].transform(features).astype(np.float32)
+    ctx_full = _make_context(Xs).astype(np.float32)
+    last_x = Xs[-1]
+    last_ctx = ctx_full[-1]
+    max_h = max(horizons)
+
+    # 자기-반복(auto-regressive): 마지막 feature 를 max_h 번 반복 입력하여 미래 state 시뮬레이션
+    # reservoirpy 0.3.x 의 Node.run() 은 reset 인자 미지원 → 새 인스턴스(같은 seed)로 전체 한 번에 run
+    X_extended = np.vstack([Xs, np.tile(last_x, (max_h, 1))]).astype(np.float32)
+    res_fresh = Reservoir(units=RESERVOIR_UNITS, lr=0.3, sr=0.9, seed=42)
+    H_extended = res_fresh.run(X_extended)
+    H_ahead = H_extended[-max_h:].astype(np.float32)
+    ctx_ahead = np.tile(last_ctx, (max_h, 1)).astype(np.float32)
+
+    dims = bundle["model_dims"]
+    model = HyperReadout(reservoir_dim=dims["reservoir"], context_dim=dims["context"])
+    model.load_state_dict(bundle["model_state"])
+    _set_inference(model)
+    with torch.no_grad():
+        h = torch.from_numpy(H_ahead)
+        c = torch.from_numpy(ctx_ahead)
+        proba_all = torch.softmax(model(h, c), dim=1).numpy()  # (max_h, 4)
+
+    out = {}
+    for hz in horizons:
+        out[hz] = proba_all[hz - 1]
+    return out

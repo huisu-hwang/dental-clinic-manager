@@ -34,6 +34,23 @@ export interface ModelVote {
   probs: Record<RegimeState, number>
 }
 
+export interface RegimeSignals {
+  ret_20d: number | null
+  vol_60d: number | null
+  vol_median: number | null
+  vix: number | null
+  thresholds?: {
+    crisis_vix: number
+    crisis_ret_20d: number
+    bull_ret_20d: number
+    bear_ret_20d: number
+    bull_vol_ratio: number
+    bear_vol_ratio: number
+  }
+  matched_rule?: RegimeState
+  rules?: { name: string; ok: boolean; actual: string; threshold: string }[]
+}
+
 export interface RegimeRun {
   scope_type: 'market' | 'sector' | 'ticker'
   scope_id: string
@@ -47,5 +64,11 @@ export interface RegimeRun {
     '10d'?: Record<RegimeState, number>
     '30d'?: Record<RegimeState, number>
   }
+  reservoir_predictions?: {
+    '5d'?: Record<RegimeState, number>
+    '10d'?: Record<RegimeState, number>
+    '30d'?: Record<RegimeState, number>
+  } | null
+  signals?: RegimeSignals | null
   data_as_of: string
 }

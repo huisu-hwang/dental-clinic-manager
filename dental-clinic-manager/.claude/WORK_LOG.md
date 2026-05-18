@@ -10,6 +10,54 @@
 
 ---
 
+## 2026-05-19 [기능 개선] 국면 판단 근거 시각화 + 모델 용도 분리
+
+**키워드:** #regime #signals #transparency #reservoir-nstep #model-specialization
+
+### 📋 작업 내용
+
+#### 1) 판단 근거 시각화 (Transparency)
+- 마이그레이션: `regime_runs.signals` (JSONB) + `regime_runs.reservoir_predictions` (JSONB) 컬럼 추가
+- `labeling.py` 리팩터링:
+  - `THRESHOLDS` dict 단일 진실 원천 (Crisis VIX>30 / 수익률<-10%, Bull/Bear ±3% + 변동성 조건)
+  - 신규 `compute_current_signals(features)` — 마지막 시점 입력값 + 매칭된 규칙(✓/✗) 평가
+- `train_worker.train_scope`: 학습 후 `compute_current_signals` 호출 → signals upsert
+- 신규 컴포넌트 `RegimeSignals.tsx`:
+  - 3개 카드: 20일 수익률 / 60일 변동성 (중앙값 함께) / VIX
+  - 최종 판단 규칙 + 어떤 조건이 ✓/✗인지 명시
+  - "분류 규칙 전체 보기" 펼치기 (4-state 전체 규칙 참조)
+
+#### 2) 모델 용도 분리 (HMM = 현재+전이, Reservoir = 시계열 예측)
+- 신규 `reservoir_hypernet.predict_nstep_proba(bundle, features, horizons)`:
+  - 자기-반복(auto-regressive): 마지막 feature 를 N번 반복 입력
+  - 새 Reservoir 인스턴스(같은 seed)로 전체 시퀀스 한 번에 run (reservoirpy 0.3.x reset 미지원 우회)
+  - HyperReadout 으로 N-step ahead 4-state 분포 출력
+- `train_worker`: HMM transmat^n + Reservoir N-step 두 가지 모두 계산·저장
+- `RegimeTransitionTable` 재설계: 두 모델 분리 표시 + 비교 설명 + 셀 색상 (HMM 인디고 / Reservoir 에메랄드)
+
+### 🐛 해결한 문제
+1. `reservoirpy.Node.run(reset=False)` 미지원 → 새 인스턴스(같은 seed) + 전체 시퀀스 한 번에 run
+2. IDE 진단 (torch/reservoirpy 모듈 못 찾음) — venv 미참조로 발생, 실제 빌드/실행은 정상
+
+### 🧪 검증 (KOSPI 예시)
+- 판단 근거 카드: 수익률 +27.68%, 변동성 0.0364 (중앙값 0.0116), VIX 17.2
+- 매칭 규칙 표시: ✗ Crisis, ✗ Bull (수익률 OK 지만 변동성 > 중앙값×1.2 미충족), ✗ Bear → Sideways 정착 이유 명확
+- HMM Transition: 5d/10d/30d 모두 Sideways 100% (유지 시각)
+- Reservoir N-step: 5d Bear 95% / 10d Bear 92% / 30d Bear 91% (조정 신호) — **두 모델의 견해 차이가 명확히 사용자에게 노출**
+- 콘솔 에러 0, 빌드 PASS
+
+### 💡 배운 점
+- **HMM vs Reservoir 의 상호 보완**: 안정적 상태 유지(HMM) vs 단기 조정 시그널(Reservoir) 둘 다 함께 보여줄 때 의사결정 가치 ↑
+- 임계값(THRESHOLDS dict)을 단일 진실 원천으로 → labeling + signals 양쪽이 동일 규칙 사용
+- Auto-regressive simulation 은 단순 baseline 이지만 (마지막 feature 반복) 시각화로서 직관적, 실제 외부 입력 시뮬레이션은 차후 개선 여지
+
+### 🔮 다음 개선 여지
+- 임계값(THRESHOLDS)을 시장·자산별 동적 분위수로 (현재는 하드코딩)
+- KR 시장에 VKOSPI 추가 (현재 VIX 단일 의존)
+- Reservoir N-step 입력에 외부 시뮬레이션 (예: VIX shock 시나리오) 가능
+
+---
+
 ## 2026-05-19 [기능 개선] 내 종목 분석 — 종목 이름 검색 + 자동완성
 
 **키워드:** #regime #ticker-search #autocomplete #korean-search #user-ticker
