@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Header from '@/components/Layout/Header'
@@ -28,8 +28,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     type: 'success' | 'error' | 'warning' | 'info'
   }>({ show: false, message: '', type: 'info' })
 
-  // 활성 탭 상태 관리 (클릭 즉시 UI 반영을 위해 로컬 상태 사용)
-  const getInitialTab = (): string => {
+  // 활성 탭은 URL 에서 직접 파생 (useState + useEffect 동기화 패턴 제거 — 추가 re-render 가 깜빡임 원인이었음)
+  const activeTab = useMemo<string>(() => {
     if (pathname.startsWith('/dashboard/marketing')) return 'marketing'
     if (pathname.startsWith('/dashboard/contracts')) return 'contracts'
     if (pathname.startsWith('/dashboard/attendance')) return 'attendance'
@@ -40,8 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/dashboard/financial')) return 'financial'
     if (pathname.startsWith('/dashboard/ai-analysis')) return 'ai-analysis'
     return searchParams.get('tab') || 'home'
-  }
-  const [activeTab, setActiveTab] = useState<string>(getInitialTab)
+  }, [pathname, searchParams])
 
   // 헤더 알림 가져오기
   const { notifications, dismissNotification } = useClinicNotifications({
@@ -84,10 +83,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, loading, router, pathname, searchParams, isPublicTelegramGroupRoute])
 
-  // 페이지 변경 시 모바일 메뉴 닫기 및 activeTab 동기화
+  // 페이지 변경 시 모바일 메뉴 닫기 (activeTab 은 useMemo 로 자동 갱신 — 별도 setState 불필요)
   useEffect(() => {
     setIsMobileMenuOpen(false)
-    setActiveTab(getInitialTab())
   }, [pathname, searchParams])
 
   // 모바일 메뉴가 열려 있을 때 스크롤 방지
@@ -120,14 +118,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setToast({ show: true, message, type })
   }
 
-  // 탭 변경 핸들러
-  const handleTabChange = (tab: string) => {
-    // 먼저 로컬 상태 업데이트 (즉시 UI 반영)
-    setActiveTab(tab)
-
-    // 중앙 집중식 라우팅 유틸리티 사용
+  // 탭 변경 핸들러 — activeTab 은 pathname/searchParams 에서 파생되므로 router.push 만 호출하면 자동 반영
+  const handleTabChange = useCallback((tab: string) => {
     router.push(getTabRoute(tab))
-  }
+  }, [router])
 
   // 퇴사자/승인대기/거절된 사용자는 대시보드를 렌더링하지 않음
   if (loading) {

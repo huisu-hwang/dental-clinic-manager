@@ -21,7 +21,8 @@ export const useSupabaseData = (clinicId?: string | null, options: UseSupabaseDa
   const [giftCategories, setGiftCategories] = useState<GiftCategory[]>([])
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [cashRegisterLogs, setCashRegisterLogs] = useState<CashRegisterLog[]>([])
-  const [loading, setLoading] = useState(true)
+  // enabled=false 인 호출(예: 홈 탭에서 부모 hook)은 loading=false 로 즉시 시작 — 옛 동작은 useState(true) → useEffect 후 즉시 false 로 토글되어 한 프레임 스피너 깜빡임 발생.
+  const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState<string | null>(null)
   const [activeClinicId, setActiveClinicId] = useState<string | null>(clinicId ?? null)
 
