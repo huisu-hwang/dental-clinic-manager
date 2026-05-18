@@ -26,17 +26,21 @@ export function AuctionDetailHeader({ item, market }: Props) {
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
           <div className="text-[13px] md:text-sm font-medium text-at-text-secondary mb-1">
-            {item.case_number} · {item.court_name}
+            {item.case_number}-{item.item_number} · {item.court_name}
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-at-text leading-tight">
             {item.sido} {item.sigungu} {item.eupmyeondong}
           </h1>
         </div>
-        {p.d_day !== null && (
+        {p.d_day !== null && p.d_day >= 0 ? (
           <span className="shrink-0 px-3 py-1.5 rounded-full bg-[var(--at-warning-bg)] text-[var(--at-warning)] text-sm font-bold">
-            D-{p.d_day}
+            {p.d_day === 0 ? '오늘' : `D-${p.d_day}`}
           </span>
-        )}
+        ) : p.d_day !== null ? (
+          <span className="shrink-0 px-3 py-1.5 rounded-full bg-at-surface-alt text-at-text-weak text-sm font-bold">
+            기일 경과
+          </span>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 pt-4 border-t border-at-border">

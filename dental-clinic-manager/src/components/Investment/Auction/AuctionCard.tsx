@@ -32,6 +32,12 @@ const PROPERTY_VISUAL: Record<PropertyType, { icon: React.ElementType; gradient:
 
 const fmt = (n: number | null) => n === null ? '-' : new Intl.NumberFormat('ko-KR').format(n)
 
+// 카드 좁은 한 줄 메타에 들어갈 면적 표기. 1000㎡ 이상 토지는 만큼 줄여 표시.
+function formatAreaShort(m2: number): string {
+  if (m2 >= 1000) return `${(m2 / 1000).toFixed(1)}k㎡`
+  return `${Math.round(m2)}㎡`
+}
+
 export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Props) {
   const today = new Date().toISOString().slice(0, 10)
   const primary = calculatePrimary(item, today)
@@ -74,11 +80,15 @@ export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Pro
             {PROPERTY_LABEL[item.property_type] ?? '기타'}
           </span>
         )}
-        {primary.d_day !== null && (
+        {primary.d_day !== null && primary.d_day >= 0 ? (
           <span className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-[var(--at-warning)] text-white text-[11px] font-bold shadow">
-            D-{primary.d_day}
+            {primary.d_day === 0 ? '오늘' : `D-${primary.d_day}`}
           </span>
-        )}
+        ) : primary.d_day !== null ? (
+          <span className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-at-text-weak text-white text-[11px] font-bold shadow">
+            기일 경과
+          </span>
+        ) : null}
       </div>
 
       <div className="p-4 space-y-3">
@@ -88,7 +98,14 @@ export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Pro
             {item.sido} {item.sigungu} {item.eupmyeondong}
           </div>
           <div className="text-[12px] md:text-xs text-at-text-weak mt-0.5 font-medium">
-            {item.case_number} · {item.court_name}{item.building_area_m2 ? ` · ${item.building_area_m2}㎡` : ''}
+            {item.case_number}-{item.item_number} · {item.court_name}
+            {(() => {
+              // 토지/임야는 대지면적, 그 외는 건물면적 우선 표시
+              const isLandType = item.property_type === 'land' || item.property_type === 'forest'
+              const area = isLandType ? item.land_area_m2 : (item.building_area_m2 ?? item.land_area_m2)
+              return area ? ` · ${formatAreaShort(area)}` : ''
+            })()}
+            {item.next_auction_date ? ` · ${item.next_auction_date}` : ''}
           </div>
         </div>
 
@@ -110,11 +127,23 @@ export function AuctionCard({ item, isFavorite, onToggleFavorite, onClick }: Pro
 
         {/* 보조 배지 */}
         <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-semibold pt-1">
-          {m?.match_confidence === 'high' && m.median_price_3m && (
-            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-              시세 −{Math.round((m.median_price_3m - item.min_bid_price) / m.median_price_3m * 100)}%
-            </span>
-          )}
+          {(() => {
+            // 시세 매칭이 있는 경우 신뢰도에 따라 배지 톤 차등. mid 도 가치 있어 표시.
+            const marketPrice = m?.median_price_3m ?? m?.median_price_12m ?? null
+            if (!marketPrice || !m) return null
+            const pct = Math.round((marketPrice - item.min_bid_price) / marketPrice * 100)
+            const sign = pct >= 0 ? '−' : '+'
+            const tone = m.match_confidence === 'high'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+              : m.match_confidence === 'mid'
+                ? 'bg-sky-50 text-sky-700 border-sky-100'
+                : 'bg-at-surface-alt text-at-text-secondary border-at-border'
+            return (
+              <span className={`px-2 py-0.5 rounded-full border ${tone}`}>
+                시세 {sign}{Math.abs(pct)}%
+              </span>
+            )
+          })()}
           <span className="px-2 py-0.5 rounded-full bg-at-surface-alt text-at-text-secondary border border-at-border">
             유찰 {primary.failure_count}회
           </span>

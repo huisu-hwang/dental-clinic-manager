@@ -103,13 +103,12 @@ export function OverviewTab({ item, market }: Props) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-at-accent hover:underline"
               >
-                {item.case_number}
+                {item.case_number}-{item.item_number}
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
-            ) : item.case_number}
+            ) : `${item.case_number}-${item.item_number}`}
           </Dd>
           <Dt>관할법원</Dt><Dd>{item.court_name}</Dd>
-          <Dt>물건번호</Dt><Dd>{item.item_number}</Dd>
           <Dt>유찰 횟수</Dt><Dd>{item.failure_count}회</Dd>
           <Dt>매각기일</Dt><Dd>{item.next_auction_date ?? '미정'}</Dd>
         </dl>

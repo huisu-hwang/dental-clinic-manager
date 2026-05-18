@@ -38,10 +38,15 @@ export async function listAuctionItems(f: ListFilter): Promise<ListResult> {
 
   // status='active' 부분 인덱스(20260516_auction_items_perf_indexes) 덕분에
   // 30,000+ 행에서도 정렬·필터·exact count 가 1초 이내에 끝난다.
+  //
+  // 매각기일이 이미 지났지만 결과(낙찰/유찰)가 갱신되지 않아 status='active' 로 남은 매물은
+  // 사용자에게 노이즈만 만든다. next_auction_date >= 오늘 또는 null 인 매물만 노출한다.
+  const todayIso = new Date().toISOString().slice(0, 10)
   let q = supabase
     .from('auction_items')
     .select('*, market:auction_market_prices(source, matched_complex, median_price_3m, trade_count_3m, median_price_12m, last_trade_date, match_confidence)', { count: 'exact' })
     .eq('status', 'active')
+    .or(`next_auction_date.gte.${todayIso},next_auction_date.is.null`)
     .range(offset, offset + limit - 1)
 
   if (f.sido) q = q.eq('sido', f.sido)
