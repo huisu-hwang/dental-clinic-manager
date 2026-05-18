@@ -14,6 +14,7 @@ type TransitionMap = {
 interface Props {
   transitions: TransitionMap
   reservoirPredictions?: TransitionMap | null
+  kernelPredictions?: TransitionMap | null
   currentState: RegimeState
 }
 
@@ -87,39 +88,49 @@ function MatrixTable({
   )
 }
 
-export default function RegimeTransitionTable({ transitions, reservoirPredictions, currentState }: Props) {
-  const hasReservoir = reservoirPredictions && Object.keys(reservoirPredictions).length > 0
+export default function RegimeTransitionTable({ transitions, reservoirPredictions, kernelPredictions, currentState }: Props) {
   const hasHmm = transitions && Object.keys(transitions).length > 0
+  const hasKernel = kernelPredictions && Object.keys(kernelPredictions).length > 0
+  const hasReservoir = reservoirPredictions && Object.keys(reservoirPredictions).length > 0
 
   return (
     <div className="space-y-2">
       {hasHmm && (
         <MatrixTable
-          title="① HMM Transition Matrix (P^n)"
-          description={`현재 상태(${REGIME_LABEL[currentState]})에서 N일 후 도달 확률 — 통계적 마르코프 전이`}
+          title="① HMM Voting (Gupta 2025) — P^n 전이행렬"
+          description={`원본 feature 공간에서 학습된 HMM 의 통계적 마르코프 전이 (현재 ${REGIME_LABEL[currentState]} 기준)`}
           rows={transitions}
           currentState={currentState}
           cellColor="rgb(99, 102, 241)"
         />
       )}
+      {hasKernel && (
+        <MatrixTable
+          title="② Kernel Markov (RHINE) — 비선형 임베딩 P^n"
+          description="KernelPCA 비선형 임베딩 공간에서 학습된 HMM 의 전이 — 비선형 동학을 더 잘 잡음"
+          rows={kernelPredictions!}
+          currentState={currentState}
+          cellColor="rgb(168, 85, 247)"
+        />
+      )}
       {hasReservoir && (
         <MatrixTable
-          title="② Reservoir Hypernet N-step 예측 (Sun 2025)"
-          description="시계열 동학 기반 N일 후 라벨 분포 — auto-regressive next-step"
+          title="③ Reservoir Hypernet (Sun 2025) — auto-regressive"
+          description="시계열 동학 기반 N일 후 라벨 분포 — auto-regressive next-step 예측"
           rows={reservoirPredictions!}
           currentState={currentState}
           cellColor="rgb(16, 185, 129)"
         />
       )}
-      {!hasHmm && !hasReservoir && (
+      {!hasHmm && !hasKernel && !hasReservoir && (
         <div className="rounded border border-dashed border-gray-200 py-4 text-center text-xs text-gray-400">
           전환 예측 데이터 없음
         </div>
       )}
-      {(hasHmm || hasReservoir) && (
+      {(hasHmm || hasKernel || hasReservoir) && (
         <p className="text-[10px] text-gray-500">
-          💡 HMM은 통계적 전이행렬 거듭제곱(P^n)으로 안정적, Reservoir는 시계열 동학을 직접 모델링하여 단기 예측에 강점.
-          두 결과가 일치할수록 신뢰도 높음.
+          💡 세 모델은 서로 다른 가정 위에서 동작 — HMM은 원본 통계 전이, Kernel Markov는 비선형 임베딩 전이,
+          Reservoir는 시계열 직접 시뮬레이션. 세 결과가 일치할수록 신뢰도 높음.
         </p>
       )}
     </div>

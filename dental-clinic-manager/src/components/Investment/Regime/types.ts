@@ -69,6 +69,11 @@ export interface RegimeRun {
     '10d'?: Record<RegimeState, number>
     '30d'?: Record<RegimeState, number>
   } | null
+  kernel_predictions?: {
+    '5d'?: Record<RegimeState, number>
+    '10d'?: Record<RegimeState, number>
+    '30d'?: Record<RegimeState, number>
+  } | null
   signals?: RegimeSignals | null
   data_as_of: string
 }

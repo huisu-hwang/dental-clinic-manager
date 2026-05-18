@@ -210,6 +210,19 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
         except Exception as e:
             print(f"  WARN reservoir n-step skipped: {e}")
 
+    # 3) Kernel Markov N-step ahead (RHINE 강점: 비선형 임베딩 공간 마르코프 전이)
+    kernel_predictions = {}
+    if "kernel_markov" in trained:
+        try:
+            m_kern = trained["kernel_markov"][0]
+            knstep = kernel_markov.predict_nstep_transitions(m_kern, X, [5, 10, 30])
+            kernel_predictions = {
+                f"{h}d": {s: float(p) for s, p in zip(STATES, knstep[h])}
+                for h in [5, 10, 30]
+            }
+        except Exception as e:
+            print(f"  WARN kernel markov n-step skipped: {e}")
+
     # 판단 근거 시그널 (ret_20d, vol_60d, VIX + 규칙 매칭)
     signals = compute_current_signals(feat)
 
@@ -233,6 +246,7 @@ def train_scope(scope_type: str, scope_id: str, ticker: str, market: str) -> dic
         "model_votes": model_votes,
         "transition_probabilities": transitions,
         "reservoir_predictions": reservoir_predictions,
+        "kernel_predictions": kernel_predictions,
         "signals": signals,
         "data_as_of": today.isoformat(),
     }, on_conflict="scope_type,scope_id,as_of_date,trigger_type").execute()
