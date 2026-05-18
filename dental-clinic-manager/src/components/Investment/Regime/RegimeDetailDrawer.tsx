@@ -8,6 +8,14 @@ import {
 import RegimeTimelineChart from './RegimeTimelineChart'
 import RegimeTransitionTable from './RegimeTransitionTable'
 import RegimeModelVotes from './RegimeModelVotes'
+import RegimeBestStrategies from './RegimeBestStrategies'
+
+const KR_MARKETS = new Set(['KOSPI', 'KOSDAQ'])
+
+function scopeIdToMarket(scope: 'market' | 'sector' | 'ticker', scopeId: string): 'KR' | 'US' | null {
+  if (scope !== 'market') return null
+  return KR_MARKETS.has(scopeId) ? 'KR' : 'US'
+}
 
 interface Props {
   scope: 'market' | 'sector' | 'ticker'
@@ -138,6 +146,19 @@ export default function RegimeDetailDrawer({ scope, scopeId, scopeLabel, run, on
               ensemble={{ state, confidence: run.current_confidence, probs: ensembleProbs }}
             />
           </section>
+
+          {(() => {
+            const market = scopeIdToMarket(scope, scopeId)
+            if (!market) return null
+            return (
+              <section>
+                <h3 className="mb-2 text-sm font-semibold text-gray-800">
+                  이 국면에서 잘 작동한 전략 Top 10
+                </h3>
+                <RegimeBestStrategies market={market} state={state} />
+              </section>
+            )
+          })()}
         </div>
       </aside>
     </div>

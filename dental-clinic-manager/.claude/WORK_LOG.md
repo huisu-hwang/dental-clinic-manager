@@ -10,6 +10,34 @@
 
 ---
 
+## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-D (Strategy Matrix 연동)
+
+**키워드:** #regime #strategy-matrix #backfill #materialized-view #best-strategies
+
+### 📋 작업 내용
+- DB backfill: 171,500 strategy_matrix_runs 모든 행에 regime_at_window_end 채움 (KR→KOSPI, US→SP500 regime_history 매핑, end_date 기준 최신 state)
+- 머티리얼라이즈드 뷰 `regime_strategy_stats`: market × period_window × state × entry_id 별 sample_size/avg_return/avg_sharpe/avg_mdd/avg_winrate 사전 집계
+- 인덱스 `(market, period_window, state, avg_return DESC)` 로 Top N 즉시 조회
+- 신규 API `/api/investment/regime/best-strategies?market&state&window&limit`: 머티리얼라이즈드 뷰 직접 조회
+- 신규 컴포넌트 `RegimeBestStrategies`: 1Y/3Y/5Y/10Y 토글 + Top 10 테이블 (전략명/평균수익/Sharpe/MDD/승률/표본)
+- `RegimeDetailDrawer` 4번째 섹션으로 통합 (scopeIdToMarket: KOSPI/KOSDAQ→KR, 나머지→US)
+- `presets.ts` PRESET_STRATEGIES 매핑으로 entry_id → 친화적 전략명 변환
+
+### ⚡ 성능 최적화
+- 초기 구현 (페이지네이션 + 메모리 그룹화): 23.6초 (35K row 처리)
+- 머티리얼라이즈드 뷰 도입: **289ms (80배 가속)**
+
+### 🧪 검증
+- 빌드 PASS, dev 콘솔 에러 0
+- S&P 500 Sideways 국면 (US, 3Y) Top 10: 골든크로스 +53.89%, 피보나치 크로스 +51.48%, FOMO 회피 +46.86%, ...
+- 모든 35,455 표본 분석 결과 정상 (1013건/전략씩 동일 분포 = US_ALL 1,013 종목 × 1 entry_id)
+
+### 💡 배운 점
+- 백테스트 end_date 가 모두 2025~2026 최근일이라 backfill 결과 100% sideways → 자연스러운 결과 (현재 시장이 sideways 이므로). 차후 다양한 시점의 백테스트가 추가되면 bull/bear/crisis 풀도 채워질 것
+- regime_at_window_end 매핑은 단일 시장 (KR→KOSPI / US→SP500) 으로 단순화 — KOSDAQ/NASDAQ 등 시장별 더 정밀한 매핑은 차후 개선 가능
+
+---
+
 ## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-A (3-모델 앙상블)
 
 **키워드:** #regime #ensemble #kernel-markov #rhine #reservoir #hypernet #sun2025 #soft-voting
