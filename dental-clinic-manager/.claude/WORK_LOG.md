@@ -10,6 +10,36 @@
 
 ---
 
+## 2026-05-19 [기능 개선] 국면 타임라인에 실제 지수 가격 라인 추가
+
+**키워드:** #regime #timeline #price-overlay #dual-axis #close
+
+### 📋 작업 내용
+- 마이그레이션: `regime_history.close` (NUMERIC) 컬럼 추가
+- `train_worker`: history_rows 저장 시 `prices.loc[dt, "close"]` 함께 upsert (NaN/타입 안전)
+- `/api/investment/regime/history`: `close` 필드 응답 포함
+- `RegimeTimelineChart` 재설계 (AreaChart → ComposedChart):
+  - 좌축: 신뢰도 0~100% (회색 area, 배경)
+  - 우축: 종가 (검은 라인, 전경)
+  - 배경: regime state 색상 띠 (ReferenceArea)
+  - Tooltip: 일자/state/신뢰도/종가 동시 표시
+  - 범례: regime 4종 + 종가(우축) + 신뢰도(좌축)
+  - 가격 없으면 안내 메시지 ("다음 일배치 이후 표시")
+
+### 🧪 검증 (KOSPI 풀배치 + 브라우저)
+- KOSPI 697/697 close 저장 (2,277 ~ 7,498)
+- Market 4,191 + Sector 15,180 close 모두 저장 (0 NULL)
+- 차트: 가격 곡선 (3,663 → 7,681 상승) + sideways 배경 띠 + 신뢰도 영역 정상 표시
+- "+27% 상승했지만 변동성↑로 sideways" 가 가격 시각화로 즉시 이해됨
+- 28 scope 풀배치 11분 (이전과 동일), 0 error 0 skip
+
+### 💡 배운 점
+- recharts `ComposedChart` 로 신뢰도(Area) + 가격(Line) + state 배경(ReferenceArea) 3-layer 손쉽게 합성
+- Y축 좌/우 분리 (`yAxisId="conf"` vs `"price"`) — 단위 다른 시계열 시각화 표준 패턴
+- 같은 차트에 "왜 그렇게 판단됐는지" + "실제 무슨 일이 있었는지" 함께 보면 신뢰성 ↑
+
+---
+
 ## 2026-05-19 [기능 개선] 국면 판단 근거 시각화 + 모델 용도 분리
 
 **키워드:** #regime #signals #transparency #reservoir-nstep #model-specialization
