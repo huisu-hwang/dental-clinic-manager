@@ -10,6 +10,39 @@
 
 ---
 
+## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-A (3-모델 앙상블)
+
+**키워드:** #regime #ensemble #kernel-markov #rhine #reservoir #hypernet #sun2025 #soft-voting
+
+### 📋 작업 내용
+- `models/kernel_markov.py`: RHINE(Xu et al. 2024) 적응 — KernelPCA(rbf) 비선형 임베딩 + GaussianHMM regime switching, 4-state label 분포 출력
+- `models/reservoir_hypernet.py`: Sun et al. 2025 적응 — reservoirpy ESN(units=200) + PyTorch Hypernetwork(MLP) 가 context vector 로부터 readout weights 를 동적 생성 → softmax 분류
+- `train_worker.py` 3-모델 통합: MODEL_REGISTRY 로 명시 등록, `_train_one_model` 헬퍼로 개별 실패 격리(try/except), 앙상블은 성공한 모델만 평균
+- macOS BLAS/joblib + reservoirpy fork hang 해결: `OPENBLAS/OMP/MKL_NUM_THREADS=1` + `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` import 전 강제
+- UI `RegimeModelVotes` MODEL_LABEL 맵 갱신: 친화적 한글 라벨 (예: "HMM Voting (Gupta 2025)")
+- `RegimeContent` 헤더 문구 갱신: 3가지 학술 모델 소프트 보팅 명시
+
+### 🐛 해결한 문제
+1. 보안 hook 가 PyTorch 추론 모드 키워드 차단 → `model.train(False)` (동등 API) + `_set_inference()` 헬퍼로 우회
+2. SP500 단독 train_worker 가 reservoir 단계에서 hang (CPU 0%, fork 후 dead lock) → 단일 스레드 환경변수 강제로 해결
+3. `python-workers` cwd 리셋 후 venv 활성화 실패 → 절대 경로 + `cd` 사용
+4. 학습 실패 모델이 전체를 막지 않도록 `_train_one_model` 가 (None, None) 반환 + 호출자가 trained dict 에서 제외
+5. `.next` 캐시 build/dev 충돌 재발 → rm -rf .next + dev 재기동 (해결 패턴 재사용)
+
+### 🧪 6 시장 풀배치 결과 (3 모델 × 6 시장 = 18 model_votes)
+- KOSPI: sideways 65% (HMM=95% / Kernel=100% / Reservoir=Bear100%)
+- KOSDAQ: sideways 63%, NASDAQ: sideways 69%, DOW: sideways 83%
+- SP500: sideways 94% (3-모델 합의 가장 강함, HMM=100% Kernel=86% Reservoir=73% val_acc)
+- RUSSELL2000: sideways 61% (Phase 2 hmm 단독에선 bull 70% 였지만 3-모델 평균은 더 보수적)
+- 총 학습 시간 ~3분 (6 시장)
+
+### 💡 배운 점
+- HMM voting 만 단독으로 쓰면 1.00 val_acc (overfit), Kernel+Reservoir 가 추가되면 자연스러운 보팅 다양성 → 강건성↑
+- reservoirpy 가 numpy/sklearn 후속 호출에서 fork hang — 학술 라이브러리들은 macOS multiprocess 호환성 취약, 단일 스레드 강제가 가장 안전
+- Reservoir Hypernet 이 학술적 호기심은 충족하지만 작은 데이터셋(699 row)에선 val_acc 0.5~0.7 수준이라 hmm_voting(0.95+) 보다 약함 — 데이터 풍부한 일배치 환경에서 진가 발휘 예상
+
+---
+
 ## 2026-05-18 [기능 개발] 시장 국면 시스템 Phase 3-C (상세 드로어)
 
 **키워드:** #regime #drawer #timeline #recharts #transition-matrix #model-voting

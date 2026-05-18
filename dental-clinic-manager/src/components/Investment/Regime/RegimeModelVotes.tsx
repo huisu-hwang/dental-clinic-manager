@@ -18,10 +18,12 @@ interface Props {
 function MODEL_LABEL(key: string) {
   const map: Record<string, string> = {
     hmm: 'HMM',
+    hmm_voting: 'HMM Voting (Gupta 2025)',
     xgboost: 'XGBoost',
     randomforest: 'RandomForest',
     bagging: 'Bagging',
-    kernel_markov: 'Kernel Markov',
+    kernel_markov: 'Kernel Markov (RHINE 적응)',
+    reservoir_hypernet: 'Reservoir Hypernet (Sun 2025)',
     reservoir: 'Reservoir',
   }
   return map[key] ?? key
