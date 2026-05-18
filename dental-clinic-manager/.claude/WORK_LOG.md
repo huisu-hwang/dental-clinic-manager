@@ -10,6 +10,46 @@
 
 ---
 
+## 2026-05-19 [운영/기능] 시장 국면 시스템 launchd + GICS 섹터 22개
+
+**키워드:** #regime #sectors #gics #launchd #etf #yahoo-fallback
+
+### 📋 작업 내용
+
+#### launchd 자동 일배치 (Mac mini)
+- `python-workers/regime/launchd/com.dental.regime.plist` 작성
+- 매일 KST 20:30 자동 실행 (시장 6 + 섹터 22 + 사용자 큐 + 알림)
+- 환경변수 단일 스레드 강제 (BLAS/joblib hang 방지)
+- 설치 + load 완료, 즉시 트리거 PASS
+
+#### GICS 섹터 22개 추가 (US 11 + KR 11)
+- `config.py.SECTORS`: US SPDR XL 시리즈(XLK/XLF/...) + KR KODEX 섹터 ETF
+- `train_worker.py`: `train_scope("sector", ...)` 루프 + `sectors` CLI 모드 추가
+- `price_fetcher.py`: cache miss 시 yahoo 직접 fallback (KR 6자리 → `.KS`/`.KQ` 시도)
+- API: `GET /api/investment/regime/sectors` (region=KR/US/ALL 필터)
+- UI: `RegimeSectorGrid.tsx` (4-column 그리드, 한국어 라벨 매핑, 카드 클릭 → Drawer 재사용)
+- `RegimeContent.tsx`: 3 탭 (시장 지수 / GICS 섹터 / 내 종목 분석)
+
+### 🐛 해결한 문제
+1. ETF 가격 데이터 stock_price_cache 부재 → yahoo_fetcher fallback 추가
+2. KR 6자리 ETF (091160 등) yfinance 인식 안 됨 → `.KS`/`.KQ` 접미사 자동 시도
+3. dev 서버 build 후 캐시 충돌 → rm -rf .next + 재기동 (패턴 재사용)
+
+### 🧪 검증 결과 (22 섹터 모두 학습 PASS)
+- 대부분 sideways (시장과 합치)
+- 특이 시그널:
+  - 🟢 **US Consumer Discretionary: bull 87%** (소비재 상승)
+  - 🔴 **KR 반도체: crisis 75%** (반도체 위기 경고, 5d 전환 98%)
+- US/KR/전체 필터 토글 정상
+- 카드 클릭 → 섹터 scope Drawer 정상 (history 200, 콘솔 에러 0)
+
+### 💡 배운 점
+- 섹터 ETF로 GICS 11개를 우회 매핑 — 시가총액 가중 자동 + 데이터 신뢰성 ↑
+- KR ETF는 .KS 접미사 자동 시도로 yfinance 호환 — 별도 KR 가격 캐시 작업 불필요
+- 동일 `RegimeDetailDrawer` 가 scope='market'/'sector'/'ticker' 3가지 모두 재사용 → 코드 100% 공유
+
+---
+
 ## 2026-05-19 [기능 개발] 시장 국면 시스템 Phase 3-E (국면 전환 알림)
 
 **키워드:** #regime #alerts #user_notifications #state-change

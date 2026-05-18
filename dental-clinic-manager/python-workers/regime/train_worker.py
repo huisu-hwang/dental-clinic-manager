@@ -17,7 +17,7 @@ import sys
 from datetime import date, timedelta
 import numpy as np
 
-from regime.config import MARKETS, MODEL_VERSION, STATES
+from regime.config import MARKETS, SECTORS, MODEL_VERSION, STATES
 from regime.fetchers.fred_fetcher import fetch_all_fred
 from regime.fetchers.ecos_fetcher import fetch_all_ecos
 from regime.fetchers.price_fetcher import fetch_prices
@@ -304,13 +304,45 @@ def run_full_batch(scope_filter: str | None = None,
         except Exception as e:
             print(f"  ERROR {name}: {type(e).__name__}: {e}")
 
-    # 시장 학습 후 사용자 ticker 큐 처리
+    print("== sectors ==")
+    for name, cfg in SECTORS.items():
+        if scope_filter and scope_filter != name:
+            continue
+        try:
+            train_scope("sector", name, cfg["ticker"], cfg["market"])
+        except Exception as e:
+            print(f"  ERROR sector {name}: {type(e).__name__}: {e}")
+
+    # 시장·섹터 학습 후 사용자 ticker 큐 처리
     process_queued_jobs()
+
+
+def run_sectors_only(scope_filter: str | None = None,
+                     macro_backfill_days: int = 365 * 8) -> None:
+    """섹터만 학습 — 시장 학습 건너뛰고 섹터만 처리."""
+    today = date.today()
+    print(f"== macro fetch (since {macro_backfill_days}d ago) ==")
+    fetch_all_fred(since=today - timedelta(days=macro_backfill_days))
+    try:
+        fetch_all_ecos(since=today - timedelta(days=macro_backfill_days), until=today)
+    except Exception as e:
+        print(f"  ECOS warn (continuing): {e}")
+
+    print("== sectors ==")
+    for name, cfg in SECTORS.items():
+        if scope_filter and scope_filter != name:
+            continue
+        try:
+            train_scope("sector", name, cfg["ticker"], cfg["market"])
+        except Exception as e:
+            print(f"  ERROR sector {name}: {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "jobs":
         process_queued_jobs(limit=int(sys.argv[2]) if len(sys.argv) > 2 else 20)
+    elif len(sys.argv) > 1 and sys.argv[1] == "sectors":
+        run_sectors_only(scope_filter=sys.argv[2] if len(sys.argv) > 2 else None)
     else:
         scope = sys.argv[1] if len(sys.argv) > 1 else None
         run_full_batch(scope_filter=scope)
