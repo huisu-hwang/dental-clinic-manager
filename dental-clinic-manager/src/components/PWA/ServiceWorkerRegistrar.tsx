@@ -53,11 +53,33 @@ export default function ServiceWorkerRegistrar() {
     }
 
     // ─── 업데이트 실제 적용 ───
+    // sessionStorage throttle: 같은 세션에서 60초 이내에 이미 적용 시도했으면 skip (무한 루프 방지)
+    const SW_APPLY_THROTTLE_KEY = 'sw-applyUpdateNow-at'
+    const isRecentlyApplied = (): boolean => {
+      try {
+        const last = sessionStorage.getItem(SW_APPLY_THROTTLE_KEY)
+        if (!last) return false
+        const elapsed = Date.now() - parseInt(last, 10)
+        return Number.isFinite(elapsed) && elapsed < 60_000
+      } catch {
+        return false
+      }
+    }
+    const markApplied = () => {
+      try { sessionStorage.setItem(SW_APPLY_THROTTLE_KEY, Date.now().toString()) } catch {}
+    }
+
     const applyUpdateNow = () => {
       if (refreshing) return
+      if (isRecentlyApplied()) {
+        console.log('[SW] 60초 내 이미 적용 시도 — skip (무한 루프 방지)')
+        pendingUpdate = false
+        return
+      }
       pendingUpdate = false
       if (registration?.waiting) {
         console.log('[SW] 자동 업데이트 적용 (waiting SW → SKIP_WAITING)')
+        markApplied()
         registration.waiting.postMessage({ type: 'SKIP_WAITING' })
         // controllerchange가 발생하지 않는 경우 대비 폴백 (3초 후 강제 reload)
         setTimeout(() => {
@@ -68,6 +90,7 @@ export default function ServiceWorkerRegistrar() {
         }, 3000)
       } else {
         console.log('[SW] 자동 업데이트 적용 (직접 reload)')
+        markApplied()
         refreshing = true
         window.location.reload()
       }
@@ -199,8 +222,24 @@ export default function ServiceWorkerRegistrar() {
     }
 
     // ─── SW 컨트롤러 변경 시 새로고침 ───
+    // 무한 reload 루프 방지: sessionStorage 기반 throttle (60초 내 1회만 reload 허용)
+    // 옛 버전: 매 controllerchange 마다 reload → reload 후 새 SW 또 감지되면 다시 reload → 화면 전체 무한 깜빡임 (특히 짧은 간격에 여러 번 배포된 경우)
+    const RELOAD_THROTTLE_KEY = 'sw-controllerchange-reload-at'
     const handleControllerChange = () => {
       if (refreshing) return
+      try {
+        const last = sessionStorage.getItem(RELOAD_THROTTLE_KEY)
+        if (last) {
+          const elapsed = Date.now() - parseInt(last, 10)
+          if (Number.isFinite(elapsed) && elapsed < 60_000) {
+            console.log(`[SW] controllerchange 감지됐으나 최근 ${Math.round(elapsed / 1000)}초 전 reload 이력 — skip (무한 루프 방지)`)
+            return
+          }
+        }
+        sessionStorage.setItem(RELOAD_THROTTLE_KEY, Date.now().toString())
+      } catch {
+        // sessionStorage 접근 실패 시 안전하게 1회 reload 허용
+      }
       refreshing = true
       console.log('[SW] 새 버전 활성화됨, 페이지 새로고침...')
       window.location.reload()
