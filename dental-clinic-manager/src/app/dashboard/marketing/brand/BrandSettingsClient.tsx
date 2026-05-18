@@ -8,6 +8,7 @@ import {
 } from '@/components/marketing/brand/BrandSettingsForm';
 import { BrandPhotoUploader } from '@/components/marketing/brand/BrandPhotoUploader';
 import { BrandPreview } from '@/components/marketing/brand/BrandPreview';
+import { BrandImageSetsManager } from '@/components/marketing/brand/BrandImageSetsManager';
 import type { DraftBrandAssets } from '@/types/brand';
 
 interface Props {
@@ -122,6 +123,12 @@ export function BrandSettingsClient({ canManage, embedded = false }: Props) {
             ) : (
               <p className="text-sm text-at-text-weak">조회만 가능합니다.</p>
             )}
+          </section>
+
+          <section className="bg-white rounded-xl border border-at-border p-5">
+            <h2 className="text-sm font-semibold text-at-text mb-1">끝맺음 브랜드 이미지 세트</h2>
+            <p className="text-xs text-at-text-weak mb-4">AI 글의 마지막 부분에 자동 첨가될 이미지 카드 묶음을 만들고 관리합니다.</p>
+            <BrandImageSetsManager canManage={canManage} />
           </section>
         </div>
 

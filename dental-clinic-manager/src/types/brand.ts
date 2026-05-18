@@ -1,4 +1,33 @@
-export type BrandImageType = 'medical_law' | 'title' | 'photo';
+export type BrandImageType = 'medical_law' | 'title' | 'photo' | 'image_set';
+
+// ─── 브랜드 이미지 세트 (반복 사용 가능한 끝맺음 이미지 묶음) ───
+export interface BrandImageSet {
+  id: string;
+  clinic_id: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrandImageSetCard {
+  id: string;
+  set_id: string;
+  clinic_id: string;
+  image_url: string;
+  title_copy: string | null;
+  subtitle_copy: string | null;
+  sort_order: number;
+  last_used_at: string | null;
+  use_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrandImageSetWithCards extends BrandImageSet {
+  cards: BrandImageSetCard[];
+}
 
 export type MedicalLawPresetKey =
   | 'yellow_black'
@@ -86,4 +115,6 @@ export interface BrandImageOptions {
   medicalLaw: { enabled: boolean; positions: ('top' | 'middle' | 'bottom')[] };
   title:       { enabled: boolean; positions: ('top' | 'middle' | 'bottom')[]; copy: string };
   photo:       { enabled: boolean; positions: ('top' | 'middle' | 'bottom')[]; mode: 'random' | 'manual' | 'rotate'; photoId?: string };
+  /** 끝맺음 브랜드 이미지 세트 — LRU 순환 + sharp 동적 변형 적용 (네이버 유사이미지 회피) */
+  imageSet?:   { enabled: boolean; setId?: string; positions: ('top' | 'middle' | 'bottom')[] };
 }

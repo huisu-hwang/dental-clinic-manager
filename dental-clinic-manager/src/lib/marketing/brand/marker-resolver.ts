@@ -1,6 +1,7 @@
 import { renderBrandImage } from './render-engine';
+import { renderImageSetVariant } from './image-set-variant';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
-import type { BrandAssets, BrandImageType, BrandPhoto } from '@/types/brand';
+import type { BrandAssets, BrandImageType, BrandImageSetCard, BrandPhoto } from '@/types/brand';
 
 export interface BrandMarker {
   raw: string;
@@ -15,7 +16,7 @@ export function parseBrandMarkers(body: string): BrandMarker[] {
   const out: BrandMarker[] = [];
   for (const m of body.matchAll(MARKER_RE)) {
     const type = m[1] as BrandImageType;
-    if (type !== 'medical_law' && type !== 'title' && type !== 'photo') continue;
+    if (type !== 'medical_law' && type !== 'title' && type !== 'photo' && type !== 'image_set') continue;
     const params: Record<string, string> = {};
     if (m[2]) {
       for (const pair of m[2].split('|')) {
@@ -32,6 +33,10 @@ export function parseBrandMarkers(body: string): BrandMarker[] {
 interface ResolveContext {
   clinicId: string;
   rotateCounter?: number;
+  /** 글 제목 — image_set 변형의 텍스트 오버레이에 사용 */
+  articleTitle?: string;
+  /** 글 키워드 — image_set 변형의 alt/파일명 슬러그에 사용 */
+  keyword?: string;
 }
 
 export async function resolveBrandMarkers(body: string, ctx: ResolveContext): Promise<string> {
@@ -85,6 +90,21 @@ export async function resolveBrandMarkers(body: string, ctx: ResolveContext): Pr
           if (photos.length > 0) chosen = photos[Math.floor(Math.random() * photos.length)];
         }
         if (chosen) url = await renderBrandImage({ type: 'photo', assets: a, photo: chosen });
+      } else if (marker.type === 'image_set') {
+        // 끝맺음 이미지 세트: LRU 로 카드 한 장 pick + Layer 2 동적 변형 합성
+        const setId = (marker.params.set_id || '').trim();
+        if (setId) {
+          const { data: picked } = await (admin as any).rpc('pick_brand_image_set_card_lru', { p_set_id: setId });
+          const card = Array.isArray(picked) && picked.length > 0 ? (picked[0] as BrandImageSetCard) : null;
+          if (card) {
+            url = await renderImageSetVariant(card, {
+              articleTitle: ctx.articleTitle,
+              keyword: ctx.keyword,
+            });
+          } else {
+            console.warn('[brand-resolve] image_set 카드 없음 — set_id:', setId);
+          }
+        }
       }
     } catch (err) {
       const e = err as { message?: string; stack?: string };
